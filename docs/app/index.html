@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610061136">
+<meta name="hereda-version" content="202610061149">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F6F6F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -6319,8 +6319,9 @@ function vNovedades() {
 }
 
 // ───────────────────── Hereda+ · compartir, exportar y versiones ─────────────────────
-const VERSION_APP = { n: 10, nombre: "Versión 1.0", fecha: "2026-10-04" };
+const VERSION_APP = { n: 11, nombre: "Versión 1.1", fecha: "2026-10-06" };
 const NOVEDADES = [
+  ["Más sencillo a la vista", "Menos color y menos cosas a la vez. En cada expediente, seis pestañas: Resumen, Herederos y bienes, Impuestos, Partición, Trámites y Documentos; las herramientas de apoyo están en «Más». El Resumen enseña lo esencial y el detalle se despliega con un botón. La barra lateral queda en Mi día, Expedientes y Agenda."],
   ["Nada se pierde al teclear", "Las fichas de personas y bienes, el asistente, el Encargo y los Ajustes guardan cada tecla: los datos se conservan aunque se pase de campo con Tab o se pulse enseguida Continuar o Hecho, y el primer clic siempre responde."],
   ["Plusvalía en los 8.132 municipios", "Con ordenanza incorporada se aplica la suya. En las 48 capitales y los 100 municipios de más de 50.000 habitantes, el tipo oficial que cada ayuntamiento comunica a Hacienda para 2026. En el resto, el máximo posible (30 %, coeficientes máximos, sin bonificación), con un clic para poner el tipo y la bonificación de su ordenanza. Probado en todos los municipios: la cifra nunca supera ese máximo."],
   ["Un solo coste fiscal", "Sucesiones, plusvalía y el impuesto del exceso de adjudicación salen igual en Resumen, Impuestos, Partición, Estrategia, carpeta y paquete de la notaría. Lo de riesgo alto pasa a «A valorar con el abogado»."],
@@ -13994,7 +13995,7 @@ function vHome() {
     <p class="greet">${esc(fechaHoyLarga())}</p>
     ${ayPrimerosPasosHTML()}${escritorio() ? "" : `<div class="infobar nu-otro"><span class="ico blue">${I.info}</span><span>¿Creaste expedientes en otro equipo? Siguen allí: cada equipo guarda los suyos. Para traerlos, expórtalos en ese equipo e impórtalos aquí, en <button class="link" data-act="ajustes">Ajustes › Importar un archivo</button>.</span></div>`}
     <div class="home-hero" style="grid-template-columns:1fr"><div><div class="kick">${esc(D.nombre || "Tu despacho")}</div><h2>Todavía no hay expedientes.</h2><p>Un expediente es una herencia: la persona fallecida, sus herederos y sus bienes. Con la fecha, la comunidad, una persona y un bien ya se calculan los impuestos, el reparto, los plazos y los escritos. Lo que falte se completa después, o lo rellena la familia desde su móvil.</p><div class="acts"><button class="btn" data-act="nuevo">Abrir el primer expediente</button><button class="btn gray" data-dm="cargar">Ver un despacho de ejemplo</button></div></div></div>
-    <p class="foot-note">${notaDatos()} Motor ${VERSION}.</p></div>`;
+    <p class="foot-note">${notaDatos()} Motor ${VERSION}. <button class="link" data-act="ejemplos" style="font-size:12.5px">Cargar cuatro casos de ejemplo</button></p></div>`;
   const vista = ui.cv || "tabla";
   return `${top}<div class="page wide view">
     <p class="greet">${saludo()} · ${esc(fechaHoyLarga())}</p>
@@ -14910,7 +14911,7 @@ sgArranque(() => {
 </script>
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/Claude/sw.js?v=202610061136").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/Claude/sw.js?v=202610061149").catch(() => {}));
 </script>
 </body>
 </html>
