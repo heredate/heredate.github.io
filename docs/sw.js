@@ -1,9 +1,9 @@
 // Hereda+ · service worker. Red primero (con conexión, siempre lo último publicado) y copia local sin conexión.
-// Versión: build.py sustituye 202610061630 por la versión de la construcción (así cada publicación cambia este archivo
+// Versión: build.py sustituye 202610061656 por la versión de la construcción (así cada publicación cambia este archivo
 // y el navegador detecta la actualización). En desarrollo se usa ?v= del registro.
 // Cada versión tiene su propia caché. La nueva NO se activa sola: espera a que la app (seguridad.js) pida «activar»
 // cuando el usuario pulsa «Actualizar», o a que se cierren todas las pestañas.
-const BUILD = "202610061630";
+const BUILD = "202610061656";
 const V = BUILD.indexOf("__") === 0 ? (new URL(self.location.href).searchParams.get("v") || "dev") : BUILD;
 const CACHE = "hereda-" + V;
 const ESENCIAL = ["/app/"];

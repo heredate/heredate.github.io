@@ -1460,7 +1460,7 @@ const ORDENANZAS = {
 
   SEVILLA: { nombre: "Sevilla", tipo: 0.2653, estadoTipo: P, // 26,53 % según 4 fuentes secundarias 2026; texto 2022 decía 26,8 %. Web oficial ilegible.
     bonif(c) {
-      const norma = "OF medidas de solidaridad social (Sevilla), bonificación IIVTNU mortis causa — texto oficial no leído";
+      const norma = "OF de medidas de solidaridad social (Sevilla), bonificación del IIVTNU por herencia — requisitos pendientes de comprobar en el texto oficial";
       if (!DAC(c.heredero)) return { pct: 0 };
       if (c.caudalTotal > 500000) return { pct: 0, norma: norma + " (caudal > 500.000 €)", estado: P };
       if (c.inmueble.esViviendaHabitual) { const s = c.inmueble.valorCatastralSuelo; return { pct: s <= 10000 ? 0.95 : s <= 20000 ? 0.50 : s <= 50000 ? 0.30 : 0, norma: norma + " (vivienda habitual; mantener 3 años)", estado: P }; }
@@ -1483,7 +1483,7 @@ const ORDENANZAS = {
   ALMERIA: { nombre: "Almería", tipo: 0.27, estadoTipo: P,
     bonif(c) {
       if (!c.inmueble.esViviendaHabitual || !DACP(c.heredero)) return { pct: 0 };
-      return { pct: 0.95, norma: "OF nº 6 Almería (modif. 2023, efectos 2024) — requisitos no leídos", estado: P };
+      return { pct: 0.95, norma: "OF n.º 6 de Almería (modificada en 2023, efectos 2024) — requisitos pendientes de comprobar en el texto oficial", estado: P };
     } },
   CADIZ: { nombre: "Cádiz", tipo: 0.30, estadoTipo: P,
     bonif(c) {
