@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610061455">
+<meta name="hereda-version" content="202610061630">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F6F6F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2875,6 +2875,36 @@ button.rd-sg:hover{color:var(--label)}
 .gu-compacta{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
 .gu-port{margin-top:14px}
 .gu-port .sectitle{margin-top:0}
+
+/* ── Lector de documentos ── */
+.lec-wait{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:26px 10px 10px}
+.lec-wait p{margin:0;font-size:15px}
+.lec-wait .caption{max-width:46ch;line-height:1.5}
+.lec-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--fill-3);border-top-color:var(--accent);animation:lec-rot .9s linear infinite}
+@keyframes lec-rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.lec-spin{animation:none;border-top-color:var(--accent)}}
+.lec-docs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.lec-doc{display:flex;flex-direction:column;gap:6px;padding:9px 12px;border:.5px solid var(--hair);border-radius:12px;background:var(--fill-2)}
+.lec-doc-t{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.lec-doc-t small{color:var(--label-3);font-size:12.5px}
+.lec-avisos{margin:10px 0 0;padding:10px 12px 10px 30px;font-size:13px;color:var(--label-2);line-height:1.45;border-radius:12px;background:color-mix(in srgb,var(--orange) 9%,transparent)}
+.lec-avisos li{margin:2px 0}
+.lec-row{cursor:pointer;align-items:flex-start}
+.lec-row input{margin:3px 12px 0 0;width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.lec-row .t small{white-space:normal;line-height:1.4}
+.lec-row .lec-src{color:var(--label-3);font-size:12px;margin-top:2px}
+.lec-duda{background:color-mix(in srgb,var(--orange) 7%,transparent)}
+.lec-duda .lec-src{color:var(--orange)}
+.lec-acts{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.lec-tipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 16px;margin:14px 0 0;padding:0 0 0 18px;font-size:13px;color:var(--label-2);line-height:1.5}
+.lec-res .kv{margin-top:8px}
+.lec-res .kv > span{padding:7px 0;border-top:.5px solid var(--hair)}
+.lec-res .kv > span:nth-child(-n+2){border-top:0}
+.lec-franja{display:flex;align-items:center;gap:14px;margin-top:14px;padding:14px 16px;flex-wrap:wrap}
+.lec-franja .t{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px}
+.lec-franja .t small{color:var(--label-2);line-height:1.45;white-space:normal}
+.lec-franja .acts{display:flex;gap:8px;flex-wrap:wrap}
+.lec-franja .btn input{display:none}
 
 </style>
 <div id="app"></div>
@@ -6067,6 +6097,7 @@ async function archivoGuardar(files, expId, tramiteId) {
   { const xx = DB.expedientes.find((q) => q.id === expId); if (xx && n) { anotar(xx, `${plural(n, "documento archivado", "documentos archivados")}${tramiteId ? " en el trámite" : ""}`, "doc"); guardar(); } }
   await archivoCargar(); render();
   toast(n ? `${plural(n, "documento guardado", "documentos guardados")}${ARCH.persistente ? "" : " solo en esta sesión"}` : "No se guardó ningún documento");
+  if (n && typeof lecTrasArchivar === "function") lecTrasArchivar(files, expId);
 }
 async function archivoBorrar(id) {
   if (ARCH.db) await new Promise((res) => { const q = archivoTx("readwrite").delete(id); q.onsuccess = res; q.onerror = res; }); else ARCH.mem.delete(id);
@@ -6362,8 +6393,9 @@ function vNovedades() {
 }
 
 // ───────────────────── Hereda+ · compartir, exportar y versiones ─────────────────────
-const VERSION_APP = { n: 11, nombre: "Versión 1.1", fecha: "2026-10-06" };
+const VERSION_APP = { n: 12, nombre: "Versión 1.2", fecha: "2026-10-06" };
 const NOVEDADES = [
+  ["Los documentos rellenan el expediente", "Arrastra el certificado de defunción, el de últimas voluntades, el de seguros, el testamento, las notas simples, el IBI o la certificación catastral, los DNI, los certificados del banco y las escrituras de compra: el programa los lee (también escaneos y fotos, en el propio ordenador) y propone el causante, el reparto, las personas, los inmuebles con sus valores catastrales, las cuentas y las deudas. Tú marcas lo que entra; todo queda señalado como «leído de documento». Desde la portada («Desde documentos») o subiéndolos dentro del expediente."],
   ["Guías interactivas", "En Ayuda › Guías (y en la portada cuando aún no hay expedientes): diez recorridos sobre la pantalla real, de dos a ocho minutos, que iluminan cada cosa y avanzan solos cuando la haces: conocer la pantalla, el primer expediente, un expediente por dentro, herederos y bienes, impuestos, partición, trámites y agenda, la familia, documentos y ajustes."],
   ["Más sencillo a la vista", "Menos color y menos cosas a la vez. En cada expediente, seis pestañas: Resumen, Herederos y bienes, Impuestos, Partición, Trámites y Documentos; las herramientas de apoyo están en «Más». El Resumen enseña lo esencial y el detalle se despliega con un botón. La barra lateral queda en Mi día, Expedientes y Agenda."],
   ["Nada se pierde al teclear", "Las fichas de personas y bienes, el asistente, el Encargo y los Ajustes guardan cada tecla: los datos se conservan aunque se pase de campo con Tab o se pulse enseguida Continuar o Hecho, y el primer clic siempre responde."],
@@ -6642,7 +6674,10 @@ function tarjetaFamilia(x) {
   const k = F.contacto || {};
   return `<div class="card" style="margin-top:14px">${cardH("Recibidos el " + fechaCorta(F.recibido), "Datos aportados por la familia")}<div class="kv">${k.nombre ? `<span>Contacto</span><span>${esc(k.nombre)}${k.relacion ? " · " + esc(k.relacion) : ""}</span>` : ""}${k.tel ? `<span>Teléfono</span><span>${esc(k.tel)}</span>` : ""}${k.email ? `<span>Correo</span><span>${esc(k.email)}</span>` : ""}${F.testamento ? `<span>Testamento</span><span>${esc({ si: "Dicen que sí", no: "Dicen que no", nose: "No lo saben" }[F.testamento] || "")}</span>` : ""}${F.municipio ? `<span>Residencia</span><span>${esc(F.municipio)}</span>` : ""}<span>Documentos que tienen</span><span>${F.documentos.length ? esc(F.documentos.map((d) => DOC_FAM[d] || d).join(", ")) : "Ninguno"}</span>${F.seguros ? `<span>Seguros</span><span>${esc(F.seguros)}</span>` : ""}${F.observaciones ? `<span>Observaciones</span><span>${esc(F.observaciones)}</span>` : ""}<span>Consentimiento</span><span>${F.consentimiento ? "Dado en el cuestionario" : "No consta"}</span></div></div>`;
 }
-function franjaFamilia(x) { return famFranja(x) + famRevisarHTML(x); }
+// Cuestionario para la familia: apagado desde la versión 1.2 (la entrada de datos es por documentos). Se conserva el código y lo recibido;
+// si un expediente ya tiene respuesta de la familia, se sigue mostrando para revisarla.
+const FAMILIA_CUESTIONARIO = false;
+function franjaFamilia(x) { if (!FAMILIA_CUESTIONARIO) return (x.familia ? famRevisarHTML(x) : "") + (typeof lecFranjaHTML === "function" ? lecFranjaHTML(x) : ""); return famFranja(x) + famRevisarHTML(x); }
 function famFranja(x) {
   const F = x.familia, env = x.familiaEnviado, l = familiaEnlace(x);
   if (F ? Date.now() - new Date(F.recibido + "T12:00:00") > 30 * 864e5 : !["encargo", "documentacion", undefined, ""].includes(x.fase)) return "";
@@ -9229,7 +9264,7 @@ function pkAcciones(x, R) {
     add("Añadir persona", "heredero conyuge hijo nuevo", I.person, "Añadir", () => { ui.sec = "herencia"; pkClick({ act: "addPersona" }); }, "Al expediente actual");
     add("Añadir bien", "inmueble vivienda cuenta nuevo", I.house, "Añadir", () => { ui.sec = "herencia"; pkClick({ act: "addBien" }); }, "Al expediente actual");
     add("Revisar con el asistente", "editar datos expediente", I.list, "Abrir", () => pkClick({ act: "editar" }));
-    add("Datos de la familia", "cuestionario enviar familia", I.person, "Abrir", () => pkClick({ act: "familia" }), "Enviar el cuestionario o cargar la respuesta");
+    if (typeof FAMILIA_CUESTIONARIO === "undefined" || FAMILIA_CUESTIONARIO) add("Datos de la familia", "cuestionario enviar familia", I.person, "Abrir", () => pkClick({ act: "familia" }), "Enviar el cuestionario o cargar la respuesta");
     add("Ajustar trámites al caso", "situaciones autonomo pensionista", I.sliders, "Abrir", () => pkClick({ act: "situ" }));
     add("Deudas y gastos", "hipoteca funeral", I.tax, "Abrir", () => pkClick({ act: "deudas" }));
     add("Plazos de este expediente al calendario", "ics calendario exportar", I.calplus, "Descargar", () => pkClick({ act: "icsx" }));
@@ -11495,7 +11530,7 @@ function bvPaso1() {
 function bvPaso2() {
   const C = [
     ["real", BV_I.real, "Con una herencia real", "El asistente pide causante, familia y bienes en unos diez minutos y calcula todo al momento.", "Asistente guiado"],
-    ["familia", BV_I.familia, "Con la familia", "Se abre el expediente y envías a la familia un cuestionario para el móvil. Cuando lo devuelven, solo revisas.", "Cuestionario por WhatsApp o correo"],
+    ["documentos", BV_I.familia, "Con los documentos", "Arrastra el certificado de defunción, el testamento, las notas simples, el IBI, los DNI y los certificados del banco: el expediente se rellena con lo que se lea y tú apruebas cada dato.", "Lectura en tu ordenador, sin enviar nada"],
     ["demo", BV_I.demo, "Ver un despacho en marcha", "Catorce expedientes ficticios en todas las fases, con plazos, bancos, firmas y rentabilidad. Se quitan con un clic.", "Modo demostración"],
   ];
   return `<p class="bv-kick">Paso 2 de 4</p><h2 class="bv-h" id="bv-h">¿Cómo quieres empezar?</h2><p class="bv-sub">Puedes cambiar de idea después: todo está en Expedientes y en Ajustes.</p>
@@ -11506,7 +11541,7 @@ function bvPaso3() {
     ["dia", "Expedientes", "Cada herencia es un expediente: la persona fallecida, sus herederos y sus bienes. La lista de la izquierda es su despacho.", "Barra lateral"],
     ["diag", "Impuestos y reparto", "Sucesiones, plusvalía y partición calculados al momento, paso a paso y con el artículo de cada regla.", "Pestañas del expediente"],
     ["fam", "Trámites y plazos", "Qué hay que hacer, ante quién y hasta cuándo. Los plazos pasan a su agenda y a su calendario.", "Trámites y Agenda"],
-    ["firma", "Documentos", "Cartas a bancos, cuaderno particional, paquete para la notaría e informe para la familia, con su membrete.", "Documentos"],
+    ["firma", "Documentos", "Sube los del caso y el expediente se rellena solo; de ahí salen cartas a bancos, cuaderno particional y paquete para la notaría con su membrete.", "Documentos"],
   ];
   return `<p class="bv-kick">Paso 3 de 4 · 20 segundos</p><h2 class="bv-h" id="bv-h">Cuatro cosas, y poco más</h2><p class="bv-sub">Todo lo demás está a un clic en «Más», dentro de cada expediente, y en el botón de ayuda.</p>
     <div class="bv-tour">${T.map(([il, t, s, h], i) => `<div class="bv-card" style="--i:${i}">${bvIlus(il)}<b>${t}</b><p>${s}</p><span class="bv-kbd">${esc(h)}</span></div>`).join("")}</div>`;
@@ -11515,7 +11550,7 @@ function bvPaso4() {
   const D = despachoCfg(), a = D.abogados[0] || {};
   const nom = /^titular/i.test(a.nombre || "") ? "" : (a.nombre || "").split(" ")[0];
   const acc = { real: "Abrir el asistente", familia: "Preparar el cuestionario", demo: "Ver el despacho en marcha" }[BV.camino] || "Ir a Mi día";
-  const que = { real: "Empezarás con el asistente del primer expediente.", familia: "Se abrirá un expediente nuevo con el cuestionario listo para enviar.", demo: "Se cargan 14 expedientes ficticios. Para quitarlos: «Salir» en la franja superior." }[BV.camino] || "Mi día te espera vacío: crea tu primer expediente cuando quieras.";
+  const que = { real: "Empezarás con el asistente del primer expediente.", documentos: "Se abrirá la ventana para arrastrar los documentos de la herencia; con ellos se crea el expediente.", demo: "Se cargan 14 expedientes ficticios. Para quitarlos: «Salir» en la franja superior." }[BV.camino] || "Mi día te espera vacío: crea tu primer expediente cuando quieras.";
   const fila = (k, v) => `<div class="bv-sum-r"><span>${k}</span><b>${v}</b></div>`;
   return `<div class="bv-done" aria-hidden="true">${BV_I.ok}</div><h2 class="bv-h bv-c" id="bv-h">Todo listo${nom ? ", " + esc(nom) : ""}</h2><p class="bv-sub bv-c">${esc(que)}</p>
     <div class="bv-sum">${fila("Despacho", esc(D.nombre || (BV.camino === "demo" ? "Márquez Collado Abogados (ficticio)" : "Sin nombre todavía")))}${fila("Colegio", esc(bvColegioCorto(D.colegio) || D.colegio || "—"))}${fila("Tarifa objetivo", num(D.tarifaHora) ? grp(num(D.tarifaHora), 0) + " €/hora" : "90 €/hora (por defecto)")}${fila("Prueba", esc(bvPrueba()))}</div>
@@ -11587,7 +11622,7 @@ function bvTerminar(camino) {
   bvGuardarDespacho(); bvMarcar(); bvCerrar(true);
   if (camino === "demo") { const n = demoCargar(); go({ vista: "radar", sheet: null }); toast(`Modo demostración: ${n} expedientes ficticios. Mayúsculas+D abre el guion`); return; }
   if (camino === "real") { if (typeof guAbrir === "function") setTimeout(() => guAbrir("primer"), 350); else pkClick({ act: "nuevo" }); return; }
-  if (camino === "familia") { pkClick({ act: "nuevo" }); if (typeof ui === "object" && ui.vista === "asist" && ui.borrador) pkClick({ act: "nuevoFamilia" }); return; }
+  if (camino === "documentos") { go({ vista: "inicio", sheet: { tipo: "lecNuevo" } }); if (typeof guAbrir === "function") setTimeout(() => guAbrir("leer"), 350); return; }
   go({ vista: "radar", sheet: null });
 }
 
@@ -13143,7 +13178,7 @@ const AY_SECCIONES = [
   ["calculos", "Cálculos", "Qué calcula Hereda+, cómo y qué no hace"],
   ["plazos", "Trámites y plazos", "Cómo se cuentan los plazos y cómo se siguen los trámites"],
   ["documentos", "Documentos", "Escritos, informe, notaría y modelo 650"],
-  ["familia", "Familia", "Cuestionario, carpeta y modo reunión"],
+  ["familia", "Familia", "Carpeta para el móvil y modo reunión"],
   ["despacho", "Despacho", "Mi día, terceros, tiempos y rentabilidad"],
   ["datos", "Datos y seguridad", "Dónde se guardan, copias, contraseña y cambio de equipo"],
   ["licencia", "Licencia", "Prueba, activación y renovación"],
@@ -13168,14 +13203,14 @@ const AY_ARTICULOS = [
     src: [["Ayuda de Google Chrome: apps web", "https://support.google.com/chrome/answer/9658361?hl=es"], ["Microsoft: usar un sitio como aplicación en Edge", "https://support.microsoft.com/es-es/outlook/use-the-web-version-of-outlook-like-a-desktop-app"], ["Apple: apps web de Safari en el Mac", "https://support.apple.com/es-es/104996"]] },
   { id: "despacho", s: "empezar", t: "Configurar el despacho y el equipo", d: "Nombre, colegio y localidad salen en los escritos; el equipo, en los expedientes.", kw: "despacho configurar ajustes membrete colegio localidad equipo abogados usuarios responsable rol nombre tarifa",
     b: [{ pasos: ["Abre **Despacho y ajustes** (abajo en la barra lateral; en el móvil, **Menú › Despacho y ajustes**).", "Escribe el nombre del despacho, el Colegio de la Abogacía y la localidad: salen en el membrete de los PDF y en los escritos.", "En **Equipo**, añade a cada abogado o colaborador con su rol. Cada expediente tiene un responsable.", "En **Quién usa este equipo**, elige tu nombre: firma las anotaciones de la bitácora."] },
-      "La bienvenida del primer día pide estos mismos datos, el contacto del despacho (teléfono, correo y dirección, que salen en las cartas, en la carpeta y el cuestionario de la familia y en la calculadora) y la tarifa objetivo por hora. Puedes repetirla en Ajustes › Demostración y ayuda › **Ver la bienvenida otra vez**.",
+      "La bienvenida del primer día pide estos mismos datos, el contacto del despacho (teléfono, correo y dirección, que salen en las cartas, en la carpeta de la familia y en la calculadora) y la tarifa objetivo por hora. Puedes repetirla en Ajustes › Demostración y ayuda › **Ver la bienvenida otra vez**.",
       { nota: "La configuración se guarda en cada equipo. Si el despacho trabaja con varios ordenadores, configúralo en cada uno o restaura una copia." }],
     ir: [["Despacho y ajustes", "ajustes"]] },
   { id: "primer-expediente", s: "empezar", t: "Abrir el primer expediente", d: "El asistente pide los datos en once pasos; lo que falte se completa después.", kw: "nuevo expediente crear alta asistente herencia causante empezar abrir",
     b: ["Pulsa **Nuevo expediente** (barra lateral o Expedientes). El asistente pide, por orden: encargo (cliente, referencia y responsable), nombre del causante, fecha del fallecimiento, residencia habitual, estado civil, testamento, herederos, bienes, deudas y gastos, y situaciones del causante.",
       "Para calcular bastan cuatro datos: la **fecha**, la **comunidad**, **una persona** y **un bien**. Un valor aproximado sirve para empezar.",
       "La fecha decide los plazos y la ley aplicable. La residencia habitual (donde vivió más días en los últimos cinco años) decide la normativa del impuesto. Si residía fuera de España, elige «Residía fuera de España» e indica la comunidad con la mayor parte de los bienes.",
-      "¿Prefieres que la familia rellene los datos? En la primera pantalla elige **Empezar así**: se crea el expediente y les envías el cuestionario.",
+      "¿Tienes ya los documentos de la herencia? En la primera pantalla elige **Empezar con los documentos**: se crea el expediente y les envías el cuestionario.",
       "Después todo se edita en el expediente: toca una persona o un bien para cambiarlo, o usa **Revisar con el asistente** en el menú ⋯."],
     ir: [["Nuevo expediente", "nuevo"]] },
   { id: "herederos-bienes", s: "empezar", t: "Herederos y bienes: los datos que cambian el resultado", d: "Edad, parentesco, convivencia, titularidad y valores.", kw: "herederos personas bienes edad parentesco relacion convivencia discapacidad patrimonio previo seguro donaciones titularidad ganancial proindiviso valor referencia catastro datos",
@@ -13314,6 +13349,14 @@ const AY_ARTICULOS = [
       "En Andalucía: un modelo 650 por heredero y el 660 con la relación de bienes, ante la Agencia Tributaria de Andalucía. Se presenta aunque salga 0 €.",
       "Hereda+ no presenta el modelo: prepara las cifras."],
     ir: [["Hoja del 650", "sec:firma:650"]] },
+  { id: "leer-documentos", s: "documentos", t: "Cargar el expediente desde los documentos", d: "Sube el certificado de defunción, el testamento, las notas simples… y el programa propone los datos.", kw: "leer documentos subir pdf escaneo foto ocr reconocer extraer cargar datos automatico testamento defuncion ultimas voluntades nota simple catastro ibi dni banco compraventa",
+    b: ["Desde la portada, **Desde documentos** crea un expediente nuevo con lo que lean los documentos que arrastres. Dentro de un expediente, al subir un PDF o una foto en Documentos › Archivo, se lee y se proponen los datos nuevos.",
+      "Documentos que reconoce: certificado de defunción, certificado de últimas voluntades, certificado de seguros de fallecimiento, testamento abierto, nota simple del Registro, certificación catastral y recibo del IBI, DNI (la zona de letras del reverso), certificado bancario de posiciones y escritura de compraventa.",
+      "Lo leído aparece como una lista de propuestas: causante (nombre, fecha y lugar del fallecimiento, estado civil, DNI, comunidad autónoma), testamento (reparto, notario, fecha y protocolo), personas (cónyuge, hijos, legatarios, con su DNI si está en otro documento), inmuebles (referencia catastral, valores catastrales, municipio, titularidad, cargas, fecha y precio de compra), cuentas y fondos con su saldo, hipotecas y seguros. Marcas lo que quieras cargar; lo dudoso o lo que choca con un dato que ya tenía el expediente va sin marcar.",
+      "Lo que se carga queda señalado como **leído de documento** en las fichas, hasta que lo revises. Nada se inventa: lo que no se reconoce se deja vacío y se avisa.",
+      "Un PDF con texto se lee en un segundo. Un escaneo o una foto se reconoce por imagen en el propio ordenador (de cinco a treinta segundos por página la primera vez). Todo ocurre en este equipo: los documentos no se envían a ningún sitio.",
+      "Funciona en la versión web (https://heredate.github.io). En el archivo único los documentos se archivan, pero no se leen."],
+    ir: [["Crear un expediente desde documentos", "lecNuevo"], ["Guía: cargar desde documentos", "guia:leer"]] },
   { id: "archivo", s: "documentos", t: "Archivo de documentos del expediente", d: "DNI, escrituras, certificados… guardados con el expediente.", kw: "archivo adjuntos subir documentos escanear arrastrar dni escrituras certificados categorias",
     b: ["En Documentos › **Archivo** subes o arrastras los documentos del expediente. Se clasifican solos por el nombre del archivo (identidad, defunción, testamento, bancos, inmuebles, impuestos…) y puedes asignarlos a un trámite.",
       "«Lo que hace falta» es la lista de documentos del caso: márcalos al recibirlos.",
@@ -13322,7 +13365,7 @@ const AY_ARTICULOS = [
     ir: [["Documentos del expediente", "sec:documentos"]] },
 
   // ── Familia ──
-  { id: "cuestionario", s: "familia", t: "Pedir los datos a la familia", d: "Un cuestionario para el móvil; tú solo revisas.", kw: "familia cuestionario formulario datos enviar whatsapp correo respuesta cargar archivo cliente",
+  { id: "cuestionario", s: "familia", oculto: true, t: "Pedir los datos a la familia (función apagada)", d: "Un cuestionario para el móvil; tú solo revisas.", kw: "familia cuestionario formulario datos enviar whatsapp correo respuesta cargar archivo cliente",
     b: ["Desde el expediente (franja «Pide los datos a la familia» o menú ⋯ › Datos de la familia) envías a la familia un cuestionario: datos del fallecido, herederos, bienes, deudas y documentos que tienen. Unos diez minutos.",
       { pasos: ["Escribe el móvil o el correo del cliente y envía el enlace por WhatsApp o por correo, con el mensaje ya escrito. Si Hereda+ no se usa desde su dirección web, descarga el cuestionario como archivo y envíalo tú.", "La familia lo rellena en el móvil y, al terminar, te envía el archivo que se descarga.", "Cárgalo con **Cargar la respuesta**. También desde Ajustes › Importar un archivo: se une al expediente con la misma referencia o crea uno nuevo."] },
       "Copiar el enlace o descargar el archivo no lo da por enviado: si lo envías por otro medio, pulsa **Marcar como enviado**.",
@@ -13499,7 +13542,7 @@ function ayCuerpo(a) {
 let AY_IDX = null;
 function ayIndice() {
   if (AY_IDX) return AY_IDX;
-  AY_IDX = AY_ARTICULOS.map((a) => { const cuerpo = ayCuerpo(a); return { a, t: ayNorm(ayPlano(a.t)), d: ayNorm(ayPlano(a.d)), kw: ayNorm(a.kw + " " + aySec(a.s)[1]), c: ayNorm(cuerpo), plano: cuerpo }; });
+  AY_IDX = AY_ARTICULOS.filter((a) => !a.oculto).map((a) => { const cuerpo = ayCuerpo(a); return { a, t: ayNorm(ayPlano(a.t)), d: ayNorm(ayPlano(a.d)), kw: ayNorm(a.kw + " " + aySec(a.s)[1]), c: ayNorm(cuerpo), plano: cuerpo }; });
   return AY_IDX;
 }
 const ayRaiz = (w) => (w.length > 4 ? w.replace(/(es|s)$/, "") : w);
@@ -13567,7 +13610,7 @@ function ayPasos() {
     { id: "despacho", titulo: "Configura el despacho", sub: "Nombre, colegio y localidad para el membrete; tu equipo.", hecho: !!String(D.nombre || "").trim(), ir: "ajustes", accion: "Abrir ajustes", art: "despacho" },
     { id: "copia", titulo: fsa ? "Activa la copia automática" : "Descarga tu primera copia", sub: fsa ? "Una copia diaria en OneDrive, Dropbox o el servidor del despacho." : "Este navegador no permite copias automáticas: descarga una copia y guárdala fuera del equipo.", hecho: !!(carpeta || (!fsa && DB.ultimaCopia)), ir: fsa ? "copiaAuto" : "copiaDescargar", accion: fsa ? "Elegir carpeta" : "Descargar", art: "copias" },
     { id: "expediente", titulo: "Abre tu primer expediente", sub: "Fecha, comunidad, una persona y un bien bastan para calcular.", hecho: R.length > 0, ir: "nuevo", accion: "Nuevo expediente", art: "primer-expediente" },
-    { id: "cuestionario", titulo: "Envía el cuestionario a la familia", sub: "Rellenan herederos, bienes y documentos desde el móvil.", hecho: R.some((x) => x.familiaEnviado || x.familia), espera: !R.length, ir: "familia", accion: "Enviar", art: "cuestionario" },
+    { id: "documentos", titulo: "Carga un expediente desde los documentos", sub: "Defunción, testamento, notas simples, IBI, DNI, bancos: se leen y tú apruebas.", hecho: R.some((x) => (x.docsLeidos || []).length), espera: false, ir: "lecNuevo", accion: "Desde documentos", art: "leer-documentos" }, //uestionario" },
     { id: "informe", titulo: "Descarga el informe de cálculo en PDF", sub: "Masa, reparto, Sucesiones paso a paso y plusvalía, con tu membrete.", hecho: bit(/Informe de cálculo descargado/), espera: !R.length, ir: "informePdf", accion: "Descargar", art: "informe-pdf" },
     { id: "licencia", titulo: "Activa la licencia", sub: lic && lic.tipo === "prueba" ? `Prueba: ${lic.diasRestantes === 1 ? "queda 1 día" : "quedan " + lic.diasRestantes + " días"}.` : "Pega el código HRD1-… que recibiste al contratar.", hecho: !!(lic && lic.tipo === "licencia"), ir: "ajustes:licencia", accion: "Activar", art: "activar" },
   ];
@@ -13615,6 +13658,7 @@ function ayIr(dest) {
     nuevo: () => ayClick({ act: "nuevo" }), cartera: () => go({ vista: "inicio", sheet: null }), midia: () => go({ vista: "radar", sheet: null }), agenda: () => go({ vista: "agenda", sheet: null }),
     rent: () => go({ vista: "rent", sheet: null }), biblio: () => go({ vista: "biblio", sheet: null }), demo: () => ayClick({ dm: "cargar" }), ejemplos: () => ayClick({ act: "ejemplos" }),
     paleta: () => { if (typeof pkAbrir === "function") pkAbrir(); }, atajos: () => { if (typeof pkAbrir === "function") pkAbrir("atajos"); }, opinion: () => ayClick({ act: "opinion" }), novedades: () => ayClick({ act: "novedades" }),
+    guia: () => { if (typeof guAbrir === "function") setTimeout(() => guAbrir(a), 250); }, lecNuevo: () => ayClick({ act: "lecNuevo" }),
     calculadora: () => ayClick({ wg: "abrir" }), copiaAuto: () => ayClick({ sg: "carpeta" }), copiaDescargar: () => ayClick({ sg: "descargar" }),
     sec: () => conExp((x) => { const v = { vista: "exp", id: x.id, sec: a, sheet: null }; if (a === "despacho") v.sub = b || "encargo"; if (a === "documentos") v.dsub = b === "escritos" ? "escritos" : "archivo"; if (a === "firma") ui.vfv = b === "650" ? "650" : "check"; go(v); }),
     doc: () => conExp(() => { ui.sheet = { tipo: "doc", id: a }; render(); }),
@@ -13699,7 +13743,7 @@ function ayBloquesHTML(a) {
 function ayFilaArt(a, extra) { return `<button type="button" class="ay-row" data-ay="art" data-ay-v="${a.id}"><span class="ay-row-t"><b>${ayHTML(a.t)}</b><small>${extra || ayHTML(a.d)}</small></span><span class="ay-row-i">${AY_IC.go}</span></button>`; }
 function ayVistaArt() {
   const a = ayArt(AY.art); if (!a) return ayVistaInicio();
-  const s = aySec(a.s), hermanos = AY_ARTICULOS.filter((q) => q.s === a.s && q.id !== a.id);
+  const s = aySec(a.s), hermanos = AY_ARTICULOS.filter((q) => q.s === a.s && q.id !== a.id && !q.oculto);
   const ir = (a.ir || []).length ? `<div class="ay-ir">${a.ir.map(([t, d], i) => `<button type="button" class="btn sm ${i ? "gray" : ""}" data-ay="ir" data-ay-v="${esc(d)}">${ayHTML(t)}${AY_IC.go}</button>`).join("")}</div>` : "";
   const src = a.src ? `<p class="ay-src">Fuentes (consultadas el 4-10-2026): ${a.src.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(" · ")}</p>` : "";
   return `<article class="ay-art" aria-labelledby="ay-at">
@@ -13711,7 +13755,7 @@ function ayVistaArt() {
   </article>`;
 }
 function ayVistaSec() {
-  const s = aySec(AY.sec), L = AY_ARTICULOS.filter((a) => a.s === s[0]);
+  const s = aySec(AY.sec), L = AY_ARTICULOS.filter((a) => a.s === s[0] && !a.oculto);
   return `<nav class="ay-crumb"><button type="button" data-ay="inicio">Ayuda</button><span>›</span><span>${ayHTML(s[1])}</span></nav><h2 class="ay-h2">${ayHTML(s[1])}</h2><p class="ay-lead">${ayHTML(s[2])}</p><div class="ay-list">${L.map((a) => ayFilaArt(a)).join("")}</div>`;
 }
 function ayVistaBuscar() {
@@ -13724,7 +13768,7 @@ function ayVistaInicio() {
   const P = ayPasos(), n = P.filter((p) => p.hecho).length;
   const ctx = c ? `<button type="button" class="ay-ctx" data-ay="art" data-ay-v="${c.id}"><span class="ay-ctx-k">En esta pantalla</span><b>${ayHTML(c.t)}</b><small>${ayHTML(c.d)}</small><span class="ay-ctx-go">Leer ${AY_IC.go}</span></button>` : "";
   const pasos = n < P.length && (!c || c.id !== "primeros-pasos") ? `<button type="button" class="ay-ctx ay-ctx2" data-ay="art" data-ay-v="primeros-pasos"><span class="ay-ctx-k">Primeros 30 minutos · ${n} de ${P.length}</span><b>Deja el despacho listo para trabajar</b><span class="ay-mini"><i style="width:${Math.round((n / P.length) * 100)}%"></i></span></button>` : "";
-  const secs = AY_SECCIONES.map(([id, nom, sub]) => { const L = AY_ARTICULOS.filter((a) => a.s === id); return `<div class="ay-secc"><button type="button" class="ay-secc-h" data-ay="sec" data-ay-v="${id}"><b>${ayHTML(nom)}</b><small>${ayHTML(sub)}</small></button><ul>${L.slice(0, 5).map((a) => `<li><button type="button" data-ay="art" data-ay-v="${a.id}">${ayHTML(a.t)}</button></li>`).join("")}${L.length > 5 ? `<li><button type="button" class="ay-todos" data-ay="sec" data-ay-v="${id}">Ver los ${L.length}</button></li>` : ""}</ul></div>`; }).join("");
+  const secs = AY_SECCIONES.map(([id, nom, sub]) => { const L = AY_ARTICULOS.filter((a) => a.s === id && !a.oculto); return `<div class="ay-secc"><button type="button" class="ay-secc-h" data-ay="sec" data-ay-v="${id}"><b>${ayHTML(nom)}</b><small>${ayHTML(sub)}</small></button><ul>${L.slice(0, 5).map((a) => `<li><button type="button" data-ay="art" data-ay-v="${a.id}">${ayHTML(a.t)}</button></li>`).join("")}${L.length > 5 ? `<li><button type="button" class="ay-todos" data-ay="sec" data-ay-v="${id}">Ver los ${L.length}</button></li>` : ""}</ul></div>`; }).join("");
   const guias = typeof guHTMLLista === "function" ? `<div class="ay-secc" style="margin-bottom:14px"><div class="ay-secc-h" style="cursor:default"><b>Guías interactivas</b><small>Recorren la pantalla real paso a paso: tú haces cada cosa y la guía avanza sola. De dos a ocho minutos.</small></div>${guHTMLLista()}</div>` : "";
   return `<div class="ay-top">${ctx}${pasos}</div>${guias}
     <div class="ay-secs">${secs}</div>
@@ -13980,6 +14024,13 @@ const GU_GUIAS = [
     { t: "Los escritos", txt: "Carta a cada banco, solicitud de certificados, hoja de encargo, cuaderno particional, nota para la notaría, liquidación con recibí. Cada uno se abre, se revisa y se descarga en PDF con tu membrete.", sel: '[data-dsub="escritos"]', hecho: () => ui.dsub === "escritos", hacer: () => go({ dsub: "escritos" }), accion: "Ver los escritos" },
     { t: "Listo para firmar", txt: "En «Más» › Listo para firmar: comprueba NIF, catastro, títulos y cuadre antes de la notaría, y prepara el paquete notarial. Fin de la guía.", sel: '[data-act="snMas"]', movil: '.tabbar [data-act="mas"]' },
   ] },
+  { id: "leer", t: "Cargar un expediente desde los documentos", d: "Sube el certificado de defunción, el testamento, las notas simples… y revisa lo que el programa propone.", min: 3, pasos: [
+    { t: "Desde documentos", txt: "En la portada, «Desde documentos» crea un expediente a partir de los PDF o fotos que arrastres: defunción, últimas voluntades, seguros, testamento, notas simples, Catastro o IBI, DNI, certificados bancarios y escrituras. Pulsa para abrirlo.", sel: '[data-act="lecNuevo"]', ir: () => go({ vista: "inicio", sheet: null, snMas: false }), hecho: () => ui.sheet && ui.sheet.tipo === "lecNuevo", hacer: () => { ui.sheet = { tipo: "lecNuevo" }; render(); }, accion: "Abrir" },
+    { t: "Arrastra o elige", txt: "Suelta aquí todos los documentos que tengas, de una vez. Un PDF con texto se lee al instante; un escaneo o una foto se reconoce por imagen en este ordenador. Nada se envía fuera.", sel: "input[data-lecnuevo]" },
+    { t: "Revisa las propuestas", txt: "Lo leído aparece por grupos: causante, testamento, personas, inmuebles, cuentas, deudas y seguros. Cada línea dice de qué documento sale. Lo dudoso o lo que choca con un dato que ya existía va sin marcar.", sel: ".lec-sheet .body", hecho: () => !!(typeof LEC === "object" && LEC.resultado), ir: () => {} },
+    { t: "Cargar lo marcado", txt: "Con «Cargar lo marcado» los datos entran en el expediente señalados como «leído de documento». Los documentos quedan además archivados en Documentos › Archivo. Después puedes añadir más: cada documento que subas dentro del expediente se lee y propone solo lo nuevo.", sel: '[data-act="lecAplicar"], .lec-sheet .drop' },
+    { t: "Dentro del expediente", txt: "En Herederos y bienes, cada persona o bien cargado lleva la marca «Leído de documento» hasta que lo revises. En el Resumen, la tarjeta «Leído de los documentos» guarda el DNI del causante, el notario y la fecha del testamento y los seguros. Fin de la guía.", sel: '[data-sec="herencia"]', ir: () => guIrExp("herencia") },
+  ] },
   { id: "ajustes", t: "Copias de seguridad, licencia y ajustes", d: "Lo que conviene dejar hecho el primer día.", min: 2, pasos: [
     { t: "Despacho y ajustes", txt: "Aquí está todo lo del despacho. Pulsa para abrirlo.", sel: '.side [data-act="ajustes"]', movil: '[data-act="menuApp"]', hecho: () => ui.sheet && ui.sheet.tipo === "ajustes", hacer: () => { ui.sheet = { tipo: "ajustes" }; render(); }, accion: "Abrir ajustes" },
     { t: "Datos del despacho", txt: "Nombre, colegio, localidad, teléfono, correo y dirección: salen en el membrete de los escritos, en las cartas a bancos y en la carpeta de la familia.", sel: "#a-n" },
@@ -13990,7 +14041,7 @@ const GU_GUIAS = [
   ] },
 ];
 
-function guLista() { return GU_GUIAS; }
+function guLista() { return typeof FAMILIA_CUESTIONARIO !== "undefined" && !FAMILIA_CUESTIONARIO ? GU_GUIAS.filter((g) => g.id !== "familia") : GU_GUIAS; }
 function guActiva() { return !!GU.id; }
 function guGuia() { return GU_GUIAS.find((g) => g.id === GU.id); }
 const guPasoAct = () => { const g = guGuia(); return g ? g.pasos[GU.i] : null; };
@@ -14098,7 +14149,7 @@ function guTick() {
 // Lista para la ayuda y la portada
 function guHTMLLista(compacta) {
   const V = DB.guias || {};
-  return `<div class="gu-lista ${compacta ? "gu-compacta" : ""}">${GU_GUIAS.map((g) => `<button type="button" class="gu-item" data-gu="abrir" data-gu-v="${g.id}"><span class="gu-ic">${V[g.id] ? "✓" : g.pasos.length}</span><span class="gu-it"><b>${esc(g.t)}</b><small>${esc(g.d)} · ${g.min} min${V[g.id] ? " · vista" : ""}</small></span><span class="gu-go">Empezar</span></button>`).join("")}</div>`;
+  return `<div class="gu-lista ${compacta ? "gu-compacta" : ""}">${guLista().map((g) => `<button type="button" class="gu-item" data-gu="abrir" data-gu-v="${g.id}"><span class="gu-ic">${V[g.id] ? "✓" : g.pasos.length}</span><span class="gu-it"><b>${esc(g.t)}</b><small>${esc(g.d)} · ${g.min} min${V[g.id] ? " · vista" : ""}</small></span><span class="gu-go">Empezar</span></button>`).join("")}</div>`;
 }
 // Botones [data-gu="abrir"] en cualquier parte (centro de ayuda, portada, bienvenida)
 document.addEventListener("click", (e) => {
@@ -14107,6 +14158,524 @@ document.addEventListener("click", (e) => {
   guAbrir(b.dataset.guV);
 }, true);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && GU.id && !ui.sheet && !(typeof PK === "object" && PK.abierta)) { e.stopPropagation(); guCerrar(); } }, true);
+
+// ───────────────────── Lector de documentos (prefijo lec) ─────────────────────
+// Lee los documentos de la herencia que el despacho archiva (PDF con texto, PDF escaneado o foto) y propone los datos del expediente
+// que salen de ellos, siempre como propuesta que el abogado acepta o descarta. Sin inteligencia artificial: extracción de texto
+// (pdf.js), reconocimiento óptico de caracteres cuando el PDF es una imagen (Tesseract, en el propio navegador) y reglas escritas
+// sobre la estructura de cada documento oficial. Nada sale del ordenador del despacho: las librerías se cargan desde la propia web
+// (carpeta /lib) solo la primera vez que hacen falta.
+// Documentos reconocidos: certificado de defunción, certificado de actos de última voluntad, certificado de contratos de seguros de
+// cobertura de fallecimiento, certificación/consulta catastral y recibo del IBI, nota simple del Registro de la Propiedad, testamento
+// abierto (copia con texto o escaneada), DNI (zona de lectura mecánica), certificado bancario de posiciones y escritura de compraventa.
+// API: lecTrasArchivar(files, expId) · lecLeerArchivos(files) → [{nombre, tipo, texto, datos}] · lecAnalizar(texto, nombre) → datos
+//      lecSheetHTML() · lecDisponible() · lecAplicar(x, seleccion)
+const LEC = { pdf: null, ocr: null, ocrCargando: null, estado: null, resultado: null, exp: null };
+const LEC_TIPOS = { defuncion: "Certificado de defunción", ultimas: "Certificado de últimas voluntades", seguros: "Certificado de seguros de fallecimiento", catastro: "Certificación catastral", ibi: "Recibo del IBI", notasimple: "Nota simple del Registro", testamento: "Testamento", dni: "DNI", bancario: "Certificado bancario de posiciones", compraventa: "Escritura de compraventa", desconocido: "Documento sin reconocer" };
+const lecDisponible = () => typeof hayWebPublica === "function" && hayWebPublica() && typeof webURL === "function";
+
+// ── Carga perezosa de las librerías (solo en la web publicada; el archivo único no las lleva) ──
+async function lecPdfLib() {
+  if (LEC.pdf) return LEC.pdf;
+  if (!lecDisponible()) throw new Error("solo-web");
+  const m = await import(webURL("/lib/pdf.min.mjs"));
+  m.GlobalWorkerOptions.workerSrc = webURL("/lib/pdf.worker.min.mjs");
+  LEC.pdf = m; return m;
+}
+async function lecOcr() {
+  if (LEC.ocr) return LEC.ocr;
+  if (LEC.ocrCargando) return LEC.ocrCargando;
+  if (!lecDisponible()) throw new Error("solo-web");
+  LEC.ocrCargando = (async () => {
+    const M = await import(webURL("/lib/tesseract.esm.min.js")); const T = M.createWorker ? M : M.default;
+    const w = await T.createWorker("spa", 1, { workerPath: webURL("/lib/worker.min.js"), corePath: webURL("/lib/"), langPath: webURL("/lib/"), gzip: true, logger: (m) => { if (m.status && LEC.estado) lecProgreso(`${LEC.estado.base} · ${m.status === "recognizing text" ? "reconociendo texto " + Math.round((m.progress || 0) * 100) + " %" : m.status === "loading language traineddata" ? "cargando el idioma" : m.status === "loading tesseract core" ? "preparando el reconocimiento" : m.status}`); } });
+    LEC.ocr = w; return w;
+  })();
+  return LEC.ocrCargando;
+}
+
+// ── Texto de un archivo ──
+// Líneas reconstruidas por posición (misma altura → misma línea), para que «Valor catastral 140.000,00 €» quede junto.
+async function lecTextoPDF(file) {
+  const pdf = await lecPdfLib();
+  const doc = await pdf.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  let texto = "", conTexto = 0;
+  const paginas = Math.min(doc.numPages, 12);
+  for (let i = 1; i <= paginas; i++) {
+    const pg = await doc.getPage(i); const tc = await pg.getTextContent();
+    const filas = new Map();
+    for (const it of tc.items) { if (!it.str || !it.str.trim()) continue; const y = Math.round(it.transform[5] / 4); const f = filas.get(y) || []; f.push({ x: it.transform[4], s: it.str }); filas.set(y, f); }
+    const lineas = [...filas.entries()].sort((a, b) => b[0] - a[0]).map(([, f]) => f.sort((a, b) => a.x - b.x).map((q) => q.s).join(" ").replace(/\s{2,}/g, " ").trim());
+    const t = lineas.join("\n"); if (t.replace(/\s/g, "").length > 60) conTexto++;
+    texto += (texto ? "\n\f\n" : "") + t;
+  }
+  if (conTexto >= Math.max(1, Math.ceil(paginas / 2))) return { texto, escaneado: false, paginas: doc.numPages };
+  // Escaneado: se reconoce por imagen (hasta 6 páginas, a 150 ppp)
+  let ocr = "";
+  for (let i = 1; i <= Math.min(doc.numPages, 6); i++) {
+    lecProgreso(`${LEC.estado?.base || "Leyendo"} · página ${i} de ${Math.min(doc.numPages, 6)}`);
+    const pg = await doc.getPage(i); const vp = pg.getViewport({ scale: 2 });
+    const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+    await pg.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+    ocr += (ocr ? "\n\f\n" : "") + (await lecOcrCanvas(c));
+  }
+  return { texto: ocr, escaneado: true, paginas: doc.numPages };
+}
+async function lecOcrCanvas(c) { const w = await lecOcr(); const r = await w.recognize(c); return r.data.text || ""; }
+async function lecTextoImagen(file) {
+  const w = await lecOcr();
+  const r = await w.recognize(file); return { texto: r.data.text || "", escaneado: true, paginas: 1 };
+}
+async function lecTexto(file) {
+  const n = String(file.name || "").toLowerCase();
+  if (file.type === "application/pdf" || n.endsWith(".pdf")) return lecTextoPDF(file);
+  if (/^image\//.test(file.type) || /\.(jpe?g|png|webp|heic|tiff?)$/.test(n)) return lecTextoImagen(file);
+  return null;
+}
+
+// ── Utilidades de texto ──
+const lecN = (t) => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+const LEC_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const LEC_UNI = { cero: 0, un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20, veintiuno: 21, veintiun: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25, veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90, cien: 100, ciento: 100, doscientos: 200, trescientos: 300, cuatrocientos: 400, quinientos: 500, seiscientos: 600, setecientos: 700, ochocientos: 800, novecientos: 900, mil: 1000 };
+// «veintiséis», «treinta y uno», «dos mil veintiséis», «mil novecientos noventa y cinco»
+function lecPalabrasNumero(s) {
+  const w = lecN(s).toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((q) => q && q !== "y");
+  if (!w.length || !w.every((q) => q in LEC_UNI)) return null;
+  let total = 0, acc = 0;
+  for (const q of w) { const v = LEC_UNI[q]; if (v === 1000) { total += (acc || 1) * 1000; acc = 0; } else acc += v; }
+  return total + acc;
+}
+const lecIso = (d, m, y) => { d = Number(d); m = Number(m); y = Number(y); if (!(d >= 1 && d <= 31 && m >= 1 && m <= 12 && y >= 1900 && y <= 2100)) return null; return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`; };
+// Todas las fechas de un texto, con su posición: numéricas, «20 de abril de 2026» y notariales «veinte de abril de dos mil veintiséis»
+function lecFechas(t) {
+  const out = [];
+  for (const m of t.matchAll(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})\b/g)) { const f = lecIso(m[1], m[2], m[3]); if (f) out.push({ f, i: m.index }); }
+  const mes = LEC_MESES.join("|");
+  for (const m of t.matchAll(new RegExp(`\\b(\\d{1,2}|[a-záéíóú]+(?: y [a-záéíóú]+)?) de (${mes}) de (\\d{4}|[a-záéíóú]+(?: [a-záéíóú]+){0,4})`, "gi"))) {
+    const d = /^\d+$/.test(m[1]) ? Number(m[1]) : lecPalabrasNumero(m[1]);
+    let y = null; if (/^\d+$/.test(m[3])) y = Number(m[3]); else { const W = m[3].split(" "); for (let k = W.length; k >= 1 && y == null; k--) { const v = lecPalabrasNumero(W.slice(0, k).join(" ")); if (v && v >= 1900) y = v; } }
+    const f = d && y ? lecIso(d, LEC_MESES.indexOf(m[2].toLowerCase()) + 1, y) : null;
+    if (f) out.push({ f, i: m.index });
+  }
+  return out.sort((a, b) => a.i - b.i);
+}
+const lecFechaCerca = (t, re, ventana = 160) => { const m = re.exec(t); if (!m) return null; const z = t.slice(m.index, m.index + m[0].length + ventana); const F = lecFechas(z); return F.length ? F[0].f : null; };
+const lecNum = (s) => { if (s == null) return null; const v = Number(String(s).replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, "")); return Number.isFinite(v) ? v : null; };
+const lecDineroCerca = (t, re, ventana = 120) => { const m = re.exec(t); if (!m) return null; const z = t.slice(m.index + m[0].length, m.index + m[0].length + ventana); const q = /(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\s*(?:€|euros?|EUR)?/i.exec(z); return q ? lecNum(q[1]) : null; };
+const lecNifOk = (v) => { const m = /^(\d{8})([A-Z])$/.exec(String(v || "").toUpperCase().replace(/[\s-]/g, "")); return !!m && "TRWAGMYFPDXBNJZSQVHLCKE"[Number(m[1]) % 23] === m[2]; };
+const lecNifs = (t) => [...new Set([...t.matchAll(/\b(\d{8})\s?[-]?\s?([A-Za-z])\b/g)].map((m) => m[1] + m[2].toUpperCase()).filter(lecNifOk))];
+// «DON ANTONIO JIMÉNEZ SOLER» → «Antonio Jiménez Soler»
+const LEC_MINUS = ["de", "del", "la", "las", "los", "y", "e", "da", "do", "dos", "van", "von", "di"];
+// «MÁLAGA» → «Málaga», «SAN PEDRO DE ALCÁNTARA» → «San Pedro de Alcántara» (para lugares y municipios; sin mínimo de palabras)
+const lecTitulo = (s) => String(s || "").replace(/\s+/g, " ").trim().replace(/[,.;:]+$/, "").toLowerCase().split(" ").map((w, i) => (i && LEC_MINUS.includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ").replace(/-(\w)/g, (q, c) => "-" + c.toUpperCase());
+function lecNombre(s) {
+  const t = String(s || "").replace(/\s+/g, " ").trim().replace(/^(DON|DOÑA|D\.ª|Dª|D\.|DÑA\.?|SR\.?|SRA\.?)\s+/i, "").replace(/[,.;:]+$/, "");
+  if (!t || t.length < 4 || t.length > 90) return "";
+  let W = t.split(" ");
+  while (W.length && LEC_PARA.has(lecN(W[0]).replace(/[^A-Z]/g, ""))) W.shift(); // «TITULARIDAD DON ANTONIO…»: se quita lo que no es nombre
+  W = W.filter((w, i) => !(i === 0 && /^(DON|DOÑA|Dª|D\.|DÑA\.?)$/i.test(w)));
+  const corte = W.findIndex((w, i) => i > 0 && LEC_PARA.has(lecN(w).replace(/[^A-Z]/g, "")));
+  const P = corte > 0 ? W.slice(0, corte) : W;
+  if (P.length < 2 || P.join(" ").length < 4 || P.join(" ").length > 70) return "";
+  return lecTitulo(P.join(" "));
+}
+// Palabras que nunca forman parte de un nombre propio: cortan el nombre cuando el documento sigue con otro campo
+const LEC_PARA = new Set(["LOCALIDAD", "PROTOCOLO", "FECHA", "TIPO", "POBLACION", "COLEGIO", "PROVINCIA", "DNI", "NIF", "SEXO", "NACIONALIDAD", "DOMICILIO", "CALLE", "CON", "MAYOR", "VECINO", "VECINA", "NACIDO", "NACIDA", "NATURAL", "ESTADO", "HORA", "LUGAR", "DOCUMENTO", "NOMBRE", "PRIMER", "SEGUNDO", "APELLIDOS", "APELLIDO", "NOTARIO", "NOTARIA", "NUMERO", "TITULAR", "TITULARES", "CASADO", "CASADA", "VIUDO", "VIUDA", "SOLTERO", "SOLTERA", "EN", "QUE", "QUIEN", "CUYO", "CUYA", "CERTIFICA", "CERTIFICADO", "REGISTRO", "INSCRITO", "INSCRITA", "FALLECIDO", "FALLECIDA", "HIJO", "HIJA", "ESPOSO", "ESPOSA", "SITA", "SITO", "SOBRE", "PARA", "POR", "SIN", "ENTIDAD", "ASEGURADORA", "POLIZA", "CUENTA", "IBAN", "SALDO", "REFERENCIA", "CLASE", "USO", "SUPERFICIE", "VALOR", "LINDA", "CUOTA", "CARGAS", "TITULARIDAD", "OTORGA", "COMPARECE", "MANIFIESTA", "INTERVIENE", "INSTITUYE", "LEGA", "ANTE"]); // («la», «el» no se incluyen: forman parte de apellidos como «de la Torre»)
+// Descripción de un bien (frase larga): limpia espacios y pone mayúscula inicial, sin tocar el resto
+const lecFrase = (s, max = 110) => { let t = String(s || "").replace(/\s+/g, " ").trim().replace(/[,.;:]+$/, ""); if (t.length > max) t = t.slice(0, max).replace(/\s+\S*$/, "") + "…"; t = t.split(" ").map((w) => (w.length > 3 && w === w.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(w) ? w.toLowerCase() : w)).join(" "); return t.charAt(0).toUpperCase() + t.slice(1); };
+const LEC_TRAT = "(?:DON|DOÑA|D\\.ª|Dª|D\\.|DÑA\\.?)";
+const LEC_NOMBRE_RE = `((?:[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ'\\-]+\\s*){2,6})`;
+const lecRefCat = (t) => { const m = /\b(\d{7}[A-Z]{2}\d{4}[A-Z]\d{4}[A-Z]{2}|\d{5}[A-Z]\d{3}\d{5}\d{4}[A-Z]{2}|[0-9A-Z]{20})\b/.exec(t.replace(/\s+/g, " ")); if (!m) return ""; const r = m[1]; return /\d/.test(r) && /[A-Z]{2}$/.test(r) ? r : ""; };
+
+// ── Detección del tipo de documento ──
+// Puntuación por huellas de cada documento (el que más suma gana; si ninguno llega a 3, decide el nombre del archivo)
+const LEC_HUELLAS = {
+  seguros: [[/COBERTURA DE FALLECIMIENTO/, 3], [/CONTRATOS? DE SEGUROS/, 3], [/ASEGURADOR/, 1], [/POLIZA/, 1]],
+  ultimas: [[/ACTOS? DE ULTIMA VOLUNTAD|ULTIMAS VOLUNTADES/, 3], [/OTORGANTE/, 1], [/PROTOCOLO/, 1]],
+  notasimple: [[/NOTA SIMPLE/, 3], [/REGISTRO DE LA PROPIEDAD/, 2], [/IDUFIR|\bCRU\b/, 2], [/\bFINCA\b/, 1], [/\bCARGAS\b/, 1], [/TITULARIDAD/, 1], [/PLENO DOMINIO/, 1]],
+  ibi: [[/IMPUESTO SOBRE BIENES INMUEBLES/, 3], [/\bI\.?B\.?I\.?\b/, 2], [/\bRECIBO\b/, 1], [/CUOTA/, 1], [/BASE LIQUIDABLE/, 1], [/TIPO DE GRAVAMEN/, 1]],
+  catastro: [[/CERTIFICACION CATASTRAL|CONSULTA (?:DESCRIPTIVA|CATASTRAL)|DESCRIPTIVA Y GRAFICA/, 3], [/REFERENCIA CATASTRAL/, 1], [/VALOR CATASTRAL/, 1], [/CATASTRO/, 1], [/USO PRINCIPAL|SUPERFICIE CONSTRUIDA/, 1]],
+  testamento: [[/\bTESTAMENTO\b/, 2], [/INSTITUYE/, 2], [/TESTADOR/, 2], [/HEREDER/, 1], [/\bLEGA\b|LEGADO/, 1], [/COMPARECE/, 1], [/CLAUSULA/, 1], [/USUFRUCTO/, 1], [/LEGITIM/, 1]],
+  defuncion: [[/DEFUNCION/, 2], [/REGISTRO CIVIL/, 2], [/FALLECI/, 1], [/INSCRIPCION/, 1], [/CERTIFICA/, 1], [/ESTADO CIVIL/, 1]],
+  dni: [[/DOCUMENTO NACIONAL DE IDENTIDAD/, 3], [/\bIDESP/, 3], [/^[A-Z0-9<]{28,32}$/m, 3], [/\bDNI\b/, 1]],
+  bancario: [[/POSICIONES/, 3], [/\bSALDOS?\b/, 2], [/\bIBAN\b|\bES\d{2} ?\d{4}/, 2], [/BANCO|CAIXA|\bCAJA\b|BANK/, 1], [/DEPOSITO|FONDO|PARTICIPACIONES/, 1], [/CUENTA CORRIENTE/, 1]],
+  compraventa: [[/COMPRAVENTA/, 3], [/\bPRECIO\b/, 2], [/VENDEDOR|COMPRADOR/, 2], [/ESCRITURA/, 1], [/ESTIPULACION/, 1]],
+};
+function lecTipo(texto, nombre) {
+  const T = lecN(texto), N = lecN(nombre);
+  let mejor = "desconocido", max = 0;
+  for (const [k, H] of Object.entries(LEC_HUELLAS)) { const sc = H.reduce((a, [re, w]) => a + (re.test(T) ? w : 0), 0); if (sc > max) { max = sc; mejor = k; } }
+  if (max >= 3) return mejor;
+  if (/DEFUNCION|FALLECI/.test(N)) return "defuncion";
+  if (/ULTIMAS|VOLUNTAD/.test(N)) return "ultimas";
+  if (/SEGURO/.test(N)) return "seguros";
+  if (/\bIBI\b/.test(N)) return "ibi";
+  if (/CATASTR/.test(N)) return "catastro";
+  if (/NOTA.?SIMPLE|REGISTRO/.test(N)) return "notasimple";
+  if (/TESTAMENTO/.test(N)) return "testamento";
+  if (/\bDNI\b|\bNIF\b/.test(N)) return "dni";
+  if (/BANCO|SALDO|POSICION|CUENTA/.test(N)) return "bancario";
+  if (/COMPRA|ESCRITURA/.test(N)) return "compraventa";
+  return mejor === "desconocido" || max < 2 ? "desconocido" : mejor;
+}
+
+// ── Extractores: devuelven { campos: [{k, etiqueta, valor, mostrar, conf}], personas: [...], bienes: [...], deudas: [...], avisos: [...] } ──
+// conf: 2 = seguro (marcado), 1 = probable (marcado), 0 = dudoso (sin marcar)
+function lecDefuncion(t) {
+  const out = { campos: [], avisos: [] };
+  const T = t.replace(/\s+/g, " ");
+  // Nombre: «Nombre: X» + «Primer apellido: Y» «Segundo apellido: Z» (certificado digital) o «D./Dª NOMBRE APELLIDOS» tras «inscrito/a»
+  const n1 = /Nombre\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ' \-]{1,40}?)\s+(?:Primer|1\.?er)\s+apellido\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ' \-]{1,30}?)\s+(?:Segundo|2\.?º)\s+apellido\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ' \-]{1,30}?)(?=\s+(?:DNI|NIF|N\.I\.F|Sexo|Nacionalidad|Fecha|Documento|Lugar|$))/i.exec(T);
+  let nombre = n1 ? lecNombre(`${n1[1]} ${n1[2]} ${n1[3]}`) : "";
+  if (!nombre) { const n2 = new RegExp(`(?:fallecid[oa]|inscrit[oa]|defunci[óo]n de|difunt[oa])\\s*[:：]?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`, "i").exec(T); if (n2) nombre = lecNombre(n2[1]); }
+  if (!nombre) { const n3 = new RegExp(`${LEC_TRAT}\\s+${LEC_NOMBRE_RE}`).exec(T); if (n3) nombre = lecNombre(n3[1]); }
+  if (nombre) out.campos.push({ k: "nombre", etiqueta: "Nombre del causante", valor: nombre, conf: n1 ? 2 : 1 });
+  const f = lecFechaCerca(T, /(?:fecha\s*(?:y hora\s*)?(?:de\s*(?:la\s*)?)?(?:defunci[óo]n|fallecimiento)|falleci[óo]\s*(?:el\s*(?:d[ií]a)?)?|defunci[óo]n ocurrida|ocurri[óo] el)/i, 140);
+  if (f) out.campos.push({ k: "fecha", etiqueta: "Fecha del fallecimiento", valor: f, mostrar: fechaLarga(f), conf: 2 });
+  else { const F = lecFechas(T).filter((q) => q.f >= "1990-01-01" && q.f <= hoy()); if (F.length) { const ult = F.sort((a, b) => b.f.localeCompare(a.f))[0]; out.campos.push({ k: "fecha", etiqueta: "Fecha del fallecimiento (la más reciente del documento)", valor: ult.f, mostrar: fechaLarga(ult.f), conf: 0 }); } }
+  const ec = /estado civil\s*[:：]?\s*(casad[oa]|viud[oa]|solter[oa]|divorciad[oa]|separad[oa])/i.exec(T) || /\b(casad[oa]|viud[oa]|solter[oa]|divorciad[oa])\b/i.exec(T);
+  if (ec) { const v = lecN(ec[1]); const civil = /CASAD/.test(v) ? "gananciales" : /VIUD/.test(v) ? "viudo" : /DIVORC|SEPARAD/.test(v) ? "divorciado" : "soltero"; out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: civil, mostrar: ec[1].toLowerCase() + (civil === "gananciales" ? " (se propone gananciales; cambia a separación de bienes si procede)" : ""), conf: 1 }); }
+  const nif = lecNifs(T); if (nif.length) out.campos.push({ k: "nifCausante", etiqueta: "DNI del causante", valor: nif[0], conf: 1 });
+  const lugar = /(?:lugar|municipio)\s*(?:de\s*(?:la\s*)?)?(?:defunci[óo]n|fallecimiento)?\s*[:：]\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ' \-]{2,40}?)(?=\s+(?:Provincia|Hora|Fecha|$))/i.exec(T);
+  if (lugar) out.campos.push({ k: "lugarFallecimiento", etiqueta: "Lugar del fallecimiento", valor: lecTitulo(lugar[1]), conf: 1 });
+  return out;
+}
+function lecUltimas(t) {
+  const out = { campos: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
+  if (/no consta|no figura|sin inscripci[óo]n|no aparece/i.test(T) && !/(?<!\bno\s{1,3})consta(?:n)?\s+(?:como\s+otorgante|inscrit)/i.test(T)) { out.campos.push({ k: "testamento", etiqueta: "Testamento", valor: "no", mostrar: "No consta testamento: sucesión intestada", conf: 2 }); return out; }
+  const nota = new RegExp(`notari[oa]\\s*[:：]?\\s*(?:de\\s+[A-ZÁÉÍÓÚÑa-záéíóúñ ,.]+?\\s+)?${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`, "i").exec(T);
+  const fecha = lecFechaCerca(T, /fecha\s*(?:del?\s*)?(?:acto|otorgamiento|testamento)/i, 40) || lecFechaCerca(T, /(?:testamento|acto)\b[^.]{0,80}?(?:fecha|otorgad[oa]|de fecha|el d[ií]a)/i, 60);
+  const prot = /protocolo\s*(?:n[úu]mero|n[.º°]?)?\s*[:：]?\s*(\d{1,6})/i.exec(T);
+  const tipo = /testamento\s+(abierto|cerrado|ol[óo]grafo|mancomunado)/i.exec(T);
+  const partes = [tipo ? "testamento " + tipo[1].toLowerCase() : "testamento", fecha ? "de " + fechaLarga(fecha) : "", nota ? "ante " + lecNombre(nota[1]) : "", prot ? "protocolo " + prot[1] : ""].filter(Boolean).join(", ");
+  out.campos.push({ k: "testamento", etiqueta: "Testamento", valor: "nose", mostrar: `Consta ${partes}. Hay que pedir copia a la notaría: hasta leerlo, el reparto queda «por confirmar»`, conf: 2 });
+  out.campos.push({ k: "testamentoDatos", etiqueta: "Datos del testamento", valor: { notario: nota ? lecNombre(nota[1]) : "", fecha: fecha || "", protocolo: prot ? prot[1] : "", tipo: tipo ? tipo[1].toLowerCase() : "" }, mostrar: partes, conf: 2 });
+  const nombre = new RegExp(`(?:causante|otorgante|fallecid[oa]|D\\.?/D[ñÑ]?[aª]?\\.?)\\s*[:：]?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`, "i").exec(T);
+  if (nombre) out.campos.push({ k: "nombre", etiqueta: "Nombre del causante", valor: lecNombre(nombre[1]), conf: 1 });
+  const f = lecFechaCerca(T, /fecha\s*de\s*(?:la\s*)?(?:defunci[óo]n|fallecimiento)|fallecid[oa](?:\/a)?\s+el\s+(?:d[ií]a\s+)?/i, 40); if (f) out.campos.push({ k: "fecha", etiqueta: "Fecha del fallecimiento", valor: f, mostrar: fechaLarga(f), conf: 2 });
+  return out;
+}
+function lecSeguros(t) {
+  const out = { campos: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
+  if (/no figura|no consta|sin contratos|ning[úu]n contrato/i.test(T)) { out.campos.push({ k: "aseguradoras", etiqueta: "Seguros de fallecimiento", valor: [], mostrar: "No consta ningún seguro de vida ni de accidentes", conf: 2 }); return out; }
+  const L = [];
+  for (const m of T.matchAll(/(?:entidad\s*(?:aseguradora)?|aseguradora|compa[ñn][íi]a)\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ&.,' \-]{3,60}?)(?=\s+(?:tipo|n[úu]mero|p[óo]liza|entidad|aseguradora|compa|$))/gi)) { const n = m[1].replace(/[,.]+$/, "").trim(); if (n.length > 3 && !L.includes(n)) L.push(n); }
+  if (!L.length) for (const m of T.matchAll(/\b([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ&. ]{3,40}(?:SEGUROS|VIDA|ASEGURADORA|MUTUA|INSURANCE|S\.A\.))\b/g)) { const n = lecNombre(m[1]); if (!L.includes(n)) L.push(n); }
+  out.campos.push({ k: "aseguradoras", etiqueta: "Seguros de fallecimiento", valor: L, mostrar: L.length ? L.join(" · ") : "Consta algún contrato, pero no se han podido leer las entidades: ábrelo y anótalas", conf: L.length ? 2 : 0 });
+  return out;
+}
+function lecCatastro(t, esIbi) {
+  const out = { campos: [], bienes: [], avisos: [] }; const T = t.replace(/[ \t]+/g, " ");
+  const ref = lecRefCat(T);
+  const vTotal = lecDineroCerca(T, /valor\s+catastral(?!\s+(?:del?\s+)?(?:la\s+)?(?:suelo|construcci))(?:\s+(?:total|del\s+inmueble|\(?€?\)?))?\s*(?:\(\d{4}\))?\s*[:：]?/i) || lecDineroCerca(T, /\bV\.?\s*catastral\b(?!\s*suelo)\s*[:：]?/i);
+  const vSuelo = lecDineroCerca(T, /valor\s+catastral\s+(?:del\s+)?suelo\s*[:：]?/i) || lecDineroCerca(T, /\bV\.?\s*(?:cat\.?\s*)?suelo\b\s*[:：]?/i) || lecDineroCerca(T, /\bsuelo\s*[:：]/i);
+  const vCons = lecDineroCerca(T, /valor\s+catastral\s+(?:de\s+)?(?:la\s+)?construcci[óo]n\s*[:：]?/i);
+  const loc = /(?:localizaci[óo]n|situaci[óo]n|direcci[óo]n|domicilio tributario)\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][^\n]{6,110}?)(?=\s+(?:Clase|Uso|Superficie|Ref\.?|Referencia|Coeficiente|A[ñn]o|Valor|\n|$))/i.exec(T);
+  const sup = /superficie\s*(?:construida|del inmueble)?\s*[:：]?\s*(\d{1,5}(?:,\d+)?)\s*m/i.exec(T);
+  const uso = /uso\s*(?:principal|local)?\s*[:：]?\s*(residencial|vivienda|almac[ée]n|aparcamiento|garaje|comercial|industrial|oficinas|agrario|suelo sin edif)/i.exec(T);
+  const anio = /a[ñn]o\s*(?:de\s*)?construcci[óo]n\s*[:：]?\s*(\d{4})/i.exec(T);
+  const muni = /\b(\d{5})\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ' \-]{2,40}?)\s*\(([A-ZÁÉÍÓÚÑa-záéíóúñ ]{3,30})\)/.exec(T);
+  const esGaraje = uso && /aparcamiento|garaje/i.test(uso[1]);
+  const b = { tipo: esGaraje ? "inmueble" : uso && /residencial|vivienda/i.test(uso[1]) ? "vivienda" : "inmueble", descripcion: loc ? lecFrase(loc[1].replace(/\s+\d{5}\s+[^\n]*$/, ""), 80).replace(/\b(Cl|Av|Pz|Cm|Ur|CL|AV|PZ|CM|UR)\b\.?/g, (m) => ({ CL: "Calle", AV: "Avenida", PZ: "Plaza", CM: "Camino", UR: "Urbanización" })[m.replace(".", "").toUpperCase()] || m) : esGaraje ? "Plaza de garaje" : "Inmueble", refCatastral: ref, valorCatastralTotal: vTotal, valorCatastralSuelo: vSuelo, muniNombre: muni ? lecTitulo(muni[2]) : "", muniProv: muni ? lecTitulo(muni[3]) : "", superficie: sup ? lecNum(sup[1]) : null, anioConstruccion: anio ? Number(anio[1]) : null, usoResidencial: !!(uso && /residencial|vivienda/i.test(uso[1])) };
+  if (vTotal && vSuelo && vSuelo > vTotal) out.avisos.push("El valor del suelo leído supera el total: revisa el documento.");
+  if (!vTotal && !vSuelo) out.avisos.push(esIbi ? "No se ha leído el valor catastral en el recibo: comprueba que sea el recibo completo del IBI." : "Esta consulta catastral no incluye los valores catastrales (solo los lleva la certificación para el titular o el recibo del IBI).");
+  if (!vCons && vTotal && vSuelo && vTotal >= vSuelo) b.valorCatastralConstruccion = Math.round((vTotal - vSuelo) * 100) / 100;
+  out.bienes.push({ ...b, conf: ref || vTotal ? 2 : 1 });
+  return out;
+}
+function lecNotaSimple(t) {
+  const out = { campos: [], bienes: [], deudas: [], personas: [], avisos: [] }; const T = t.replace(/[ \t]+/g, " ");
+  const ref = lecRefCat(T);
+  const finca = /finca\s*(?:registral\s*)?(?:de\s+[A-ZÁÉÍÓÚÑa-záéíóúñ ]+?\s+)?(?:n[úu]mero|n[.º°]?)\s*[:：]?\s*(\d{1,7})/i.exec(T);
+  const cru = /(?:IDUFIR|CRU)\s*[:：]?\s*(\d{14})/i.exec(T);
+  const desc = /(URBANA|R[ÚU]STICA)\s*[:.:]\s*([^\n]{10,220}?)(?=\s+(?:Tiene una superficie|Superficie|Linda|Cuota|Referencia|Inscri|$))/i.exec(T);
+  const tipoDesc = desc && /vivienda|piso|casa|chalet|apartamento|d[úu]plex|[áa]tico/i.test(desc[2]) ? "vivienda" : "inmueble";
+  const b = { tipo: tipoDesc, descripcion: desc ? lecFrase(desc[2], 90) : (finca ? `Finca registral ${finca[1]}` : "Inmueble de la nota simple"), refCatastral: ref, fincaRegistral: finca ? finca[1] : "", cru: cru ? cru[1] : "", conf: 2 };
+  // Titularidad: «X ... N.I.F. ... titular del pleno dominio de una mitad indivisa con carácter ganancial» / «100,00 % del pleno dominio ... privativo»
+  const gan = /(?:car[áa]cter|bienes?)\s+ganancial/i.test(T), priv = /(?:car[áa]cter|bien)\s+privativ/i.test(T);
+  const pct = /(\d{1,3}(?:,\d{1,2})?)\s*%\s*(?:del\s+)?(?:pleno\s+dominio|propiedad)/i.exec(T) || /(?:pleno\s+dominio|propiedad)[^.]{0,40}?(\d{1,3}(?:,\d{1,2})?)\s*%/i.exec(T);
+  const mitad = /(?:una\s+)?mitad\s+indivisa/i.test(T);
+  b.titularidad = gan ? "ganancial" : priv ? "privativo" : (pct && lecNum(pct[1]) < 100) || mitad ? "proindiviso" : "privativo";
+  if (b.titularidad === "proindiviso") b.porcentaje = pct ? lecNum(pct[1]) : mitad ? 50 : null;
+  if (/usufructo/i.test(T) && /nuda\s+propiedad/i.test(T)) out.avisos.push("La finca figura desmembrada en usufructo y nuda propiedad: comprueba qué derecho tenía el causante.");
+  for (const m of T.matchAll(new RegExp(`${LEC_NOMBRE_RE}\\s*,?\\s*(?:con\\s+)?(?:N\\.?I\\.?F\\.?|D\\.?N\\.?I\\.?)\\s*[:：]?\\s*(\\d{8}\\s?-?\\s?[A-Z])`, "g"))) { const n = lecNombre(m[1]); if (n && !out.personas.some((p) => p.nombre === n)) out.personas.push({ nombre: n, nif: m[2].replace(/[\s-]/g, ""), rol: "titular registral", conf: 1 }); }
+  // Cargas
+  if (/libre\s+de\s+cargas|sin\s+cargas|no\s+(?:existen|constan)\s+cargas/i.test(T)) out.campos.push({ k: "cargas", etiqueta: "Cargas", valor: "libre", mostrar: "La finca consta libre de cargas", conf: 2 });
+  else if (/hipoteca/i.test(T)) {
+    const banco = /hipoteca\s+(?:a\s+favor\s+de|constituida\s+a\s+favor\s+de)\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ,.&' \-]{3,60}?)(?=\s*(?:,|\.|S\.A|en garant|para responder|responde|por un|de un|$))/i.exec(T);
+    const princ = lecDineroCerca(T, /(?:responde\s+de\s+un\s+)?(?:principal|capital)\s*(?:de|por\s+importe\s+de|:)?\s*/i, 60) || lecDineroCerca(T, /hipoteca[^.]{0,200}?(?:de|por)\s*/i, 60);
+    out.deudas.push({ concepto: `Hipoteca${banco ? " a favor de " + lecNombre(banco[1]) : ""} sobre ${b.descripcion.slice(0, 50)}`, importe: princ, ganancial: b.titularidad === "ganancial", nota: "Importe según la nota simple (responsabilidad hipotecaria o principal inicial): pide al banco el saldo pendiente a la fecha del fallecimiento", conf: 1 });
+    b.cargas = `Hipoteca${banco ? " · " + lecNombre(banco[1]) : ""}${princ ? " · " + eur0(princ) : ""}`;
+  }
+  if (/embargo|anotaci[óo]n preventiva/i.test(T)) out.avisos.push("Constan embargos o anotaciones preventivas: revisa las cargas antes de adjudicar.");
+  out.bienes.push(b);
+  return out;
+}
+function lecTestamento(t) {
+  const out = { campos: [], personas: [], bienes: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
+  // Testador: tras COMPARECE / OTORGA / «el testador» o el primer DON/DOÑA
+  const tes = new RegExp(`(?:COMPARECE[N]?\\s*[:：]?|OTORGANTE\\s*[:：]?|testador[a]?\\s*[,:]?)\\s*${LEC_TRAT}\\s*${LEC_NOMBRE_RE}`, "i").exec(T) || new RegExp(`${LEC_TRAT}\\s+${LEC_NOMBRE_RE}`).exec(T);
+  if (tes) out.campos.push({ k: "nombre", etiqueta: "Testador (causante)", valor: lecNombre(tes[1]), conf: tes[0].match(/COMPARECE|OTORGANTE|testador/i) ? 2 : 1 });
+  // Cónyuge y régimen
+  const cony = new RegExp(`casad[oa]\\s+(?:en\\s+(?:[úu]nicas|segundas|primeras)\\s+nupcias\\s+)?(?:(?:y\\s+)?(?:en|bajo)\\s+(?:el\\s+)?r[ée]gimen\\s+(?:econ[óo]mico[- ]matrimonial\\s+)?(?:legal\\s+)?de\\s+([a-záéíóúñ ]{5,40}?)\\s+)?con\\s+${LEC_TRAT}\\s*${LEC_NOMBRE_RE}`, "i").exec(T);
+  const reg = /r[ée]gimen\s+(?:econ[óo]mico[- ]matrimonial\s+)?(?:legal\s+)?de\s+(gananciales|separaci[óo]n de bienes|participaci[óo]n)/i.exec(T);
+  if (cony) { out.personas.push({ nombre: lecNombre(cony[2]), relacion: "conyuge", conf: 2 }); const r = reg ? reg[1] : cony[1] || ""; out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: /separaci/i.test(r) ? "separacion" : "gananciales", mostrar: `casado/a${r ? " en régimen de " + r.toLowerCase() : " (régimen no indicado: se propone gananciales)"}`, conf: r ? 2 : 1 }); }
+  else if (/viud[oa]/i.test(T)) out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: "viudo", mostrar: "viudo/a", conf: 1 });
+  else if (/solter[oa]/i.test(T)) out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: "soltero", mostrar: "soltero/a", conf: 1 });
+  // Hijos: «tiene cuatro hijos llamados CARMEN, LUIS, ANA y JAVIER JIMÉNEZ RUIZ» / «hijos llamados DON X, DOÑA Y y DON Z»
+  const hj = /(?:tiene|tienen|hay|son|con)\s+([a-záéíóúñ]+|\d+)\s+(?:hij[oa]s?|descendientes)\s*(?:,\s*)?(?:llamad[oa]s?|de nombres?|que son|:)?\s*[:：]?\s*([^.;]{4,260}?)(?:[.;]|\s+(?:y\s+)?(?:que|los cuales|todos|siendo|habiendo))/i.exec(T);
+  if (hj) {
+    const n = /^\d+$/.test(hj[1]) ? Number(hj[1]) : LEC_UNI[lecN(hj[1]).toLowerCase()] || 0;
+    const lista = hj[2].replace(new RegExp(LEC_TRAT, "g"), "").split(/\s*,\s*|\s+y\s+|\s+e\s+/i).map((s) => s.trim()).filter(Boolean);
+    // Apellidos comunes al final («CARMEN, LUIS, ANA y JAVIER JIMÉNEZ RUIZ»): si los primeros son una sola palabra, se les añaden los del último
+    const ultimo = lista[lista.length - 1] || "", pal = ultimo.split(/\s+/);
+    const apellidos = pal.length >= 3 ? pal.slice(1).join(" ") : pal.length === 2 && lista.length > 1 && lista.slice(0, -1).every((s) => !/\s/.test(s)) ? pal.slice(1).join(" ") : "";
+    for (const s of lista) { const nom = lecNombre(/\s/.test(s) || !apellidos ? s : `${s} ${apellidos}`); if (nom && !out.personas.some((p) => p.nombre === nom)) out.personas.push({ nombre: nom, relacion: "hijo", conf: n && lista.length === n ? 2 : 1 }); }
+    if (n && lista.length !== n) out.avisos.push(`El testamento habla de ${n} hijos y se han leído ${lista.length} nombres: revisa la lista.`);
+  }
+  // Premuertos: «hijo premuerto X ... dejó descendencia» / «fallecido con anterioridad»
+  if (/premuert|fallecid[oa]\s+con\s+anterioridad|falleci[óo]\s+antes/i.test(T)) out.avisos.push("El testamento menciona un hijo fallecido con anterioridad: añade a sus descendientes como nietos indicando de quién descienden.");
+  // Tipo de reparto
+  const usuf = /usufructo\s+(?:universal|vitalicio\s+y\s+universal|universal\s+y\s+vitalicio)|usufructo\s+(?:vitalicio\s+)?de\s+(?:toda\s+)?(?:su|la)\s+herencia/i.test(T);
+  const iguales = /por\s+partes\s+iguales|a\s+partes\s+iguales|en\s+partes\s+iguales/i.test(T);
+  const socini = /cautela\s+socini|socini|opci[óo]n\s+compensatoria|legitima\s+estricta/i.test(T);
+  const sustVulgar = /sustitu(?:idos?|ci[óo]n)\s+vulgar/i.test(T);
+  if (usuf && cony) out.campos.push({ k: "testamento", etiqueta: "Reparto del testamento", valor: "usufructo", mostrar: `Usufructo universal al cónyuge y nuda propiedad a los descendientes${iguales ? " por partes iguales" : ""}${socini ? " · cautela socini" : ""}${sustVulgar ? " · sustitución vulgar por descendientes" : ""}`, conf: 2 });
+  else if (iguales) out.campos.push({ k: "testamento", etiqueta: "Reparto del testamento", valor: "porcentajes", mostrar: `Herederos por partes iguales${sustVulgar ? " · sustitución vulgar" : ""}. Se cargan porcentajes iguales; ajústalos si el testamento distingue`, conf: 1 });
+  else out.campos.push({ k: "testamento", etiqueta: "Reparto del testamento", valor: "porcentajes", mostrar: "Hay testamento con institución de herederos; no se ha reconocido el reparto: introduce los porcentajes", conf: 0 });
+  // Legados: «Lega a su sobrino DON MIGUEL JIMÉNEZ SOLER la plaza de garaje…»
+  for (const m of T.matchAll(new RegExp(`\\bLega\\s+a\\s+(?:su\\s+)?(sobrin[oa]|herman[oa]|niet[oa]|hij[oa]|ahijad[oa]|amig[oa]|esposa|esposo|c[óo]nyuge|cu[ñn]ad[oa]|t[íi][oa])?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}\\s*,?\\s*(?:mayor de edad[^,]*,\\s*)?(?:el|la|los|las|un|una|su)\\s+([^.;]{5,120}?)(?:[.;]|\\s+(?:que|sit[oa]|ubicad))`, "gi"))) {
+    const rel = lecN(m[1] || ""), nombre = lecNombre(m[2]); if (!nombre) continue;
+    const relacion = /SOBRIN/.test(rel) ? "sobrino" : /HERMAN/.test(rel) ? "hermano" : /NIET/.test(rel) ? "nieto" : /HIJ/.test(rel) ? "hijo" : /ESPOS|CONYUG/.test(rel) ? "conyuge" : /TI[OA]/.test(rel) ? "tio" : "extrano";
+    if (!/usufructo/i.test(m[3]) && !out.personas.some((p) => p.nombre === nombre)) { out.personas.push({ nombre, relacion, legatario: true, legadoDesc: m[3].trim(), conf: 1 }); out.avisos.push(`Legado a ${nombre}: «${m[3].trim().slice(0, 80)}». Marca el bien correspondiente como legado en su ficha.`); }
+  }
+  const fechaT = lecFechas(T.slice(0, 600)); if (fechaT.length) out.campos.push({ k: "testamentoFecha", etiqueta: "Fecha del testamento", valor: fechaT[0].f, mostrar: fechaLarga(fechaT[0].f), conf: 1 });
+  const nota = new RegExp(`Ante\\s+m[íi]\\s*,?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}\\s*,?\\s*Notari[oa]`, "i").exec(T); if (nota) out.campos.push({ k: "testamentoNotario", etiqueta: "Notario", valor: lecNombre(nota[1]), conf: 2 });
+  if (/desheredad|desheredaci[óo]n/i.test(T)) out.avisos.push("El testamento contiene una desheredación: revisa su causa y alcance.");
+  if (/fideicomis/i.test(T)) out.avisos.push("Hay una sustitución fideicomisaria: el reparto automático no la modela.");
+  return out;
+}
+function lecDni(t) {
+  const out = { personas: [], avisos: [] };
+  // Zona de lectura mecánica del DNI 3.0 (tres líneas de 30): IDESP..., fecha nacimiento AAMMDD, APELLIDOS<<NOMBRE
+  const L = t.split(/\n/).map((s) => s.replace(/\s/g, "").toUpperCase()).filter((s) => /^[A-Z0-9<]{28,32}$/.test(s));
+  const l1 = L.find((s) => /^ID/.test(s)), l3 = L.find((s) => /<<\w/.test(s) && !/^ID/.test(s) && /^[A-Z<]+$/.test(s));
+  const l2 = L.find((s) => /^\d{6}[0-9MF<]/.test(s) || /^\d{7}[MF]\d{7}/.test(s));
+  let nombre = "", nif = "", nac = "";
+  if (l3) { const [ap, nm] = l3.split("<<"); nombre = lecNombre(`${(nm || "").replace(/</g, " ")} ${(ap || "").replace(/</g, " ")}`); }
+  if (l1) { const m = /^ID[A-Z]{3}[A-Z0-9]{9}.?(\d{8}[A-Z])/.exec(l1); if (m && lecNifOk(m[1])) nif = m[1]; }
+  if (l2) { const m = /^(\d{2})(\d{2})(\d{2})/.exec(l2); if (m) { const yy = Number(m[1]); const y = yy > Number(String(new Date().getFullYear()).slice(2)) ? 1900 + yy : 2000 + yy; nac = lecIso(m[3], m[2], y) || ""; } }
+  if (!nif) { const N = lecNifs(t); if (N.length) nif = N[0]; }
+  if (!nombre) { const ap = /APELLIDOS?\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{3,40})\s+NOMBRE\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{2,30})/.exec(lecN(t)); if (ap) nombre = lecNombre(`${ap[2]} ${ap[1]}`); }
+  if (!nac) { const f = lecFechaCerca(t, /nacimiento|FECHA DE NAC/i, 40); if (f) nac = f; }
+  if (nombre || nif) out.personas.push({ nombre: nombre || "Titular del DNI", nif, nacimiento: nac, edad: nac ? Math.floor((Date.now() - new Date(nac + "T12:00:00")) / 31557600000) : null, relacion: "", conf: nif && nombre ? 2 : 1 });
+  else out.avisos.push("No se ha podido leer el DNI: prueba con una foto más nítida del reverso (las dos líneas de letras y «<»).");
+  return out;
+}
+function lecBancario(t) {
+  const out = { bienes: [], avisos: [] }; const T = t.replace(/[ \t]+/g, " ");
+  const banco = /(UNICAJA|CAIXABANK|LA CAIXA|BBVA|SANTANDER|SABADELL|BANKINTER|ABANCA|KUTXABANK|IBERCAJA|CAJAMAR|ING|OPENBANK|EVO|CAJA RURAL[A-Z ]*|BANCA MARCH|DEUTSCHE BANK|TARGOBANK|LABORAL KUTXA|CAJASUR|EUROCAJA RURAL|GLOBALCAJA|MYINVESTOR|RENTA 4|SELFBANK|SINGULAR BANK|ANDBANK|BANKIA|CAJA DE INGENIEROS|ARQUIA|TRIODOS|N26|REVOLUT)/i.exec(T);
+  const nombreBanco = banco ? lecTitulo(banco[1]) : "Entidad";
+  const ibans = [...new Set([...T.matchAll(/\bES\d{2}(?:\s?\d{4}){5}\b/g)].map((m) => m[0].replace(/\s/g, "")))];
+  const saldos = [];
+  for (const m of T.matchAll(/(cuenta(?: corriente| de ahorro| vivienda)?|dep[óo]sito(?: a plazo)?|imposici[óo]n a plazo|fondo de inversi[óo]n|fondos?|plan de pensiones|acciones|valores|cartera)[^\n]{0,120}?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{2})\s*(?:€|euros?|EUR)/gi)) saldos.push({ tipo: m[1].toLowerCase(), importe: lecNum(m[2]) });
+  if (!saldos.length) for (const m of T.matchAll(/saldo[^\n]{0,60}?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{2})\s*(?:€|euros?|EUR)/gi)) saldos.push({ tipo: "cuenta", importe: lecNum(m[1]) });
+  saldos.forEach((s, i) => { const esFondo = /fondo|plan|accion|valores|cartera/.test(s.tipo); out.bienes.push({ tipo: esFondo ? "valores" : "cuenta", descripcion: `${esFondo ? "Fondo o valores" : /dep[óo]sito|imposici/.test(s.tipo) ? "Depósito a plazo" : "Cuenta"} en ${nombreBanco}`, valor: s.importe, entidad: nombreBanco, iban: !esFondo && ibans[i] ? ibans[i] : "", conf: 1 }); });
+  if (!saldos.length) out.avisos.push(`Certificado de ${nombreBanco}: no se han podido leer los saldos; introdúcelos a mano.`);
+  const f = lecFechaCerca(T, /a\s+(?:la\s+)?fecha\s+(?:de|del)\s+(?:fallecimiento|defunci[óo]n)|saldo\s+a\s+(?:fecha\s+)?/i, 40); if (f) out.fechaSaldo = f;
+  return out;
+}
+function lecCompraventa(t) {
+  const out = { campos: [], bienes: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
+  const F = lecFechas(T.slice(0, 800)); const fecha = F.length ? F[0].f : null;
+  const pre = /precio\s+(?:total\s+)?(?:de\s+(?:esta|la)\s+compraventa|de\s+la\s+venta|convenido|pactado|es\s+(?:el\s+)?de|de|:)\s*/i.exec(T) || /\bprecio\b/i.exec(T);
+  let precio = pre ? lecDineroCerca(T.slice(pre.index), /precio[^\d(]{0,160}?/i, 200) : null;
+  const zona = pre ? T.slice(pre.index, pre.index + 360) : "";
+  if (precio && /pesetas|ptas/i.test(zona) && !/€|euros/i.test(zona)) { precio = Math.round(precio / 166.386 * 100) / 100; out.avisos.push("El precio estaba en pesetas: se ha convertido a euros (166,386 ptas/€)."); }
+  const ref = lecRefCat(T);
+  out.bienes.push({ tipo: "inmueble", descripcion: "Inmueble de la escritura de compraventa", refCatastral: ref, fechaAdq: fecha, valorAdq: precio, conf: fecha && precio ? 2 : 1 });
+  if (!precio) out.avisos.push("No se ha leído el precio de la compraventa: búscalo en la escritura (plusvalía por el método real).");
+  return out;
+}
+function lecAnalizar(texto, nombre) {
+  const tipo = lecTipo(texto, nombre);
+  const F = { defuncion: lecDefuncion, ultimas: lecUltimas, seguros: lecSeguros, catastro: (t) => lecCatastro(t, false), ibi: (t) => lecCatastro(t, true), notasimple: lecNotaSimple, testamento: lecTestamento, dni: lecDni, bancario: lecBancario, compraventa: lecCompraventa }[tipo];
+  const d = F ? F(texto) : { avisos: ["No se reconoce el tipo de documento. Se archiva igualmente; los datos se introducen a mano."] };
+  return { tipo, titulo: LEC_TIPOS[tipo], campos: d.campos || [], personas: d.personas || [], bienes: d.bienes || [], deudas: d.deudas || [], avisos: d.avisos || [], extra: d };
+}
+
+// ── Lectura de varios archivos con progreso ──
+function lecProgreso(txt) { const n = document.getElementById("lec-prog"); if (n) n.textContent = txt; }
+async function lecLeerArchivos(files) {
+  const out = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i]; LEC.estado = { base: `Leyendo ${i + 1} de ${files.length}: ${f.name}` }; lecProgreso(LEC.estado.base);
+    try {
+      const r = await lecTexto(f);
+      if (!r) { out.push({ nombre: f.name, tipo: "desconocido", titulo: "Formato no legible (Word u otro)", texto: "", datos: { campos: [], personas: [], bienes: [], deudas: [], avisos: ["Solo se leen PDF e imágenes. El archivo queda archivado."] }, escaneado: false }); continue; }
+      const datos = lecAnalizar(r.texto, f.name);
+      out.push({ nombre: f.name, tipo: datos.tipo, titulo: datos.titulo, texto: r.texto, datos, escaneado: r.escaneado, paginas: r.paginas });
+    } catch (e) {
+      const msg = e && e.message === "solo-web" ? "La lectura de documentos funciona en la versión web (heredate.github.io); en el archivo único no está disponible." : `No se pudo leer ${f.name}: ${e && e.message ? e.message.slice(0, 80) : "error"}`;
+      out.push({ nombre: f.name, tipo: "desconocido", titulo: "No leído", texto: "", datos: { campos: [], personas: [], bienes: [], deudas: [], avisos: [msg] }, escaneado: false });
+    }
+  }
+  LEC.estado = null;
+  return out;
+}
+// Gancho desde archivoGuardar: tras archivar, se leen los PDF e imágenes y se abre la revisión
+async function lecTrasArchivar(files, expId) {
+  if (!lecDisponible()) return;
+  const L = [...files].filter((f) => f.type === "application/pdf" || /^image\//.test(f.type) || /\.(pdf|jpe?g|png|webp|tiff?)$/i.test(f.name));
+  if (!L.length) return;
+  const x = DB.expedientes.find((q) => q.id === expId); if (!x) return;
+  LEC.exp = expId; LEC.resultado = null; LEC.leyendo = true;
+  ui.sheet = { tipo: "lector" }; render();
+  const R = await lecLeerArchivos(L);
+  LEC.leyendo = false; LEC.resultado = lecPropuestas(x, R);
+  if (ui.sheet && ui.sheet.tipo === "lector") render();
+}
+
+// ── De los datos leídos a propuestas concretas sobre el expediente (con fusión por nombre o referencia catastral) ──
+// Misma persona: el nombre corto contenido en orden en el largo («Carmen Ruiz» ⊂ «Carmen Ruiz López»), o mismo nombre de pila y algún
+// apellido en la misma posición. Dos hermanos («Ana» y «Luis Jiménez Ruiz») o madre e hija con un apellido común no se confunden.
+const lecMismoNombre = (a, b) => {
+  const n = (s) => lecN(s).replace(/[^A-Z ]/g, "").split(/\s+/).filter((w) => w && !["DON", "DONA", "D", "DNA"].includes(w)); const A = n(a), B = n(b);
+  if (A.length < 2 || B.length < 2) return false;
+  const [C, Lg] = A.length <= B.length ? [A, B] : [B, A];
+  let i = 0; for (const w of Lg) if (w === C[i]) i++; if (i === C.length) return true;
+  if (A[0] !== B[0]) return false;
+  const a2 = A.slice(-2), b2 = B.slice(-2); return a2[0] === b2[0] || a2[1] === b2[1];
+};
+function lecPropuestas(x, R) {
+  const P = []; let id = 0; const nuevas = []; // personas propuestas por un documento anterior (para fundir el DNI o el parentesco que aporte otro)
+  const addP = (p) => { p.id = "lp" + (++id); p.on = p.conf >= 1; P.push(p); return p; }; let add = addP;
+  const vistos = new Map(); // campos ya propuestos: el mismo dato en dos documentos se funde; un valor distinto se marca como dudoso
+  const nomsCausante = [x.nombre, ...R.flatMap((r) => r.datos.campos.filter((c) => c.k === "nombre").map((c) => c.valor))].filter(Boolean);
+  const esCausante = (n) => nomsCausante.some((q) => lecMismoNombre(q, n));
+  const nuevosB = []; // bienes propuestos por un documento anterior (misma referencia catastral o mismo IBAN → se completan, no se repiten)
+  const descP = (np) => `${np.nombre}${np.nif ? " · " + np.nif : ""}${np.edad ? " · " + np.edad + " años" : ""}${np.relacion ? " · " + (RELACIONES[np.relacion]?.label || np.relacion) : " · parentesco por indicar"}${np.notaLegado ? " · legado: " + np.notaLegado.slice(0, 60) : ""}`;
+  for (const r of R) {
+    const doc = r.nombre;
+    for (const c of r.datos.campos) {
+      const add = (p) => { p.k = c.k; p.valor = c.valor; const clave = JSON.stringify([c.k, c.valor]); const ya = vistos.get(clave); if (ya) { ya.doc += " + " + doc; ya.conf = Math.max(ya.conf, p.conf); ya.on = ya.on || p.on; return ya; } const otro = [...vistos.values()].find((q) => q.k === c.k && q.k !== "testamentoDatos" && q.k !== "aseguradoras"); if (otro && c.k !== "testamento") { p.conf = 0; p.etiqueta += " (otro valor en " + doc + ")"; } const q = addP(p); vistos.set(clave, q); return q; };
+      if (c.k === "nombre") { if (x.nombre && lecMismoNombre(x.nombre, c.valor)) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar || c.valor, conf: x.nombre ? 0 : c.conf, aplicar: (x) => { x.nombre = c.valor; } }); }
+      else if (c.k === "fecha") { if (x.fecha === c.valor) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar || c.valor, conf: x.fecha && x.fecha !== c.valor ? 0 : c.conf, aplicar: (x) => { x.fecha = c.valor; } }); }
+      else if (c.k === "civil") { if (x.civil === c.valor) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: x.civil ? 0 : c.conf, aplicar: (x) => { x.civil = c.valor; } }); }
+      else if (c.k === "nifCausante") add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.valor, conf: c.conf, aplicar: (x) => { x.nifCausante = c.valor; } });
+      else if (c.k === "lugarFallecimiento") add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.valor, conf: c.conf, aplicar: (x) => { x.lugarFallecimiento = c.valor; } });
+      else if (c.k === "testamento") { if (x.testamento === c.valor) continue; add({ doc, grupo: "Testamento", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: x.testamento && x.testamento !== "nose" ? 0 : c.conf, aplicar: (x) => { x.testamento = c.valor; if (c.valor === "porcentajes") { const H = (x.personas || []).filter((p) => !p.renuncia && p.relacion !== "conyuge"); H.forEach((p) => { if (!p.pct) p.pct = Math.round(10000 / H.length) / 100; }); } } }); }
+      else if (c.k === "testamentoDatos") add({ doc, grupo: "Testamento", etiqueta: "Notaría y fecha del testamento", mostrar: c.mostrar, conf: c.conf, aplicar: (x) => { x.testamentoDatos = { ...(x.testamentoDatos || {}), ...c.valor }; } });
+      else if (c.k === "testamentoFecha") add({ doc, grupo: "Testamento", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: c.conf, aplicar: (x) => { x.testamentoDatos = { ...(x.testamentoDatos || {}), fecha: c.valor }; } });
+      else if (c.k === "testamentoNotario") add({ doc, grupo: "Testamento", etiqueta: c.etiqueta, mostrar: c.valor, conf: c.conf, aplicar: (x) => { x.testamentoDatos = { ...(x.testamentoDatos || {}), notario: c.valor }; } });
+      else if (c.k === "aseguradoras") add({ doc, grupo: "Seguros", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: c.conf, aplicar: (x) => { x.aseguradoras = c.valor; x.situ = x.situ || {}; if (c.valor.length) x.situ.seguro_vida = true; } });
+      else if (c.k === "cargas" && c.valor === "libre") add({ doc, grupo: "Inmuebles", etiqueta: "Cargas", mostrar: c.mostrar, conf: c.conf, aplicar: () => {} });
+    }
+    add = addP;
+    for (const p of r.datos.personas) {
+      if (esCausante(p.nombre)) { if (p.nif && !x.nifCausante && !P.some((q) => q.grupo === "Causante" && q.etiqueta === "DNI del causante")) add({ doc, grupo: "Causante", etiqueta: "DNI del causante", mostrar: p.nif, conf: 1, aplicar: (x) => { x.nifCausante = p.nif; } }); continue; }
+      const ex = (x.personas || []).find((q) => lecMismoNombre(q.nombre, p.nombre));
+      if (ex) {
+        const cambios = {}; if (p.nif && !ex.nif) cambios.nif = p.nif; if (p.edad && !ex.edad) cambios.edad = p.edad; if (p.relacion && (!ex.relacion || ex.relacion === "extrano") && p.relacion !== "extrano") cambios.relacion = p.relacion;
+        if (Object.keys(cambios).length) add({ doc, grupo: "Personas", etiqueta: `Completar a ${ex.nombre}`, mostrar: Object.entries(cambios).map(([k, v]) => `${k === "nif" ? "NIF" : k === "edad" ? "edad" : "parentesco"}: ${k === "relacion" ? RELACIONES[v]?.label || v : v}`).join(" · "), conf: p.conf, aplicar: (x) => { const q = x.personas.find((z) => z.id === ex.id); if (q) Object.assign(q, cambios); } });
+        continue;
+      }
+      const ya = nuevas.find((q) => lecMismoNombre(q.np.nombre, p.nombre));
+      if (ya) { const np = ya.np; if (p.nif && !np.nif) np.nif = p.nif; if (p.edad && !np.edad) np.edad = p.edad; if (p.relacion && !np.relacion) { np.relacion = p.relacion; ya.prop.conf = Math.max(ya.prop.conf, p.conf); ya.prop.on = true; ya.prop.etiqueta = p.relacion === "conyuge" ? "Cónyuge" : p.relacion === "hijo" ? "Hijo/a" : ya.prop.etiqueta; } ya.prop.mostrar = descP(np); ya.prop.doc += " + " + doc; continue; }
+      if (p.rol === "titular registral") { if (x.nombre && lecMismoNombre(x.nombre, p.nombre)) continue; add({ doc, grupo: "Personas", etiqueta: "Titular registral que no está en el expediente", mostrar: `${p.nombre}${p.nif ? " · " + p.nif : ""}: ¿cotitular, cónyuge o el propio causante con otro nombre?`, conf: 0, aplicar: (x) => { x.personas.push({ id: uid(), nombre: p.nombre, nif: p.nif || "", relacion: "extrano", edad: "", origen: "documento" }); } }); continue; }
+      const rel = p.relacion || "";
+      const np = { nombre: p.nombre, relacion: rel, edad: p.edad || "", nif: p.nif || "", ...(p.legadoDesc ? { notaLegado: p.legadoDesc } : {}) };
+      const prop = add({ doc, grupo: "Personas", etiqueta: p.legatario ? "Legatario" : rel === "conyuge" ? "Cónyuge" : rel === "hijo" ? "Hijo/a" : "Persona", mostrar: descP(np), conf: rel ? p.conf : 0, aplicar: (x) => { x.personas.push({ id: uid(), nombre: np.nombre, relacion: np.relacion || "extrano", edad: np.edad || "", nif: np.nif || "", origen: "documento", ...(np.notaLegado ? { notaLegado: np.notaLegado } : {}) }); } });
+      nuevas.push({ np, prop });
+    }
+    for (const b of r.datos.bienes) {
+      const ex = (x.bienes || []).find((q) => (b.refCatastral && q.refCatastral && q.refCatastral === b.refCatastral) || (b.descripcion && q.descripcion && lecMismoNombre(q.descripcion, b.descripcion) && (q.tipo === "vivienda" || q.tipo === "inmueble")));
+      const campos = {}; for (const k of ["refCatastral", "valorCatastralTotal", "valorCatastralSuelo", "fechaAdq", "valorAdq", "porcentaje", "cargas", "iban", "entidad"]) if (b[k] != null && b[k] !== "") campos[k] = b[k];
+      if (b.titularidad) campos.titularidad = b.titularidad;
+      if (b.usoResidencial != null && b.tipo !== "cuenta") campos.usoResidencial = b.usoResidencial;
+      const resumen = [b.refCatastral ? "ref. catastral " + b.refCatastral : "", b.valorCatastralTotal ? "valor catastral " + eur0(b.valorCatastralTotal) : "", b.valorCatastralSuelo ? "suelo " + eur0(b.valorCatastralSuelo) : "", b.titularidad ? b.titularidad + (b.porcentaje ? " " + b.porcentaje + " %" : "") : "", b.fechaAdq ? "adquirido " + fechaCorta(b.fechaAdq) : "", b.valorAdq ? "por " + eur0(b.valorAdq) : "", b.valor ? eur0(b.valor) : "", b.cargas || "", b.muniNombre ? b.muniNombre + (b.muniProv ? " (" + b.muniProv + ")" : "") : ""].filter(Boolean).join(" · ");
+      const yaB = nuevosB.find((q) => (b.refCatastral && q.nb.refCatastral === b.refCatastral) || (b.iban && q.nb.iban === b.iban));
+      if (!ex && yaB) { const nb = yaB.nb; for (const [k, v] of Object.entries(campos)) if (nb[k] == null || nb[k] === "" || nb[k] === 0) nb[k] = v; if (!nb.valor && b.valor) nb.valor = b.valor; if (b.muniNombre && !nb.muniNombre && !nb.muniIne) { nb._muni = [b.muniNombre, b.muniProv]; } if (b.tipo === "vivienda" && nb.tipo === "inmueble") nb.tipo = "vivienda"; yaB.prop.mostrar += " · " + resumen; yaB.prop.doc += " + " + doc; yaB.prop.conf = Math.max(yaB.prop.conf, b.conf); yaB.prop.on = yaB.prop.conf >= 1; continue; }
+      if (ex) { const nuevos = Object.fromEntries(Object.entries(campos).filter(([k, v]) => ex[k] == null || ex[k] === "" || ex[k] === 0)); if (!Object.keys(nuevos).length) continue; add({ doc, grupo: "Inmuebles", etiqueta: `Completar «${ex.descripcion || "inmueble"}»`, mostrar: resumen, conf: b.conf, aplicar: (x) => { const q = x.bienes.find((z) => z.id === ex.id); if (q) { Object.assign(q, nuevos); if (b.muniNombre && !q.muniIne) lecMunicipio(q, b.muniNombre, b.muniProv); } } }); continue; }
+      const esInm = b.tipo === "vivienda" || b.tipo === "inmueble";
+      const nb = { tipo: b.tipo, descripcion: b.descripcion, valor: b.valor || "", titularidad: b.titularidad || "", ...campos, _muni: b.muniNombre ? [b.muniNombre, b.muniProv] : null };
+      const prop = add({ doc, grupo: esInm ? "Inmuebles" : "Cuentas y valores", etiqueta: esInm ? (b.tipo === "vivienda" ? "Vivienda" : "Inmueble") : b.tipo === "valores" ? "Fondos o valores" : "Cuenta", mostrar: `${b.descripcion}${resumen ? " · " + resumen : ""}`, conf: b.conf, aplicar: (x) => { const { _muni, ...resto } = nb; const fin = { id: uid(), ...resto, titularidad: resto.titularidad || (x.civil === "gananciales" ? "ganancial" : "privativo"), origen: "documento" }; if (_muni) lecMunicipio(fin, _muni[0], _muni[1]); x.bienes.push(fin); } });
+      nuevosB.push({ nb, prop });
+    }
+    for (const d of r.datos.deudas) add({ doc, grupo: "Deudas", etiqueta: "Deuda", mostrar: `${d.concepto}${d.importe ? " · " + eur0(d.importe) : " (importe por confirmar)"}${d.ganancial ? " · deuda ganancial (la herencia responde de la mitad)" : ""}${d.nota ? ". " + d.nota : ""}`, conf: d.conf, aplicar: (x) => { x.deudas = x.deudas || []; x.deudas.push({ concepto: d.concepto, importe: d.importe || "", ...(d.ganancial ? { ganancial: true } : {}), origen: "documento" }); } });
+  }
+  // Comunidad autónoma del impuesto: si el expediente no la tiene, se propone por el lugar del fallecimiento (o, en su defecto, por el primer inmueble)
+  if (!x.ccaa && typeof muniDesdeTexto === "function" && typeof MUNI_ES === "object") {
+    const lug = P.find((p) => p.k === "lugarFallecimiento"); const inm = R.flatMap((r) => r.datos.bienes).find((b) => b.muniNombre);
+    const ine = (lug && muniDesdeTexto(lug.mostrar)) || (inm && (muniDesdeTexto(inm.muniProv ? `${inm.muniNombre} (${inm.muniProv})` : inm.muniNombre)));
+    const pv = ine && MUNI_ES.provincias[String(ine).slice(0, 2)];
+    if (pv && pv.ccaa && (typeof TERRITORIOS !== "object" || TERRITORIOS.some((t) => t[0] === pv.ccaa))) addP({ doc: lug ? lug.doc : (inm ? R.find((r) => r.datos.bienes.includes(inm)).nombre : ""), grupo: "Causante", etiqueta: "Comunidad autónoma del impuesto", mostrar: `${typeof nombreTerr === "function" ? nombreTerr(pv.ccaa) : pv.ccaa} (por ${lug ? "el lugar del fallecimiento" : "el municipio del inmueble"}; lo que cuenta es la residencia habitual del causante)`, conf: lug ? 1 : 0, k: "ccaa", valor: pv.ccaa, aplicar: (x) => { if (!x.ccaa) x.ccaa = pv.ccaa; } });
+  }
+  // Si un documento dice «consta testamento» (últimas voluntades) y otro es el propio testamento, manda el testamento
+  const tst = P.filter((p) => p.k === "testamento");
+  if (tst.length > 1 && tst.some((p) => p.valor !== "nose")) for (const p of tst.filter((q) => q.valor === "nose")) P.splice(P.indexOf(p), 1);
+  return { docs: R, propuestas: P };
+}
+function lecMunicipio(b, nombre, prov) {
+  if (typeof muniDesdeTexto !== "function") return;
+  const ine = muniDesdeTexto(prov ? `${nombre} (${prov})` : nombre) || muniDesdeTexto(nombre);
+  if (ine && typeof muniElegir === "function") muniElegir(b, ine); else b.muniNombre = b.muniNombre || nombre;
+}
+function lecAplicar(x, ids) {
+  const R = LEC.resultado; if (!R) return 0;
+  let n = 0;
+  for (const p of R.propuestas) if (ids.includes(p.id)) { try { p.aplicar(x); n++; } catch (e) { console.error(e); } }
+  if (n) { x.docsLeidos = (x.docsLeidos || []).concat(R.docs.map((d) => ({ nombre: d.nombre, tipo: d.tipo, fecha: hoy() }))); anotar(x, `${plural(n, "dato cargado", "datos cargados")} desde ${plural(R.docs.length, "documento")} (${R.docs.map((d) => d.titulo).filter((v, i, a) => a.indexOf(v) === i).join(", ")}). Marcados «leído de documento» para revisar.`, "doc"); guardar(); }
+  return n;
+}
+
+// ── Hoja de revisión ──
+function lecSheetHTML() {
+  const x = DB.expedientes.find((q) => q.id === LEC.exp);
+  if (LEC.leyendo || !LEC.resultado) return sheetHTML("Leyendo los documentos", `<div class="lec-wait"><div class="lec-spin" aria-hidden="true"></div><p id="lec-prog">Preparando la lectura…</p><p class="caption">Todo ocurre en este ordenador: los documentos no se envían a ningún sitio. Un PDF con texto tarda un segundo; un escaneo o una foto, entre diez y treinta segundos por página la primera vez.</p></div>`, "Cerrar");
+  const R = LEC.resultado, P = R.propuestas;
+  const grupos = [...new Set(P.map((p) => p.grupo))];
+  const docs = `<div class="lec-docs">${R.docs.map((d) => `<div class="lec-doc"><span class="lec-doc-t"><b>${esc(d.titulo)}</b><small>${esc(d.nombre)}${d.escaneado ? " · escaneo" : d.texto ? " · PDF con texto" : ""}${d.paginas > 1 ? " · " + plural(d.paginas, "página") : ""}</small></span></div>`).join("")}</div>${(() => { const A = R.docs.flatMap((d) => d.datos.avisos.map((a) => [d.titulo, a])); return A.length ? `<ul class="lec-avisos">${A.map(([t, a]) => `<li><b>${esc(t)}:</b> ${esc(a)}</li>`).join("")}</ul>` : ""; })()}`;
+  const lista = grupos.map((g) => `<div class="sectitle">${esc(g)}</div><div class="group lec-grupo">${P.filter((p) => p.grupo === g).map((p) => `<label class="row lec-row ${p.conf === 0 ? "lec-duda" : ""}"><input type="checkbox" data-lecsel="${p.id}" ${p.on ? "checked" : ""}><span class="t"><b>${esc(p.etiqueta)}</b><small>${esc(p.mostrar)}</small><small class="lec-src">${esc(p.doc)}${p.conf === 0 ? " · dudoso o ya hay un valor en el expediente: revísalo" : ""}</small></span></label>`).join("")}</div>`).join("");
+  const body = `<p class="caption" style="margin:0 0 12px">Lo que se ha leído en ${plural(R.docs.length, "documento")}. Marca lo que quieras cargar en el expediente${x ? ` de ${esc(nombreExp(x))}` : ""}; todo queda señalado como «leído de documento» para que lo revises. Nada se inventa: lo que no se reconoce, se deja vacío.</p>
+    ${docs}
+    ${P.length ? lista : `<div class="card empty" style="margin-top:12px"><b>Sin datos nuevos</b>Los documentos se han archivado, pero no se ha reconocido nada que no estuviera ya en el expediente.</div>`}
+    ${P.length ? `<div class="lec-acts"><button class="btn block" data-act="lecAplicar">Cargar lo marcado en el expediente</button><button class="btn block gray" data-act="cerrarSheet">Solo archivar los documentos</button></div>` : ""}`;
+  return sheetHTML("Datos leídos de los documentos", body, "Cerrar", "lec-sheet");
+}
+// Nuevo expediente a partir de documentos (portada): se crea vacío, se archivan y se leen
+function lecNuevoHTML() {
+  return sheetHTML("Nuevo expediente desde documentos", `<p class="caption" style="margin:0 0 12px">Arrastra aquí los documentos de la herencia que tengas: certificado de defunción, últimas voluntades, seguros, testamento, recibos del IBI o certificaciones catastrales, notas simples, certificados bancarios, DNI. Se crea el expediente y se rellena con lo que se lea; después lo completas tú.</p>
+    <label class="drop" data-drop="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><b>Elegir o arrastrar los documentos</b><span>PDF, fotos o escaneos. Se guardan en este dispositivo y no se envían a ningún sitio.</span><input type="file" multiple data-lecnuevo="1" accept="application/pdf,image/*"></label>
+    <ul class="lec-tipos">${Object.entries(LEC_TIPOS).filter(([k]) => k !== "desconocido").map(([, v]) => `<li>${esc(v)}</li>`).join("")}</ul>
+    ${lecDisponible() ? "" : `<p class="caption" style="color:var(--orange);margin-top:12px">La lectura de documentos funciona en la versión web (heredate.github.io). En este archivo se pueden archivar, pero no leer.</p>`}`, "Cerrar", "lec-sheet");
+}
+async function lecNuevoDesdeArchivos(files) {
+  if (!files || !files.length) return;
+  if (typeof licPuedeCrear === "function" && !licPuedeCrear()) { toast(licMotivoBloqueo()); return; }
+  const D = despachoCfg();
+  const x = { id: uid(), creado: hoy(), nombre: "", fecha: "", ccaa: D.ccaaDefecto || "", civil: "", testamento: "", personas: [], bienes: [], deudas: [], gastos: [], situ: {}, tramites: {}, ajuar: "sts", enPlazo: true, fase: "encargo", despacho: { ref: typeof nuevaRef === "function" ? nuevaRef() : "", cliente: "", alta: hoy() }, responsable: D.abogados[0]?.id, bitacora: [] };
+  DB.expedientes.unshift(x); guardar();
+  anotar(x, "Expediente creado a partir de documentos", "doc");
+  go({ vista: "exp", id: x.id, sec: "resumen", sheet: null });
+  await archivoGuardar([...files], x.id, "");
+}
+// Tarjeta del Resumen: qué se leyó y los datos del causante que no tienen campo propio en el formulario
+function lecResumenHTML(x) {
+  const D = x.docsLeidos || []; const td = x.testamentoDatos || {}; const A = x.aseguradoras || [];
+  if (!D.length && !x.nifCausante && !x.lugarFallecimiento && !td.notario && !td.fecha && !A.length) return "";
+  const filas = [x.nifCausante ? ["NIF del causante", x.nifCausante] : null, x.lugarFallecimiento ? ["Lugar del fallecimiento", x.lugarFallecimiento] : null, td.notario ? ["Notario del testamento", td.notario] : null, td.fecha ? ["Fecha del testamento", fechaCorta(td.fecha)] : null, td.protocolo ? ["Protocolo", td.protocolo] : null, A.length ? ["Seguros de vida", A.map((a) => a.entidad + (a.poliza ? " (" + a.poliza + ")" : "")).join(", ")] : null].filter(Boolean);
+  const tipos = D.map((d) => LEC_TIPOS[d.tipo] || d.tipo).filter((v, i, a) => a.indexOf(v) === i);
+  return `<div class="card lec-res" style="margin-top:14px">${cardH("Leído de los documentos", D.length ? `${plural(D.length, "documento leído", "documentos leídos")}: ${esc(tipos.join(", "))}` : "Datos del causante", `<button class="link" data-sec="documentos">Documentos ›</button>`)}${filas.length ? `<div class="kv">${filas.map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div>` : ""}<p class="caption" style="margin:10px 0 0">Las personas y bienes cargados desde documentos llevan la marca «leído de documento» hasta que los revises.</p></div>`;
+}
+
+// Franja del Resumen mientras el expediente está empezando: la vía rápida es subir los documentos
+function lecFranjaHTML(x) {
+  if (!["encargo", "documentacion", undefined, ""].includes(x.fase)) return "";
+  const n = (x.docsLeidos || []).length; const faltan = [!x.fecha && "la fecha", !(x.personas || []).length && "los herederos", !(x.bienes || []).some((b) => num(b.valor) > 0) && "el valor de los bienes"].filter(Boolean);
+  if (n && !faltan.length) return "";
+  return `<div class="card lec-franja"><span class="ico q">${I.doc}</span><span class="t"><b>${n ? "Sube más documentos para completar" : "Sube los documentos y el expediente se rellena solo"}</b><small>${n ? `${plural(n, "documento leído", "documentos leídos")}. Falta ${faltan.join(", ")}: nota simple, IBI o Catastro para los inmuebles; certificado del banco para las cuentas; DNI de los herederos.` : "Certificado de defunción, últimas voluntades, seguros, testamento, notas simples, IBI o Catastro, DNI, certificados bancarios, escrituras. Se leen en este ordenador y tú apruebas cada dato."}</small></span><span class="acts"><label class="btn sm">${I.doc}Subir documentos<input type="file" multiple data-subir="" accept="application/pdf,image/*" style="display:none"></label><button class="btn sm gray" data-sec="documentos">Archivo</button></span></div>`;
+}
 
 // ───────────────────── Hereda+ · interfaz v4 ─────────────────────
 const SV = (d, w = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -14277,12 +14846,12 @@ function vHome() {
     <p class="greet">${esc(fechaHoyLarga())}</p>
     ${ayPrimerosPasosHTML()}${escritorio() ? "" : `<div class="infobar nu-otro"><span class="ico blue">${I.info}</span><span>¿Creaste expedientes en otro equipo? Siguen allí: cada equipo guarda los suyos. Para traerlos, expórtalos en ese equipo e impórtalos aquí, en <button class="link" data-act="ajustes">Ajustes › Importar un archivo</button>.</span></div>`}
     <div class="gu-port"><div class="sectitle flex"><b>Aprende usándolo</b><span>guías interactivas</span></div>${guHTMLLista(true)}</div>
-    <div class="home-hero" style="grid-template-columns:1fr;margin-top:14px"><div><div class="kick">${esc(D.nombre || "Tu despacho")}</div><h2>Todavía no hay expedientes.</h2><p>Un expediente es una herencia: la persona fallecida, sus herederos y sus bienes. Con la fecha, la comunidad, una persona y un bien ya se calculan los impuestos, el reparto, los plazos y los escritos. Lo que falte se completa después, o lo rellena la familia desde su móvil.</p><div class="acts"><button class="btn" data-act="nuevo">Abrir el primer expediente</button><button class="btn gray" data-dm="cargar">Ver un despacho de ejemplo</button></div></div></div>
+    <div class="home-hero" style="grid-template-columns:1fr;margin-top:14px"><div><div class="kick">${esc(D.nombre || "Tu despacho")}</div><h2>Todavía no hay expedientes.</h2><p>Un expediente es una herencia: la persona fallecida, sus herederos y sus bienes. Con la fecha, la comunidad, una persona y un bien ya se calculan los impuestos, el reparto, los plazos y los escritos. Lo que falte se completa después, o lo rellena la familia desde su móvil.</p><div class="acts"><button class="btn" data-act="nuevo">Abrir el primer expediente</button><button class="btn gray" data-act="lecNuevo">Crear desde documentos</button><button class="btn gray" data-dm="cargar">Ver un despacho de ejemplo</button></div></div></div>
     <p class="foot-note">${notaDatos()} Motor ${VERSION}. <button class="link" data-act="ejemplos" style="font-size:12.5px">Cargar cuatro casos de ejemplo</button></p></div>`;
   const vista = ui.cv || "tabla";
   return `${top}<div class="page wide view">
     <p class="greet">${saludo()} · ${esc(fechaHoyLarga())}</p>
-    <div class="headrow"><h1 class="ltitle">Expedientes</h1><div class="headacts"><div class="search" style="width:240px">${I.search}<input id="h-q" placeholder="Buscar" value="${esc(ui.q)}" autocomplete="off"></div><button class="btn sm" data-act="nuevo">${I.plus}Nuevo expediente</button></div></div>${ayPrimerosPasosHTML()}${rdResumenCartera()}
+    <div class="headrow"><h1 class="ltitle">Expedientes</h1><div class="headacts"><div class="search" style="width:240px">${I.search}<input id="h-q" placeholder="Buscar" value="${esc(ui.q)}" autocomplete="off"></div><button class="btn sm gray" data-act="lecNuevo" title="Crear un expediente a partir de los documentos de la herencia">${I.doc}Desde documentos</button><button class="btn sm" data-act="nuevo">${I.plus}Nuevo expediente</button></div></div>${ayPrimerosPasosHTML()}${rdResumenCartera()}
     <div class="kpis kpis3" style="margin-top:14px">${kpi("En curso", act.length, `${est.length - act.length} archivados`)}${kpi("Vencen en 30 días", pronto, "expedientes con un plazo próximo", pronto ? "warn" : "")}${kpi("Vencidos", venc, "expedientes con plazos vencidos", venc ? "bad" : "")}</div>
     ${bloqueVigilancia()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 12px"><div class="seg"><button data-cv="tabla" aria-pressed="${vista === "tabla"}">Tabla</button><button data-cv="tablero" aria-pressed="${vista === "tablero"}">Por fase</button><button data-cv="plazos" aria-pressed="${vista === "plazos"}">Plazos y mapa</button></div><button class="btn sm gray desk-only" data-act="ics">${I.calplus}Plazos al calendario</button></div>
@@ -14354,7 +14923,7 @@ function tResumen(x, R, T) {
       ${kpi(v && v.q != null && v.q < 0 ? "Plazo vencido" : "Próximo plazo", v && v.q != null ? (v.q < 0 ? "hace " + plural(-v.q, "día") : v.q === 0 ? "Hoy" : "en " + plural(v.q, "día")) : "—", p ? esc(p.titulo) : "Sin plazos", v ? v.cls : "", p ? `data-topen="${p.id}"` : "")}
       ${kpi("Trámites", `${hechos} de ${T.length}`, "resueltos", "", 'data-sec="tramites"')}
     </div>
-    ${franjaFamilia(x)}
+    ${franjaFamilia(x)}${typeof lecResumenHTML === "function" ? lecResumenHTML(x) : ""}
     <div class="grid g2" style="margin-top:14px">
       <div class="card next">${p ? `<div><div class="k"><i class="dot ${v.cls === "bad" ? "bad" : v.cls === "warn" ? "warn" : ""}"></i>Siguiente paso</div><div class="title">${esc(p.titulo)}</div><div class="sub">${esc(p.organismo || p.quien || "")}</div><p class="caption" style="margin:12px 0 0;line-height:1.55;max-width:52ch">${esc(p.que.split(". ")[0].replace(/\.$/, ""))}.</p></div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">${v.q != null ? `<div class="when"><span class="days num ${v.cls}">${Math.abs(v.q)}</span><span class="caption">${v.q < 0 ? "días de retraso" : v.q === 1 ? "día" : "días"}${p.limite ? "<br>" + fechaCorta(p.limite) : ""}</span></div>` : `<div class="caption">${esc(v.txt)}</div>`}<button class="btn sm" data-topen="${p.id}">Abrir</button></div>` : `<div><div class="k"><i class="dot ok"></i>Todo al día</div><div class="title">No quedan trámites pendientes.</div></div>`}</div>
@@ -14397,12 +14966,12 @@ function tTramites(x, R, T) {
 
 function listaBienes(x) {
   if (!(x.bienes || []).length) return `<div class="group"><p class="empty">Todavía no hay bienes.</p></div>`;
-  return `<div class="group" style="--inset:60px">${x.bienes.map((b) => { const [c, ic] = icoBien[b.tipo]; const adj = b.adjudicadoA && persona(x, b.adjudicadoA); return `<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion || TIPO_BIEN[b.tipo][0])}</b><small>${b.origen === "familia" ? "Aportado por la familia · " : ""}${TIPO_BIEN[b.tipo][0]}${b.titularidad === "ganancial" ? " · gananciales" : b.titularidad === "proindiviso" ? " · " + num(b.porcentaje) + " %" : ""}${b.legatarioId ? " · legado" : ""}${adj ? " · para " + esc(adj.nombre) : ""}${b.municipio && b.municipio !== "OTRO" && ORDENANZAS[b.municipio] ? " · " + ORDENANZAS[b.municipio].nombre : ""}</small></span><span class="v num">${eur0(Math.max(num(b.valor), num(b.valorReferencia)))}</span>${I.chev}</button>`; }).join("")}</div>`;
+  return `<div class="group" style="--inset:60px">${x.bienes.map((b) => { const [c, ic] = icoBien[b.tipo]; const adj = b.adjudicadoA && persona(x, b.adjudicadoA); return `<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion || TIPO_BIEN[b.tipo][0])}</b><small>${b.origen === "familia" ? "Aportado por la familia · " : b.origen === "documento" ? "Leído de documento · " : ""}${TIPO_BIEN[b.tipo][0]}${b.titularidad === "ganancial" ? " · gananciales" : b.titularidad === "proindiviso" ? " · " + num(b.porcentaje) + " %" : ""}${b.legatarioId ? " · legado" : ""}${adj ? " · para " + esc(adj.nombre) : ""}${b.municipio && b.municipio !== "OTRO" && ORDENANZAS[b.municipio] ? " · " + ORDENANZAS[b.municipio].nombre : ""}</small></span><span class="v num">${eur0(Math.max(num(b.valor), num(b.valorReferencia)))}</span>${I.chev}</button>`; }).join("")}</div>`;
 }
 function listaPersonas(x, R) {
   if (!(x.personas || []).length) return `<div class="group"><p class="empty">Todavía no hay nadie. Añade a la primera persona.</p></div>`;
   const der = (id) => R ? (R.isd.derechos[id] || []).map((d) => `${d.tipo === "pleno" ? "Propiedad" : d.tipo === "usufructo" ? "Usufructo" : "Nuda propiedad"} ${grp(d.fraccion * 100, d.fraccion * 100 % 1 ? 1 : 0)} %`).join(" · ") : "";
-  return `<div class="group" style="--inset:60px">${x.personas.map((p) => `<button class="row" data-editp="${p.id}"><span class="ico ${p.renuncia ? "gray" : "q"}">${I.person}</span><span class="t"><b>${esc(p.nombre || "Sin nombre")}</b><small>${p.origen === "familia" ? "Aportado por la familia · " : ""}${RELACIONES[p.relacion].label}${p.edad !== "" && p.edad != null ? " · " + p.edad + " años" : ""}${x.testamento === "porcentajes" ? " · " + (num(p.pct) || 0) + " %" : ""}${p.renuncia ? " · renuncia" : R ? " · " + (der(p.id) || "no hereda en este reparto") : ""}</small></span>${I.chev}</button>`).join("")}</div>`;
+  return `<div class="group" style="--inset:60px">${x.personas.map((p) => `<button class="row" data-editp="${p.id}"><span class="ico ${p.renuncia ? "gray" : "q"}">${I.person}</span><span class="t"><b>${esc(p.nombre || "Sin nombre")}</b><small>${p.origen === "familia" ? "Aportado por la familia · " : p.origen === "documento" ? "Leído de documento · " : ""}${RELACIONES[p.relacion].label}${p.edad !== "" && p.edad != null ? " · " + p.edad + " años" : ""}${x.testamento === "porcentajes" ? " · " + (num(p.pct) || 0) + " %" : ""}${p.renuncia ? " · renuncia" : R ? " · " + (der(p.id) || "no hereda en este reparto") : ""}</small></span>${I.chev}</button>`).join("")}</div>`;
 }
 const ADD_P = [["conyuge", "Cónyuge"], ["pareja_hecho", "Pareja de hecho"], ["hijo", "Hijo/a"], ["nieto", "Nieto/a"], ["padre", "Padre/madre"], ["abuelo", "Abuelo/a"], ["hermano", "Hermano/a"], ["sobrino", "Sobrino/a"], ["tio", "Tío/a"], ["primo", "Primo/a"], ["extrano", "Otra persona"]];
 // H43: un solo cónyuge o pareja: «+ Cónyuge» y «+ Pareja de hecho» desaparecen cuando ya hay uno (no separado)
@@ -14594,7 +15163,7 @@ function vAsistente() {
   const pct = Math.round(ui.paso / (PASOS.length - 1) * 100);
   let body = "", puede = true;
   const opciones = (key, attr, o) => `<div class="group">${o.map(([v, t, s]) => `<button class="choice" data-${attr}="${v}" aria-pressed="${x[key] === v}"><span class="radio"></span><span><b>${t}</b>${s ? `<small>${s}</small>` : ""}</span></button>`).join("")}</div>`;
-  if (p === "intro") body = `<span class="logo" style="width:56px;height:56px;border-radius:14px;margin-bottom:24px;font-size:22px">H+</span><h2 class="q">Nuevo expediente</h2><p class="qsub">Datos del encargo, del causante, de los herederos y del patrimonio. Unos diez minutos. Lo que falte se completa después desde el expediente.</p><div class="altpath"><span class="ico green">${I.person}</span><span class="t"><b>¿Prefieres que la familia rellene los datos?</b><small>Se crea el expediente y les envías un cuestionario para el móvil. Cuando lo devuelvan, solo revisas.</small></span><button class="btn sm gray" data-act="nuevoFamilia">Empezar así</button></div>`;
+  if (p === "intro") body = `<span class="logo" style="width:56px;height:56px;border-radius:14px;margin-bottom:24px;font-size:22px">H+</span><h2 class="q">Nuevo expediente</h2><p class="qsub">Datos del encargo, del causante, de los herederos y del patrimonio. Unos diez minutos. Lo que falte se completa después desde el expediente.</p><div class="altpath"><span class="ico green">${I.person}</span><span class="t"><b>¿Tienes ya los documentos?</b><small>Certificado de defunción, testamento, notas simples, IBI, DNI, bancos… El expediente se crea y se rellena con lo que se lea; tú apruebas cada dato.</small></span><button class="btn sm gray" data-act="lecNuevo">Empezar con los documentos</button></div>`;
   if (p === "encargo") { const D = despachoCfg(); x.despacho = x.despacho || {}; if (!x.despacho.ref) x.despacho.ref = nuevaRef(); if (!x.responsable) x.responsable = D.abogados[0].id; body = `<h2 class="q">Encargo</h2><p class="qsub">Cliente que encarga el asunto y abogado responsable.</p><div class="group"><div class="field"><label for="f-cli">Cliente</label><input id="f-cli" data-bd="cliente" value="${esc(x.despacho.cliente)}" placeholder="Nombre del cliente" autocomplete="off"></div><div class="field"><label for="f-ref">Referencia</label><input id="f-ref" data-bd="ref" value="${esc(x.despacho.ref)}"></div><div class="field"><label for="f-resp">Responsable</label><select id="f-resp" data-resp="1">${D.abogados.map((a) => `<option value="${a.id}" ${x.responsable === a.id ? "selected" : ""}>${esc(a.nombre)}</option>`).join("")}</select></div></div>`; }
   if (p === "nombre") body = `<h2 class="q">Nombre del causante</h2><p class="qsub">Aparece en los escritos. Opcional.</p><div class="group"><div class="field"><label for="f-nombre">Nombre y apellidos</label><input id="f-nombre" data-b="nombre" value="${esc(x.nombre)}" autocomplete="off" placeholder="Nombre de la persona fallecida"></div><div class="field"><label for="f-gen">Tratamiento en los escritos</label><select id="f-gen" data-b="generoCausante"><option value="">Sin indicar (redacción neutra)</option><option value="f" ${x.generoCausante === "f" ? "selected" : ""}>Femenino (D.ª, fallecida, viuda)</option><option value="m" ${x.generoCausante === "m" ? "selected" : ""}>Masculino (D., fallecido, viudo)</option></select></div></div>`;
   if (p === "fecha") { body = `<h2 class="q">Fecha del fallecimiento</h2><p class="qsub">Los plazos se cuentan desde ese día y se aplica la ley vigente entonces.</p><div class="group"><div class="field"><label for="f-fecha">Fecha</label><input id="f-fecha" type="date" data-b="fecha" value="${esc(x.fecha)}" max="${hoy()}"></div></div>`; puede = !!x.fecha; }
@@ -14775,6 +15344,8 @@ function vSheet() {
   if (s.tipo === "mas") return sheetHTML("Más secciones", `<div class="group" style="--inset:60px">${SECCIONES().filter(([k]) => !TABS_M.includes(k)).map(([k, tt, ic]) => `<button class="row" data-sec="${k}"><span class="ico q">${ic}</span><span class="t"><b>${tt}</b></span>${I.chev}</button>`).join("")}</div>`);
   if (s.tipo === "opinion") return sheetOpinion();
   if (s.tipo === "familia") return sheetFamilia(exp());
+  if (s.tipo === "lector") return lecSheetHTML();
+  if (s.tipo === "lecNuevo") return lecNuevoHTML();
   if (s.tipo === "carpeta") return rnSheetCarpeta(exp());
   if (s.tipo === "tc") return tcSheet(exp());
   if (s.tipo === "novedades") return sheetNovedades();
@@ -14795,7 +15366,7 @@ function vSheet() {
       <div class="composer"><textarea id="ia-in" rows="1" placeholder="Escribe" ${c.busy ? "disabled" : ""}></textarea>${c.busy ? `<button data-act="iaStop" aria-label="Detener">${I.stop}</button>` : `<button data-act="iaSend" aria-label="Enviar">${I.send}</button>`}</div>`);
   }
   if (s.tipo === "menu") {
-    return sheetHTML("Opciones", `<div class="group" style="--inset:60px"><button class="row" data-act="familia"><span class="ico green">${I.person}</span><span class="t"><b>Datos de la familia</b><small>${exp()?.familia ? "Recibidos el " + fechaCorta(exp().familia.recibido) : "Enviar el cuestionario o cargar la respuesta"}</small></span>${I.chev}</button><button class="row" data-act="paraFamilia"><span class="ico blue">${I.people}</span><span class="t"><b>Para la familia</b><small>Modo reunión y carpeta para el móvil</small></span>${I.chev}</button><button class="row" data-act="informePdf"><span class="ico q">${I.dl}</span><span class="t"><b>Informe de cálculo en PDF</b></span>${I.chev}</button><button class="row" data-act="editar"><span class="ico teal">${I.list}</span><span class="t"><b>Revisar con el asistente</b></span>${I.chev}</button><button class="row" data-act="situ"><span class="ico indigo">${I.sliders}</span><span class="t"><b>Ajustar trámites al caso</b></span>${I.chev}</button><button class="row" data-doc="liquidacion"><span class="ico gold">${I.law}</span><span class="t"><b>Propuesta de liquidación</b></span>${I.chev}</button><button class="row" data-act="icsx"><span class="ico blue">${I.calplus}</span><span class="t"><b>Plazos al calendario</b><small>Archivo .ics con aviso una semana antes</small></span>${I.chev}</button><button class="row" data-act="exportarExp"><span class="ico green">${I.dl}</span><span class="t"><b>Exportar este expediente</b><small>Con sus documentos, para otro equipo o abogado</small></span>${I.chev}</button><button class="row" data-act="duplicar"><span class="ico blue">${I.doc}</span><span class="t"><b>Duplicar como escenario</b></span>${I.chev}</button><button class="row" data-act="exportar"><span class="ico green">${I.tax}</span><span class="t"><b>Copiar el informe completo</b></span>${I.chev}</button></div>
+    return sheetHTML("Opciones", `<div class="group" style="--inset:60px">${FAMILIA_CUESTIONARIO || exp()?.familia ? `<button class="row" data-act="familia"><span class="ico green">${I.person}</span><span class="t"><b>Datos de la familia</b><small>${exp()?.familia ? "Recibidos el " + fechaCorta(exp().familia.recibido) : "Enviar el cuestionario o cargar la respuesta"}</small></span>${I.chev}</button>` : ""}<button class="row" data-act="paraFamilia"><span class="ico blue">${I.people}</span><span class="t"><b>Para la familia</b><small>Modo reunión y carpeta para el móvil</small></span>${I.chev}</button><button class="row" data-act="informePdf"><span class="ico q">${I.dl}</span><span class="t"><b>Informe de cálculo en PDF</b></span>${I.chev}</button><button class="row" data-act="editar"><span class="ico teal">${I.list}</span><span class="t"><b>Revisar con el asistente</b></span>${I.chev}</button><button class="row" data-act="situ"><span class="ico indigo">${I.sliders}</span><span class="t"><b>Ajustar trámites al caso</b></span>${I.chev}</button><button class="row" data-doc="liquidacion"><span class="ico gold">${I.law}</span><span class="t"><b>Propuesta de liquidación</b></span>${I.chev}</button><button class="row" data-act="icsx"><span class="ico blue">${I.calplus}</span><span class="t"><b>Plazos al calendario</b><small>Archivo .ics con aviso una semana antes</small></span>${I.chev}</button><button class="row" data-act="exportarExp"><span class="ico green">${I.dl}</span><span class="t"><b>Exportar este expediente</b><small>Con sus documentos, para otro equipo o abogado</small></span>${I.chev}</button><button class="row" data-act="duplicar"><span class="ico blue">${I.doc}</span><span class="t"><b>Duplicar como escenario</b></span>${I.chev}</button><button class="row" data-act="exportar"><span class="ico green">${I.tax}</span><span class="t"><b>Copiar el informe completo</b></span>${I.chev}</button></div>
       <div class="sectitle">Zona peligrosa</div><div class="group">${s.confirmar ? `<div class="row"><span class="t"><b>¿Borrar este expediente?</b><small>No se puede deshacer.</small></span></div><button class="row" data-act="borrarSi"><span class="t"><b style="color:var(--red)">Sí, borrar</b></span></button>` : `<button class="row" data-act="borrar"><span class="t"><b style="color:var(--red)">Borrar este expediente</b></span></button>`}</div>`);
   }
   if (s.tipo === "ajustes") {
@@ -15030,6 +15601,8 @@ $app.addEventListener("click", (e) => {
   if (d.act === "avisoVisto") { const x = exp(); (x.avisos || []).forEach((a) => (a.visto = true)); guardar(); render(); return; }
   if (d.act === "biblioNov") { ui.bn = "novedades"; go({ vista: "biblio", sheet: null }); return; }
   if (d.act === "familia") { ui.sheet = { tipo: "familia" }; render(); return; }
+  if (d.act === "lecNuevo") { if (!licPuedeCrear()) { toast(licMotivoBloqueo()); ui.sheet = { tipo: "ajustes" }; render(); return; } ui.sheet = { tipo: "lecNuevo" }; render(); return; }
+  if (d.act === "lecAplicar") { const x = DB.expedientes.find((q) => q.id === LEC.exp) || exp(); if (!x) return; const ids = [...document.querySelectorAll("[data-lecsel]:checked")].map((n) => n.dataset.lecsel); if (!ids.length) { toast("No hay nada marcado"); return; } const n = lecAplicar(x, ids); ui.sheet = null; if (ui.vista !== "exp" || ui.id !== x.id) go({ vista: "exp", id: x.id, sec: "herencia", sheet: null }); else render(); toast(`${plural(n, "dato cargado", "datos cargados")} en el expediente. Revisa lo marcado «leído de documento».`); return; }
   if (d.act === "famWa") { const x = exp(); abrirExterno(familiaWaURL(x)); marcarEnviado(x, "enviado por WhatsApp"); render(); return; }
   if (d.act === "famMail") { const x = exp(); abrirExterno(familiaMailURL(x)); marcarEnviado(x, "enviado por correo"); render(); return; }
   if (d.act === "famCopy") { const x = exp(); copiar(familiaEnlace(x)); marcarEnviado(x, "copiado para enviar"); render(); return; }
@@ -15152,6 +15725,7 @@ $app.addEventListener("change", (e) => {
   if (d.simval) { const x = exp(), S = simEstado(x); const f = Number(t.value); if (Math.abs(f - 1) < 0.005) delete S.val[d.simval]; else S.val[d.simval] = f; render(); return; }
   if (t.id === "f-fam" && t.files && t.files[0]) { const x = exp(); t.files[0].text().then((txt) => importarArchivo(txt, x)); return; }
   if (t.id === "f-img" && t.files && t.files[0]) { iaLeerDoc(t.files[0]); return; }
+  if (d.lecnuevo != null && t.files && t.files.length) { const F = [...t.files]; t.value = ""; lecNuevoDesdeArchivos(F); return; }
   if (d.subir != null && t.files && t.files.length) { const q = exp(); if (q) archivoGuardar([...t.files], q.id, d.subir); return; }
   if (d.fcat) { archivoCambiar(d.fcat, { cat: t.value }); return; }
   if (d.cfg) { despachoCfg()[d.cfg] = d.cfg === "localidad" ? dpSinRepetir(t.value) : t.value.trim(); guardar(); render(); return; }
@@ -15174,7 +15748,7 @@ $app.addEventListener("change", (e) => {
 });
 $app.addEventListener("dragover", (e) => { const z = e.target.closest(".drop"); if (z) { e.preventDefault(); z.classList.add("over"); } });
 $app.addEventListener("dragleave", (e) => { const z = e.target.closest(".drop"); if (z) z.classList.remove("over"); });
-$app.addEventListener("drop", (e) => { const z = e.target.closest(".drop"); if (!z) return; e.preventDefault(); z.classList.remove("over"); const inp = z.querySelector("input[data-subir]"); const q = exp(); if (q && e.dataTransfer?.files?.length) archivoGuardar([...e.dataTransfer.files], q.id, inp ? inp.dataset.subir : ""); });
+$app.addEventListener("drop", (e) => { const z = e.target.closest(".drop"); if (!z) return; e.preventDefault(); z.classList.remove("over"); if (z.querySelector("input[data-lecnuevo]")) { if (e.dataTransfer?.files?.length) lecNuevoDesdeArchivos([...e.dataTransfer.files]); return; } const inp = z.querySelector("input[data-subir]"); const q = exp(); if (q && e.dataTransfer?.files?.length) archivoGuardar([...e.dataTransfer.files], q.id, inp ? inp.dataset.subir : ""); });
 document.addEventListener("keydown", (e) => {
   if (e.target && e.target.id === "ia-in" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (e.target.value.trim()) iaEnviar(e.target.value); return; }
   if (e.key === "Escape" && ui.sheet) { ui.sheet = null; persistir(); render(); return; }
@@ -15194,7 +15768,7 @@ sgArranque(() => {
 </script>
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610061455").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610061630").catch(() => {}));
 </script>
 </body>
 </html>
