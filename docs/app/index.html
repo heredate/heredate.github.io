@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610061402">
+<meta name="hereda-version" content="202610061426">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F6F6F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Hereda+">
-<link rel="manifest" href="/Claude/manifest.webmanifest">
-<link rel="icon" type="image/png" href="/Claude/favicon.png">
-<link rel="apple-touch-icon" href="/Claude/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 </head>
 <body>
 <title>Hereda+</title>
@@ -14806,7 +14806,7 @@ function vSheet() {
       ${dmAjustesHTML()}
       ${sgAjustesHTML()}
       <div class="sectitle">Datos</div><div class="group" style="--inset:60px"><label class="row" style="cursor:pointer;position:relative;overflow:hidden"><span class="ico blue">${I.box}</span><span class="t"><b>Importar un archivo</b><small>Expediente exportado, datos de la familia o copia de seguridad</small></span>${I.chev}<input type="file" id="f-restore" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="row" data-act="ics"><span class="ico gold">${I.calplus}</span><span class="t"><b>Plazos de la cartera al calendario</b></span>${I.chev}</button><button class="row" data-act="ejemplos"><span class="ico q">${I.doc}</span><span class="t"><b>Cargar casos de ejemplo</b></span>${I.chev}</button></div>
-      <p class="group-foot">Los datos y los documentos se guardan en este equipo, en este navegador; no se envían a ningún servidor. Activa la copia automática (arriba, en «Copias de seguridad») para no depender de un solo ordenador. En otro equipo o en el móvil, los expedientes se pasan con «Exportar» o con una copia.</p>${hayWebPublica() ? `<p class="group-foot"><a href="/Claude/condiciones.html" target="_blank" rel="noopener">Condiciones</a> · <a href="/Claude/privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="/Claude/aviso-legal.html" target="_blank" rel="noopener">Aviso legal</a></p>` : ""}
+      <p class="group-foot">Los datos y los documentos se guardan en este equipo, en este navegador; no se envían a ningún servidor. Activa la copia automática (arriba, en «Copias de seguridad») para no depender de un solo ordenador. En otro equipo o en el móvil, los expedientes se pasan con «Exportar» o con una copia.</p>${hayWebPublica() ? `<p class="group-foot"><a href="/condiciones.html" target="_blank" rel="noopener">Condiciones</a> · <a href="/privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="/aviso-legal.html" target="_blank" rel="noopener">Aviso legal</a></p>` : ""}
       <div class="sectitle">Acerca de</div><div class="group"><div class="row"><span class="t"><b>Motor de cálculo</b></span><span class="v">${VERSION}</span></div><div class="row"><span class="t"><b>Trámites en el catálogo</b></span><span class="v">${TR_TOTAL}</span></div><div class="row"><span class="t"><b>Enlaces oficiales</b></span><span class="v">${Object.values(ENLACES).reduce((s, e) => s + e.accion.length + e.norma.length, 0)}</span></div><div class="row"><span class="t"><b>Normativas del impuesto</b></span><span class="v">${TERRITORIOS.length}</span></div><div class="row"><span class="t"><b>Ordenanzas de plusvalía</b></span><span class="v">${Object.keys(ORDENANZAS).length - 1}</span></div></div>`, "Hecho");
   }
   return "";
@@ -15187,7 +15187,7 @@ sgArranque(() => {
 </script>
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/Claude/sw.js?v=202610061402").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610061426").catch(() => {}));
 </script>
 </body>
 </html>
