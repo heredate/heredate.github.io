@@ -819,16 +819,23 @@ function repartoUsufructoUniversal(personas) {
   const hijosVivos = new Set(vivos.filter((p) => p.relacion === "hijo").map((p) => norm(p.nombre)));
   const fuera = vivos.filter((p) => linea(p) === "desc" && p.relacion !== "hijo" && norm(p.estirpe) && hijosVivos.has(norm(p.estirpe)));
   const hijos = vivos.filter((p) => linea(p) === "desc" && !fuera.includes(p));
+  // Por estirpes: los nietos (o bisnietos) de un hijo premuerto que indican de quién descienden comparten la cabeza de ese hijo
+  // (sustitución vulgar a favor de los descendientes, lo habitual en estos testamentos; arts. 774 y 924-926 CC). Sin estirpe, cada uno es una cabeza.
+  const cabezas = []; const porEst = {};
+  for (const h of hijos) { if (h.relacion !== "hijo" && norm(h.estirpe)) { const k = norm(h.estirpe); if (!porEst[k]) { porEst[k] = []; cabezas.push(porEst[k]); } porEst[k].push(h); } else cabezas.push([h]); }
+  const frac = (h) => { const g = cabezas.find((c) => c.includes(h)); return 1 / cabezas.length / g.length; };
+  const hayEstirpes = Object.keys(porEst).length > 0;
   const der = {}; const add = (id, d) => (der[id] = der[id] || []).push(d);
   const avisosFuera = fuera.map((p) => `${p.nombre} no recibe ${conyRen ? "parte" : "nuda propiedad"}: su progenitor ${p.estirpe} vive y hereda (arts. 929-931 CC). Si el testamento le nombra, introdúcelo por porcentajes.`);
+  if (hayEstirpes) avisosFuera.push(`Los descendientes de ${Object.keys(porEst).map((k) => porEst[k][0].estirpe).join(" y ")} reciben por estirpes la parte de su progenitor premuerto (sustitución vulgar, art. 774 CC). Si el testamento llama a los nietos por cabezas, introdúcelo por porcentajes.`);
   if (conyRen && hijos.length) {
-    for (const h of hijos) add(h.id, { tipo: "pleno", fraccion: 1 / hijos.length });
+    for (const h of hijos) add(h.id, { tipo: "pleno", fraccion: frac(h) });
     return { derechos: der, notas: [`${conyRen.nombre} renuncia al usufructo universal: el legado no tiene efecto y se refunde en la herencia (art. 888 CC), de modo que los descendientes, herederos de la nuda propiedad, reciben el pleno dominio por partes iguales. Si el testamento nombra un sustituto para el usufructo (art. 774 CC), se aplica la sustitución: revisar el testamento.`], avisos: avisosFuera };
   }
   if (!cony || !hijos.length) return { derechos: {}, notas: ["Este modelo necesita cónyuge (o pareja) y al menos un descendiente."] };
   add(cony.id, { tipo: "usufructo", fraccion: 1 });
-  for (const h of hijos) add(h.id, { tipo: "nuda", fraccion: 1 / hijos.length, usufructuarioId: cony.id });
-  return { derechos: der, notas: ["Usufructo universal al cónyuge y nuda propiedad a los descendientes por partes iguales. Suele ir con cautela socini: si un hijo exige su legítima libre, se reduce a la estricta. Revisar el testamento."], avisos: avisosFuera };
+  for (const h of hijos) add(h.id, { tipo: "nuda", fraccion: frac(h), usufructuarioId: cony.id });
+  return { derechos: der, notas: [`Usufructo universal al cónyuge y nuda propiedad a los descendientes por partes iguales${hayEstirpes ? ", por estirpes" : ""}. Suele ir con cautela socini: si un hijo exige su legítima libre, se reduce a la estricta. Revisar el testamento.`], avisos: avisosFuera };
 }
 
 function repartoPorcentajes(personas) {
