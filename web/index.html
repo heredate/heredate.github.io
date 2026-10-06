@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hereda+ · Software de sucesiones para despachos</title>
+<meta name="description" content="Hereda+: Impuesto sobre Sucesiones, plusvalía, estrategia fiscal, trámites, escritos y gestión del expediente para despachos de abogados.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F6F6F3">
+<link rel="icon" type="image/png" href="/Claude/favicon.png">
+<link rel="apple-touch-icon" href="/Claude/icons/apple-touch-icon.png">
+
+<style>
+:root{--bg:#F6F6F3;--bg2:#EFEFEB;--panel:#FFFFFF;--panel2:#FAFAF8;--line:rgba(40,38,20,.1);--tx:#1C1C1E;--tx2:#5A5A60;--tx3:#74747A;--acc:#1F6AE0;--ok:#16875A;--shadow:0 0 0 1px rgba(40,38,20,.045),0 1px 2px rgba(40,38,20,.04),0 2px 8px -2px rgba(40,38,20,.045);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Text",Roboto,"Helvetica Neue",Arial,sans-serif;--ease:cubic-bezier(.32,.72,0,1)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 var(--font);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.nav{position:sticky;top:0;z-index:50;background:rgba(246,246,243,.82);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:.5px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px}
+.logo{width:28px;height:28px;border-radius:7px;background:#1F6FEB;color:#fff;display:grid;place-items:center;font:800 12px/1 var(--font);letter-spacing:-.04em}
+.links{display:flex;gap:26px;font-size:14px;color:var(--tx2)}
+.links a:hover{color:var(--tx)}
+@media (max-width:760px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:9px;font-size:14.5px;font-weight:600;transition:opacity .15s}
+.btn:hover{opacity:.88}
+.btn.pri{background:var(--acc);color:#fff;box-shadow:0 1px 2px rgba(31,106,224,.25)}
+.btn.sec{background:var(--panel);color:var(--tx);box-shadow:var(--shadow)}
+.btn.big{height:46px;padding:0 22px;font-size:15.5px}
+.hero{padding:84px 0 40px;text-align:center}
+.eyebrow{display:inline-block;font-size:13px;font-weight:600;color:var(--acc);background:rgba(31,106,224,.09);padding:5px 11px;border-radius:999px;margin-bottom:22px}
+h1{font:700 clamp(36px,5vw,58px)/1.08 var(--font);letter-spacing:-.03em;margin:0 auto;max-width:15em;text-wrap:balance}
+h1 span{color:var(--tx2)}
+.sub{font-size:19px;color:var(--tx2);max-width:40em;margin:22px auto 30px}
+.ctas{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.note{font-size:13px;color:var(--tx3);margin-top:16px}
+.shot{margin:56px auto 0;max-width:1180px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(40,38,20,.06),0 40px 100px -30px rgba(40,38,20,.3);background:var(--panel)}
+.shot .bar{height:30px;background:#F0F0EC;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:.5px solid var(--line)}
+.shot .bar i{width:11px;height:11px;border-radius:50%;background:#D6D6D0}
+.trust{display:flex;justify-content:center;gap:34px;flex-wrap:wrap;margin:44px 0 0;color:var(--tx3);font-size:13.5px}
+.trust b{display:block;color:var(--tx);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+section{padding:96px 0;border-top:.5px solid var(--line)}
+h2{font:700 clamp(28px,3.6vw,40px)/1.15 var(--font);letter-spacing:-.025em;margin:0 0 14px;max-width:20em;text-wrap:balance}
+.lead{font-size:18px;color:var(--tx2);max-width:44em;margin:0 0 46px}
+.feat{display:grid;grid-template-columns:1fr;gap:40px;align-items:center;margin-top:70px}
+@media (min-width:960px){.feat{grid-template-columns:.9fr 1.3fr}.feat.rev{grid-template-columns:1.3fr .9fr}.feat.rev .txt{order:2}}
+.feat h3{font:700 24px/1.25 var(--font);letter-spacing:-.015em;margin:0 0 12px}
+.feat p{color:var(--tx2);margin:0 0 16px}
+.feat ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px;font-size:15px}
+.feat li{display:flex;gap:10px}
+.feat li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--acc);margin-top:9px;flex:none}
+.frame{border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(40,38,20,.06),0 30px 80px -24px rgba(40,38,20,.28)}
+.grid3{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--panel);border-radius:14px;padding:24px;box-shadow:var(--shadow)}
+.card h4{margin:0 0 8px;font-size:16px;font-weight:700}
+.card p{margin:0;color:var(--tx2);font-size:14.5px}
+.card .k{font-size:12px;font-weight:700;color:var(--acc);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px}
+.plans{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:900px){.plans{grid-template-columns:repeat(3,1fr)}}
+.oferta{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:14px;padding:18px 22px;border-radius:14px;background:var(--panel);box-shadow:var(--shadow);border:1px solid rgba(31,106,224,.35)}
+.oferta > div{max-width:720px}.oferta .k{display:block;font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--acc);margin-bottom:4px}
+.plan{background:var(--panel);border-radius:14px;padding:26px 24px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 1.5px var(--acc)}
+.plan .n{font-size:14px;font-weight:700;color:var(--tx2)}
+.plan .p{font:700 36px/1 var(--font);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.plan .p small{font-size:14px;font-weight:500;color:var(--tx2);letter-spacing:0}
+.plan ul{list-style:none;padding:0;margin:6px 0 14px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;color:var(--tx2)}
+.plan li::before{content:"✓";color:var(--ok);margin-right:8px;font-weight:700}
+.plan .btn{margin-top:auto}
+.fine{font-size:13px;color:var(--tx3);margin-top:18px}
+.cta{text-align:center}
+.cta h2{margin:0 auto 14px}
+.cta .lead{margin:0 auto 28px}
+footer{padding:40px 0 60px;color:var(--tx3);font-size:13px;border-top:.5px solid var(--line)}
+footer a{color:inherit}
+footer .wrap{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="#"><span class="logo">H+</span>Hereda+</a>
+  <nav class="links"><a href="#funciones">Funciones</a><a href="#seguridad">Seguridad</a><a href="#precios">Precios</a><a href="/Claude/contratar.html">Contratar</a></nav>
+  <a class="btn pri" href="/Claude/app/">Abrir la app</a>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <span class="eyebrow">Solo para despachos de abogados</span>
+  <h1>Las herencias del despacho, <span>de la hoja de encargo a la inscripción.</span></h1>
+  <p class="sub">Impuesto sobre Sucesiones y plusvalía calculados con la norma de cada comunidad y cada ayuntamiento, partición con cuadro de adjudicaciones, estrategia fiscal del reparto, 183 trámites con sus plazos y enlaces oficiales, escritos en PDF y Word, archivo, honorarios y fondos del cliente. Los 8.132 municipios de España.</p>
+  <div class="ctas"><a class="btn pri big" href="/Claude/app/">Probar con casos de ejemplo</a><a class="btn sec big" href="/Claude/contratar.html">Ver planes y contratar</a></div>
+  <p class="note">Funciona en el navegador del despacho, en Windows y Mac. Sin instalar nada.</p>
+  <div class="shot reveal in"><div class="bar"><i></i><i></i><i></i></div><img src="img/d-cartera.jpg" alt="Cartera del despacho con los expedientes, su fase, responsable, próximo vencimiento, impuestos y honorarios"></div>
+  <div class="trust"><div><b>183</b>trámites en el catálogo</div><div><b>22</b>normativas del Impuesto sobre Sucesiones</div><div><b>8.132</b>municipios: 105 ordenanzas de plusvalía incorporadas y el tipo oficial de los 148 mayores</div><div><b>665</b>pruebas automáticas del motor</div></div>
+</div></div>
+
+<section id="funciones"><div class="wrap">
+  <h2 class="reveal">Todo el expediente sucesorio en una sola herramienta.</h2>
+  <p class="lead reveal">Los programas de gestión de despachos no calculan impuestos. Las calculadoras no gestionan el despacho. Hereda+ hace las dos cosas para las herencias.</p>
+
+  <div class="feat reveal"><div class="txt"><h3>Cartera con fases y vencimientos</h3><p>Cada expediente con su fase del encargo, su abogado responsable y el próximo plazo. Vista en tabla, por fase o en el mapa.</p><ul><li>Mi día: qué está vencido, qué está parado y quién lo debe, con la acción lista a un clic</li><li>Semáforo de plazos de toda la cartera y exportación al calendario</li><li>Bitácora automática de cada actuación</li><li>Coincidencias de nombres entre expedientes para revisar conflictos</li><li>Vigilancia normativa: avisa de los cambios de ordenanzas y leyes que afectan a tus expedientes</li><li>Diagnóstico de cada expediente: una puntuación y la lista de lo que puede salir mal, con su acción y su norma</li></ul></div><div class="frame"><img src="img/d-resumen.jpg" alt="Resumen de un expediente con fase, cronograma, árbol de herederos e inmuebles" loading="lazy"></div></div>
+
+  <div class="feat rev reveal"><div class="txt"><h3>Estrategia fiscal con el ahorro calculado</h3><p>Cada palanca se simula sobre el expediente: el ahorro en euros, su riesgo y la norma o sentencia que la sostiene.</p><ul><li>Lotes de adjudicación que minimizan la plusvalía sin excesos</li><li>Vivienda habitual, valor declarado frente al IRPF futuro, valor de referencia</li><li>Prórroga frente a recargo, renuncia, conmutación del usufructo</li><li>Propuesta de liquidación por heredero lista para revisar</li><li>Dos herencias: cuánto costará la segunda herencia según el reparto que se elija hoy</li><li>Control de legítimas, también en los territorios forales</li></ul></div><div class="frame"><img src="img/d-estrategia.jpg" alt="Estrategia fiscal con el ahorro de cada palanca" loading="lazy"></div></div>
+
+  <div class="feat reveal"><div class="txt"><h3>Encargo, fondos y documentación</h3><p>Hoja de encargo con presupuesto, control de la provisión de fondos y de los suplidos, y la lista de documentos que falta pedir al cliente.</p><ul><li>La familia envía sus datos desde el móvil y se cargan en el expediente</li><li>Modo reunión a pantalla completa y carpeta para la familia: la herencia explicada en una página que se llevan al móvil</li><li>Calculadora de herencias para tu web, con tu marca: las familias calculan lo que pagarían y te escriben para que revises su caso. <a href="/Claude/calculadora/">Pruébala</a></li><li>Solicitudes a bancos, notarías y registros con días de espera, reclamación y queja al Banco de España preparadas</li><li>Listo para firmar: comprobación previa y paquete completo para la notaría</li><li>Tiempos y rentabilidad: euros por hora de cada herencia</li><li>Saldo de fondos del cliente y honorarios pendientes</li><li>Archivo de documentos por trámite</li><li>Escritos en PDF y Word con el membrete del despacho: cuaderno particional, prórroga, carta al banco, renuncia</li><li>Informe de cálculo en PDF: masa, reparto, Sucesiones paso a paso, plusvalía y partición</li></ul></div><div class="frame"><img src="img/d-despacho.jpg" alt="Encargo y fondos del cliente" loading="lazy"></div></div>
+</div></section>
+
+<section id="seguridad"><div class="wrap">
+  <h2 class="reveal">Diseñado para el secreto profesional.</h2>
+  <p class="lead reveal">El despacho es el responsable de los datos de sus clientes. Hoy Hereda+ no los recibe: se quedan en los equipos del despacho.</p>
+  <div class="grid3">
+    <div class="card reveal"><div class="k">Hoy</div><h4>Los datos no salen del equipo</h4><p>Expedientes y documentos se guardan en el navegador del despacho. Nada se envía a ningún servidor. Copias de seguridad automáticas en una carpeta del despacho y cifrado con contraseña.</p></div>
+    <div class="card reveal"><div class="k">Más adelante, si se activa</div><h4>Servidores en la Unión Europea</h4><p>La sincronización en la nube llegará como opción, con servidores en la UE, un espacio aislado por despacho, roles y doble factor.</p></div>
+    <div class="card reveal"><div class="k">Contrato</div><h4>Encargado del tratamiento, solo con la nube</h4><p>Como hoy no tratamos datos de los expedientes, no hace falta contrato de encargo. Si un despacho activa la nube, firmará antes el del art. 28 RGPD, con secreto profesional y exportación completa en cualquier momento.</p></div>
+  </div>
+</div></section>
+
+<section id="precios"><div class="wrap">
+  <h2 class="reveal">Precios claros.</h2>
+  <p class="lead reveal">Todos los planes incluyen el software completo y las actualizaciones normativas. Prueba de 30 días con todas las funciones. Precios sin IVA; pago por transferencia, trimestral, semestral o anual.</p>
+  <div class="plans">
+    <div class="plan reveal"><div class="n">Individual</div><div class="p">59 € <small>al mes</small></div><ul><li>1 usuario</li><li>Software completo</li><li>Soporte por correo en un día hábil</li></ul><a class="btn sec" href="/Claude/contratar.html">Contratar</a></div>
+    <div class="plan hi reveal"><div class="n">Despacho</div><div class="p">129 € <small>al mes</small></div><ul><li>Hasta 5 usuarios</li><li>Software completo</li><li>Sesión de puesta en marcha</li></ul><a class="btn pri" href="/Claude/contratar.html">Contratar</a></div>
+    <div class="plan reveal"><div class="n">Despacho+</div><div class="p">249 € <small>al mes</small></div><ul><li>Hasta 15 usuarios</li><li>Atención prioritaria</li><li>Sesión de puesta en marcha ampliada</li></ul><a class="btn sec" href="/Claude/contratar.html">Contratar</a></div>
+  </div>
+  <div class="oferta reveal"><div><span class="k">Oferta de lanzamiento · Plan Fundador</span><b>10 despachos, hasta el 31-12-2026, precio fijo.</b> Lo mismo que el plan Despacho por 49 € al mes, con el precio fijo mientras la licencia siga activa.</div><a class="btn pri" href="/Claude/contratar.html#solicitud">Solicitar plaza</a></div>
+  <p class="fine">Hereda+ calcula y prepara; el criterio y la firma son del abogado. Los cálculos los hace un motor de reglas con 665 pruebas automáticas, sin inteligencia artificial: el mismo caso da siempre el mismo resultado y cada cifra enlaza a su norma.</p>
+</div></section>
+
+<section class="cta"><div class="wrap">
+  <h2 class="reveal">Pruébalo con un caso ya cerrado.</h2>
+  <p class="lead reveal">Mete una herencia que ya presentaste, sin nombres ni DNI, y compara las cifras.</p>
+  <a class="btn pri big reveal" href="/Claude/app/">Abrir Hereda+</a>
+</div></section>
+
+<footer><div class="wrap"><span>© 2026 Hereda+ · <a href="/Claude/aviso-legal.html">Aviso legal</a> · <a href="/Claude/privacidad.html">Privacidad</a> · <a href="/Claude/condiciones.html">Condiciones</a> · <a href="/Claude/contratar.html">Contratar</a></span><span>Los cálculos son estimaciones con la normativa vigente y los revisa el abogado antes de presentar.</span></div></footer>
+<script>
+const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .1 }) : null;
+document.querySelectorAll(".reveal").forEach((el) => io ? io.observe(el) : el.classList.add("in"));
+</script>
+</body>
+</html>
