@@ -7,96 +7,122 @@
 <title>Condiciones generales de licencia y uso · Hereda+</title>
 <meta name="description" content="Condiciones generales de licencia y uso del software Hereda+ para despachos de abogados.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#FFFFFF">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18191C" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="/favicon.png">
-<style>:root{--bg:#FFFFFF;--bg2:#F5F6F8;--panel:#F5F6F8;--panel2:#ECEEF1;--line:rgba(0,0,0,.10);--tx:#1D1D1F;--tx2:#4F5157;--tx3:#6B6C72;--acc:#1F6FEB;--ok:#1A7F4E;--warn:#9A5B00;
-  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Text",Roboto,"Helvetica Neue",Arial,sans-serif;--ease:cubic-bezier(.32,.72,0,1)}
+<style>
+/* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
+:root{--bg:#F5F5F2;--bg-2:#EEEEEA;--surface:#FFFFFF;--surface-2:#FAFAF8;--border:#E3E2DD;--border-2:#CFCEC8;
+  --ink-1:#18191C;--ink-2:#4B4D53;--ink-3:#5F6167;--brand:#1F3A5F;--brand-tint:rgba(31,58,95,.075);--on-brand:#FFFFFF;
+  --success:#2D6A4F;--warning:#8A5A12;--warning-bg:#F7EFE1;--danger:#AF3A2E;--btn:#18191C;--on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(24,25,28,.035);
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Text",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+  --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#18191C;--bg-2:#141518;--surface:#202125;--surface-2:#25262B;--border:rgba(255,255,255,.085);--border-2:rgba(255,255,255,.15);
+  --ink-1:#EDEDEF;--ink-2:#B5B6BB;--ink-3:#9C9DA3;--brand:#8FB3E6;--brand-tint:rgba(143,179,230,.14);--on-brand:#101114;
+  --success:#6DC39C;--warning:#E2AE63;--warning-bg:rgba(226,174,99,.14);--danger:#EF8A7D;--btn:#EDEDEF;--on-btn:#18191C;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#18191C;--bg-2:#141518;--surface:#202125;--surface-2:#25262B;--border:rgba(255,255,255,.085);--border-2:rgba(255,255,255,.15);
+  --ink-1:#EDEDEF;--ink-2:#B5B6BB;--ink-3:#9C9DA3;--brand:#8FB3E6;--brand-tint:rgba(143,179,230,.14);--on-brand:#101114;
+  --success:#6DC39C;--warning:#E2AE63;--warning-bg:rgba(226,174,99,.14);--danger:#EF8A7D;--btn:#EDEDEF;--on-btn:#18191C;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 var(--font);-webkit-font-smoothing:antialiased}
-a{color:var(--acc);text-decoration:none}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink-1);font:16px/1.6 var(--font-sans);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--brand);text-decoration:none}
 a:hover{text-decoration:underline}
-.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
-@media (max-width:480px){.wrap{padding:0 16px}}
-.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:.5px solid var(--line)}
-.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--tx)}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:100;background:var(--btn);color:var(--on-btn);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+@media (max-width:520px){.wrap{padding:0 16px}}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;color:var(--ink-1)}
 .brand:hover{text-decoration:none}
-.logo{width:28px;height:28px;border-radius:7px;background:#1F6FEB;color:#fff;display:grid;place-items:center;font:800 12px/1 var(--font);letter-spacing:-.04em}
+.logo{width:26px;height:26px;border-radius:7px;background:var(--btn);color:var(--on-btn);display:grid;place-items:center;font:750 11px/1 var(--font-sans);letter-spacing:-.04em}
 .links{display:flex;gap:26px;font-size:14px}
-.links a{color:var(--tx2)}
-.links a:hover,.links a[aria-current]{color:var(--tx);text-decoration:none}
-.links a[aria-current]{font-weight:600}
-@media (max-width:760px){.links{display:none}}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:9px;font:600 14.5px/1 var(--font);border:0;cursor:pointer;transition:opacity .15s}
-.btn:hover{opacity:.88;text-decoration:none}
-.btn.pri{background:#1F6FEB;color:#fff}
-.btn.sec{background:rgba(0,0,0,.05);color:var(--tx);box-shadow:inset 0 0 0 .5px var(--line)}
-.btn.big{height:46px;padding:0 22px;font-size:15.5px}
-.head{padding:56px 0 8px}
-.eyebrow{display:inline-block;font-size:13px;font-weight:600;color:var(--acc);background:rgba(31,111,235,.09);padding:5px 11px;border-radius:999px;margin-bottom:18px}
-h1{font:700 clamp(30px,4.4vw,46px)/1.1 var(--font);letter-spacing:-.03em;margin:0;max-width:18em;text-wrap:balance}
-.lead{font-size:18px;color:var(--tx2);max-width:44em;margin:16px 0 0}
-.meta{font-size:13.5px;color:var(--tx3);margin-top:14px}
-section{padding:56px 0;border-top:.5px solid var(--line);scroll-margin-top:60px}
-h2{font:700 clamp(24px,3vw,32px)/1.2 var(--font);letter-spacing:-.02em;margin:0 0 12px;max-width:22em;text-wrap:balance}
+.links a{color:var(--ink-2)}
+.links a:hover,.links a[aria-current]{color:var(--ink-1);text-decoration:none}
+.links a[aria-current]{font-weight:650}
+@media (max-width:860px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:999px;font:600 15px/1 var(--font-sans);border:0;cursor:pointer;transition:opacity .2s,background-color .2s}
+.btn:hover{text-decoration:none}
+.btn.pri{background:var(--btn);color:var(--on-btn)}
+.btn.pri:hover{opacity:.86}
+.btn.sec{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.btn.sec:hover{background:var(--surface)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:14px}
+.btn.big{min-height:48px;padding:0 24px;font-size:16px}
+.head{padding:clamp(48px,7vw,88px) 0 12px}
+.eyebrow{display:inline-block;font-size:14px;font-weight:650;color:var(--brand);margin-bottom:14px}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.04;margin:0;max-width:16em}
+.lead{font-size:clamp(17px,1.7vw,19px);color:var(--ink-2);max-width:42em;margin:18px 0 0}
+.meta{font-size:14px;color:var(--ink-3);margin-top:14px}
+section{padding:clamp(48px,6vw,72px) 0;border-top:1px solid var(--border);scroll-margin-top:60px}
+h2{font-size:clamp(26px,3.2vw,36px);line-height:1.12;margin:0 0 14px;max-width:22em}
 .grid3{display:grid;grid-template-columns:1fr;gap:14px}
 @media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
-.card{background:var(--panel);border-radius:14px;padding:24px;box-shadow:inset 0 0 0 .5px var(--line)}
-.card h4{margin:0 0 8px;font-size:16px;font-weight:700}
-.card p{margin:0;color:var(--tx2);font-size:14.5px}
-.card .k{font-size:12px;font-weight:700;color:var(--acc);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px}
+.card{background:var(--surface);border-radius:18px;padding:26px;box-shadow:var(--sh-1)}
+.card h3,.card h4{margin:0 0 8px;font-size:16.5px;font-weight:650;font-family:var(--font-sans);letter-spacing:-.01em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+p a,li a,td a,dd a,.lead a,label a,details a{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.card p{margin:0;color:var(--ink-2);font-size:15px}
+.card .k{font-size:13px;font-weight:650;color:var(--brand);margin-bottom:12px}
 .plans{display:grid;grid-template-columns:1fr;gap:14px}
 @media (min-width:640px){.plans{grid-template-columns:repeat(2,1fr)}}
-@media (min-width:1000px){.plans{grid-template-columns:repeat(4,1fr)}}
-.plan{background:var(--panel);border-radius:14px;padding:26px 24px;box-shadow:inset 0 0 0 .5px var(--line);display:flex;flex-direction:column;gap:10px}
-.plan.hi{box-shadow:inset 0 0 0 1.5px var(--acc)}
-.plan .n{font-size:14px;font-weight:700;color:var(--tx2)}
-.plan .p{font:700 36px/1 var(--font);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.plan .p small{font-size:14px;font-weight:500;color:var(--tx2);letter-spacing:0}
-.plan .iva{font-size:13px;color:var(--tx3);margin-top:-4px}
-.plan ul{list-style:none;padding:0;margin:6px 0 14px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;color:var(--tx2)}
-.plan li::before{content:"✓";color:var(--ok);margin-right:8px;font-weight:700}
+@media (min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:18px;padding:28px 26px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.plan .n{font-size:16px;font-weight:650}
+.plan .p{font:600 46px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan .p small{font:500 15px/1 var(--font-sans);color:var(--ink-2);letter-spacing:0}
+.plan .iva{font-size:14px;color:var(--ink-3)}
+.plan ul{list-style:none;padding:0;margin:8px 0 16px;display:flex;flex-direction:column;gap:9px;font-size:15px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--success);margin-right:8px;font-weight:700}
 .plan .btn{margin-top:auto}
-.fine{font-size:13px;color:var(--tx3);margin-top:18px}
-footer{padding:36px 0 56px;color:var(--tx3);font-size:13px;border-top:.5px solid var(--line)}
+.fine{font-size:14px;color:var(--ink-3);margin-top:18px}
+footer{padding:36px 0 56px;color:var(--ink-3);font-size:13.5px;border-top:1px solid var(--border)}
 footer .wrap{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
-footer nav{display:flex;gap:8px 18px;flex-wrap:wrap}
-footer a{color:var(--tx2)}
+footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+footer a{color:var(--ink-2)}
 /* Documento legal */
-.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:72px}
-@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,760px);justify-content:start;gap:64px}}
+.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:80px}
+@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,740px);justify-content:start;gap:72px}}
 .toc{font-size:14px}
-.toc b{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--tx3);margin-bottom:10px}
+.toc b{display:block;font-size:13px;font-weight:650;color:var(--ink-3);margin-bottom:10px}
 .toc ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
-.toc a{color:var(--tx2)}
+.toc a,.toc li a{color:var(--ink-2);text-decoration:none}
+.toc li a:hover{color:var(--ink-1);text-decoration:underline}
 @media (min-width:1000px){.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
-@media (max-width:999px){.toc{background:var(--panel);border-radius:12px;padding:18px 20px;box-shadow:inset 0 0 0 .5px var(--line)}}
+@media (max-width:999px){.toc{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1)}}
 .prose{min-width:0}
-.prose h2{font-size:22px;margin:44px 0 10px;scroll-margin-top:80px}
+.prose h2{font-size:clamp(22px,2.4vw,26px);margin:48px 0 12px;scroll-margin-top:80px}
 .prose h2:first-child{margin-top:0}
-.prose h3{font-size:16.5px;margin:26px 0 6px}
-.prose p,.prose li{color:var(--tx);overflow-wrap:anywhere}
+.prose h3{font-size:17px;margin:26px 0 6px}
+.prose p,.prose li{color:var(--ink-1);overflow-wrap:anywhere}
 .prose p{margin:0 0 12px}
 .prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
 .prose li{margin:0 0 6px}
-.prose .n{color:var(--tx3);font-variant-numeric:tabular-nums;margin-right:6px}
-.box{background:var(--panel);border-radius:12px;padding:18px 20px;box-shadow:inset 0 0 0 .5px var(--line);margin:0 0 18px}
+.prose .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:6px}
+.box{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1);margin:0 0 18px}
 .box p:last-child,.box ul:last-child{margin-bottom:0}
-.box.note{background:rgba(31,111,235,.06);box-shadow:inset 0 0 0 .5px rgba(31,111,235,.25)}
-.ph{background:rgba(154,91,0,.10);color:var(--warn);border-radius:4px;padding:0 3px;font-weight:600}
+.box.note{background:var(--brand-tint);box-shadow:none}
+.ph{background:var(--warning-bg);color:var(--warning);border-radius:4px;padding:0 3px;font-weight:650}
 .tbl{width:100%;overflow-x:auto;margin:0 0 18px;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:14.5px}
-th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:.5px solid var(--line)}
-thead th{font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;color:var(--tx3);font-weight:700;background:var(--panel)}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--border)}
+thead th{font-size:13px;color:var(--ink-3);font-weight:650;background:var(--surface)}
 tbody th{font-weight:600}
 table.cmp{table-layout:fixed;min-width:620px}
 table.cmp td,table.cmp th{text-align:center}
 table.cmp thead th:first-child{width:30%}
 table.cmp td:first-child,table.cmp th:first-child{text-align:left}
-table.cmp .hi{background:rgba(31,111,235,.06)}
+table.cmp .hi{background:var(--brand-tint)}
 dl.id{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
-dl.id dt{color:var(--tx3)}
+dl.id dt{color:var(--ink-3)}
 dl.id dd{margin:0;overflow-wrap:anywhere}
 @media (max-width:480px){dl.id{grid-template-columns:1fr;gap:2px}dl.id dd{margin-bottom:8px}}
 /* Pasos y formulario */
@@ -107,32 +133,39 @@ dl.id dd{margin:0;overflow-wrap:anywhere}
 .form{display:grid;grid-template-columns:1fr;gap:16px;max-width:760px}
 @media (min-width:700px){.form{grid-template-columns:1fr 1fr}.form .full{grid-column:1/-1}}
 .form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
-.form label span.opt{font-weight:400;color:var(--tx3)}
-.form input,.form select,.form textarea{font:15px/1.4 var(--font);color:var(--tx);background:#fff;border:1px solid rgba(0,0,0,.18);border-radius:9px;padding:10px 12px;min-height:44px;width:100%}
+.form label span.opt{font-weight:400;color:var(--ink-3)}
+.form input,.form select,.form textarea{font:15px/1.4 var(--font-sans);color:var(--ink-1);background:var(--surface);border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
 .form textarea{min-height:96px;resize:vertical}
-.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid rgba(31,111,235,.45);outline-offset:1px;border-color:var(--acc)}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
 .form .check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}
 .form .check input{width:18px;min-height:18px;height:18px;margin:3px 0 0;flex:none}
 .form .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.msg{font-size:14px;color:var(--tx2)}
-.msg.err{color:#B42318}
-details.faq{border-bottom:.5px solid var(--line);padding:14px 0}
-details.faq summary{cursor:pointer;font-weight:600;list-style-position:outside}
-details.faq p{color:var(--tx2);margin:10px 0 0}
-@media print{.nav,.toc,footer nav{display:none}.doc{display:block;padding:0}body{font-size:12pt}}</style>
+.msg{font-size:14px;color:var(--ink-2)}
+.msg.err{color:var(--danger)}
+.oferta{display:flex;gap:18px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:26px 28px;border-radius:18px;background:var(--brand);color:var(--on-brand)}
+.oferta h3{margin:4px 0 6px;font:600 24px/1.2 var(--font-display)}.oferta p{margin:0;opacity:.9;max-width:640px}.oferta .k{font-size:13px;font-weight:650;opacity:.85}
+.oferta .btn.pri{background:var(--on-brand);color:var(--brand)}
+.pagoinfo{font-size:14px;color:var(--ink-2);background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-1)}
+.sinmail{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--warning-bg);color:var(--warning);font-size:14.5px}
+details.faq{border-bottom:1px solid var(--border);padding:16px 0}
+details.faq summary{cursor:pointer;font-weight:600;font-size:16.5px}
+details.faq p{color:var(--ink-2);margin:10px 0 0}
+@media print{.nav,.toc,footer nav,.skip{display:none}.doc{display:block;padding:0}body{font-size:11pt;background:#fff;color:#000}section{border:0}}
+</style>
 </head>
 <body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
 <header class="nav"><div class="wrap">
   <a class="brand" href="/"><span class="logo">H+</span>Hereda+</a>
   <nav class="links" aria-label="Información legal"><a href="condiciones.html" aria-current="page">Condiciones</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Planes y contratación</a></nav>
-  <a class="btn pri" href="contratar.html">Contratar</a>
+  <a class="btn pri sm" href="contratar.html">Contratar</a>
 </div></header>
-<main>
+<main id="contenido">
 <div class="head"><div class="wrap">
   <span class="eyebrow">Documento contractual</span>
   <h1>Condiciones generales de licencia y uso</h1>
   <p class="lead">Regulan la licencia del software Hereda+ para despachos y profesionales de la abogacía. Solo se contrata entre profesionales.</p>
-  <p class="meta">Versión 1.0 · En vigor desde el 4 de octubre de 2026</p>
+  <p class="meta">Versión 1.1 (para Hereda+ 1.4) · En vigor desde el 4 de octubre de 2026</p>
 </div></div>
 
 <div class="wrap doc">
@@ -166,7 +199,10 @@ details.faq p{color:var(--tx2);margin:10px 0 0}
 
 <article class="prose">
 <div class="box note">
-  <p><b>En resumen.</b> Hereda+ es una herramienta de cálculo y preparación de documentos para abogados. Los datos de los expedientes se guardan solo en los equipos del despacho: nosotros no los recibimos. Los cálculos y borradores los revisa y firma el abogado, que es quien asesora al cliente. Prueba gratuita de 30 días. Planes mensuales sin permanencia o anuales. Si no se renueva, el software queda en modo de solo lectura y los datos nunca se bloquean. Este resumen no sustituye al texto de las condiciones.</p>
+  <p><b>En resumen.</b> Hereda+ es una herramienta de cálculo y preparación de documentos para abogados. Los datos de los expedientes, incluidos los documentos que el programa lee, se guardan y se procesan solo en los equipos del despacho: nosotros no los recibimos. No usa inteligencia artificial. Lo que el programa lee o calcula es una propuesta que el abogado revisa, decide y firma. Prueba gratuita de 30 días. Precio mensual pagado por trimestres o semestres, sin permanencia, o pago anual. Si no se renueva, el software queda en modo de solo lectura y los datos nunca se bloquean. Este resumen no sustituye al texto de las condiciones.</p>
+</div>
+<div class="box">
+  <p><b>Cambios respecto a la versión 1.0.</b> Se describen el lector de documentos (cláusulas 3, 7.6 y 8.1), los avisos de plazos y acciones (7.7), el registro de cambios y los perfiles de usuario (3 y 8.7), las copias automáticas (8.4) y los componentes de código abierto (14.4). No cambian el precio, la duración, la responsabilidad ni el tratamiento de datos por el Proveedor.</p>
 </div>
 
 <h2 id="c1">1. Proveedor</h2>
@@ -187,7 +223,9 @@ details.faq p{color:var(--tx2);margin:10px 0 0}
 <h2 id="c3">3. Definiciones</h2>
 <ul>
   <li><b>Cliente</b>: el despacho, sociedad o profesional que contrata la licencia.</li>
-  <li><b>Software</b>: la aplicación Hereda+ en cualquiera de sus formas de uso: la versión web publicada por el Proveedor y el archivo HTML que se abre en el navegador sin conexión. Incluye el cuestionario para familias y la documentación de uso.</li>
+  <li><b>Software</b>: la aplicación Hereda+ en cualquiera de sus formas de uso: la versión web publicada por el Proveedor y el archivo HTML que se abre en el navegador sin conexión. Incluye el lector de documentos, el cuestionario para familias, la calculadora para la web del Cliente y la documentación de uso.</li>
+  <li><b>Lector de documentos</b>: la función del Software que reconoce el texto de los documentos que el Cliente carga (PDF, Word, texto e imágenes) y propone datos para el expediente. Funciona en el navegador del dispositivo del Cliente.</li>
+  <li><b>Registro de cambios</b>: la relación, guardada en el dispositivo del Cliente, de los cambios hechos en datos relevantes del expediente, con el Usuario autorizado que los hizo, la fecha, el valor anterior y el nuevo.</li>
   <li><b>Plan</b>: la modalidad contratada (Individual, Despacho, Despacho+ o Fundador) con el número de Usuarios autorizados que le corresponde.</li>
   <li><b>Código de licencia</b>: la clave que el Proveedor entrega al Cliente para activar el Software. Es única por Cliente.</li>
   <li><b>Usuario autorizado</b>: la persona física que trabaja para el Cliente (abogados, personal del despacho o colaboradores) y a la que el Cliente permite usar el Software dentro del límite de su Plan.</li>
@@ -215,19 +253,22 @@ details.faq p{color:var(--tx2);margin:10px 0 0}
 <p><span class="n">6.4</span>Si el Cliente necesita más Usuarios autorizados que los de su Plan, puede pasar a un Plan superior en cualquier momento (cláusula 10.6).</p>
 
 <h2 id="c7">7. Naturaleza del software: herramienta de apoyo al abogado</h2>
-<p><span class="n">7.1</span>Hereda+ <b>calcula y prepara</b>: estimaciones del Impuesto sobre Sucesiones y Donaciones y del Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana, simulaciones de estrategia fiscal, calendario de trámites y plazos, y borradores de escritos. <b>No presta asesoramiento jurídico ni fiscal</b>, no presenta declaraciones ni autoliquidaciones y no sustituye el criterio profesional.</p>
+<p><span class="n">7.1</span>Hereda+ <b>lee, calcula y prepara</b>: propuestas de datos leídos de los documentos que carga el Cliente, estimaciones del Impuesto sobre Sucesiones y Donaciones y del Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana, simulaciones de estrategia fiscal, calendario de trámites y plazos, y borradores de escritos. <b>No presta asesoramiento jurídico ni fiscal</b>, no presenta declaraciones ni autoliquidaciones y no sustituye el criterio profesional.</p>
 <p><span class="n">7.2</span>El asesoramiento, la revisión de cada cálculo y documento, la decisión sobre su uso y la firma corresponden al profesional de la abogacía, conforme a la Ley Orgánica 5/2024, de 11 de noviembre, del Derecho de Defensa, y a las normas deontológicas de la profesión. El Cliente debe comprobar los resultados con la normativa vigente en la fecha de devengo de cada impuesto y con los datos reales del caso antes de usarlos.</p>
-<p><span class="n">7.3</span>Los cálculos se hacen con un motor de reglas que aplica la normativa estatal, autonómica y municipal cargada en el Software, y que se comprueba con pruebas automáticas. <b>El cálculo no usa inteligencia artificial.</b> Las funciones de inteligencia artificial que puedan ofrecerse fuera del Software, en plataformas de terceros, no forman parte de esta licencia.</p>
+<p><span class="n">7.3</span>Los cálculos se hacen con un motor de reglas que aplica la normativa estatal, autonómica y municipal cargada en el Software, y que se comprueba con pruebas automáticas. <b>Ni el cálculo ni el lector de documentos usan inteligencia artificial</b>: aplican reglas escritas, de forma que los mismos datos dan siempre el mismo resultado. Las funciones de inteligencia artificial que puedan ofrecerse fuera del Software, en plataformas de terceros, no forman parte de esta licencia.</p>
 <p><span class="n">7.4</span>El Proveedor actualiza la normativa con diligencia razonable, pero no garantiza que recoja cada cambio normativo desde su publicación ni cada criterio administrativo o jurisprudencial. El Software indica, en lo posible, la norma y la fecha en que se basa cada cálculo.</p>
 <p><span class="n">7.5</span>Los enlaces a sedes electrónicas y organismos oficiales se ofrecen para facilitar el trabajo. El Proveedor no controla esos sitios.</p>
+<p><span class="n">7.6</span><b>Lector de documentos.</b> Los datos que el lector extrae son <b>propuestas</b>: solo entran en el expediente los que el Usuario autorizado marca, quedan señalados como «leído de documento» y el documento queda «por revisar» hasta que el Usuario lo valida. El lector puede no reconocer, o reconocer de forma incompleta o errónea, datos de documentos con formatos no previstos, escaneos o fotografías de baja calidad, o textos manuscritos. El Cliente debe cotejar cada dato con el documento original antes de usarlo.</p>
+<p><span class="n">7.7</span><b>Plazos, avisos y acciones.</b> Las funciones que ordenan el trabajo (Mi día, «Qué hacer» en cada expediente, el semáforo de plazos y el panel del despacho) se calculan con reglas a partir de los datos introducidos en el Software. Son una ayuda: no sustituyen el control de plazos del Cliente, y que el Software no muestre un aviso no significa que no exista un plazo o una obligación.</p>
 
 <h2 id="c8">8. Datos del Cliente en el modo local</h2>
-<p><span class="n">8.1</span>En el modo local, los Datos del Cliente se guardan <b>solo en el navegador del dispositivo del Cliente</b> (almacenamiento local e IndexedDB). El Software no los envía al Proveedor ni a terceros. El Proveedor no tiene acceso a ellos.</p>
+<p><span class="n">8.1</span>En el modo local, los Datos del Cliente se guardan <b>solo en el navegador del dispositivo del Cliente</b> (almacenamiento local e IndexedDB). El Software no los envía al Proveedor ni a terceros. El Proveedor no tiene acceso a ellos. Lo mismo se aplica a los documentos que se cargan para su lectura: se leen en el propio dispositivo. Para leer escaneos e imágenes, el Software descarga del sitio del Proveedor, una sola vez, el componente de reconocimiento de texto; esa descarga no envía ningún documento ni dato del expediente.</p>
 <p><span class="n">8.2</span>Por ello, en el modo local el Proveedor no trata Datos del Cliente por cuenta de este y no actúa como encargado del tratamiento. El Cliente es el responsable del tratamiento de los datos personales de sus clientes y de terceros que introduzca en el Software.</p>
 <p><span class="n">8.3</span>El cuestionario para familias funciona en el navegador de quien lo rellena y genera un archivo que la familia envía directamente al Cliente. El Proveedor no recibe esos datos. El Cliente decide si usa el cuestionario y debe informar a las familias del tratamiento que hará de sus datos.</p>
-<p><span class="n">8.4</span>Como los datos están solo en sus dispositivos, el Cliente es responsable de: (a) hacer <b>copias de seguridad</b> periódicas con la función de exportación del Software; (b) proteger el acceso a sus dispositivos y cuentas; (c) no borrar los datos de navegación del sitio sin exportar antes. Borrar los datos del navegador, reinstalarlo, usar el modo privado o cambiar de dispositivo puede hacer que los datos no estén disponibles. El Proveedor no puede recuperarlos.</p>
+<p><span class="n">8.4</span>Como los datos están solo en sus dispositivos, el Cliente es responsable de: (a) hacer <b>copias de seguridad</b> periódicas con la función de exportación del Software o activar las copias automáticas en una carpeta de su elección, cuya custodia, ubicación y cifrado decide el Cliente; (b) proteger el acceso a sus dispositivos y cuentas; (c) no borrar los datos de navegación del sitio sin exportar antes. Borrar los datos del navegador, reinstalarlo, usar el modo privado o cambiar de dispositivo puede hacer que los datos no estén disponibles. El Proveedor no puede recuperarlos.</p>
 <p><span class="n">8.5</span>En el modo local, cada dispositivo guarda sus propios datos. Para compartir un expediente entre Usuarios autorizados se usan las funciones de exportación e importación de archivos.</p>
 <p><span class="n">8.6</span>Si, para resolver una incidencia de soporte, el Cliente decide enviar al Proveedor un archivo o una captura, debe anonimizarlo antes. Si aun así contiene datos personales, el Proveedor los usará solo para resolver la incidencia, con el deber de confidencialidad de la cláusula 17, y los borrará al cerrarla.</p>
+<p><span class="n">8.7</span>El Software permite asignar a cada Usuario autorizado un perfil (socio, abogado o administrativo) y guarda en el dispositivo el registro de cambios y los tiempos que se anotan. Esos datos se refieren a los Usuarios autorizados y los trata el Cliente como responsable: le corresponde informar a sus Usuarios autorizados de su existencia y finalidad y usarlos conforme a la normativa de protección de datos y laboral aplicable. El Proveedor no los recibe.</p>
 
 <h2 id="c9">9. Funciones en la nube (futuras)</h2>
 <p><span class="n">9.1</span>El Proveedor puede ofrecer en el futuro funciones en la nube, como cuentas de usuario, sincronización o copias de seguridad en servidores situados en la Unión Europea.</p>
@@ -252,7 +293,7 @@ details.faq p{color:var(--tx2);margin:10px 0 0}
 <h2 id="c12">12. Soporte y actualizaciones</h2>
 <p><span class="n">12.1</span>La licencia incluye, sin coste adicional, las actualizaciones del Software y de la normativa cargada, y soporte por correo electrónico en días hábiles (de lunes a viernes, salvo festivos nacionales).</p>
 <p><span class="n">12.2</span>Tiempos de primera respuesta objetivo:</p>
-<div class="tbl"><table>
+<div class="tbl" tabindex="0" role="region" aria-label="Tiempos de primera respuesta del soporte"><table>
   <thead><tr><th>Incidencia</th><th>Todos los planes</th></tr></thead>
   <tbody>
     <tr><th>Crítica: error de cálculo que puede afectar a una liquidación o el Software no abre</th><td>1 día hábil</td></tr>
@@ -281,6 +322,7 @@ details.faq p{color:var(--tx2);margin:10px 0 0}
 <p><span class="n">14.1</span>El Software, su código, su diseño, sus bases de datos de normativa y trámites, su documentación y la marca y el nombre comercial Hereda+ son del Proveedor o de sus licenciantes. Esta licencia no transmite ningún derecho sobre ellos, salvo el uso previsto en la cláusula 6.</p>
 <p><span class="n">14.2</span>Los Datos del Cliente y los documentos que el Cliente genera con el Software son del Cliente, que puede usarlos, modificarlos y conservarlos sin limitación, también después de terminar la licencia.</p>
 <p><span class="n">14.3</span>Si el Cliente envía sugerencias de mejora, el Proveedor puede usarlas libremente para mejorar el Software, sin obligación de pago y sin usar Datos del Cliente.</p>
+<p><span class="n">14.4</span>El lector de documentos incluye componentes de código abierto de terceros (pdf.js y Tesseract.js, con licencia Apache 2.0), que se rigen por sus propias licencias. Sus textos se publican junto al Software, en la carpeta <a href="/lib/LICENSE-pdfjs.txt">/lib</a> del sitio.</p>
 
 <h2 id="c15">15. Garantía</h2>
 <p><span class="n">15.1</span>El Proveedor garantiza que el Software funciona sustancialmente como se describe en su documentación. Si no es así, la obligación del Proveedor es corregir el error en un plazo razonable. Si no puede corregirlo, el Cliente puede resolver el contrato con la devolución prevista en la cláusula 11.3.</p>

@@ -1,18 +1,19 @@
 // Hereda+ · service worker. Red primero (con conexión, siempre lo último publicado) y copia local sin conexión.
-// Versión: build.py sustituye 202610070548 por la versión de la construcción (así cada publicación cambia este archivo
+// Versión: build.py sustituye 202610072006 por la versión de la construcción (así cada publicación cambia este archivo
 // y el navegador detecta la actualización). En desarrollo se usa ?v= del registro.
 // Cada versión tiene su propia caché. La nueva NO se activa sola: espera a que la app (seguridad.js) pida «activar»
 // cuando el usuario pulsa «Actualizar», o a que se cierren todas las pestañas.
-const BUILD = "202610070548";
+const BUILD = "202610072006";
 const V = BUILD.indexOf("__") === 0 ? (new URL(self.location.href).searchParams.get("v") || "dev") : BUILD;
 const CACHE = "hereda-" + V;
 const ESENCIAL = ["/app/"];
-const OPCIONAL = ["/", "/manifest.webmanifest", "/favicon.png", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png"];
+const PARTES = ["/app/partes/municipios.js?v=202610072006", "/app/partes/biblioteca.js?v=202610072006", "/app/partes/mapas.js?v=202610072006", "/app/partes/carpeta.js?v=202610072006", "/app/partes/familia.js?v=202610072006", "/app/partes/calculadora.js?v=202610072006", "/app/nucleo/motor.js?v=202610072006", "/app/nucleo/app.js?v=202610072006"]; // build.py: partes de la app que se cargan bajo demanda (app/partes/*.js); se guardan con la app para usarlas sin conexión
+const OPCIONAL = ["/", "/manifest.webmanifest", "/favicon.png", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-touch-icon.png", "/fonts/inter-var-latin.woff2", "/fonts/source-serif-4-var-latin.woff2"];
 const fresco = (u) => new Request(u, { cache: "reload" });
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then(async (c) => {
-    await c.addAll(ESENCIAL.map(fresco));                     // sin la app no hay versión nueva
+    await c.addAll(ESENCIAL.concat(PARTES).map(fresco));      // sin la app (y sus partes) no hay versión nueva
     await Promise.all(OPCIONAL.map((u) => fetch(fresco(u)).then((r) => (r.ok && !r.redirected ? c.put(u, r) : null)).catch(() => null)));
   }));
 });

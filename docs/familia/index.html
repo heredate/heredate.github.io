@@ -4,16 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#F6F6F3">
+<meta name="theme-color" content="#F5F5F2">
 <title>Datos para la herencia · Hereda+</title>
 <link rel="icon" href="/favicon.png">
 <style>
+/* Tipografía de la casa (autoalojada, OFL): Inter para el texto y Source Serif 4 para los títulos. Sin ellas (archivo abierto
+   sin conexión), la fuente del sistema. Azul notarial como acento, igual que la aplicación del despacho. */
+@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}
+@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}
 :root{
-  --text:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --canvas:#F6F6F3; --panel:#FFFFFF; --field:#FAFAF8;
-  --label:#1D1D1F; --label-2:#55555A; --label-3:#6B6B70; --label-4:#BDBDC2;
+  --text:"Hereda Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --display:"Hereda Serif","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --canvas:#F5F5F2; --panel:#FFFFFF; --field:#FAFAF8;
+  --label:#18191C; --label-2:#4B4D53; --label-3:#65676D; --label-4:#B4B5B8;
   --line:#DCDBD6; --line-2:#ECEBE7;
-  --accent:#1F6AE0; --accent-2:#1857C2; --accent-t:#EEF3FC; --accent-t2:#DCE7FA;
+  --accent:#1F3A5F; --accent-2:#162B47; --accent-t:#EDF1F6; --accent-t2:#D9E2EE;
   --green:#16875A; --green-t:#E6F3EC; --red:#B3261E; --red-t:#FBEEEC;
   --shadow:0 0 0 1px rgba(28,27,20,.05),0 1px 2px rgba(28,27,20,.04),0 4px 14px -6px rgba(28,27,20,.06);
   --r:16px;
@@ -51,7 +56,7 @@ h1:focus{outline:none}
 .saved svg{color:var(--green)}
 
 /* Texto */
-h1{text-wrap:balance;font-size:28px;line-height:1.18;letter-spacing:-.022em;margin:0 0 10px;font-weight:650}
+h1{text-wrap:balance;font-family:var(--display);font-size:30px;line-height:1.15;letter-spacing:-.018em;margin:0 0 10px;font-weight:600}
 .lead{color:var(--label-2);margin:0 0 26px;font-size:16.5px;line-height:1.55}
 .qt{font-size:15px;font-weight:600;margin:30px 2px 12px;color:var(--label)}
 .hint{font-size:13.5px;color:var(--label-3);margin:6px 2px 0;line-height:1.4}
