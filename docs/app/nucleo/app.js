@@ -9669,7 +9669,7 @@ const LEC_COMUNES = new Set(["de", "la", "el", "en", "y", "que", "los", "del", "
 // ¿Texto extraído que no se puede interpretar? Caracteres de uso privado o de control, o palabras sin vocales ni palabras comunes
 function lecTextoIlegible(t) {
   const s = String(t || "").replace(/\s+/g, ""); if (s.length < 80) return false;
-  const raros = (s.match(/[\u0000-\u0008\u000E-\u001F-�]/g) || []).length; if (raros / s.length > 0.12) return true;
+  const raros = (s.match(/[\u0000-\u0008\u000E-\u001F\uE000-\uF8FF\uFFFD]/g) || []).length; if (raros / s.length > 0.12) return true;
   const W = String(t).toLowerCase().match(/[a-záéíóúñü]+/g) || []; const largas = W.filter((w) => w.length >= 2); if (largas.length < 30) return false;
   const L = largas.join(""); const voc = (L.match(/[aeiouáéíóúü]/g) || []).length / L.length; const com = W.filter((w) => LEC_COMUNES.has(w)).length / W.length;
   return com < 0.03 || voc < 0.22 || voc > 0.72;
