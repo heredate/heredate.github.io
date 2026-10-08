@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Hereda+">
   <title>Hereda+</title>
-  <!-- Monograma «H+»: el travesaño de la H atraviesa el asta derecha y se convierte en el brazo del signo más. Superelipse n=5. -->
-  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#284A75"/><stop offset="1" stop-color="#1A3352"/></linearGradient></defs>
+  <!-- Monograma «H+»: el travesaño de la H atraviesa el asta derecha y se convierte en el brazo del signo más (en petróleo). Superelipse n=5, azul notarial. -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17375E"/><stop offset="1" stop-color="#0B2240"/></linearGradient></defs>
   <path d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z" fill="url(#g)"/>
-  <path d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z" fill="#FFFFFF"/>
+  <path d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z" fill="#FFFFFF"/>
+  <path d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z" fill="#6CC2B8"/>
 </svg>

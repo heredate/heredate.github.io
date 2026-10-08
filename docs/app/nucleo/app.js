@@ -430,7 +430,7 @@ const conPartes=(nombre,L,aviso)=>{const f=window[nombre];if(typeof f!=="functio
 conPartes("descargarCuestionario",["familia","municipios"],"No se pudo cargar el cuestionario: comprueba la conexión");
 conPartes("carpetaDescargar",["carpeta"],"No se pudo cargar la plantilla de la carpeta: comprueba la conexión");
 }
-const LOGO_SVG=`<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z"/></svg>`;
+const LOGO_SVG=`<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg>`;
 const fmtK=(v)=>(v<0?"−":"")+grp(Math.abs(v),0)+" €";
 const corta=(s,n)=>{s=String(s||"");return s.length>n?s.slice(0,n-1).trimEnd()+"…":s;};
 const pctTxt=(f)=>grp(f*100,f*100%1&&f<0.1?1:0)+" %";
@@ -441,8 +441,10 @@ return L.map((d)=>(d.tipo==="pleno"?"":d.tipo==="usufructo"?"usufr. ":"nuda ")+p
 }
 function arbol(x,R,opt={}){
 const P=x.personas||[];
-const W=190,H=70,GX=18,GY=44,S=W+GX;
 const hs=R?Object.fromEntries(R.isd.herederos.map((h)=>[h.id,h])):{};
+const lote=(p)=>(x.bienes||[]).filter((b)=>b&&(b.legatarioId===p.id||(!b.legatarioId&&b.adjudicadoA===p.id)));
+const hayLote=!!R&&P.some((p)=>!p.renuncia&&(lote(p).length||p.notaLegado));
+const W=206,H=R?(hayLote?104:88):70,GX=18,GY=44,S=W+GX;
 const norm=(s)=>String(s||"").trim().toLowerCase();
 const by=(...r)=>P.filter((p)=>r.includes(p.relacion));
 const conyuge=by("conyuge","pareja_hecho","pareja_no_inscrita")[0];
@@ -496,7 +498,9 @@ const mid=hx.length?(hx[0]+hx[hx.length-1])/2:c0+(cursor-c0-GX)/2;
 const cauX=conyuge?mid-S/2:mid,conX=mid+S/2;
 nodes.push({cau:true,x:cauX,y:Y(0)});
 if(conyuge){nodes.push({p:conyuge,x:conX,y:Y(0)});links.push([cauX+W/2,Y(0)+H/2,conX-W/2,Y(0)+H/2,"sp"+(conyuge.relacion==="pareja_no_inscrita"?" dash":"")]);}
-for(const v of hx)links.push([mid,Y(0)+(conyuge?H/2:H),v,Y(1)]);
+const yHijos=conyuge&&hx.length?Y(0)+H+8:Y(0)+H;
+if(conyuge&&hx.length)links.push([mid,Y(0)+H/2,mid,yHijos,"v"]);
+for(const v of hx)links.push([mid,yHijos,v,Y(1)]);
 const pX=padres.length===2?[cauX-S/2,cauX+S/2]:[cauX];
 padres.forEach((p,i)=>{nodes.push({p,x:pX[i],y:Y(-1)});});
 if(padres.length){const pm=padres.length===2?cauX:pX[0];links.push([pm,Y(-1)+H,cauX,Y(0)]);for(const hv of hermX)links.push([pm,Y(-1)+H,hv,Y(0)]);}
@@ -524,22 +528,32 @@ const width=maxX-minX,height=Y(rows[rows.length-1])+H+12;
 const sx=(v)=>v-minX;
 const path=([x1,y1,x2,y2,k])=>{
 if(k&&k.startsWith("sp"))return`<path class="tlink sp" ${k.includes("dash")?'stroke-dasharray="4 4"':""} d="M${sx(x1)} ${y1}H${sx(x2)}"/>`;
+if(k==="v")return`<path class="tlink" d="M${sx(x1)} ${y1}V${y2}"/>`;
 if(k==="bro"){const yb=y1-14;return`<path class="tlink" d="M${sx(x1)} ${y1}V${yb}H${sx(x2)}V${y2}"/>`;}
 const ym=(y1+y2)/2;return`<path class="tlink" d="M${sx(x1)} ${y1}C${sx(x1)} ${ym} ${sx(x2)} ${ym} ${sx(x2)} ${y2}"/>`;
 };
 const tot=R?R.isd.herederos.reduce((s,h)=>s+h.valorAdquirido,0)||1:1;
 const card=(n)=>{
 const x0=sx(n.x)-W/2,y0=n.y;
-if(n.cau)return`<g class="tnode cau" data-sec="herencia"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0+14}" y="${y0+22}">${esc(corta(x.nombre||"Causante",24))}</text><text class="r" x="${x0+14}" y="${y0+39}">† ${x.fecha?fechaCorta(x.fecha):"fecha pendiente"}</text><text class="s tax" x="${x0+14}" y="${y0+56}">${R?"Caudal "+fmtK(R.isd.masa.bruto):"Causante"}</text></g>`;
+if(n.cau)return`<g class="tnode cau" data-sec="herencia"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0+14}" y="${y0+22}">${esc(corta(x.nombre||"Causante",24))}</text><text class="r" x="${x0+14}" y="${y0+39}">† ${x.fecha?fechaCorta(x.fecha):"fecha pendiente"}</text><text class="s tax" x="${x0+14}" y="${y0+56}">${R?"Caudal "+fmtK(R.isd.masa.bruto):"Causante"}</text>${R?`<text class="r" x="${x0+14}" y="${y0+73}">Neto a repartir ${esc(fmtK(R.isd.masa.netoReparto??R.isd.masa.neto))}</text>`:""}</g>`;
 if(n.ghost)return`<g class="tnode off"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0+14}" y="${y0+22}">${esc(corta(n.ghost,21))}</text><text class="r" x="${x0+14}" y="${y0+39}">${esc(n.rel)}</text><text class="r" x="${x0+14}" y="${y0+56}">${n.sinDato?"Indica «Desciende de»":"Representado por su estirpe"}</text></g>`;
 const p=n.p,h=hs[p.id],ren=p.renuncia;
 const cls=ren?"ren":h?"":"off";
-const l3=ren?"Renuncia":h?`${pctTxt(h.valorAdquirido/tot)}${derechoTxt(R,p.id).includes("usufr")?" · usufructo":""}`:"No hereda";
-const l3b=h&&!ren?fmtK(h.aIngresar):"";
-return`<g class="tnode ${cls}" data-editp="${p.id}"><title>${esc(p.nombre||"")} · ${esc(RELACIONES[p.relacion]?.label||"")}${h?" · recibe "+eur0(h.valorAdquirido)+" · paga "+eur(h.aIngresar):""}</title><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0+14}" y="${y0+22}">${esc(corta(p.nombre||"Sin nombre",24))}</text><text class="r" x="${x0+14}" y="${y0+39}">${esc(RELACIONES[p.relacion]?.label||"")}${p.edad!==""&&p.edad!=null?" · "+p.edad+" años":""}</text><text class="s" x="${x0+14}" y="${y0+56}">${esc(l3)}</text>${l3b?`<text class="s tax" x="${x0+W-12}" y="${y0+56}" text-anchor="end">${esc(l3b)}</text>`:""}</g>`;
+const ders=(R&&R.isd.derechos[p.id])||[],L=ren?[]:lote(p);
+const derC=ders.length&&typeof derTxt==="function"?ders.map(derTxt).join(" + "):"";
+const legNota=!ren&&!L.some((b)=>b.legatarioId===p.id)&&p.notaLegado?String(p.notaLegado):"";
+const l3=ren?"Renuncia":!R?(h?pctTxt(h.valorAdquirido/tot):"No hereda"):derC?corta(derC,30):L.some((b)=>b.legatarioId===p.id)||legNota?"Legatario":h?pctTxt(h.valorAdquirido/tot):"No hereda";
+const l3b=!R&&h&&!ren?fmtK(h.aIngresar):"";
+const l4=R&&h&&!ren?`Recibe ${fmtK(h.valorAdquirido)}`:"",l4b=R&&h&&!ren?`Paga ${fmtK(h.aIngresar)}`:"";
+const nb=(b)=>String(b.descripcion||TIPO_BIEN[b.tipo]?.[0]||"Bien").split(/,|\s+(?:en|sito|sita|situad[oa])\s+/)[0].trim();
+const cp=(t,n)=>(t.length>n?t.slice(0,n).replace(/\s+\S*$/,"")+"…":t);
+const pre=L.length?(L.every((b)=>b.legatarioId===p.id)?"Legado: ":"Se adjudica: "):"Legado: ",mas=L.length>1?` y ${L.length-1} más`:"";
+const l5=!R||ren?"":L.length?pre+cp(nb(L[0]),33-pre.length-mas.length)+mas:legNota?pre+cp(legNota.split(/,|\s+(?:en|sito|sita)\s+/)[0],33-pre.length):"";
+const yL=(i)=>y0+22+(i-1)*17;
+return`<g class="tnode ${cls}" data-editp="${p.id}"><title>${esc(p.nombre||"")} · ${esc(RELACIONES[p.relacion]?.label||"")}${h?" · recibe "+eur0(h.valorAdquirido)+" · paga "+eur(h.aIngresar):""}</title><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0+14}" y="${y0+22}">${esc(corta(p.nombre||"Sin nombre",24))}</text><text class="r" x="${x0+14}" y="${y0+39}">${esc(RELACIONES[p.relacion]?.label||"")}${p.edad!==""&&p.edad!=null?" · "+p.edad+" años":""}</text><text class="s" x="${x0+14}" y="${yL(3)}">${esc(l3)}</text>${l3b?`<text class="s tax" x="${x0+W-12}" y="${yL(3)}" text-anchor="end">${esc(l3b)}</text>`:""}${l4?`<text class="r" x="${x0+14}" y="${yL(4)}">${esc(l4)}</text><text class="s tax" x="${x0+W-12}" y="${yL(4)}" text-anchor="end">${esc(l4b)}</text>`:""}${l5?`<text class="r lote" x="${x0+14}" y="${yL(5)}">${esc(l5)}</text>`:""}</g>`;
 };
 const svg=`<svg class="viz" viewBox="0 0 ${width} ${height}" style="min-width:${Math.round(Math.min(width,1100)*0.8)}px;max-width:${Math.round(width*(opt.zoom||1.3))}px;margin:0 auto" role="img" aria-label="Árbol familiar">${links.map(path).join("")}${nodes.map(card).join("")}</svg>`;
-return`<div class="tree-wrap">${svg}</div>${opt.leyenda===false?"":`<div class="legend-inline"><span><i style="background:var(--gold-tint);box-shadow:inset 0 0 0 1px var(--gold)"></i>Causante</span><span><i style="background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--hair)"></i>Heredero · % de lo que se reparte · impuesto</span><span><i style="box-shadow:inset 0 0 0 1px var(--label-4)"></i>No hereda o premuerto</span><span><i style="box-shadow:inset 0 0 0 1px var(--red)"></i>Renuncia</span></div>`}`;
+return`<div class="tree-wrap">${svg}</div>${opt.leyenda===false?"":`<div class="legend-inline"><span><i style="background:var(--gold-tint);box-shadow:inset 0 0 0 1px var(--gold)"></i>Causante</span><span><i style="background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--hair)"></i>Heredero · su parte, lo que recibe y lo que paga de Sucesiones</span><span><i style="box-shadow:inset 0 0 0 1px var(--label-4)"></i>No hereda o premuerto</span><span><i style="box-shadow:inset 0 0 0 1px var(--red)"></i>Renuncia</span></div>`}`;
 }
 const VENTANAS={urgente:[0,15],conocer:[15,60],inventario:[30,100],decidir:[60,140],formalizar:[90,180],titularidad:[150,270],despues:[180,400]};
 function gantt(T,fecha,opt={}){
@@ -1227,8 +1241,11 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:16,nombre:"Versión 1.6",fecha:"2026-10-08"};
+const VERSION_APP={n:17,nombre:"Versión 1.7",fecha:"2026-10-08"};
 const NOVEDADES=[
+["Nueva identidad: azul notarial","La barra lateral, los botones principales, los títulos y las cifras pasan al azul notarial, con el petróleo como acento para lo activo y lo leído de los documentos, sobre papel marfil. El tema oscuro pasa a azul noche. Monograma H+ nuevo. El mismo color en la web, los PDF y los escritos."],
+["El árbol familiar enseña el reparto","Cada persona del árbol muestra su derecho (pleno dominio, usufructo o nuda propiedad), lo que recibe, lo que paga de Sucesiones y el bien que se le adjudica o se le lega."],
+["Legados con usufructo del viudo","Con un testamento de usufructo universal, la ficha del bien ya permite marcarlo como legado. El cuadro de partición con muchos herederos cabe en pantalla."],
 ["Despacho en red: varios ordenadores, los mismos expedientes","En Despacho y ajustes › Despacho en red: los ordenadores del despacho comparten expedientes y documentos a través de una carpeta de OneDrive, Dropbox, Google Drive o del servidor, cifrada con contraseña si se quiere. Sin servidores de Hereda+. Avisa si otra persona tiene abierto el mismo expediente y, si dos cambian el mismo dato, guarda las dos versiones y pregunta cuál se queda. En Chrome y Edge."],
 ["Escritos listos para la notaría","Borrador de escritura de manifestación y aceptación de herencia, cuaderno particional completo (inventario, avalúo, liquidación, lotes y adjudicaciones con las cifras del cálculo), escritura de renuncia, solicitud de certificados (modelo 790), carta a la familia con lo que falta, cambio de titular en el Catastro (modelo 900D) y declaración de plusvalía. Los datos que faltan quedan marcados ⟦así⟧ y resaltados en el Word, que sale con estilos, tablas y membrete."],
 ["Herencias sin testamento en Aragón, Navarra y País Vasco","Reparto con el derecho propio de cada vecindad civil: llamamientos, usufructo del viudo o de la pareja y bienes troncales, que se marcan en la ficha del bien. Legítimas forales revisadas."],
@@ -2167,7 +2184,7 @@ const PDF_AW={};
 const PDF_CP={8364:128,8218:130,402:131,8222:132,8230:133,8224:134,8225:135,710:136,8240:137,352:138,8249:139,338:140,381:142,8216:145,8217:146,8220:147,8221:148,8226:149,8211:150,8212:151,732:152,8482:153,353:154,8250:155,339:156,382:158,376:159};
 const PDF_SUST={"−":"–","‐":"-","‑":"-","‒":"–","―":"—","′":"'","″":"\"","‚":",","→":"->","←":"<-","⇒":"=>","↔":"<->","≥":">=","≤":"<=","≠":"!=","≈":"~","✓":"v","✔":"v","✗":"x","✘":"x","⚠":"!","★":"*","☐":"[ ]","☑":"[x]","▪":"•","◦":"•","●":"•","∙":"·","⟦":"[","⟧":"]","〈":"<","〉":">","\u202F":"\u00A0","\u2007":"\u00A0","\u2009":" ","\u2002":" ","\u2003":" ","\u200B":"","\u200D":"","\uFEFF":"","\t":"    ","Ł":"L","ł":"l","Đ":"D","đ":"d","ı":"i","ﬁ":"fi","ﬂ":"fl","ˮ":"\"","ʼ":"’"};
 const PDF_A4=[595.28,841.89];
-const PDF_C={tinta:[0.1,0.1,0.11],marca:[0.1,0.19,0.33],gris:[0.4,0.41,0.44],linea:[0.72,0.74,0.78],ambar:[0.56,0.35,0],notaT:[0.23,0.18,0.08],notaF:[0.992,0.964,0.89],notaB:[0.82,0.58,0.14],tabla:[0.925,0.937,0.957],agua:[0.915,0.92,0.93]};
+const PDF_C={tinta:[0.071,0.11,0.165],marca:[0.059,0.169,0.298],acento:[0.122,0.431,0.42],gris:[0.361,0.392,0.439],linea:[0.81,0.792,0.753],ambar:[0.529,0.353,0.102],notaT:[0.24,0.18,0.09],notaF:[0.973,0.953,0.906],notaB:[0.69,0.53,0.24],tabla:[0.918,0.929,0.945],agua:[0.918,0.922,0.93]};
 const PDF_S=11,PDF_LH=15.4;
 const PDF_PROD="Hereda+".indexOf("{{")?"Hereda+":"Hereda+";
 const PDF_ORD=/^((?:(?:Primer|Segund|Tercer|Cuart|Quint|Sext|Séptim|Octav|Noven|Décim)[oa]|(?:PRIMER|SEGUND|TERCER|CUART|QUINT|SEXT|SÉPTIM|OCTAV|NOVEN|DÉCIM)[OA]|[IVX]{1,5})\.)(?= |$)/;
@@ -2518,7 +2535,7 @@ yL-=4;
 let yR=PH-56;
 [["REFERENCIA",o.ref],["FECHA",fecha]].filter((r)=>r[1]).forEach(([k,v])=>{m.push(pdfT(X1,yR-6,k,"HB",6.3,C.gris,1,"r"));m.push(pdfT(X1,yR-18,v,"H",9,C.tinta,0,"r"));yR-=28;});
 const yr=Math.min(yL,yR+6)-8;
-m.push(pdfRaya(X0,yr,X1,yr,C.marca,1.1),pdfRaya(X0,yr-2.4,X1,yr-2.4,C.marca,0.35));
+m.push(pdfRaya(X0,yr,X1,yr,C.marca,1.1),pdfRaya(X0,yr-2.4,X1,yr-2.4,C.acento,0.45));
 const pages=pdfPagina(B.map((b)=>pdfMaqueta(b,X0,W)),yr-28,PH-74,74);
 const der=pdfRecorta([titulo,o.ref?"Ref. "+o.ref:""].filter(Boolean).join("  ·  "),"H",7.5,W*0.48);
 const pie=pdfRecorta([firma,d.localidad].filter(Boolean).join(" · "),"H",7.5,W-pdfMide(pdfCod("Página 999 de 999"),"H",7.5)-16);
@@ -6071,7 +6088,7 @@ const base=ws.reduce((a,b)=>a+b,0);
 if(base>W)ws=ws.map((w)=>Math.floor((w*W)/base));
 else{const extra=maxC.map((m,j)=>Math.max(0,m-minC[j])),te=extra.reduce((a,b)=>a+b,0)||1;ws=ws.map((w,j)=>w+Math.floor(((W-base)*extra[j])/te));}
 ws[ws.indexOf(Math.max(...ws))]+=W-ws.reduce((a,b)=>a+b,0);
-const tc=(v,j,h,neg)=>`<w:tc><w:tcPr><w:tcW w:w="${ws[j]}" w:type="dxa"/>${h?'<w:shd w:val="clear" w:color="auto" w:fill="EEF0F2"/>':""}</w:tcPr><w:p><w:pPr><w:pStyle w:val="Tabla"/>${!h&&numC(v)?'<w:jc w:val="right"/>':""}</w:pPr>${esrRuns(v,{b:h||neg})}</w:p></w:tc>`;
+const tc=(v,j,h,neg)=>`<w:tc><w:tcPr><w:tcW w:w="${ws[j]}" w:type="dxa"/>${h?'<w:shd w:val="clear" w:color="auto" w:fill="E9EDF2"/>':""}</w:tcPr><w:p><w:pPr><w:pStyle w:val="Tabla"/>${!h&&numC(v)?'<w:jc w:val="right"/>':""}</w:pPr>${esrRuns(v,{b:h||neg})}</w:p></w:tc>`;
 const rows=F.map((r,i)=>{
 const neg=i>0&&(/^(total|caudal partible)/i.test(String(r[0]||""))||(!String(r[0]||"").trim()&&/^total/i.test(String(r[1]||""))));
 return`<w:tr><w:trPr><w:cantSplit/>${i===0?"<w:tblHeader/>":""}</w:trPr>${Array.from({length:nc},(_,j)=>tc(r[j]||"",j,i===0,neg)).join("")}</w:tr>`;
@@ -6117,18 +6134,18 @@ return out.join("");
 const ESR_STYLES=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:styles xmlns:w="${ESR_W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Georgia" w:hAnsi="Georgia" w:eastAsia="Georgia" w:cs="Times New Roman"/><w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="es-ES" w:eastAsia="es-ES" w:bidi="ar-SA"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="140" w:line="300" w:lineRule="auto"/><w:jc w:val="both"/></w:pPr></w:pPrDefault></w:docDefaults>
 <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:widowControl/></w:pPr></w:style>
-<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="60"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:bCs/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="240"/><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="555555"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="280" w:after="140"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:bCs/><w:spacing w:val="10"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="120"/><w:jc w:val="left"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:bCs/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="120" w:after="60"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="0F2B4C"/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="240"/><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="5C6470"/><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="280" w:after="140"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="0F2B4C"/><w:spacing w:val="10"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="120"/><w:jc w:val="left"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:bCs/><w:color w:val="0F2B4C"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Lista"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="30"/></w:pPr></w:style>
 <w:style w:type="paragraph" w:styleId="Firma"><w:name w:val="Signature"/><w:basedOn w:val="Normal"/><w:pPr><w:keepLines/><w:spacing w:before="560" w:after="0"/><w:jc w:val="left"/></w:pPr></w:style>
-<w:style w:type="paragraph" w:styleId="Nota"><w:name w:val="Nota de revisión"/><w:basedOn w:val="Normal"/><w:pPr><w:keepLines/><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="C9A227"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="FFF6D6"/><w:spacing w:before="60" w:after="160" w:line="264" w:lineRule="auto"/><w:ind w:left="170" w:right="113"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Nota"><w:name w:val="Nota de revisión"/><w:basedOn w:val="Normal"/><w:pPr><w:keepLines/><w:pBdr><w:left w:val="single" w:sz="18" w:space="6" w:color="B0873D"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="F8F2E4"/><w:spacing w:before="60" w:after="160" w:line="264" w:lineRule="auto"/><w:ind w:left="170" w:right="113"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Tabla"><w:name w:val="Texto de tabla"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="20" w:after="20" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/></w:pPr><w:rPr><w:sz w:val="19"/><w:szCs w:val="19"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/></w:pPr><w:rPr><w:color w:val="444444"/><w:sz w:val="17"/><w:szCs w:val="17"/></w:rPr></w:style>
-<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="666666"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Header"><w:name w:val="header"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/></w:pPr><w:rPr><w:color w:val="434C59"/><w:sz w:val="17"/><w:szCs w:val="17"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="5C6470"/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:style>
 <w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
-<w:style w:type="table" w:styleId="TablaHereda"><w:name w:val="Tabla Hereda"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/><w:left w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/><w:right w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="A6A6A6"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
+<w:style w:type="table" w:styleId="TablaHereda"><w:name w:val="Tabla Hereda"/><w:basedOn w:val="TableNormal"/><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/><w:left w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/><w:right w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/><w:insideV w:val="single" w:sz="4" w:space="0" w:color="BDB7AA"/></w:tblBorders><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="90" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>
 </w:styles>`;
 const ESR_NUMBERING=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:numbering xmlns:w="${ESR_W}"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="425" w:hanging="283"/></w:pPr><w:rPr><w:rFonts w:ascii="Georgia" w:hAnsi="Georgia"/></w:rPr></w:lvl><w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="–"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="851" w:hanging="283"/></w:pPr><w:rPr><w:rFonts w:ascii="Georgia" w:hAnsi="Georgia"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
@@ -6138,7 +6155,7 @@ function esrDocx(texto,o={}){
 const KD=o.despacho||(typeof despachoContacto==="function"?despachoContacto():{nombre:"",linea:""});
 let t=String(texto||"").replace(/\r\n?/g,"\n");
 if(KD.nombre&&t.startsWith(KD.nombre+"\n")){const k=t.indexOf("\n\n");if(k>0&&k<400)t=t.slice(k+2);}
-const cab=KD.nombre||KD.linea?`<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr>${esrRuns(KD.nombre||"",{b:true,sz:19})}</w:p>${KD.linea?`<w:p><w:pPr><w:pStyle w:val="Header"/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="4" w:color="A6A6A6"/></w:pBdr></w:pPr>${esrRuns(KD.linea)}</w:p>`:""}`:`<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr></w:p>`;
+const cab=KD.nombre||KD.linea?`<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr>${esrRuns(KD.nombre||"",{b:true,sz:19})}</w:p>${KD.linea?`<w:p><w:pPr><w:pStyle w:val="Header"/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="4" w:color="BDB7AA"/></w:pBdr></w:pPr>${esrRuns(KD.linea)}</w:p>`:""}`:`<w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr></w:p>`;
 const pie=[o.ref?"Ref. "+o.ref:"",o.expediente||"","Borrador sujeto a revisión del abogado"].filter(Boolean).join(" · ");
 const fld=(ins)=>`<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> ${ins} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>`;
 const header=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="${ESR_W}" xmlns:r="${ESR_R}">${cab}</w:hdr>`;
@@ -7224,7 +7241,7 @@ const t=e.target;if(t&&(t.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(t.
 if(!dmActivo())return;
 e.preventDefault();dmGuionAlternar();
 },true);
-const WG_COLORES=[["#1F6AE0","Azul"],["#1E3A5F","Marino"],["#16875A","Verde"],["#0F6E74","Petróleo"],["#8E2C48","Granate"],["#3A3A40","Grafito"]];
+const WG_COLORES=[["#0F2B4C","Azul notarial"],["#2C5A92","Azul"],["#1F6E6B","Petróleo"],["#2F5D46","Verde"],["#7A2E3B","Granate"],["#2A3340","Grafito"]];
 const WG_ARCHIVO="calculadora-herencias.html";
 const WG={vista:"movil",t:0,munis:null};
 const WG_I={
@@ -13787,12 +13804,12 @@ TR_FASES.map((f)=>{const L=vis.filter((t)=>t.fase===f.id);const all=T.filter((t)
 }
 function listaBienes(x){
 if(!(x.bienes||[]).length)return`<div class="group"><div class="empty"><b>Todavía no hay bienes.</b><p>Añade la vivienda, las cuentas o el resto del patrimonio: con un valor aproximado ya se calculan el reparto y los impuestos.</p></div></div>`;
-return`<div class="group" style="--inset:60px">${x.bienes.map((b)=>{const[c,ic]=icoBien[b.tipo];const adj=b.adjudicadoA&&persona(x,b.adjudicadoA);return`<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion||TIPO_BIEN[b.tipo][0])}</b><small>${b.origen==="familia"?"Aportado por la familia · ":b.origen==="documento"?"Leído de documento · ":""}${TIPO_BIEN[b.tipo][0]}${b.titularidad==="ganancial"?" · gananciales":b.titularidad==="proindiviso"?" · "+num(b.porcentaje)+" %":""}${b.legatarioId?" · legado":""}${adj?" · para "+esc(adj.nombre):""}${b.municipio&&b.municipio!=="OTRO"&&ORDENANZAS[b.municipio]?" · "+ORDENANZAS[b.municipio].nombre:""}</small></span><span class="v num">${eur0(Math.max(num(b.valor),num(b.valorReferencia)))}</span>${I.chev}</button>`;}).join("")}</div>`;
+return`<div class="group" style="--inset:60px">${x.bienes.map((b)=>{const[c,ic]=icoBien[b.tipo];const adj=b.adjudicadoA&&persona(x,b.adjudicadoA);return`<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion||TIPO_BIEN[b.tipo][0])}</b><small>${b.origen==="familia"?"Aportado por la familia · ":b.origen==="documento"?`<span class="orig-doc">Leído de documento</span> · `:""}${TIPO_BIEN[b.tipo][0]}${b.titularidad==="ganancial"?" · gananciales":b.titularidad==="proindiviso"?" · "+num(b.porcentaje)+" %":""}${b.legatarioId?" · legado":""}${adj?" · para "+esc(adj.nombre):""}${b.municipio&&b.municipio!=="OTRO"&&ORDENANZAS[b.municipio]?" · "+ORDENANZAS[b.municipio].nombre:""}</small></span><span class="v num">${eur0(Math.max(num(b.valor),num(b.valorReferencia)))}</span>${I.chev}</button>`;}).join("")}</div>`;
 }
 function listaPersonas(x,R){
 if(!(x.personas||[]).length)return`<div class="group"><div class="empty"><b>Todavía no hay herederos.</b><p>Añade al cónyuge, a los hijos o a quien corresponda: el reparto se calcula en cuanto hay una persona y un bien.</p></div></div>`;
 const der=(id)=>R?(R.isd.derechos[id]||[]).map((d)=>`${d.tipo==="pleno"?"Propiedad":d.tipo==="usufructo"?"Usufructo":"Nuda propiedad"} ${grp(d.fraccion*100,d.fraccion*100%1?1:0)} %`).join(" · "):"";
-return`<div class="group" style="--inset:60px">${x.personas.map((p)=>`<button class="row" data-editp="${p.id}"><span class="ico ${p.renuncia?"gray":"q"}">${I.person}</span><span class="t"><b>${esc(p.nombre||"Sin nombre")}</b><small>${p.origen==="familia"?"Aportado por la familia · ":p.origen==="documento"?"Leído de documento · ":""}${RELACIONES[p.relacion].label}${p.edad!==""&&p.edad!=null?" · "+p.edad+" años":""}${x.testamento==="porcentajes"?" · "+(num(p.pct)||0)+" %":""}${p.renuncia?" · renuncia":R?" · "+(der(p.id)||"no hereda en este reparto"):""}</small></span>${I.chev}</button>`).join("")}</div>`;
+return`<div class="group" style="--inset:60px">${x.personas.map((p)=>`<button class="row" data-editp="${p.id}"><span class="ico ${p.renuncia?"gray":"q"}">${I.person}</span><span class="t"><b>${esc(p.nombre||"Sin nombre")}</b><small>${p.origen==="familia"?"Aportado por la familia · ":p.origen==="documento"?`<span class="orig-doc">Leído de documento</span> · `:""}${RELACIONES[p.relacion].label}${p.edad!==""&&p.edad!=null?" · "+p.edad+" años":""}${x.testamento==="porcentajes"?" · "+(num(p.pct)||0)+" %":""}${p.renuncia?" · renuncia":R?" · "+(der(p.id)||"no hereda en este reparto"):""}</small></span>${I.chev}</button>`).join("")}</div>`;
 }
 const ADD_P=[["conyuge","Cónyuge"],["pareja_hecho","Pareja de hecho"],["hijo","Hijo/a"],["nieto","Nieto/a"],["padre","Padre/madre"],["abuelo","Abuelo/a"],["hermano","Hermano/a"],["sobrino","Sobrino/a"],["tio","Tío/a"],["primo","Primo/a"],["extrano","Otra persona"]];
 const addP=(x)=>{const hay=(x.personas||[]).some((p)=>(p.relacion==="conyuge"||p.relacion==="pareja_hecho")&&!p.separado);return hay?ADD_P.filter(([r])=>r!=="conyuge"&&r!=="pareja_hecho"):ADD_P;};
@@ -14134,7 +14151,7 @@ return sheetHTML(b.descripcion?`${TIPO_BIEN[b.tipo][0]} · ${b.descripcion}`:TIP
     <div class="group">
       <div class="field"><label>Titularidad</label><div class="seg"><button data-tit="privativo" aria-pressed="${(b.titularidad||"privativo")==="privativo"}">Privativo</button><button data-tit="ganancial" aria-pressed="${b.titularidad==="ganancial"}">Ganancial</button><button data-tit="proindiviso" aria-pressed="${b.titularidad==="proindiviso"}">Una parte</button></div></div>
       ${b.titularidad==="proindiviso"?`<div class="field"><label for="b-p">Porcentaje del causante</label><input id="b-p" inputmode="decimal" data-bn="porcentaje" data-valida="pct" value="${numStr(b.porcentaje)}" placeholder="50"><span class="hint">Porcentaje del bien que pertenecía al causante.</span></div>`:""}
-      ${x.testamento==="porcentajes"?`<div class="field"><label for="b-l">Legado</label><select id="b-l" data-bn="legatarioId"><option value="">No, forma parte del reparto</option>${pers}</select></div>`:""}
+      ${x.testamento==="porcentajes"||x.testamento==="usufructo"||b.legatarioId||(x.personas||[]).some((p)=>p.notaLegado)?`<div class="field"><label for="b-l">Legado</label><select id="b-l" data-bn="legatarioId"><option value="">No, forma parte del reparto</option>${pers}</select></div>`:""}
       ${inm&&!b.legatarioId?`<div class="field"><label for="b-adj">Adjudicación en la partición</label><select id="b-adj" data-bn="adjudicadoA"><option value="">Pro indiviso entre los herederos</option>${persAdj}</select><span class="hint">Quien se lo adjudica paga la plusvalía. Estrategia propone el reparto que menos cuesta.</span></div>`:""}
       ${inm?`<div class="row toggle"><span class="t"><b>Uso residencial</b><small>Vivienda habitual o segunda vivienda, con garaje y trastero. Cuenta para el ajuar doméstico</small></span><label class="switch"><input type="checkbox" data-bn="usoResidencial" ${(b.usoResidencial??b.tipo==="vivienda")?"checked":""}><span></span></label></div><div class="row toggle"><span class="t"><b>Alquilado o cedido el día del fallecimiento</b><small>Si lo está, no cuenta para el ajuar doméstico</small></span><label class="switch"><input type="checkbox" data-bn="arrendadoOCedido" ${b.arrendadoOCedido?"checked":""}><span></span></label></div>`:""}
       ${frTroncalBienHTML(x,b)}
