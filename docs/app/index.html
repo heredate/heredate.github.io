@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610072007">
+<meta name="hereda-version" content="202610080158">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F6F6F3">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -760,6 +760,7 @@ button.kpi:hover{background:var(--panel-2)}
 .paperview{background:var(--paper);color:var(--paper-ink);border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:52px 56px;font:15.5px/1.65 var(--serif);letter-spacing:0;white-space:pre-wrap;max-width:720px;margin:0 auto}
 .paperview mark{background:#F1DFAE;color:#5A4000;padding:1px 4px;border-radius:3px;font:500 12.5px/1.5 var(--text)}
 @media (max-width:600px){.paperview{padding:26px 20px;font-size:15px}}
+.paperview .pv-tw{overflow-x:auto;margin:4px 0 12px;white-space:normal}.paperview .pv-t{width:100%;border-collapse:collapse;font:13px/1.4 var(--text);font-variant-numeric:tabular-nums}.paperview .pv-t th,.paperview .pv-t td{border:1px solid color-mix(in srgb,var(--paper-ink) 20%,transparent);padding:5px 8px;text-align:left;vertical-align:top}.paperview .pv-t th{background:color-mix(in srgb,var(--paper-ink) 6%,transparent);font-weight:600}.paperview .pv-t td.n{text-align:right;white-space:nowrap}
 .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;border-radius:var(--r);padding:26px 20px;border:1px dashed var(--label-4);background:var(--fill-2);position:relative;color:var(--label-2);font-size:14px;transition:border-color .2s,background .2s}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-tint)}
 .drop b{color:var(--label);font-weight:600;font-size:15px}
@@ -1552,6 +1553,7 @@ input[type="date"]::-webkit-datetime-edit-day-field:focus,input[type="date"]::-w
 .lg-nums b{color:var(--label);font-weight:600;margin-left:4px}
 .lg-st{display:grid;gap:4px;justify-items:end;text-align:right}
 .lg-st small{font-size:12px;color:var(--label-3)}
+.lg-st small a{display:inline-block;min-height:24px;line-height:24px;min-width:24px}  /* WCAG 2.5.8: objetivo táctil de 24 px */
 .lg-pill{display:inline-flex;align-items:center;font:600 12px/1.4 var(--text);padding:3px 9px;border-radius:999px;white-space:nowrap}
 .lg-pill.ok{background:var(--green-t);color:var(--green)}
 .lg-pill.bad{background:var(--red-t);color:var(--red)}
@@ -3519,7 +3521,7 @@ body{letter-spacing:-.006em;font-optical-sizing:auto;text-rendering:optimizeLegi
 @keyframes v9toast{from{opacity:0;transform:translate(-50%,14px) scale(.97)}to{opacity:1;transform:translate(-50%,0)}}
 
 /* ── Arranque: esqueleto de la app mientras se interpretan los scripts (lo sustituye el primer pintado) ── */
-.boot{display:grid;grid-template-columns:1fr;min-height:100vh}
+.boot{display:grid;grid-template-columns:1fr;min-height:100vh;font-family:"Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif} /* fuentes locales: el primer pintado no espera a las web */
 .boot-side{display:none}
 .boot-main{padding:24px 18px}
 @media (min-width:1024px){
@@ -3527,11 +3529,14 @@ body{letter-spacing:-.006em;font-optical-sizing:auto;text-rendering:optimizeLegi
   .boot-side{display:flex;flex-direction:column;gap:10px;padding:16px 16px;background:var(--sunken);border-right:1px solid var(--border)}
   .boot-main{padding:84px 48px}
 }
-.boot-marca{display:flex;align-items:center;gap:10px;margin-bottom:14px;font:650 15px/1 var(--font-sans);letter-spacing:-.016em;color:var(--ink-1)}
+.boot-marca{display:flex;align-items:center;gap:10px;margin-bottom:14px;font:650 15px/1 "Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;letter-spacing:-.016em;color:var(--ink-1)}
 .boot-marca .logo{width:30px;height:30px}
 .boot .skel{height:12px;margin:0 0 12px}
 .boot .skel.t{height:30px;width:min(420px,70%);margin:6px 0 22px;border-radius:8px}
 .boot .skel.b{height:96px;border-radius:var(--r-panel);margin-top:24px}
+/* Mensaje del arranque: texto real desde el primer pintado (en un móvil lento los scripts tardan unos segundos en llegar) */
+.boot-msg{margin:6px 0 26px;max-width:560px;font-size:15px;line-height:1.55;color:var(--ink-2)}
+.boot-msg b{display:block;margin-bottom:6px;font:600 24px/1.2 "Hereda Serif Fallback",Georgia,"Times New Roman",serif;letter-spacing:-.01em;color:var(--ink-1)}
 
 /* ── Tabla de la cartera con Inter: columnas ajustadas al contenido real (cabe de 1024 a 1600 px sin desplazamiento) ── */
 .cartera-t .c-fase{width:112px}
@@ -3736,6 +3741,18 @@ td.sc-bad,.kv .sc-bad{color:var(--red);font-weight:600}
 .rb-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rb-conf{font-size:var(--fs-caption);color:var(--danger,#C0392B)}
 .rb-error{max-width:720px;margin:40px auto;padding:0 16px}.rb-error p{color:var(--ink-2);line-height:1.55}.rb-error code{overflow-wrap:anywhere;font-size:12px}
 .rb-error .rb-acts{margin-top:18px}
+/* ───────── Despacho en red (red.js, prefijo red-): asistente, choques y avisos. Usa los componentes de seguridad.js (sg-modal, sg-opt, sg-banner) ───────── */
+.red-paso{margin:2px 0 4px;font:550 12px/1.3 var(--text);color:var(--label-2);letter-spacing:.01em}
+.red-h{margin:0 0 10px;font:650 16px/1.3 var(--display);letter-spacing:-.01em;color:var(--label)}
+.red-f{gap:6px;margin:4px 0 2px}.red-f label{font:550 13px/1.3 var(--text);color:var(--label-2)}
+.red-f select{height:46px;border-radius:12px;border:0;background:var(--fill-2);box-shadow:inset 0 0 0 1px var(--hair);padding:0 12px;font-size:16px;color:var(--label);outline:none;width:100%}
+.red-f select:focus{box-shadow:inset 0 0 0 1.5px var(--accent),0 0 0 3px var(--accent-tint)}
+.red-hint{font-size:12.5px;line-height:1.45;color:var(--label-2)}
+.red-ch{margin:0 0 14px}.red-ch-t{margin:0 0 8px;font-size:14px;line-height:1.45}.red-ch-t b{display:block;font-weight:600;color:var(--label);overflow-wrap:anywhere}.red-ch-t small{display:block;font-size:13px;color:var(--label-2)}
+.red-ch-o{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.red-opt{width:100%;cursor:pointer}.red-opt b{overflow-wrap:anywhere}.red-opt:hover{border-color:var(--accent)}
+.red-opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){.red-ch-o{grid-template-columns:1fr}}
 
 /* ───────── Escáner de documentos con la cámara (escaner.js) ─────────
    Capa a pantalla completa, oscura en cualquier tema (como la cámara del sistema), con controles grandes para el pulgar. */
@@ -3745,7 +3762,7 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .scn button,.scn select,.scn label{font:inherit}
 .scn :focus-visible{outline:2px solid #6aa8ff;outline-offset:2px}
 .scn-cab{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:52px}
-.scn-cab h2{flex:1;margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;text-align:center}
+.scn-cab h2{flex:1;min-width:0;margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scn-cuenta{min-width:44px;text-align:right;color:#b8b8be;font-size:13px;font-variant-numeric:tabular-nums}
 .scn-x{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.1);color:#fff;display:grid;place-items:center;cursor:pointer}
 .scn-x:hover{background:rgba(255,255,255,.18)}
@@ -3774,6 +3791,11 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .scn-mini img{width:100%;height:100%;object-fit:cover;display:block}
 .scn-mini b{position:absolute;right:3px;bottom:3px;min-width:16px;height:16px;border-radius:8px;background:rgba(0,0,0,.72);color:#fff;font-size:10.5px;line-height:16px;text-align:center}
 .scn-mini:hover{border-color:#fff}
+.scn-nuevo{border-style:dashed;background:none;color:#e5e5ea;display:flex;flex-direction:column;gap:2px;font-size:10.5px;line-height:1.15;text-align:center}
+.scn-nuevo svg{width:20px;height:20px}
+.scn-luz:empty{display:none}
+.scn-lint[aria-pressed="true"]{color:#ffd60a}
+.scn-ic span{white-space:nowrap}
 .scn-sep{flex:none;align-self:center;color:#8e8e93;font-size:11.5px;padding:0 4px;border-left:1px solid #3a3a3c;margin-left:4px;padding-left:10px}
 .scn-ctrl{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
 .scn-izq,.scn-der{display:flex;gap:4px;align-items:center}
@@ -3818,7 +3840,34 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .scn-abrir svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
 .lec-scan{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 0}
 .lec-scan .caption{margin:0}
+/* En el móvil, escanear es la forma natural de subir papel: botón a todo lo ancho y de 48 px, al alcance del pulgar */
+@media (max-width:560px){.lec-scan{flex-direction:column;align-items:stretch;gap:6px}.lec-scan .scn-abrir{min-height:48px;width:100%;display:inline-flex;align-items:center;justify-content:center;font-size:15px}.lec-scan .scn-abrir svg{width:18px;height:18px}}
 @media (max-width:560px){.scn-ic span{font-size:10.5px}.scn-ic{min-width:48px}.scn-disp{width:68px;height:68px}.scn-disp span{width:54px;height:54px}.scn-ed{padding:10px 18px}}
+.scn-reint{margin-top:2px;min-height:44px;padding:0 20px}
+/* Móvil en horizontal (poca altura): cabecera fina y los controles en una columna a la derecha, al alcance del pulgar, como en la cámara
+   del sistema; la imagen ocupa el resto */
+@media (orientation:landscape) and (max-height:540px){
+  .scn{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr)}
+  .scn-cab{grid-column:1/-1;min-height:40px;padding:2px 12px}
+  .scn-cab h2{font-size:15px}
+  .scn-esc,.scn-ed{grid-column:1;grid-row:2}
+  .scn-pie,.scn-edbar{grid-column:2;grid-row:2;min-height:0;overflow-y:auto}
+  .scn-pie{display:flex;flex-direction:row-reverse;gap:8px;padding:6px 10px 8px 6px}
+  .scn-bandeja{flex-direction:column;overflow-x:hidden;overflow-y:auto;padding:2px 4px}
+  .scn-sep{border-left:0;border-top:1px solid #3a3a3c;margin:4px 0 0;padding:6px 0 0}
+  .scn-ctrl{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px}
+  .scn-izq,.scn-der{flex-direction:column;gap:2px}
+  .scn-der{justify-content:flex-start}
+  .scn-edbar{display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:2px 4px;width:208px;padding:6px 8px}
+  .scn-edbar .scn-seg,.scn-edbar .scn-sel,.scn-edbar .scn-fin{grid-column:1/-1}
+  .scn-edbar .scn-seg button{flex:1;min-height:44px}
+  .scn-sel{flex-direction:row;justify-content:center;gap:8px}
+  .scn-edbar .scn-ic{min-width:0;min-height:46px}
+  .scn-edbar .scn-fin{justify-content:center;margin-top:4px}
+  .scn-vivo{top:48px;left:calc((100% - 230px) / 2);max-width:calc(100% - 270px)}
+  .scn-ed+.scn-edbar+.scn-vivo{bottom:12px}
+  .scn-conf{bottom:16px}
+}
 @media (prefers-reduced-motion:reduce){.scn-flash.on,.scn-spin{animation:none}.scn-marco polygon{transition:none}}
 /* Contraseña de un PDF protegido (lector.js) */
 .lec-clave{position:fixed;inset:0;z-index:2147483100;display:grid;place-items:center;background:rgba(0,0,0,.45);padding:16px}
@@ -3831,15 +3880,15 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .lec-clave span{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
 
 </style>
-<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><span class="skel" style="width:160px"></span><span class="skel t"></span><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
+<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F6F6F3" : "#1E1F22"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script defer src="nucleo/motor.js?v=202610072007" data-nucleo="motor"></script>
-<script defer src="nucleo/app.js?v=202610072007" data-nucleo="app"></script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610080158"], ["app", "nucleo/app.js?v=202610080158"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610072007").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610080158").catch(() => {}));
 </script>
 </body>
 </html>

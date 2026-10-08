@@ -11,11 +11,16 @@
 <meta name="theme-color" content="#18191C" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="preload" as="image" href="img/web/resumen-1600.webp" media="(min-width: 700px) and (prefers-color-scheme: light)">
-
+<link rel="preload" as="image" href="video/hereda-demo-poster-1600.webp" media="(min-width: 700px)">
+<link rel="preload" as="image" href="video/hereda-demo-poster-960.webp" media="(max-width: 699px)">
+<meta property="og:title" content="Hereda+ · La herencia, lista en una tarde">
+<meta property="og:description" content="Software de sucesiones para despachos de abogados. Los documentos rellenan el expediente. Nada sale del despacho.">
+<meta property="og:image" content="video/hereda-demo-poster.jpg">
+<meta property="og:type" content="website">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
 <style>
-/* Hereda+ · web de producto. Mismos tokens que la app (src/app/shell.html): papel, tinta, azul notarial y la tipografía de títulos.
-   Si cambia la tipografía de la app, basta con cambiar --font-sans y --font-display aquí (las pilas del sistema quedan de respaldo). */
+/* Hereda+ · web de producto. Mismos tokens y misma letra que la app (src/app/shell.html): papel, tinta, azul notarial, Inter y Source Serif 4
+   (autoalojadas en /fonts; build.py pone la precarga y las @font-face en el marcador de fuentes del head). Las pilas del sistema quedan de respaldo. */
 :root{
   --bg:#F5F5F2; --bg-2:#EEEEEA; --surface:#FFFFFF; --surface-2:#FAFAF8;
   --border:#E3E2DD; --border-2:#CFCEC8;
@@ -25,8 +30,8 @@
   --btn:#18191C; --on-btn:#FFFFFF;
   --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(24,25,28,.035);
   --sh-frame:0 0 0 1px rgba(24,25,28,.07),0 2px 4px rgba(24,25,28,.04),0 40px 90px -30px rgba(24,25,28,.32);
-  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","SF Pro Text",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --font-display:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+  --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
   --ease:cubic-bezier(.32,.72,0,1);
   --max:1180px;
   color-scheme:light;
@@ -67,6 +72,7 @@ img{display:block;max-width:100%;height:auto}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
 @media (max-width:520px){.wrap{padding:0 16px}}
 .num{font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 /* Navegación */
 .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
@@ -91,21 +97,69 @@ img{display:block;max-width:100%;height:auto}
 .lnk:hover{text-decoration:underline}
 
 /* Portada */
-.hero{padding:clamp(56px,9vw,112px) 0 0;text-align:center}
-.eyebrow{font-size:14px;font-weight:600;color:var(--ink-2);margin:0 auto 22px;text-wrap:balance;max-width:30em}
+.hero{padding:clamp(40px,6vw,76px) 0 0;text-align:center}
+.eyebrow{font-size:14px;font-weight:600;color:var(--ink-2);margin:0 auto 18px;text-wrap:balance;max-width:30em}
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block;vertical-align:middle;margin:0 8px 2px 0}
 h1,h2,.display{font-family:var(--font-display);font-weight:600;letter-spacing:-.022em;text-wrap:balance}
 h1{font-size:clamp(44px,8vw,92px);line-height:1;margin:0 auto;max-width:11em}
-.sub{font-size:clamp(18px,2vw,22px);line-height:1.45;color:var(--ink-2);max-width:34em;margin:26px auto 34px;text-wrap:pretty}
+.sub{font-size:clamp(18px,2vw,22px);line-height:1.45;color:var(--ink-2);max-width:34em;margin:22px auto 30px;text-wrap:pretty}
 .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .note{font-size:14px;color:var(--ink-3);margin:18px 0 0}
-.stage{margin:clamp(48px,7vw,84px) auto 0;max-width:1240px;padding:0 24px}
+.stage{margin:clamp(36px,4.5vw,60px) auto 0;max-width:1240px;padding:0 24px}
 @media (max-width:520px){.stage{padding:0 16px}}
 .frame{border-radius:14px;overflow:hidden;box-shadow:var(--sh-frame);background:var(--surface)}
 .frame .bar{height:28px;display:flex;align-items:center;gap:7px;padding:0 12px;background:var(--surface-2);border-bottom:1px solid var(--border)}
 .frame .bar i{width:10px;height:10px;border-radius:50%;background:var(--border-2)}
 .frame .bar span{margin:0 auto;font-size:12px;color:var(--ink-3);transform:translateX(-24px)}
 .cap{font-size:13.5px;color:var(--ink-3);text-align:center;margin:16px 0 0}
+/* Vídeo de la portada: la imagen fija es el póster (y la mayor pintura de contenido); el vídeo se carga después de la página
+   y aparece encima con un fundido al empezar. En móvil, con «ahorro de datos» o con «reducir movimiento» no se reproduce solo. */
+.vid{position:relative;aspect-ratio:16/9;background:var(--surface)}
+.vid img,.vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.vid video{opacity:0;transition:opacity .6s var(--ease)}
+.vid.on video{opacity:1}
+.vctl{position:absolute;right:14px;bottom:14px;z-index:2;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 13px;border:0;border-radius:999px;cursor:pointer;
+  background:rgba(24,25,28,.82);color:#fff;font:600 14px/1 var(--font-sans);white-space:nowrap;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background-color .2s}
+.vctl:hover{background:rgba(24,25,28,.94)}
+.vctl:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px rgba(24,25,28,.82)}
+.vctl svg{flex:none}
+.vctl.grande{right:50%;bottom:50%;transform:translate(50%,50%);min-height:56px;padding:0 24px 0 20px;font-size:16px}
+@media (max-width:520px){.vctl{right:10px;bottom:10px;min-height:36px;font-size:13px}}
+
+/* Propuesta en tres puntos */
+.tres{display:grid;grid-template-columns:1fr;gap:0;margin:clamp(48px,6vw,72px) auto 0;border-top:1px solid var(--border);text-align:left}
+@media (min-width:860px){.tres{grid-template-columns:repeat(3,1fr)}}
+.tres div{padding:28px 4px 30px;border-bottom:1px solid var(--border)}
+@media (min-width:860px){.tres div{padding:30px 28px 0;border-bottom:0;border-left:1px solid var(--border)}.tres div:first-child{border-left:0;padding-left:0}}
+.tres b{display:block;font:600 clamp(22px,2.2vw,27px)/1.15 var(--font-display);letter-spacing:-.016em;margin-bottom:10px;text-wrap:balance}
+.tres p{margin:0;color:var(--ink-2);font-size:16px;line-height:1.5;text-wrap:pretty}
+
+/* Comparativa */
+.cmp{width:100%;border-collapse:separate;border-spacing:0;margin-top:clamp(40px,5vw,60px);font-size:15.5px;line-height:1.45;background:var(--surface);border-radius:20px;box-shadow:var(--sh-1);overflow:hidden}
+.cmp th,.cmp td{padding:16px 20px;text-align:left;vertical-align:top;border-top:1px solid var(--border)}
+.cmp thead th{border-top:0;font-size:14px;font-weight:650;color:var(--ink-2);background:var(--surface-2)}
+.cmp thead th.h{color:var(--brand)}
+.cmp tbody th{font-weight:600;color:var(--ink-1);width:22%}
+.cmp td{color:var(--ink-2);width:26%}
+.cmp td.h{color:var(--ink-1);background:var(--brand-tint)}
+.cmp thead th.h{background:var(--brand-tint)}
+.cmp-nota{font-size:14px;color:var(--ink-3);margin:18px 0 0;max-width:62em}
+@media (max-width:760px){
+  .cmp,.cmp tbody,.cmp tr,.cmp th,.cmp td{display:block;width:auto}
+  .cmp thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .cmp tbody tr{border-top:1px solid var(--border);padding:6px 0 10px}
+  .cmp tbody tr:first-child{border-top:0}
+  .cmp tbody th{border-top:0;padding:16px 18px 6px;font-size:16px;width:auto}
+  .cmp td{width:auto}
+  .cmp td{border-top:0;padding:6px 18px}
+  .cmp td::before{content:attr(data-c);display:block;font-size:12.5px;font-weight:650;color:var(--ink-3);margin-bottom:2px}
+  .cmp td.h{margin:4px 10px 0;border-radius:12px;padding:10px 12px}
+  .cmp td.h::before{color:var(--brand)}
+}
+
+/* Cifras como prueba */
+.cifras.prueba{margin-top:clamp(40px,5vw,60px)}
+.pie-cifras{font-size:14px;color:var(--ink-3);margin:18px 0 0;max-width:60em}
 
 /* Cifras */
 .cifras{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:clamp(56px,7vw,88px) auto 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
@@ -142,9 +196,11 @@ figure{margin:0}
 /* Producto */
 .alt{background:var(--surface)}
 .alt .frame{box-shadow:var(--sh-frame)}
+.alt .panel{background:var(--bg)}
+.alt .cmp{background:var(--bg)}
 .dos{display:grid;grid-template-columns:1fr;gap:20px;margin-top:clamp(48px,6vw,72px)}
 @media (min-width:900px){.dos{grid-template-columns:1fr 1fr}}
-.panel{background:var(--bg);border-radius:20px;padding:32px 32px 0;overflow:hidden;display:flex;flex-direction:column}
+.panel{background:var(--surface);border-radius:20px;padding:32px 32px 0;overflow:hidden;display:flex;flex-direction:column}
 .panel h3{font:600 26px/1.15 var(--font-display);letter-spacing:-.015em;margin:0 0 10px}
 .panel p{color:var(--ink-2);margin:0 0 26px;font-size:16px}
 .panel .frame{margin:auto -6px -6px 0;border-radius:12px 12px 0 0;box-shadow:var(--sh-1)}
@@ -222,9 +278,9 @@ footer p{margin:0;max-width:42em}
 <body>
 <a class="skip" href="#contenido">Saltar al contenido</a>
 <header class="nav"><div class="wrap">
-  <a class="brand" href="#" aria-label="Hereda+, inicio"><span class="logo" aria-hidden="true">H+</span>Hereda+</a>
-  <nav class="links" aria-label="Secciones"><a href="#como">Cómo funciona</a><a href="#producto">Producto</a><a href="#confianza">Confianza</a><a href="#precios">Precios</a><a href="#preguntas">Preguntas</a></nav>
-  <a class="btn pri sm" href="/app/">Probar gratis</a>
+  <a class="brand" href="#"><span class="logo" aria-hidden="true">H+</span>Hereda+<span class="sr-only">, inicio</span></a>
+  <nav class="links" aria-label="Secciones"><a href="#como">Cómo funciona</a><a href="#comparativa">Comparativa</a><a href="#seguridad">Seguridad</a><a href="#precios">Precios</a><a href="#preguntas">Preguntas</a></nav>
+  <a class="btn pri sm" href="/app/">Probar 30 días</a>
 </div></header>
 
 <main id="contenido">
@@ -233,43 +289,44 @@ footer p{margin:0;max-width:42em}
     <p class="eyebrow"><i aria-hidden="true"></i>Software de sucesiones para despachos de abogados</p>
     <h1>La herencia, lista en una tarde.</h1>
     <p class="sub">Arrastra los documentos del cliente. Hereda+ los lee en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Tú revisas, decides y firmas.</p>
-    <div class="ctas"><a class="btn pri big" href="/app/">Ver el despacho de demostración</a><a class="btn sec big" href="#precios">Precios</a></div>
-    <p class="note">30 días de prueba con todo incluido, sin tarjeta. En el navegador, en Windows y Mac.</p>
+    <div class="ctas"><a class="btn pri big" href="/app/">Probar 30 días</a><a class="btn sec big" href="/contratar.html#solicitud">Hablar con nosotros</a></div>
+    <p class="note">Con todas las funciones y sin tarjeta. En el navegador, en Windows y Mac. Empieza con un despacho de demostración.</p>
   </div>
   <div class="stage rv">
     <div class="frame">
       <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>Hereda+</span></div>
-      <picture>
-        <source media="(max-width: 700px) and (prefers-color-scheme: dark)" srcset="img/web/resumen-m-osc-900.webp" width="900" height="568">
-        <source media="(max-width: 700px)" srcset="img/web/resumen-m-900.webp" width="900" height="568">
-        <source media="(prefers-color-scheme: dark)" srcset="img/web/resumen-osc-1600.webp 1600w, img/web/resumen-osc-900.webp 900w" sizes="(min-width:1240px) 1192px, 100vw">
-        <img src="img/web/resumen-1600.webp" srcset="img/web/resumen-1600.webp 1600w, img/web/resumen-900.webp 900w" sizes="(min-width:1240px) 1192px, 100vw" width="1600" height="1000" fetchpriority="high" alt="Resumen de un expediente en Hereda+: caudal de 520.000 euros, impuestos de 4.234 euros, cuatro herederos y la tarjeta «Qué hacer en este expediente» con dos plazos de esta semana y un trámite en espera de la notaría.">
-      </picture>
+      <div class="vid" id="demo">
+        <picture>
+          <source media="(max-width: 699px)" srcset="video/hereda-demo-poster-960.webp" width="960" height="540">
+          <img src="video/hereda-demo-poster-1600.webp" srcset="video/hereda-demo-poster-1600.webp 1600w, video/hereda-demo-poster-960.webp 960w" sizes="(min-width:1240px) 1192px, 100vw" width="1600" height="900" fetchpriority="high" alt="Expediente de Antonio Jiménez Soler creado a partir de 26 documentos: caudal de 206.742 euros, impuestos de 3.071 euros, cinco herederos, y la lista «Qué hacer en este expediente» con una acción crítica y un plazo próximo.">
+        </picture>
+        <video muted playsinline preload="none" width="1920" height="1080" aria-hidden="true" tabindex="-1" data-mp4="video/hereda-demo.mp4" data-webm="video/hereda-demo.webm"></video>
+        <button class="vctl" type="button" hidden aria-pressed="false" aria-describedby="demo-desc"></button>
+      </div>
+      <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos»; el programa los lee en el ordenador y propone cada dato con su documento de origen; al cargarlos, el expediente queda calculado con Sucesiones y plusvalía; después se ven Mi día, las cifras del modelo 650 de cada heredero y el informe de cálculo en PDF.</p>
     </div>
-    <p class="cap">Expediente del despacho de demostración. Todos los datos son ficticios.</p>
+    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre al informe en PDF, en un minuto y medio y sin sonido. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
   </div>
   <div class="wrap">
-    <div class="cifras rv" role="list">
-      <div role="listitem"><b class="num">28</b><span>tipos de documento que el programa lee y entiende</span></div>
-      <div role="listitem"><b class="num">22</b><span>normativas del Impuesto sobre Sucesiones, forales incluidas</span></div>
-      <div role="listitem"><b class="num">8.132</b><span>municipios con su plusvalía, 303 con la ordenanza incorporada</span></div>
-      <div role="listitem"><b class="num">183</b><span>trámites con su plazo, su organismo y su enlace oficial</span></div>
-      <div role="listitem"><b class="num">1036</b><span>pruebas automáticas del motor de cálculo</span></div>
+    <div class="tres rv">
+      <div><b>La herencia, lista en una tarde.</b><p>Del montón de papeles al expediente calculado, con los plazos y los escritos. Sin teclear lo que ya dicen los documentos.</p></div>
+      <div><b>Los documentos rellenan el expediente.</b><p>Defunción, testamento, notas simples, Catastro, bancos, DNI: en PDF, Word, escaneados o fotografiados. Cada dato dice de dónde sale.</p></div>
+      <div><b>Nada sale del despacho.</b><p>Los expedientes y los documentos se guardan y se leen en tus equipos. No los recibimos. Sin IA y sin analítica.</p></div>
     </div>
   </div>
 </div>
 
 <section id="como" aria-labelledby="t-como"><div class="wrap">
   <p class="kicker">Cómo funciona</p>
-  <h2 id="t-como">Del montón de papeles al primer paso del día.</h2>
-  <p class="lead">Lo que hoy son horas de teclear certificados, buscar la ordenanza del ayuntamiento y apuntar plazos en un Excel, en cuatro pantallas.</p>
+  <h2 id="t-como">Tres pasos, del montón de papeles al primer paso del día.</h2>
+  <p class="lead">Lo que hoy son horas de teclear certificados, buscar la ordenanza del ayuntamiento y apuntar plazos en un Excel.</p>
 
   <div class="pasos">
     <div class="paso rv">
       <div class="txt">
         <span class="n" aria-hidden="true">1</span>
         <h3>Arrastra los documentos. El programa los lee.</h3>
-        <p>Certificados de defunción, de últimas voluntades y de seguros, testamento o acta de herederos, notas simples, Catastro e IBI, certificados de los bancos, DNI, escrituras, facturas del funeral. En PDF, en Word, escaneados o fotografiados con el móvil.</p>
+        <p>Certificados de defunción, de últimas voluntades y de seguros, testamento o acta de herederos, notas simples, Catastro e IBI, bancos, DNI, escrituras, facturas del funeral. En PDF, Word, Excel o correo; escaneados, fotografiados con el móvil o escaneados con la cámara desde el propio programa.</p>
         <p>Cada dato propuesto dice de qué documento sale. Lo dudoso, o lo que choca con algo que ya estaba, va sin marcar. Tú eliges qué entra.</p>
         <ul><li>Se leen en tu ordenador: los documentos no se suben a ningún servidor</li><li>Sin IA: reglas escritas para cada tipo de documento</li><li>Lo que no se reconoce se deja vacío, nunca se inventa</li></ul>
       </div>
@@ -279,7 +336,7 @@ footer p{margin:0;max-width:42em}
             <source media="(prefers-color-scheme: dark)" srcset="img/web/lector-docs-osc-1200.webp 1200w, img/web/lector-docs-osc-600.webp 600w" sizes="(min-width:980px) 360px, (min-width:640px) 45vw, 92vw">
             <img src="img/web/lector-docs-1200.webp" srcset="img/web/lector-docs-1200.webp 1200w, img/web/lector-docs-600.webp 600w" sizes="(min-width:980px) 360px, (min-width:640px) 45vw, 92vw" width="1200" height="1768" loading="lazy" alt="Documentos reconocidos: certificado de defunción, de últimas voluntades, de seguros, testamento, notas simples, certificación catastral, recibo del IBI, certificado bancario, escritura de compraventa y DNI, cada uno con su archivo de origen.">
           </picture></div>
-          <figcaption>25 documentos de un caso de ejemplo, reconocidos.</figcaption>
+          <figcaption>Los documentos de un caso de ejemplo, reconocidos.</figcaption>
         </figure>
         <figure>
           <div class="frame"><picture>
@@ -294,8 +351,8 @@ footer p{margin:0;max-width:42em}
     <div class="paso rev rv">
       <div class="txt">
         <span class="n" aria-hidden="true">2</span>
-        <h3>El expediente queda calculado.</h3>
-        <p>Personas, inmuebles con su valor de referencia y su valor catastral, cuentas a la fecha del fallecimiento, deudas y gastos. Con eso salen el caudal, el Impuesto sobre Sucesiones de cada heredero y la plusvalía de cada inmueble.</p>
+        <h3>Revisa. El expediente queda calculado.</h3>
+        <p>Personas, inmuebles con su valor de referencia y su valor catastral, cuentas a la fecha del fallecimiento, deudas y gastos. Con eso salen el caudal, el Impuesto sobre Sucesiones de cada heredero paso a paso y la plusvalía de cada inmueble, cada cifra con su norma.</p>
         <p>Todo lo leído queda señalado «leído de documento» y los documentos, «por revisar» hasta que los valides.</p>
       </div>
       <figure class="fig">
@@ -310,9 +367,9 @@ footer p{margin:0;max-width:42em}
     <div class="paso rv">
       <div class="txt">
         <span class="n" aria-hidden="true">3</span>
-        <h3>Cada mañana, qué hacer hoy.</h3>
+        <h3>Cada mañana, qué hacer hoy. Y los escritos, listos.</h3>
         <p>Mi día reúne lo vencido, lo que vence esta semana, lo que espera a la familia, al banco o a la notaría y desde cuándo, y lo que lleva un mes parado. Cada línea con su acción a un clic.</p>
-        <p>Dentro de cada expediente, la misma lista: crítico, esta semana y esperando a terceros. Se calcula con reglas a partir de los plazos y los datos que faltan.</p>
+        <p>Del mismo expediente salen el informe de cálculo en PDF, las cifras del 650 por heredero, las solicitudes a bancos y registros, la prórroga, la renuncia y el cuaderno particional, con el membrete del despacho.</p>
       </div>
       <figure class="fig">
         <div class="frame"><picture>
@@ -322,34 +379,32 @@ footer p{margin:0;max-width:42em}
         <figcaption>Mi día en el despacho de demostración: 14 expedientes ficticios.</figcaption>
       </figure>
     </div>
-
-    <div class="paso rev rv">
-      <div class="txt">
-        <span class="n" aria-hidden="true">4</span>
-        <h3>Escritos, notaría y familia.</h3>
-        <p>Solicitudes a bancos y registros, prórroga, renuncia y cuaderno particional en PDF y Word con el membrete del despacho. Antes de la firma, una comprobación previa y el paquete completo para la notaría.</p>
-        <p>Para la familia, la herencia explicada en una carpeta de una página y el modo reunión a pantalla completa.</p>
-      </div>
-      <figure class="fig">
-        <div class="frame"><picture>
-          <source media="(prefers-color-scheme: dark)" srcset="img/web/firma-osc-1400.webp 1400w, img/web/firma-osc-800.webp 800w" sizes="(min-width:980px) 720px, 100vw">
-          <img src="img/web/firma-1400.webp" srcset="img/web/firma-1400.webp 1400w, img/web/firma-800.webp 800w" sizes="(min-width:980px) 720px, 100vw" width="1400" height="1061" loading="lazy" alt="Listo para firmar: firma en notaría el 13 de octubre, cero bloqueos, tres avisos y 25 de 28 comprobaciones correctas, con los botones «Paquete para la notaría» y «Texto del correo» y los datos de identificación para la escritura.">
-        </picture></div>
-        <figcaption>Comprobación previa a la firma y paquete para la notaría.</figcaption>
-      </figure>
-    </div>
   </div>
 </div></section>
 
-<section id="producto" class="alt" aria-labelledby="t-producto"><div class="wrap">
+<section id="cifras" class="alt" aria-labelledby="t-cifras"><div class="wrap">
+  <p class="kicker">En cifras</p>
+  <h2 id="t-cifras">Lo que ya hace la versión 1.6.</h2>
+  <p class="lead">Cifras del propio programa, comprobables en el despacho de demostración. Las pruebas automáticas se ejecutan antes de cada versión: si una falla, la versión no se publica.</p>
+  <div class="cifras prueba rv" role="list">
+    <div role="listitem"><b class="num">28</b><span>tipos de documento que el programa lee y entiende</span></div>
+    <div role="listitem"><b class="num">22</b><span>normativas del Impuesto sobre Sucesiones, forales incluidas</span></div>
+    <div role="listitem"><b class="num">8.132</b><span>municipios con su plusvalía, 322 con la ordenanza incorporada</span></div>
+    <div role="listitem"><b class="num">183</b><span>trámites con su plazo, su organismo y su enlace oficial</span></div>
+    <div role="listitem"><b class="num">1.676</b><span>pruebas automáticas: 1.235 del cálculo y 441 de la lectura</span></div>
+  </div>
+  <p class="pie-cifras">Territorios: las 15 comunidades de régimen común, Navarra, Álava, Bizkaia, Gipuzkoa, Ceuta, Melilla y la norma estatal para no residentes. En plusvalía, el tipo oficial de las 48 capitales y de los 100 municipios de más de 50.000 habitantes; en el resto, el máximo legal con un aviso para poner el de su ordenanza.</p>
+</div></section>
+
+<section id="producto" aria-labelledby="t-producto"><div class="wrap">
   <p class="kicker">Producto</p>
   <h2 id="t-producto">Lo que hoy está en Excel, Word, carpetas y correos, en un solo sitio.</h2>
-  <p class="lead">Los programas de gestión de despachos no calculan impuestos. Las calculadoras no llevan el despacho. Hereda+ hace las dos cosas, solo para herencias.</p>
+  <p class="lead">Hecho solo para herencias: el cálculo de los impuestos y el trabajo del despacho, en la misma pantalla.</p>
 
   <div class="dos">
     <div class="panel rv">
       <h3>Sucesiones de 22 territorios y plusvalía de 8.132 municipios</h3>
-      <p>Las 15 comunidades de régimen común, Navarra, Álava, Bizkaia, Gipuzkoa, Ceuta, Melilla y la norma estatal para no residentes. En plusvalía, la ordenanza de 303 municipios, el tipo oficial de las 48 capitales y los 100 municipios de más de 50.000 habitantes, y en el resto el máximo legal con aviso para poner el de su ordenanza.</p>
+      <p>Cada heredero con su reducción, su base, su cuota y su bonificación, y cada paso con el artículo de la ley de su comunidad. Cada inmueble con su plusvalía por los dos métodos y la ordenanza que se aplica.</p>
       <div class="frame"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="img/web/impuestos-osc-800.webp">
         <img src="img/web/impuestos-800.webp" width="800" height="606" loading="lazy" alt="Detalle del Impuesto sobre Sucesiones de un heredero, con la reducción por parentesco, la base liquidable, la cuota y el coeficiente explicados.">
@@ -368,41 +423,62 @@ footer p{margin:0;max-width:42em}
   <div class="rejilla rv">
     <div><h4>Partición y estrategia fiscal</h4><p>Cuadro de adjudicaciones con excesos, lotes que reducen la plusvalía y el ahorro de cada opción en euros, con su riesgo y su norma.</p></div>
     <div><h4>Legítimas comunes y forales</h4><p>Control de legítimas también en los territorios con derecho civil propio, y cuánto costará la segunda herencia según el reparto de hoy.</p></div>
-    <div><h4>183 trámites con plazo</h4><p>Cada trámite con su organismo, su plazo, los días de espera y su enlace oficial. Semáforo de la cartera y exportación al calendario.</p></div>
+    <div><h4>Notaría y firma</h4><p>Comprobación previa a la firma, paquete completo para la notaría y el texto del correo. Para la familia, una carpeta de una página y el modo reunión.</p></div>
     <div><h4>Registro de cambios</h4><p>Quién cambió qué y cuándo, con el valor anterior y el nuevo: porcentajes, renuncias, valores, adjudicaciones, fase, honorarios y fondos.</p></div>
     <div><h4>Búsqueda en toda la cartera</h4><p>Ctrl K encuentra expedientes, personas por nombre o NIF, inmuebles por referencia catastral, cuentas por IBAN, documentos y tareas.</p></div>
-    <div><h4>Documentos con estado</h4><p>Recibido, por revisar, validado. Lo que lee el programa espera a que lo valides, y la lista de lo que falta pedir al cliente se hace sola.</p></div>
+    <div><h4>Escáner con la cámara</h4><p>Con el móvil, la tableta o la webcam: detecta el papel, lo endereza, lo guarda en PDF y lo lee como cualquier otro documento.</p></div>
     <div><h4>Encargo, fondos y rentabilidad</h4><p>Hoja de encargo con presupuesto, provisión de fondos y suplidos, honorarios por facturar y euros por hora de cada herencia.</p></div>
     <div><h4>Traer la cartera desde Excel</h4><p>Guarda tu hoja como CSV, súbela, revisa lo que va a entrar y confirma. Las herencias que ya tienes abiertas, sin teclearlas otra vez.</p></div>
     <div><h4>Calculadora para tu web</h4><p>Con la marca del despacho: las familias calculan lo que pagarían y te escriben para que revises su caso. <a href="/calculadora/">Pruébala</a>.</p></div>
   </div>
 </div></section>
 
-<section id="confianza" aria-labelledby="t-confianza"><div class="wrap">
-  <p class="kicker">Confianza</p>
-  <h2 id="t-confianza">Tu criterio. Tus datos.</h2>
-  <p class="lead">Hereda+ prepara el trabajo; la decisión y la firma son del abogado. Está hecho para que puedas comprobar cada cifra y responder del expediente con tranquilidad.</p>
+<section id="comparativa" class="alt" aria-labelledby="t-comparativa"><div class="wrap">
+  <p class="kicker">Comparativa</p>
+  <h2 id="t-comparativa">Frente a lo que ya usas.</h2>
+  <p class="lead">Por categorías, no con marcas. Si ya tienes un programa de gestión del despacho, Hereda+ convive con él: se ocupa solo de las herencias.</p>
+  <table class="cmp rv">
+    <caption class="sr-only">Comparativa de Hereda+ con Excel y Word y con el software de despacho genérico</caption>
+    <thead><tr><th scope="col"><span class="sr-only">Tarea</span></th><th scope="col">Excel y Word</th><th scope="col">Software de despacho genérico</th><th scope="col" class="h">Hereda+</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Datos de los documentos</th><td data-c="Excel y Word">Se teclean a mano</td><td data-c="Software genérico">Se archivan; los datos se teclean</td><td class="h" data-c="Hereda+">Se leen en tu ordenador y se proponen, cada uno con su documento de origen</td></tr>
+      <tr><th scope="row">Impuesto sobre Sucesiones</th><td data-c="Excel y Word">Una hoja propia que hay que mantener cuando cambia la ley</td><td data-c="Software genérico">Por lo general, no lo calcula</td><td class="h" data-c="Hereda+">22 normativas, paso a paso y con su artículo</td></tr>
+      <tr><th scope="row">Plusvalía municipal</th><td data-c="Excel y Word">Buscar la ordenanza de cada ayuntamiento</td><td data-c="Software genérico">Por lo general, no la calcula</td><td class="h" data-c="Hereda+">8.132 municipios; 322 con su ordenanza incorporada</td></tr>
+      <tr><th scope="row">Plazos de la herencia</th><td data-c="Excel y Word">Agenda y recordatorios a mano</td><td data-c="Software genérico">Agenda general, sin los trámites de una herencia</td><td class="h" data-c="Hereda+">183 trámites con su plazo y su organismo, y Mi día</td></tr>
+      <tr><th scope="row">Escritos</th><td data-c="Excel y Word">Plantillas que se rellenan a mano</td><td data-c="Software genérico">Plantillas generales</td><td class="h" data-c="Hereda+">Solicitudes, prórroga, renuncia y cuaderno particional con los datos del expediente</td></tr>
+      <tr><th scope="row">Gestión general del despacho</th><td data-c="Excel y Word">—</td><td data-c="Software genérico">Sí: facturación, agenda y expedientes de todas las materias</td><td class="h" data-c="Hereda+">Solo lo de cada herencia: encargo, fondos, honorarios y tiempos</td></tr>
+      <tr><th scope="row">Varios ordenadores con los mismos expedientes</th><td data-c="Excel y Word">Carpeta compartida</td><td data-c="Software genérico">Habitualmente, en la nube</td><td class="h" data-c="Hereda+">Próximamente, como opción. Hoy, cada equipo con sus datos y exportar o importar expedientes</td></tr>
+      <tr><th scope="row">Dónde están los datos de los clientes</th><td data-c="Excel y Word">En tus equipos</td><td data-c="Software genérico">Habitualmente, en los servidores del proveedor</td><td class="h" data-c="Hereda+">En tus equipos. No los recibimos</td></tr>
+    </tbody>
+  </table>
+  <p class="cmp-nota">«Software de despacho genérico»: programas de gestión para despachos de cualquier materia. Lo que hace cada uno varía; aquí se describe lo habitual. Compruébalo con el tuyo.</p>
+</div></section>
+
+<section id="seguridad" aria-labelledby="t-seguridad"><div class="wrap">
+  <p class="kicker">Seguridad y datos</p>
+  <h2 id="t-seguridad">Nada sale del despacho.</h2>
+  <p class="lead">Hereda+ prepara el trabajo; la decisión y la firma son del abogado. Y los datos de tus clientes se quedan contigo.</p>
   <div class="pilares">
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
-      <h3>Los datos se quedan en el despacho</h3>
-      <p>Expedientes y documentos se guardan en el navegador de cada equipo del despacho. No los recibimos ni podemos verlos. La lectura de documentos también se hace en el propio ordenador.</p>
+      <h3>Los datos se quedan en tus equipos</h3>
+      <p>Expedientes y documentos se guardan en el navegador de cada equipo del despacho, y la lectura de documentos también se hace ahí. No los recibimos ni podemos verlos. Sin analítica ni servicios de terceros en la aplicación.</p>
       <p>Copias automáticas en una carpeta del despacho y cifrado con contraseña.</p>
+    </div>
+    <div class="pilar rv">
+      <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg></div>
+      <h3>RGPD sin encargo del tratamiento</h3>
+      <p>Como no recibimos los datos de tus clientes, en el uso local no somos encargados del tratamiento (cláusula 8.2 de las <a class="lnk" href="/condiciones.html">condiciones</a>). Si algún día activas una función en la nube, antes se firma el contrato de encargo del artículo 28 del RGPD.</p>
     </div>
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
       <h3>Sin IA, con reglas</h3>
-      <p>No usamos inteligencia artificial: ni para leer los documentos ni para calcular. Un motor de reglas con 1036 pruebas automáticas: el mismo caso da siempre el mismo resultado.</p>
+      <p>No usamos inteligencia artificial: ni para leer los documentos ni para calcular. Reglas escritas y 1.676 pruebas automáticas: el mismo caso da siempre el mismo resultado, y cada cifra enlaza a su norma.</p>
     </div>
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <h3>El abogado decide</h3>
-      <p>Nada entra en el expediente sin que lo marques, y lo leído queda señalado. Las opciones fiscales de riesgo alto se quedan en «A valorar con el abogado». Hereda+ no presenta declaraciones ni firma nada.</p>
-    </div>
-    <div class="pilar rv">
-      <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div>
-      <h3>Cada regla, con su fuente</h3>
-      <p>Cada cifra enlaza a su norma: la ley de la comunidad, la ordenanza del ayuntamiento, el artículo. Y el registro de cambios deja constancia de quién tocó qué y cuándo.</p>
+      <p>Nada entra en el expediente sin que lo marques, y lo leído queda señalado. El registro de cambios deja constancia de quién tocó qué y cuándo. Hereda+ no presenta declaraciones ni firma nada.</p>
     </div>
   </div>
 </div></section>
@@ -411,7 +487,8 @@ footer p{margin:0;max-width:42em}
   <div class="center">
     <p class="kicker">Precios</p>
     <h2 id="t-precios">Un precio al mes. Todo el programa.</h2>
-    <p class="lead">Sin límite de expedientes. Las actualizaciones normativas, incluidas. Solo cambia cuántas personas lo usan.</p>
+    <p class="lead">Sin límite de expedientes. Las actualizaciones normativas y el soporte, incluidos. Solo cambia cuántas personas lo usan.</p>
+    <div class="ctas" style="margin-top:28px"><a class="btn pri" href="/app/">Probar 30 días</a></div>
   </div>
   <div class="planes">
     <div class="plan rv">
@@ -450,35 +527,37 @@ footer p{margin:0;max-width:42em}
     <div><p class="k">Oferta de lanzamiento · Plan Fundador</p><h3>10 despachos, 49 € al mes, precio fijo.</h3><p>Lo mismo que el plan Despacho, con el precio fijo mientras la licencia siga activa. Para los 10 primeros despachos que lo soliciten antes del 31 de diciembre de 2026.</p></div>
     <a class="btn big" href="/contratar.html#solicitud">Solicitar plaza</a>
   </div>
-  <p class="letra">Precios sin IVA. Pago por adelantado por transferencia: trimestral, semestral o anual (el año, al precio de 10 meses). Sin permanencia más allá del periodo pagado. Prueba de 30 días con todas las funciones; si no contratas, los expedientes quedan en solo lectura y nunca se bloquean. <a class="lnk" href="/contratar.html">Comparativa completa y condiciones</a>.</p>
+  <p class="letra">Precios sin IVA. Pago por adelantado por transferencia: trimestral, semestral o anual (el año, al precio de 10 meses). Al recibir la transferencia te llega el código de licencia, que se pega en el programa. Sin permanencia más allá del periodo pagado. Prueba de 30 días con todas las funciones; si no contratas, los expedientes quedan en solo lectura y nunca se bloquean. <a class="lnk" href="/contratar.html">Comparativa completa y condiciones</a>.</p>
 </div></section>
 
 <section id="preguntas" aria-labelledby="t-preguntas"><div class="wrap">
   <div class="center"><p class="kicker">Preguntas frecuentes</p><h2 id="t-preguntas">Lo que suelen preguntar los socios.</h2></div>
   <div class="faq">
+    <details><summary>¿Hay que instalar algo?</summary><div class="r"><p>No. Funciona en el navegador (recomendamos Chrome o Edge actualizados), en Windows y Mac, y se puede instalar como aplicación desde la barra de direcciones. Una vez abierto, funciona también sin conexión.</p><p>Hay además un archivo que se abre con doble clic, sin conexión; en él los documentos se archivan, pero la lectura de documentos necesita la versión web.</p></div></details>
     <details><summary>¿Dónde se guardan los expedientes y los documentos?</summary><div class="r"><p>En el navegador de cada equipo del despacho. No pasan por nuestros servidores y no podemos verlos. Por eso el programa hace copias automáticas en una carpeta del despacho (por ejemplo, la sincronizada con OneDrive o Dropbox) y permite cifrarlas con contraseña.</p></div></details>
-    <details><summary>¿Usa inteligencia artificial?</summary><div class="r"><p>No. El lector reconoce cada tipo de documento con reglas escritas para él, y el cálculo lo hace un motor de reglas con 1036 pruebas automáticas. El mismo caso da siempre el mismo resultado y se puede explicar línea a línea.</p></div></details>
+    <details><summary>¿Podemos usarlo en varios ordenadores, con los mismos expedientes?</summary><div class="r"><p>Sí, y cada persona con su perfil: socio, abogado o administrativo. Con «Despacho en red», los ordenadores del despacho comparten los expedientes y sus documentos a través de una carpeta que el despacho ya tiene: la de OneDrive, Dropbox o Google Drive, o la del servidor de la oficina. Si se pone contraseña, todo lo que se guarda en esa carpeta va cifrado. No pasa por nuestros servidores. El programa avisa si otra persona tiene abierto el mismo expediente y, si dos cambian el mismo dato, guarda las dos versiones y pregunta cuál se queda. Hace falta Chrome o Edge en el ordenador; en el móvil, los expedientes se pasan exportándolos e importándolos. Cada persona tiene su perfil (socio, abogado o administrativo) y el socio ve el panel de todo el despacho.</p></div></details>
+    <details><summary>¿Usa inteligencia artificial?</summary><div class="r"><p>No. El lector reconoce cada tipo de documento con reglas escritas para él, y el cálculo lo hace un motor de reglas con 1.235 pruebas automáticas (y 441 más para la lectura). El mismo caso da siempre el mismo resultado y se puede explicar línea a línea.</p></div></details>
     <details><summary>¿Y si se equivoca?</summary><div class="r"><p>Está pensado para que el error se vea antes de que cueste. Lo leído entra solo si lo marcas y queda señalado; lo dudoso va sin marcar; cada cifra enlaza a su norma; y el cálculo es prudente cuando falta un dato (por ejemplo, la plusvalía usa el método objetivo, nunca «no sujeto» por falta de datos).</p><p>Los resultados son estimaciones con la normativa cargada y los revisa el abogado antes de presentar. Si encontramos un error de cálculo, lo corregimos y avisamos a los despachos afectados.</p></div></details>
+    <details><summary>¿Qué soporte tiene?</summary><div class="r"><p>Por correo electrónico, de lunes a viernes, con la primera respuesta en un día hábil en todos los planes (en Despacho+, con prioridad). Los planes Despacho y Fundador incluyen una sesión de puesta en marcha de 30 minutos por videollamada; Despacho+, de 60. Las actualizaciones del programa y de la normativa están incluidas.</p><p>El soporte no incluye asesoramiento sobre casos concretos.</p></div></details>
+    <details><summary>¿Qué contrato se firma? ¿Hay permanencia?</summary><div class="r"><p>Las <a class="lnk" href="/condiciones.html">condiciones generales de la licencia</a>, publicadas en esta web, y la confirmación del plan que elijas. El pago mensual se hace por trimestres o semestres y no tiene permanencia más allá del periodo pagado; el plan anual se renueva salvo que avises con 15 días de antelación.</p><p>Mientras lo uses en local no hace falta contrato de encargo del tratamiento, porque no recibimos los datos de tus clientes.</p></div></details>
     <details><summary>Ya llevo las herencias en Excel. ¿Tengo que empezar de cero?</summary><div class="r"><p>No. En Despacho y ajustes › Datos, «Traer la cartera desde una hoja»: guardas tu Excel como CSV, lo subes, revisas lo que va a entrar y confirmas. Luego completas cada expediente con sus documentos.</p></div></details>
-    <details><summary>¿Hay que instalar algo?</summary><div class="r"><p>No. Funciona en el navegador (recomendamos Chrome o Edge actualizados), en Windows y Mac, y se puede instalar como aplicación desde la barra de direcciones. Funciona también sin conexión.</p></div></details>
-    <details><summary>¿Varios abogados pueden trabajar con los mismos expedientes?</summary><div class="r"><p>Cada persona tiene su perfil (socio, abogado o administrativo) y el socio ve el panel de todo el despacho. Hoy cada equipo guarda sus propios datos: los expedientes se pasan entre equipos exportándolos e importándolos. La sincronización en la nube, con servidores en la Unión Europea, llegará más adelante como opción y con su propio contrato de encargo del tratamiento.</p></div></details>
-    <details><summary>¿Presenta los modelos 650 y 660?</summary><div class="r"><p>No. Calcula y prepara la liquidación de cada heredero, indica qué modelo corresponde en cada comunidad y enlaza a su programa de ayuda. La presentación la hace el despacho.</p></div></details>
+    <details><summary>¿Presenta los modelos 650 y 660?</summary><div class="r"><p>No. Calcula y prepara la liquidación de cada heredero, ordena las cifras del 650 para copiarlas, indica qué modelo corresponde en cada comunidad y enlaza a su programa de ayuda. La presentación la hace el despacho.</p></div></details>
     <details><summary>¿Qué pasa si dejo de pagar?</summary><div class="r"><p>El programa pasa a solo lectura: puedes consultar, imprimir y exportar todo, sin límite de tiempo. Tus expedientes nunca se bloquean ni se borran.</p></div></details>
-    <details><summary>¿Cómo se contrata?</summary><div class="r"><p>Rellenas la <a class="lnk" href="/contratar.html#solicitud">solicitud</a>, te enviamos la confirmación y los datos para la transferencia, y al recibirla te llegan el código de licencia y la factura, normalmente el mismo día. El código se pega en Despacho y ajustes › Licencia; lo que hiciste durante la prueba sigue donde estaba.</p></div></details>
+    <details><summary>¿Cómo se contrata?</summary><div class="r"><p>Rellenas la <a class="lnk" href="/contratar.html#solicitud">solicitud</a>, te enviamos la confirmación y los datos para la transferencia, y al recibirla te llegan el código de licencia y la factura, normalmente el mismo día hábil. El código se pega en Despacho y ajustes › Licencia; lo que hiciste durante la prueba sigue donde estaba.</p></div></details>
   </div>
 </div></section>
 
 <section id="contacto" class="contacto center" aria-labelledby="t-contacto"><div class="wrap">
-  <p class="kicker">Hablemos</p>
-  <h2 id="t-contacto">Quince minutos y una herencia de principio a fin.</h2>
-  <p class="lead">Abre el despacho de demostración y recorre un expediente tú mismo, o pídenos una videollamada y te lo enseñamos con tus preguntas. Mejor aún: trae una herencia ya presentada, sin nombres ni DNI, y compara las cifras.</p>
-  <div class="ctas"><a class="btn pri big" href="/app/">Abrir el despacho de demostración</a><a class="btn sec big" id="pedir-demo" href="/contratar.html#solicitud">Pedir una demostración</a></div>
+  <p class="kicker">Empieza hoy</p>
+  <h2 id="t-contacto">Trae una herencia ya presentada y compara las cifras.</h2>
+  <p class="lead">Abre la prueba con el despacho de demostración y recorre un expediente tú mismo, o pídenos una videollamada de 15 minutos con tus preguntas. Sin nombres ni DNI: basta con las cifras.</p>
+  <div class="ctas"><a class="btn pri big" href="/app/">Probar 30 días</a><a class="btn sec big" href="/contratar.html#solicitud">Hablar con nosotros</a></div>
   <p class="sinfrio">Solo escribimos a quien nos lo pide. No enviamos correos comerciales que no hayas solicitado.</p>
 </div></section>
 </main>
 
 <footer><div class="wrap">
-  <p>© 2026 Hereda+ · Versión 1.4. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
+  <p>© 2026 Hereda+ · Versión 1.6. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
   <nav aria-label="Información legal"><a href="/contratar.html">Planes y contratación</a><a href="/condiciones.html">Condiciones</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
 </div></footer>
 
@@ -490,13 +569,29 @@ footer p{margin:0;max-width:42em}
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
   els.forEach((e) => io.observe(e));
 })();
-// «Pedir una demostración»: abre el correo del visitante con el asunto preparado. build.py pone la dirección desde src/empresa.json;
-// mientras no exista, el botón lleva a la solicitud de contratación.
+// Vídeo de la portada. Se carga cuando la página ya ha terminado (no compite con la primera pintura) y solo si se ve.
+// Se reproduce solo, en silencio y en bucle, en pantallas anchas sin «reducir movimiento» ni «ahorro de datos»; si no, el visitante lo
+// inicia con el botón. Siempre hay botón para pausarlo (WCAG 2.2.2). Al terminar vuelve a empezar después de la tarjeta de título.
 (() => {
-  const DESTINO = "[EMAIL DE CONTACTO]";
-  if (!/^[^\s@\[\]]+@[^\s@\[\]]+\.[^\s@\[\]]+$/.test(DESTINO)) return;
-  const a = document.getElementById("pedir-demo");
-  a.href = "mailto:" + DESTINO + "?subject=" + encodeURIComponent("Demostración de Hereda+") + "&body=" + encodeURIComponent("Hola:\n\nMe gustaría ver Hereda+ en una videollamada de 15 minutos.\n\nDespacho:\nCiudad:\nPersonas que llevan herencias:\nDías y horas que me vienen bien:\n\nGracias.");
+  const caja = document.getElementById("demo"); if (!caja) return;
+  const v = caja.querySelector("video"), b = caja.querySelector(".vctl");
+  const ICO = { play: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.2v9.6L11.6 7z" fill="currentColor"/></svg>', pausa: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.5h2.4v9H3.5zM8.1 2.5h2.4v9H8.1z" fill="currentColor"/></svg>' };
+  const INICIO = 4.2; // tras la tarjeta de título del vídeo (el titular ya está en la página)
+  let cargado = false;
+  const cargar = () => { if (cargado) return; cargado = true;
+    const w = document.createElement("source"); w.src = v.dataset.webm; w.type = "video/webm"; const m = document.createElement("source"); m.src = v.dataset.mp4; m.type = "video/mp4";
+    v.append(w, m); v.preload = "auto"; v.load(); };
+  const pinta = () => { const p = v.paused; b.innerHTML = (p ? ICO.play : ICO.pausa) + "<span>" + (p ? (cargado && v.currentTime > INICIO ? "Seguir el vídeo" : "Ver el vídeo · 1:34") : "Pausar el vídeo") + "</span>"; b.setAttribute("aria-pressed", String(!p)); b.classList.toggle("grande", p && !caja.classList.contains("on")); };
+  const reproducir = () => { cargar(); const go = () => { if (v.currentTime < INICIO) { try { v.currentTime = INICIO; } catch (e) {} } v.play().then(() => caja.classList.add("on")).catch(() => {}).finally(pinta); };
+    if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true }); };
+  v.addEventListener("ended", () => { v.currentTime = INICIO; v.play().catch(() => {}); });
+  v.addEventListener("pause", pinta); v.addEventListener("play", pinta);
+  b.addEventListener("click", () => { if (v.paused) { caja.dataset.parado = ""; reproducir(); } else { caja.dataset.parado = "1"; v.pause(); } });
+  b.hidden = false; pinta();
+  const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches, ahorro = navigator.connection && navigator.connection.saveData, estrecho = matchMedia("(max-width: 699px)").matches;
+  if (quieto || ahorro || estrecho || !("IntersectionObserver" in window)) return;
+  const empezar = () => { const io = new IntersectionObserver((es) => { for (const e of es) { if (e.isIntersecting) { if (v.paused && !caja.dataset.parado) reproducir(); } else if (!v.paused) v.pause(); } }, { threshold: 0.2 }); io.observe(caja); };
+  if (document.readyState === "complete") setTimeout(empezar, 400); else addEventListener("load", () => setTimeout(empezar, 400), { once: true });
 })();
 </script>
 </body>
