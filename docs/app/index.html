@@ -3999,6 +3999,252 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .lec-clave span{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
 
 </style>
+<style id="hereda-cine">
+/* ══════════════════════════════════════════════════════════════════════════════
+   v11 · «Cine» (09-10-2026) — luz, profundidad y oficio sobre el mismo sistema
+   Solo capa visual: re-afina tokens y añade luz (aurora del fondo y de la barra lateral), superficies con canto de luz,
+   sombras en capas, cifras en la serifa, foco petróleo, botón principal con brillo y paleta y reunión de cine.
+   Va después de todo lo demás para mandar sobre ello; nada cambia de tamaño ni de sitio. Todo bajo @media screen
+   (la impresión queda como estaba) y las animaciones propias se apagan con «reducir movimiento».
+   ══════════════════════════════════════════════════════════════════════════════ */
+@media screen{
+/* ── Tokens · grafito «azul noche notarial»: azul más hondo, superficies con un punto más de luz y sombras en capas ── */
+:root{
+  --bg:#0B1220; --surface:#111A29; --surface-2:#162133; --sunken:#09101B; --elevated:#172336;
+  --border:rgba(168,190,222,.115); --border-2:rgba(168,190,222,.2); --border-soft:rgba(168,190,222,.07);
+  --scrim:rgba(3,7,14,.62);
+  --side-bg:#070D17;
+  --cine-hi:rgba(214,228,250,.055);          /* canto de luz superior de las superficies */
+  --cine-sheen:rgba(157,188,230,.04);        /* velo de luz que cae sobre las tarjetas */
+  --cine-glow:rgba(99,184,175,.38);          /* halo petróleo (foco, avance, pestaña) */
+  --cine-gold:#E0C48A;
+  --sh-1:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi),0 1px 2px rgba(2,6,14,.32),0 12px 28px -18px rgba(2,6,14,.75);
+  --sh-2:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.07),0 2px 4px rgba(2,6,14,.28),0 16px 36px -12px rgba(2,6,14,.72);
+  --sh-3:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.08),0 10px 24px -8px rgba(2,6,14,.5),0 44px 96px -24px rgba(2,6,14,.9);
+  --cine-title:linear-gradient(180deg,#F3F6FB 20%,#BCCDE6 120%);
+  --cine-num:linear-gradient(180deg,#F1F5FB 25%,#AFC3DF 125%);
+}
+/* ── Tokens · claro «papel marfil»: marfil cálido, tinta azul-negra, sombras tostadas en lugar de grises ── */
+:root[data-theme="light"]{
+  --bg:#F3F0E8; --surface:#FFFDF8; --surface-2:#FAF7F0; --sunken:#ECE8DE; --elevated:#FFFDF8;
+  --border:#E2DDD1; --border-2:#CDC6B7; --border-soft:#ECE8DF;
+  --scrim:rgba(14,24,38,.3);
+  --side-bg:#0F2B4C;
+  --cine-hi:rgba(255,255,255,.95);
+  --cine-sheen:rgba(255,255,255,.7);
+  --cine-glow:rgba(31,110,107,.28);
+  --cine-gold:#7A5C24;
+  --sh-1:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi),0 1px 2px rgba(64,50,28,.05),0 10px 24px -16px rgba(48,38,22,.2);
+  --sh-2:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi),0 2px 4px rgba(64,50,28,.05),0 14px 32px -12px rgba(40,32,20,.22);
+  --sh-3:0 0 0 1px rgba(40,32,20,.08),inset 0 1px 0 #fff,0 10px 24px -10px rgba(40,32,20,.16),0 36px 80px -20px rgba(28,24,18,.32);
+  --cine-title:linear-gradient(180deg,#14355E 10%,#0B2140 110%);
+  --cine-num:linear-gradient(180deg,#173A63 10%,#0C2443 110%);
+}
+
+/* ── Fondo: aurora fija, muy tenue (una capa pintada una vez; no se recalcula al desplazar) ── */
+body{background:transparent}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(1100px 620px at 82% -12%,rgba(44,90,146,.32),transparent 62%),
+    radial-gradient(900px 560px at 18% 112%,rgba(108,194,184,.09),transparent 62%),
+    radial-gradient(700px 420px at 50% 38%,rgba(157,188,230,.025),transparent 70%),
+    var(--bg)}
+:root[data-theme="light"] body::before{
+  background:
+    radial-gradient(1100px 640px at 86% -16%,rgba(157,188,230,.24),transparent 62%),
+    radial-gradient(900px 600px at 6% 108%,rgba(224,196,138,.16),transparent 62%),
+    radial-gradient(700px 420px at 50% 30%,rgba(255,255,255,.5),transparent 70%),
+    var(--bg)}
+:root{scrollbar-color:rgba(157,188,230,.22) transparent}
+:root[data-theme="light"]{scrollbar-color:rgba(18,28,42,.2) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(157,188,230,.2);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(157,188,230,.34)}
+:root[data-theme="light"] ::-webkit-scrollbar-thumb{background-color:rgba(18,28,42,.18)}
+::selection{background:rgba(99,184,175,.28)}
+:root[data-theme="light"] ::selection{background:rgba(31,110,107,.16)}
+
+/* ── Barra lateral: azul noche con luz que entra por arriba y un filete de luz a la derecha ── */
+@media (min-width:1024px){
+  .side,:root[data-theme="light"] .side{
+    background:
+      radial-gradient(130% 46% at 0% 0%,rgba(44,90,146,.32),transparent 70%),
+      radial-gradient(120% 40% at 100% 104%,rgba(108,194,184,.09),transparent 70%),
+      linear-gradient(180deg,rgba(255,255,255,.012),transparent 40%),
+      var(--side-bg);
+    box-shadow:inset -1px 0 0 rgba(214,228,250,.05),1px 0 0 rgba(2,6,14,.4)}
+  :root[data-theme="light"] .side{
+    background:
+      radial-gradient(130% 46% at 0% 0%,rgba(157,188,230,.2),transparent 70%),
+      radial-gradient(120% 40% at 100% 104%,rgba(108,194,184,.14),transparent 70%),
+      linear-gradient(180deg,#123760 0%,#0F2B4C 46%,#0C2340 100%);
+    box-shadow:inset -1px 0 0 rgba(255,255,255,.08),1px 0 0 rgba(10,24,44,.25)}
+}
+.side .sitem[aria-current="true"],:root[data-theme="light"] .side .sitem[aria-current="true"]{
+  background:linear-gradient(90deg,rgba(108,194,184,.12),rgba(168,190,222,.07) 55%,rgba(168,190,222,.05));
+  box-shadow:inset 0 0 0 1px rgba(214,228,250,.06),inset 0 1px 0 rgba(214,228,250,.05)}
+.side .sitem[aria-current="true"]::before{box-shadow:0 0 10px 1px rgba(108,194,184,.55)}
+.side .sitem{transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease),box-shadow var(--dur-1) var(--ease)}
+.side .pk-btn{box-shadow:inset 0 0 0 1px rgba(214,228,250,.07),inset 0 1px 0 rgba(214,228,250,.04)}
+.side .logo svg{filter:drop-shadow(0 2px 6px rgba(2,6,14,.45))}
+
+/* ── Barra superior y pestañas pegajosas: cristal fino con filete de luz ── */
+.topbar{background:color-mix(in srgb,var(--bg) 72%,transparent);-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px)}
+@media (min-width:1024px){
+  .topbar{background:color-mix(in srgb,var(--bg) 70%,transparent)}
+  .topbar.scrolled{box-shadow:0 1px 0 var(--border-soft),0 10px 28px -20px rgba(var(--shadow-rgb),.7)}
+  .sn-wrap{background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:saturate(150%) blur(16px);backdrop-filter:saturate(150%) blur(16px)}
+}
+
+/* ── Títulos: la serifa con un degradado de luz muy leve ── */
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .ltitle,.detail-h h3{background:var(--cine-title);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .ltitle em{-webkit-text-fill-color:var(--ink-3)}
+  .page > .headrow .ltitle::after,.page > .ltitle::after{width:32px;background:linear-gradient(90deg,var(--petrol),color-mix(in srgb,var(--petrol) 0%,transparent));box-shadow:0 0 10px var(--cine-glow)}
+}
+
+/* ── Superficies: velo de luz desde arriba y canto de luz (el borde lo sigue dando la sombra de 1 px) ── */
+.card:not(.flat),.group,.kpis,.rd-kpis,.tiles,.infobar,.rd-list,.rd-dinero,.rd-strip,.rd-ok,.sn-menu,.res-mas button{background-image:linear-gradient(180deg,var(--cine-sheen),transparent 160px)}
+button.card:hover,.doccard:hover,.ej:hover,.bcard:hover,.gu-item:hover,.fcard:hover{background-image:linear-gradient(180deg,var(--cine-sheen),transparent 160px)}
+@media (hover:hover) and (pointer:fine){
+  button.card,.doccard,.ej,.bcard,.gu-item,.fcard,.rd-kpi,button.kpi{transition:transform 180ms var(--ease-out),box-shadow 180ms var(--ease-out),background-color 150ms}
+  button.card:hover,.doccard:hover,.ej:hover,.bcard:hover,.gu-item:hover,.fcard:hover{transform:translateY(-1px);box-shadow:var(--sh-2)}
+}
+.kpis .kpi,.rd-kpis .rd-kpi{background-image:none}
+
+/* ── Cifras grandes: la serifa de la casa, tabular, con un degradado de luz (los estados conservan su color) ── */
+.kpi b,.rd-kpi b,.sc-kpis .kpi b{font-family:var(--font-display);font-weight:600;letter-spacing:-.012em;font-feature-settings:"tnum" 1,"lnum" 1}
+.kpi b .cur,.rd-kpi b .cur{font-family:var(--font-sans)}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .kpi:not(.bad):not(.warn):not(.ok):not(.gold) b,.rd-kpi.info b,.rd-kpi.mute b{background:var(--cine-num);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .kpi:not(.bad):not(.warn):not(.ok):not(.gold) b .cur{-webkit-text-fill-color:var(--ink-3)}
+}
+.rd-kpi[aria-pressed="true"],.rd-kpi.zero[aria-pressed="true"]{background-image:linear-gradient(0deg,color-mix(in srgb,var(--rd-c) 9%,transparent),transparent 70%)}
+.ring .fg{filter:drop-shadow(0 0 4px var(--cine-glow))}
+.ring text{font-family:var(--font-display)}
+
+/* ── Botón principal: azul notarial con luz desde arriba, canto claro y un brillo que cruza al pasar ── */
+.btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger),.sheet header .tbtn.sh-ok,.bv-pri,.gu-b.gu-pri{
+  background-image:
+    linear-gradient(115deg,transparent 38%,rgba(255,255,255,.16) 50%,transparent 62%),
+    linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,0) 60%);
+  background-size:260% 100%,100% 100%;background-position:120% 0,0 0;background-repeat:no-repeat;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.04),0 1px 2px rgba(var(--shadow-rgb),.35),0 6px 16px -8px color-mix(in srgb,var(--btn) 70%,transparent)}
+.btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger):hover,.sheet header .tbtn.sh-ok:hover,.bv-pri:hover,.gu-b.gu-pri:hover{background-position:-20% 0,0 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(255,255,255,.06),0 1px 2px rgba(var(--shadow-rgb),.35),0 8px 22px -8px color-mix(in srgb,var(--btn) 85%,transparent)}
+@media (prefers-reduced-motion:no-preference){
+  .btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger),.sheet header .tbtn.sh-ok,.bv-pri,.gu-b.gu-pri{transition:background-color var(--dur-1),background-position 650ms var(--ease-out),box-shadow var(--dur-2),color var(--dur-1),transform 80ms}
+}
+.side .newbtn .btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 2px rgba(2,6,14,.4),0 8px 20px -10px rgba(44,90,146,.9)}
+:root[data-theme="light"] .side .newbtn .btn{background-image:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.7) 50%,transparent 62%),linear-gradient(180deg,#fff,rgba(255,255,255,0));box-shadow:inset 0 1px 0 #fff,0 1px 2px rgba(2,6,14,.3),0 8px 20px -10px rgba(2,6,14,.7)}
+
+/* ── Foco: anillo petróleo con halo; en los campos, el halo envuelve la caja ── */
+:focus-visible{outline-color:var(--petrol)}
+.search:focus-within,.search:has(input:focus-visible){box-shadow:inset 0 0 0 1px var(--petrol),0 0 0 3px color-mix(in srgb,var(--petrol) 18%,transparent),0 0 16px -2px var(--cine-glow)}
+.side .search:focus-within{box-shadow:inset 0 0 0 1px var(--side-accent),0 0 0 3px rgba(108,194,184,.2)}
+
+/* ── Fases del encargo: la fase en curso recibe una luz que cae desde su filete ── */
+.stepper button.on,:root[data-theme="light"] .stepper button.on{background:linear-gradient(180deg,color-mix(in srgb,var(--petrol) 13%,transparent),transparent 34px);box-shadow:inset 0 3px 0 var(--petrol),0 -4px 14px -8px var(--cine-glow)}
+.stepper button.on.blk,:root[data-theme="light"] .stepper button.on.blk{background:linear-gradient(180deg,color-mix(in srgb,var(--warning) 12%,transparent),transparent 34px)}
+.stepper button.on.venc,:root[data-theme="light"] .stepper button.on.venc{background:linear-gradient(180deg,color-mix(in srgb,var(--danger) 12%,transparent),transparent 34px)}
+.stepper button.on i{box-shadow:0 0 0 3px color-mix(in srgb,var(--petrol) 20%,transparent),0 0 12px var(--cine-glow)}
+.stepper button.done i{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--petrol) 30%,transparent)}
+
+/* ── Pestañas del expediente: marca petróleo con halo ── */
+@media (min-width:1024px){
+  .secnav .sn-ind,.secnav button[aria-current="page"]::after{background:linear-gradient(90deg,color-mix(in srgb,var(--petrol) 70%,var(--brand)),var(--petrol));box-shadow:0 0 10px 0 var(--cine-glow),0 -2px 8px -2px var(--cine-glow)}
+  .secnav .n{box-shadow:inset 0 0 0 1px var(--border-soft)}
+}
+
+/* ── Segmentado: la opción activa flota con su canto de luz ── */
+.seg button[aria-pressed="true"],:root[data-theme="light"] .seg button[aria-pressed="true"]{box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi),0 2px 6px -2px rgba(var(--shadow-rgb),.35)}
+
+/* ── Barras de avance y reparto: petróleo con brillo ── */
+.mbar i,.wiz .progress i,.gu-bar i{background:linear-gradient(90deg,color-mix(in srgb,var(--petrol) 75%,var(--brand)),var(--petrol));box-shadow:0 0 8px -1px var(--cine-glow)}
+.pinv .pi-b i{background:linear-gradient(90deg,color-mix(in srgb,var(--c1) 80%,transparent),var(--c1));box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.pinv .pi-b,.mbar{box-shadow:inset 0 1px 1px rgba(var(--shadow-rgb),.25)}
+
+/* ── Tablas: cabecera con canto de luz; la fila bajo el puntero se ilumina desde la izquierda ── */
+.grid-t th{background-image:linear-gradient(180deg,var(--cine-sheen),transparent)}
+@media (hover:hover) and (pointer:fine){
+  .grid-t tbody tr:hover{background:linear-gradient(90deg,color-mix(in srgb,var(--petrol) 7%,transparent),var(--hover) 40%)}
+}
+
+/* ── Hojas y ventanas: canto de luz, sombra profunda y un fondo que se aparta con un desenfoque leve ── */
+.sheet,:root[data-theme="light"] .sheet{box-shadow:var(--sh-3);background-image:linear-gradient(180deg,var(--cine-sheen),transparent 220px)}
+.sheet header{background:linear-gradient(180deg,rgba(214,228,250,.025),transparent)}
+:root[data-theme="light"] .sheet header{background:linear-gradient(180deg,rgba(255,255,255,.7),transparent)}
+@media (min-width:1024px){.scrim,:root[data-theme="light"] .scrim{-webkit-backdrop-filter:blur(3px) saturate(115%);backdrop-filter:blur(3px) saturate(115%)}}
+.sg-modal,.sn-menu{box-shadow:var(--sh-3)}
+.toast,:root[data-theme="light"] .toast{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),var(--sh-3)}
+
+/* ── Cronómetro flotante y barra de pestañas del móvil: cristal con canto de luz ── */
+.tm-pill{box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi),0 10px 28px -10px rgba(var(--shadow-rgb),.55)}
+.tabbar{background:color-mix(in srgb,var(--bg) 76%,transparent);box-shadow:inset 0 1px 0 var(--cine-hi),0 -10px 30px -20px rgba(var(--shadow-rgb),.6)}
+.tabbar button[aria-current="page"] svg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--brand) 55%,transparent))}
+
+/* ── Paleta de comandos (Ctrl K): cristal profundo, filete de luz y selección con luz petróleo ── */
+.pk-scrim{background:radial-gradient(900px 520px at 50% 20%,rgba(44,90,146,.18),transparent 70%),var(--scrim)}
+:root[data-theme="light"] .pk-scrim{background:radial-gradient(900px 520px at 50% 20%,rgba(157,188,230,.22),transparent 70%),rgba(14,24,38,.26)}
+.pk-panel{background:color-mix(in srgb,var(--surface) 86%,transparent);background-image:linear-gradient(180deg,rgba(214,228,250,.05),transparent 120px);-webkit-backdrop-filter:saturate(160%) blur(26px);backdrop-filter:saturate(160%) blur(26px);
+  box-shadow:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.1),0 24px 60px -18px rgba(2,6,14,.85),0 60px 140px -40px rgba(44,90,146,.45)}
+:root[data-theme="light"] .pk-panel{background:color-mix(in srgb,var(--surface) 90%,transparent);background-image:linear-gradient(180deg,#fff,transparent 120px);box-shadow:0 0 0 1px rgba(40,32,20,.1),inset 0 1px 0 #fff,0 24px 60px -18px rgba(28,24,18,.35),0 60px 140px -40px rgba(15,43,76,.3)}
+.pk-head{border-bottom:1px solid var(--border-soft)}
+.pk-head>svg{color:var(--petrol)}
+.pk-in{caret-color:var(--petrol)}
+.pk-row{position:relative}
+.pk-row.on{background:linear-gradient(90deg,color-mix(in srgb,var(--petrol) 14%,transparent),color-mix(in srgb,var(--brand) 7%,transparent));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--petrol) 22%,transparent)}
+.pk-row.on .pk-ic{color:var(--petrol);background:color-mix(in srgb,var(--petrol) 16%,transparent);box-shadow:0 0 14px -4px var(--cine-glow)}
+.pk-m{color:var(--petrol)}
+.pk-foot{background:color-mix(in srgb,var(--surface-2) 70%,transparent);border-top:1px solid var(--border-soft)}
+.pk-hint kbd,.pk-foot kbd,.pk-keys kbd{box-shadow:inset 0 -1px 0 var(--border)}
+@media (max-width:640px){.pk-panel{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:var(--surface)}}
+
+/* ── Modo reunión con la familia: sala a oscuras con luz de escenario ── */
+.rn-over{background:
+    radial-gradient(1200px 700px at 50% -18%,rgba(44,90,146,.32),transparent 64%),
+    radial-gradient(900px 600px at 100% 110%,rgba(108,194,184,.08),transparent 60%),
+    radial-gradient(800px 500px at 0% 100%,rgba(224,196,138,.045),transparent 60%),
+    var(--bg)}
+:root[data-theme="light"] .rn-over{background:
+    radial-gradient(1200px 700px at 50% -18%,rgba(157,188,230,.3),transparent 64%),
+    radial-gradient(900px 600px at 100% 110%,rgba(108,194,184,.1),transparent 60%),
+    radial-gradient(800px 500px at 0% 100%,rgba(224,196,138,.18),transparent 60%),
+    var(--bg)}
+.rn-prog{background:var(--border-soft)}
+.rn-prog i{background:linear-gradient(90deg,var(--brand),var(--petrol));box-shadow:0 0 12px var(--cine-glow)}
+.rn-kick{color:var(--cine-gold)}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .rn-h1,.rn-h2{background:var(--cine-title);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding-bottom:.06em}
+}
+.rn-card,.rn-tile,.rn-pay,.rn-formula,.rn-steps li,.rn-scroll,.rn-link{background-color:color-mix(in srgb,var(--surface) 82%,transparent);background-image:linear-gradient(180deg,var(--cine-sheen),transparent 140px);box-shadow:var(--sh-2)}
+.rn-card-v,.rn-tile-v,.rn-formula>div b,.rn-pay-f span{font-family:var(--font-display);font-weight:600;letter-spacing:-.015em;font-feature-settings:"tnum" 1,"lnum" 1}
+.rn-card-v small,.rn-pay-f small{font-family:var(--font-sans)}
+.rn-formula>div.tot b{text-shadow:0 0 24px color-mix(in srgb,var(--green) 35%,transparent)}
+.rn-tile-i,.rn-step-n{box-shadow:inset 0 0 0 1px var(--border-soft),inset 0 1px 0 var(--cine-hi)}
+.rn-btn,.rn-nav{background:color-mix(in srgb,var(--surface) 70%,transparent);box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--cine-hi);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.rn-btn[aria-pressed="true"]{background:var(--label);color:var(--canvas)}
+.rn-salir{background:transparent}
+.rn-nav:not(:disabled):hover,.rn-btn:hover{box-shadow:0 0 0 1px var(--border-2),inset 0 1px 0 var(--cine-hi),0 0 18px -6px var(--cine-glow);filter:none}
+
+/* ── Entrada de vistas: un fundido corto que sube 4 px y se enfoca (solo cuando cambia la vista) ── */
+@media (prefers-reduced-motion:no-preference){
+  html.mo.mo-nav .view{animation:cine-entra 240ms var(--ease-out) both}
+  .pk-panel{animation-duration:200ms}
+}
+@keyframes cine-entra{from{opacity:0;transform:translateY(4px);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+
+/* Alto contraste del sistema: sin degradados en el texto */
+@media (forced-colors:active){
+  .ltitle,.detail-h h3,.kpi b,.rd-kpi b,.rn-h1,.rn-h2{background:none!important;-webkit-text-fill-color:currentColor!important}
+  body::before{display:none}
+}
+}
+@media (prefers-reduced-motion:reduce){
+  .btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger),.sheet header .tbtn.sh-ok,.bv-pri,.gu-b.gu-pri{transition:none}
+  button.card:hover,.doccard:hover,.ej:hover,.bcard:hover,.gu-item:hover,.fcard:hover{transform:none}
+}
+</style>
 <div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
