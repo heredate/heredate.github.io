@@ -686,7 +686,7 @@ footer a:hover{color:var(--ink-1)}
     const b = $("[data-count]", e.target);
     if (b) {
       const to = +b.dataset.count, t0 = performance.now(), d = reduce ? 0 : 1600;
-      const step = (t) => { const k = d ? ease(clamp((t - t0) / d)) : 1; b.textContent = fmt(to * k); if (k < 1) requestAnimationFrame(step); };
+      const step = () => { const k = d ? ease(clamp((performance.now() - t0) / d)) : 1; b.textContent = fmt(to * k); if (k < 1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
     }
     io.unobserve(e.target);
