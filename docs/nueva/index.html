@@ -12,13 +12,15 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<script>(function(d){var r=matchMedia("(prefers-reduced-motion: reduce)").matches,c=document.createElement("canvas");d.className+=" js"+(r?" rm":"")+(!r&&c.getContext&&c.getContext("2d")?" fx":"")})(document.documentElement)</script>
 <style>
 @font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}
 @font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}
 @font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}
 @font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}
 
-/* Hereda+ · portada «noche». Página independiente: no comparte CSS ni JS con la app ni con la portada actual. */
+/* Hereda+ · portada «noche». Página independiente: no comparte CSS ni JS con la app ni con la portada actual.
+   Todo el movimiento ligado al scroll escribe solo transform/opacity desde un único bucle rAF (ver <script>). */
 :root{
   --night:#060B14; --night-2:#0A1322; --night-3:#0F1B2E;
   --line:rgba(168,190,222,.12); --line-2:rgba(168,190,222,.22);
@@ -28,11 +30,13 @@
   --sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   --serif:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style",Georgia,serif;
   --ease:cubic-bezier(.22,.8,.2,1);
+  --ease-io:cubic-bezier(.65,0,.35,1);
   --max:1200px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--night);color:var(--ink-1);-webkit-text-size-adjust:100%}
 body{font-family:var(--sans);font-size:16px;line-height:1.55;background:var(--night);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+main{overflow-x:clip}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
@@ -40,36 +44,52 @@ img{display:block;max-width:100%}
 .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--petrol);font-weight:600}
 .muted{color:var(--ink-2)}
 .skip{position:absolute;left:-9999px}.skip:focus{left:16px;top:16px;z-index:100;background:#fff;color:#000;padding:8px 12px;border-radius:8px}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
 
 /* Grano de película, encima de todo y sin capturar clics */
-.grain{position:fixed;inset:-50%;z-index:90;pointer-events:none;opacity:.06;
+.grain{position:fixed;inset:-50%;z-index:90;pointer-events:none;opacity:.055;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
   animation:grain 1.2s steps(6) infinite}
 @keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
 
 /* Barra de progreso del relato */
 .progress{position:fixed;left:0;top:0;height:2px;width:100%;transform-origin:0 50%;transform:scaleX(0);z-index:80;
-  background:linear-gradient(90deg,var(--brand),var(--petrol))}
+  background:linear-gradient(90deg,var(--brand),var(--petrol));box-shadow:0 0 12px rgba(108,194,184,.6)}
 
 /* Navegación de cristal */
 .nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:70;width:min(calc(100% - 24px),var(--max));
   display:flex;align-items:center;gap:20px;padding:10px 12px 10px 16px;border-radius:16px;
-  background:rgba(10,19,34,.55);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+  background:rgba(10,19,34,.55);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 10px 40px -20px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.04)}
 .nav .logo{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em}
 .nav .logo img{width:28px;height:28px;border-radius:7px}
 .nav ul{display:flex;gap:22px;list-style:none;margin-left:auto;font-size:14px;color:var(--ink-2)}
+.nav ul a{position:relative;transition:color .25s}
+.nav ul a::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:1px;background:linear-gradient(90deg,var(--brand),var(--petrol));transform:scaleX(0);transform-origin:0 50%;transition:transform .4s var(--ease)}
 .nav ul a:hover{color:var(--ink-1)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:12px;font-weight:600;font-size:15px;transition:transform .25s var(--ease),background .25s,box-shadow .25s;white-space:nowrap}
+.nav ul a:hover::after{transform:scaleX(1)}
+
+/* Botones: brillo que sigue al cursor y leve atracción magnética (ver JS) */
+.btn{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:12px;font-weight:600;font-size:15px;
+  transition:transform .25s var(--ease),translate .45s var(--ease),background .25s,box-shadow .25s;white-space:nowrap}
+.btn::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:radial-gradient(140px circle at var(--sx,50%) var(--sy,50%),var(--glint,rgba(255,255,255,.16)),transparent 65%)}
+.btn:hover::after{opacity:1}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:var(--ink-1);color:var(--night)}
-.btn-primary:hover{box-shadow:0 0 0 6px rgba(238,242,248,.12)}
+.btn-primary{background:var(--ink-1);color:var(--night);--glint:rgba(108,194,184,.38)}
+.btn-primary:hover{box-shadow:0 0 0 6px rgba(238,242,248,.12),0 12px 40px -10px rgba(157,188,230,.55)}
 .btn-ghost{border:1px solid var(--line-2);color:var(--ink-1)}
-.btn-ghost:hover{background:rgba(168,190,222,.08)}
+.btn-ghost:hover{background:rgba(168,190,222,.08);border-color:rgba(168,190,222,.4)}
+.btn-primary.sheen::before{content:"";position:absolute;top:-20%;bottom:-20%;left:0;width:38%;z-index:-1;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(108,194,184,.45),rgba(255,255,255,.9),rgba(157,188,230,.45),transparent);
+  transform:translateX(-160%) skewX(-18deg);animation:btnsheen 6.5s 2.2s var(--ease-io) infinite}
+@keyframes btnsheen{0%{transform:translateX(-160%) skewX(-18deg)}22%,100%{transform:translateX(330%) skewX(-18deg)}}
 .nav .btn{height:38px;padding:0 16px;font-size:14px}
 @media (max-width:860px){.nav ul{display:none}.nav .btn{margin-left:auto}}
 
 /* ─── Portada ─── */
-.hero{position:relative;min-height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;padding:120px 0 80px}
+.hero{position:relative;min-height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;padding:120px 0 80px;isolation:isolate}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:22%;z-index:2;pointer-events:none;background:linear-gradient(to bottom,transparent,var(--night))}
 .aurora{position:absolute;inset:-20%;z-index:0;filter:blur(60px);opacity:.9}
 .aurora i{position:absolute;border-radius:50%;mix-blend-mode:screen}
 .aurora i:nth-child(1){width:60vmax;height:60vmax;left:5%;top:10%;background:radial-gradient(circle,rgba(44,90,146,.55),transparent 60%);animation:drift1 18s ease-in-out infinite alternate}
@@ -77,36 +97,73 @@ img{display:block;max-width:100%}
 .aurora i:nth-child(3){width:40vmax;height:40vmax;left:35%;bottom:-5%;background:radial-gradient(circle,rgba(157,188,230,.22),transparent 60%);animation:drift1 26s ease-in-out infinite alternate-reverse}
 @keyframes drift1{to{transform:translate(8vmax,-6vmax) scale(1.15)}}
 @keyframes drift2{to{transform:translate(-10vmax,6vmax) scale(.9)}}
+/* Luz volumétrica + polvo + monograma de partículas (Canvas 2D). Si no hay JS o hay movimiento reducido, queda la aurora CSS. */
+.hero canvas.fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;display:none}
+.fx .hero canvas.fx{display:block}
 .hero .spot{position:absolute;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(600px circle at var(--mx,50%) var(--my,40%),rgba(157,188,230,.10),transparent 60%)}
 .hero .floor{position:absolute;left:0;right:0;bottom:0;height:45%;z-index:1;pointer-events:none;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
   background-size:64px 64px;transform:perspective(600px) rotateX(62deg);transform-origin:50% 100%;
-  -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 85%);mask-image:linear-gradient(to top,#000 10%,transparent 85%);opacity:.55}
-.hero-inner{position:relative;z-index:2;padding:0 20px}
-.mark{width:96px;height:96px;margin:0 auto 34px;position:relative;transform-style:preserve-3d;animation:float 6s ease-in-out infinite}
+  -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 85%);mask-image:linear-gradient(to top,#000 10%,transparent 85%);opacity:.5}
+.hero-inner{position:relative;z-index:3;padding:0 20px}
+.mark{width:96px;height:96px;margin:0 auto 34px;position:relative;transform-style:preserve-3d;will-change:transform}
+.rm .mark,.js:not(.fx) .mark{animation:float 6s ease-in-out infinite}
+.mark .glass{position:relative;width:100%;height:100%;border-radius:24px}
 .mark img{width:100%;height:100%;border-radius:24px;box-shadow:0 30px 80px -20px rgba(44,90,146,.9),0 0 0 1px rgba(157,188,230,.25)}
+.mark .glass::before{content:"";position:absolute;inset:0;border-radius:24px;z-index:1;pointer-events:none;
+  background:linear-gradient(160deg,rgba(255,255,255,.28),rgba(255,255,255,0) 38%),linear-gradient(0deg,rgba(108,194,184,.18),transparent 30%);mix-blend-mode:screen}
+.mark .glass::after{content:"";position:absolute;inset:0;border-radius:24px;z-index:2;pointer-events:none;
+  background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.55) 48%,rgba(255,255,255,.08) 54%,transparent 62%) no-repeat;background-size:300% 100%;background-position:120% 0;
+  animation:glint 7s 1.6s var(--ease-io) infinite}
+@keyframes glint{0%{background-position:120% 0}18%,100%{background-position:-20% 0}}
 .mark::after{content:"";position:absolute;inset:-40px;border-radius:50%;background:radial-gradient(circle,rgba(108,194,184,.35),transparent 65%);z-index:-1;filter:blur(10px)}
+.fx .mark .glass{opacity:0;animation:markIn .6s .85s var(--ease) forwards}
+@keyframes markIn{from{opacity:0;transform:scale(.86);filter:blur(8px) brightness(1.8)}to{opacity:1;transform:none;filter:none}}
 @keyframes float{0%,100%{transform:translateY(0) rotateX(8deg) rotateY(-10deg)}50%{transform:translateY(-10px) rotateX(-6deg) rotateY(10deg)}}
 .hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(44px,7.6vw,112px);line-height:.98;letter-spacing:-.035em;max-width:none;margin:18px auto 0}
 .hero h1 .ln{display:block;overflow:hidden;padding-bottom:.08em}
-.hero h1 .ln span{display:inline-block;transform:translateY(105%);animation:rise 1.2s var(--ease) forwards}
-.hero h1 .ln:nth-child(2) span{animation-delay:.14s}
-.hero h1 em{font-style:italic;background:linear-gradient(100deg,var(--brand) 10%,var(--petrol) 60%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-@keyframes rise{to{transform:translateY(0)}}
-.fade-in{opacity:0;transform:translateY(16px);animation:fin 1s var(--ease) forwards}
+.hero h1 .ln>span{display:inline-block;transform:translateY(105%);filter:blur(10px);animation:rise 1.05s var(--ease) .05s forwards}
+.hero h1 .ln:nth-child(2)>span{animation-delay:.17s}
+.hero h1 em{font-style:italic;padding-right:.06em;
+  background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.95) 50%,transparent 58%) no-repeat,linear-gradient(100deg,var(--brand) 10%,var(--petrol) 60%,var(--gold) 100%);
+  background-size:250% 100%,100% 100%;background-position:130% 0,0 0;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:emsheen 2.2s 1.15s var(--ease-io) forwards}
+@keyframes emsheen{to{background-position:-40% 0,0 0}}
+@keyframes rise{to{transform:translateY(0);filter:blur(0)}}
+.fade-in{opacity:0;transform:translateY(16px);animation:fin .9s var(--ease) forwards}
 @keyframes fin{to{opacity:1;transform:none}}
 .hero p.lead{max-width:600px;margin:28px auto 0;font-size:clamp(16px,1.6vw,19px);color:var(--ink-2)}
 .hero .ctas{display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
 .hero .fine{margin-top:18px;font-size:13px;color:var(--ink-3)}
-.scroll-cue{position:absolute;pointer-events:none;left:50%;bottom:28px;transform:translateX(-50%);z-index:2;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:10px}
+.scroll-cue{position:absolute;pointer-events:none;left:50%;bottom:28px;transform:translateX(-50%);z-index:3;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:10px}
 .scroll-cue i{width:1px;height:46px;background:linear-gradient(var(--ink-3),transparent);position:relative;overflow:hidden}
 .scroll-cue i::after{content:"";position:absolute;left:0;top:-40%;width:1px;height:40%;background:var(--ink-1);animation:cue 2s var(--ease) infinite}
 @keyframes cue{to{top:110%}}
 
+/* ─── Índice de capítulos (escritorio) ─── */
+.chapters{position:fixed;left:50%;bottom:22px;z-index:60;display:flex;gap:4px;padding:5px;border-radius:999px;
+  background:rgba(10,19,34,.6);border:1px solid var(--line);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);
+  box-shadow:0 20px 50px -20px #000;opacity:0;transform:translate(-50%,16px);pointer-events:none;transition:opacity .5s var(--ease),transform .5s var(--ease)}
+.chapters.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.chapters a{position:relative;display:flex;align-items:center;gap:8px;padding:7px 14px 8px 8px;border-radius:999px;font-size:12.5px;color:var(--ink-3);transition:color .35s,background .35s}
+.chapters a b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line-2);font-size:10.5px;font-weight:600;transition:all .35s}
+.chapters a i{position:absolute;left:14px;right:14px;bottom:3px;height:1.5px;border-radius:2px;background:linear-gradient(90deg,var(--brand),var(--petrol));transform:scaleX(0);transform-origin:0 50%}
+.chapters a.on{color:var(--ink-1);background:rgba(168,190,222,.08)}
+.chapters a.on b{background:var(--petrol);border-color:var(--petrol);color:var(--night)}
+.chapters a.done b{border-color:rgba(108,194,184,.6);color:var(--petrol)}
+.chapters a:hover{color:var(--ink-1)}
+@media (max-width:900px),(max-height:640px){.chapters{display:none}}
+
 /* ─── Escenas fijadas al scroll ─── */
 .scene{position:relative}
 .scene .stage{position:sticky;top:0;height:100svh;overflow:hidden;display:grid;align-items:center}
+.scene .amb{position:absolute;inset:0;pointer-events:none;opacity:0;z-index:0}
+.scene .stage>.wrap,.scene .stage>.app-copy,.scene .stage>.laptop-scene,.scene .stage>.callouts{position:relative;z-index:1}
+#s-docs .amb{background:radial-gradient(50% 55% at 72% 52%,rgba(224,196,138,.07),transparent 70%),radial-gradient(60% 60% at 20% 30%,rgba(44,90,146,.14),transparent 70%)}
+#s-cifras .amb{background:radial-gradient(55% 60% at 75% 45%,rgba(44,90,146,.26),transparent 70%)}
+#s-arbol .amb{background:radial-gradient(55% 60% at 70% 55%,rgba(108,194,184,.10),transparent 70%),radial-gradient(40% 40% at 15% 70%,rgba(44,90,146,.14),transparent 70%)}
+#s-app .amb{background:radial-gradient(70% 55% at 50% 62%,rgba(44,90,146,.30),transparent 72%)}
 .scene .grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:56px;align-items:center;width:100%}
 .copy .step{display:inline-flex;align-items:center;gap:10px}
 .copy .step b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--line-2);font-size:12px;color:var(--ink-1);font-weight:600}
@@ -115,53 +172,78 @@ img{display:block;max-width:100%}
 .copy ul{list-style:none;margin-top:22px;display:grid;gap:10px;font-size:14.5px;color:var(--ink-2)}
 .copy li{display:flex;gap:10px;align-items:flex-start}
 .copy li::before{content:"";flex:none;width:6px;height:6px;margin-top:9px;border-radius:50%;background:var(--petrol);box-shadow:0 0 12px var(--petrol)}
-.reveal{opacity:0;transform:translateY(24px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
-.reveal.on{opacity:1;transform:none}
+.copy>*{will-change:transform,opacity}
+
+/* Apariciones de bloques fuera de las escenas */
+.reveal{opacity:0;translate:0 26px;filter:blur(8px);transition:opacity 1s var(--ease),translate 1s var(--ease),filter 1s var(--ease)}
+.reveal.on{opacity:1;translate:none;filter:none}
+h2.reveal{clip-path:inset(0 0 100% 0);transition:opacity 1s var(--ease),translate 1.1s var(--ease),filter 1.1s var(--ease),clip-path 1.1s var(--ease)}
+h2.reveal.on{clip-path:inset(-10% -5% -20% -5%)}
+.eyebrow.reveal{clip-path:inset(0 100% 0 0);translate:none;filter:none;transition:opacity .8s var(--ease),clip-path 1s var(--ease)}
+.eyebrow.reveal.on{clip-path:inset(-20% -2% -20% 0)}
 
 /* Escena 1 · papeles → expediente */
-#s-docs{height:340vh}
-.desk{position:relative;height:min(78svh,620px);perspective:1400px}
+#s-docs{height:360vh}
+.desk{position:relative;height:min(78svh,620px);perspective:1400px;perspective-origin:50% 35%}
 .doc{position:absolute;left:50%;top:50%;width:168px;height:224px;margin:-112px 0 0 -84px;border-radius:6px;padding:16px 14px;
-  background:var(--paper);color:var(--paper-ink);box-shadow:0 30px 60px -20px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.05);
-  will-change:transform,opacity;transform-style:preserve-3d;z-index:2;font-size:7px;line-height:1.3}
+  background:linear-gradient(170deg,#FBF9F3,var(--paper) 45%,#EEE9DC);color:var(--paper-ink);box-shadow:0 1px 2px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.05);
+  will-change:transform,opacity;transform-style:preserve-3d;z-index:2;font-size:7px;line-height:1.3;opacity:0}
 .doc::before{content:"";position:absolute;inset:0;border-radius:6px;background:linear-gradient(135deg,rgba(255,255,255,.6),transparent 40%,rgba(0,0,0,.06));pointer-events:none}
 .doc h6{font-family:var(--serif);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--paper-line);padding-bottom:6px;margin-bottom:8px}
 .doc .l{height:4px;border-radius:2px;background:var(--paper-line);margin:6px 0}
 .doc .l.s{width:60%}.doc .l.m{width:82%}
-.doc .hl{display:inline-block;padding:1px 4px;border-radius:3px;background:rgba(108,194,184,.0);transition:background .4s;font-weight:600;font-size:8px;margin-top:6px}
-.doc.lit .hl{background:rgba(108,194,184,.35)}
+.doc .hl{position:relative;display:inline-block;padding:1px 4px;border-radius:3px;transition:background .4s,box-shadow .4s;font-weight:600;font-size:8px;margin-top:6px}
+.doc.lit .hl{background:rgba(108,194,184,.38);box-shadow:0 0 0 1px rgba(108,194,184,.5),0 0 14px rgba(108,194,184,.55)}
 .doc .seal{position:absolute;right:12px;bottom:12px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(44,90,146,.5);display:grid;place-items:center;font-size:6px;color:rgba(44,90,146,.8);transform:rotate(-14deg);font-weight:700}
 .doc.dni{width:200px;height:126px;margin:-63px 0 0 -100px;background:linear-gradient(135deg,#DDE7F2,#F3EEE2);padding:12px}
 .doc.dni .ph{position:absolute;left:12px;top:30px;width:44px;height:56px;border-radius:4px;background:linear-gradient(#B9C5D3,#97A6B8)}
 .doc.dni .tx{position:absolute;left:66px;top:32px;right:12px}
-.scan{position:absolute;left:0;right:0;height:2px;top:0;background:linear-gradient(90deg,transparent,var(--petrol),transparent);box-shadow:0 0 18px var(--petrol);opacity:0;border-radius:2px}
-.doc.lit .scan{animation:scan 1.1s var(--ease)}
-@keyframes scan{0%{top:0;opacity:1}100%{top:100%;opacity:0}}
+/* Línea de escaneo: la posición la fija el scroll */
+.scan{position:absolute;left:-6px;right:-6px;height:2px;top:0;z-index:3;border-radius:2px;opacity:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent,#BFF3EC 20%,#fff 50%,#BFF3EC 80%,transparent);box-shadow:0 0 10px 1px var(--petrol),0 0 34px 4px rgba(108,194,184,.55)}
+.scan::after{content:"";position:absolute;left:6px;right:6px;bottom:2px;height:56px;background:linear-gradient(to top,rgba(108,194,184,.32),transparent);border-radius:4px 4px 0 0}
+.doc .spec{position:absolute;inset:0;border-radius:6px;overflow:hidden;pointer-events:none;z-index:2}
+.doc .spec i{position:absolute;top:-30%;bottom:-30%;left:0;width:46%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);transform:translateX(-120%) rotate(18deg);mix-blend-mode:soft-light}
+.doc .dim{position:absolute;inset:0;border-radius:6px;background:#0A1220;opacity:0;pointer-events:none;z-index:2}
+.dsh{position:absolute;left:50%;top:50%;width:168px;height:224px;margin:-112px 0 0 -84px;border-radius:10px;background:rgba(0,0,6,.75);filter:blur(14px);opacity:0;z-index:1;will-change:transform,opacity;pointer-events:none}
+.dsh.dni{width:200px;height:126px;margin:-63px 0 0 -100px}
+.bed{position:absolute;left:50%;top:50%;width:250px;height:300px;margin:-150px 0 0 -125px;border-radius:24px;z-index:1;opacity:0;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(108,194,184,.30),rgba(108,194,184,.06) 60%,transparent);will-change:transform,opacity}
 
-.folder{position:absolute;right:0;top:50%;width:min(100%,430px);transform:translateY(-50%);border-radius:18px;padding:22px;
-  background:linear-gradient(180deg,rgba(21,30,42,.92),rgba(13,20,32,.92));border:1px solid var(--line-2);
-  box-shadow:0 40px 120px -40px rgba(44,90,146,.8),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(10px);opacity:0}
+.folder{position:absolute;right:0;top:50%;z-index:1;width:min(100%,430px);transform:translateY(-50%);border-radius:18px;padding:22px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(21,30,42,.94),rgba(13,20,32,.94));border:1px solid var(--line-2);
+  box-shadow:0 40px 120px -40px rgba(44,90,146,.8),inset 0 1px 0 rgba(255,255,255,.05);opacity:0;will-change:transform,opacity}
+.folder .sweep{position:absolute;top:0;bottom:0;left:0;width:60%;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg,transparent,rgba(157,188,230,.10) 40%,rgba(108,194,184,.22) 50%,rgba(157,188,230,.10) 60%,transparent)}
 .folder .hd{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
 .folder .hd img{width:30px;height:30px;border-radius:8px}
 .folder .hd b{display:block;font-family:var(--serif);font-size:19px;font-weight:500}
 .folder .hd small{color:var(--ink-3);font-size:12px}
-.field{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-bottom:1px solid var(--line);opacity:.15;transition:opacity .5s}
+.field{position:relative;display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-bottom:1px solid var(--line);opacity:.15;transition:opacity .5s}
 .field.on{opacity:1}
+.field .fl{position:absolute;inset:2px -10px;border-radius:10px;pointer-events:none;opacity:0;
+  background:linear-gradient(90deg,rgba(108,194,184,.22),rgba(108,194,184,.05) 70%,transparent);box-shadow:inset 2px 0 0 var(--petrol)}
+.field.doubt .fl{background:linear-gradient(90deg,rgba(224,196,138,.22),rgba(224,196,138,.04) 70%,transparent);box-shadow:inset 2px 0 0 var(--gold)}
 .field .k{font-size:12px;color:var(--ink-3)}
 .field .v{font-size:15px;font-weight:550;grid-column:1}
 .field .src{grid-column:2;grid-row:1/3;align-self:center;font-size:11px;padding:4px 8px;border-radius:999px;color:var(--petrol);background:rgba(108,194,184,.1);border:1px solid rgba(108,194,184,.25);white-space:nowrap}
 .field .ck{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--ink-3);margin-right:8px;vertical-align:-2px;transition:all .3s}
-.field.on .ck{background:var(--petrol);border-color:var(--petrol);box-shadow:inset 0 0 0 2px var(--night-2)}
+.field.on .ck{background:var(--petrol);border-color:var(--petrol);box-shadow:inset 0 0 0 2px var(--night-2),0 0 10px rgba(108,194,184,.6)}
 .field.doubt .src{color:var(--gold);background:rgba(224,196,138,.1);border-color:rgba(224,196,138,.3)}
 .field.doubt.on .ck{background:transparent;border-color:var(--gold);box-shadow:none}
 
 /* Escena 2 · las cifras */
 #s-cifras{height:300vh}
-.ledger{position:relative;border-radius:22px;padding:30px;border:1px solid var(--line-2);
+.ledger{position:relative;border-radius:22px;padding:30px;border:1px solid var(--line-2);overflow:hidden;will-change:transform;
   background:radial-gradient(120% 80% at 100% 0,rgba(44,90,146,.25),transparent 60%),linear-gradient(180deg,#0E1828,#0A1220);
-  box-shadow:0 50px 140px -50px rgba(44,90,146,.7)}
-.ledger .row{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 16px;padding:16px 0;border-bottom:1px dashed var(--line-2);opacity:.12;transform:translateX(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
-.ledger .row.on{opacity:1;transform:none}
+  box-shadow:0 50px 140px -50px rgba(44,90,146,.7),inset 0 1px 0 rgba(255,255,255,.05)}
+.ledger .hi{position:absolute;left:14px;right:14px;top:0;height:100px;transform-origin:0 0;border-radius:12px;opacity:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(108,194,184,.11),rgba(157,188,230,.04) 55%,transparent);box-shadow:inset 2px 0 0 rgba(108,194,184,.8)}
+.ledger .spec{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:22px}
+.ledger .spec i{position:absolute;top:-40%;bottom:-40%;left:0;width:34%;background:linear-gradient(90deg,transparent,rgba(157,188,230,.10),rgba(255,255,255,.07),transparent);transform:translateX(-120%) rotate(16deg)}
+.ledger .flare{position:absolute;right:-10%;bottom:-30%;width:70%;height:70%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(157,188,230,.30),rgba(108,194,184,.08) 55%,transparent)}
+.ledger .row{position:relative;display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 16px;padding:16px 0;border-bottom:1px dashed var(--line-2);opacity:.12;transform:translateX(18px);filter:blur(3px);transition:opacity .6s var(--ease),transform .6s var(--ease),filter .6s var(--ease)}
+.ledger .row.on{opacity:1;transform:none;filter:none}
 .ledger .row .k{font-size:14px;color:var(--ink-2)}
 .ledger .row .n{font-family:var(--serif);font-size:clamp(28px,3.4vw,44px);font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right}
 .ledger .row .n small{font-size:.5em;color:var(--ink-3);margin-left:4px}
@@ -169,54 +251,74 @@ img{display:block;max-width:100%}
 .ledger .row .law::before{content:"§";color:var(--petrol);font-weight:700}
 .ledger .row.total{border-bottom:0;padding-top:22px}
 .ledger .row.total .n{font-size:clamp(40px,5.2vw,72px);background:linear-gradient(100deg,var(--ink-1),var(--brand));-webkit-background-clip:text;background-clip:text;color:transparent}
-.ledger .bar{position:absolute;left:30px;right:30px;bottom:0;height:2px;background:linear-gradient(90deg,var(--brand),var(--petrol));transform-origin:0 50%;transform:scaleX(0);border-radius:2px}
+.ledger .bar{position:absolute;left:30px;right:30px;bottom:0;height:2px;background:linear-gradient(90deg,var(--brand),var(--petrol));transform-origin:0 50%;transform:scaleX(0);border-radius:2px;box-shadow:0 0 14px rgba(108,194,184,.8)}
 
 /* Escena 3 · el árbol */
 #s-arbol{height:300vh}
-.tree{width:100%;height:auto;overflow:visible}
+.tree{width:100%;height:auto;overflow:visible;will-change:transform}
 .tree .edge{fill:none;stroke:url(#tg);stroke-width:1.6}
+.tree .edge.glow{stroke-width:5;opacity:.55;filter:url(#eglow)}
 .tree .node rect{fill:#0E1828;stroke:var(--line-2)}
 .tree .node .nm{font:600 14px var(--sans);fill:var(--ink-1)}
 .tree .node .rl{font:12px var(--sans);fill:var(--ink-3)}
 .tree .node .sh{font:600 12.5px var(--sans);fill:var(--petrol)}
-.tree .node{opacity:0;transition:opacity .6s var(--ease),transform .6s var(--ease);transform-box:fill-box;transform-origin:center;transform:translateY(10px) scale(.96)}
+.tree .node{opacity:0;transition:opacity .7s var(--ease),transform .8s var(--ease);transform-box:fill-box;transform-origin:center;transform:translateY(14px) scale(.9)}
 .tree .node.on{opacity:1;transform:none}
 .tree .node.root rect{fill:url(#rootg);stroke:rgba(157,188,230,.5)}
-.tree .pulse{fill:var(--petrol);filter:drop-shadow(0 0 6px var(--petrol))}
+.tree .node.paid rect{stroke:rgba(108,194,184,.55)}
+.tree .pulse{fill:#D9FFF9;filter:drop-shadow(0 0 6px var(--petrol)) drop-shadow(0 0 2px #fff)}
+.tree .trail{fill:var(--petrol)}
+.tree .ripple{fill:none;stroke:var(--petrol);stroke-width:1.2;opacity:0}
 .tree .share{opacity:0;transition:opacity .5s}
 .tree .node.paid .share{opacity:1}
 
 /* Escena 4 · la app en un portátil */
-#s-app{height:340vh}
+#s-app{height:400vh}
 #s-app .stage{display:block}
-.app-copy{position:absolute;left:0;right:0;top:11svh;text-align:center;z-index:3;padding:0 20px}
+.app-copy{position:absolute;left:0;right:0;top:11svh;text-align:center;z-index:3;padding:0 20px;will-change:transform,opacity}
 .app-copy h2{font-family:var(--serif);font-weight:500;font-size:clamp(34px,5vw,72px);line-height:1;letter-spacing:-.03em;margin-top:14px}
 .app-copy p{color:var(--ink-2);max-width:560px;margin:16px auto 0}
-.laptop-scene{position:absolute;left:50%;top:56%;width:min(1000px,92vw);transform:translate(-50%,-50%);perspective:1800px;z-index:2}
+.laptop-scene{position:absolute!important;left:50%;top:56%;width:min(1000px,92vw);transform:translate(-50%,-50%);perspective:2200px;perspective-origin:50% 20%;z-index:2}
 .laptop{position:relative;transform-style:preserve-3d;will-change:transform}
 .lid{position:relative;width:100%;aspect-ratio:16/10.4;border-radius:18px 18px 6px 6px;padding:1.6%;background:linear-gradient(180deg,#2A3343,#141B26);
   transform-origin:50% 100%;transform-style:preserve-3d;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;will-change:transform}
-.lid::before{content:"";position:absolute;top:.7%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#000;box-shadow:0 0 0 1px #2c3444}
-.screen{position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#0F1621}
-.screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left;transition:opacity .8s var(--ease)}
-.screen .glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.12),transparent 35%);pointer-events:none}
-.lid .back{position:absolute;inset:0;border-radius:18px 18px 6px 6px;background:linear-gradient(180deg,#3A4558,#1E2633);transform:rotateY(180deg) translateZ(1px);backface-visibility:hidden;display:grid;place-items:center}
-.lid .back img{width:12%;opacity:.5;border-radius:12px}
-.screen{backface-visibility:hidden}
-.base{position:relative;width:114%;margin-left:-7%;height:clamp(10px,1.8vw,18px);border-radius:0 0 22px 22px;background:linear-gradient(180deg,#BAC4D2,#7B8697 60%,#4E5869);box-shadow:0 40px 80px -10px rgba(0,0,0,.8)}
-.base::before{content:"";position:absolute;left:50%;top:0;width:16%;height:40%;transform:translateX(-50%);border-radius:0 0 10px 10px;background:rgba(0,0,0,.25)}
-.halo{position:absolute;left:50%;top:55%;width:120%;height:90%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.55),transparent);filter:blur(30px);z-index:-1}
-.callouts{position:absolute;inset:0;pointer-events:none;z-index:4}
-.callout{position:absolute;padding:10px 14px;border-radius:12px;font-size:13px;background:rgba(10,19,34,.82);border:1px solid var(--line-2);backdrop-filter:blur(10px);box-shadow:0 20px 40px -20px #000;opacity:0;transform:translateY(10px);transition:opacity .6s var(--ease),transform .6s var(--ease);max-width:240px}
+.lid::before{content:"";position:absolute;top:.7%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#000;box-shadow:0 0 0 1px #2c3444;z-index:1}
+.screen{position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#0F1621;backface-visibility:hidden}
+.screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left}
+.screen .shot.b{opacity:0}
+.screen .power{position:absolute;inset:0;background:#04070C;z-index:2}
+.screen .bloom{position:absolute;inset:-10%;z-index:3;opacity:0;pointer-events:none;background:radial-gradient(45% 50% at 50% 50%,rgba(225,236,255,.75),rgba(157,188,230,.25) 45%,transparent 75%)}
+.screen .glare{position:absolute;top:0;bottom:0;left:-60%;width:120%;z-index:4;pointer-events:none;background:linear-gradient(112deg,transparent 30%,rgba(255,255,255,.13) 44%,rgba(255,255,255,.035) 54%,transparent 64%)}
+.lid .back{position:absolute;inset:0;border-radius:18px 18px 6px 6px;background:radial-gradient(60% 70% at 50% 40%,#44516A,#232C3A 70%),#1E2633;transform:rotateY(180deg) translateZ(1px);backface-visibility:hidden;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.lid .back img{width:12%;opacity:.65;border-radius:12px;box-shadow:0 0 40px rgba(108,194,184,.35)}
+.deck{position:absolute;left:-6%;width:112%;top:100%;aspect-ratio:16/10.2;transform-origin:50% 0;transform:rotateX(90deg);transform-style:preserve-3d;border-radius:6px 6px 26px 26px;
+  background:linear-gradient(180deg,#2F3847,#232B37 60%,#1C232E);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 0 0 1px rgba(255,255,255,.05)}
+.deck .keys{position:absolute;left:11%;right:11%;top:7%;height:44%;border-radius:8px;background:#0C1118;box-shadow:inset 0 0 0 1px rgba(0,0,0,.4)}
+.deck .keys::before{content:"";position:absolute;inset:2.5% 1.2%;
+  background:repeating-linear-gradient(90deg,#1B222D 0 calc(100%/15 - 3px),transparent calc(100%/15 - 3px) calc(100%/15));
+  -webkit-mask-image:repeating-linear-gradient(180deg,#000 0 calc(100%/6 - 3px),transparent calc(100%/6 - 3px) calc(100%/6));mask-image:repeating-linear-gradient(180deg,#000 0 calc(100%/6 - 3px),transparent calc(100%/6 - 3px) calc(100%/6))}
+.deck .pad{position:absolute;left:33%;right:33%;top:58%;bottom:9%;border-radius:10px;background:linear-gradient(180deg,#2A3341,#222A36);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.deck .spill{position:absolute;inset:0;border-radius:inherit;opacity:0;background:radial-gradient(60% 75% at 50% 0,rgba(170,200,240,.42),rgba(108,194,184,.08) 55%,transparent 80%)}
+.deck .lip{position:absolute;left:0;right:0;top:100%;height:clamp(8px,1.5vw,15px);transform-origin:50% 0;transform:rotateX(-90deg);border-radius:0 0 20px 20px;background:linear-gradient(180deg,#A7B2C1,#646F81 55%,#3B4454)}
+.deck .lip::before{content:"";position:absolute;left:50%;top:0;width:16%;height:45%;transform:translateX(-50%);border-radius:0 0 10px 10px;background:rgba(0,0,0,.28)}
+.deck .ground{position:absolute;inset:-4% -6% -18%;transform:translateZ(-18px);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.7),transparent);filter:blur(20px)}
+.halo{position:absolute;left:50%;top:55%;width:120%;height:90%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.6),transparent);filter:blur(30px);z-index:-1;opacity:.4}
+.callouts{position:absolute!important;left:50%;top:56%;width:min(1000px,92vw);aspect-ratio:16/10.4;transform:translate(-50%,-50%);pointer-events:none;z-index:4!important}
+.callout{position:absolute;padding:11px 15px;border-radius:14px;font-size:13px;background:rgba(10,19,34,.78);border:1px solid var(--line-2);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px) saturate(140%);
+  box-shadow:0 24px 50px -20px #000,inset 0 1px 0 rgba(255,255,255,.05);opacity:0;transform:translateY(12px) scale(.97);filter:blur(4px);transition:opacity .6s var(--ease),transform .6s var(--ease),filter .6s var(--ease);max-width:250px}
+.callout::before{content:"";position:absolute;left:14px;top:-1px;width:36px;height:1px;background:linear-gradient(90deg,var(--petrol),transparent)}
 .callout b{display:block;font-size:14px;color:var(--ink-1)}
 .callout span{color:var(--ink-2)}
-.callout.on{opacity:1;transform:none}
+.callout.on{opacity:1;transform:none;filter:none}
 
 /* ─── Cifras ─── */
 .stats{padding:140px 0 120px;position:relative}
+.stats::before{content:"";position:absolute;left:0;right:0;top:0;height:240px;pointer-events:none;background:radial-gradient(60% 100% at 50% 0,rgba(44,90,146,.14),transparent 70%)}
 .stats h2,.sec h2{font-family:var(--serif);font-weight:500;font-size:clamp(34px,4.6vw,60px);line-height:1.04;letter-spacing:-.03em;margin:14px 0 18px;max-width:18ch}
-.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:56px;border-top:1px solid var(--line)}
-.stat{padding:30px 22px 10px 0;border-right:1px solid var(--line)}
+.stat-grid{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:56px;border-top:1px solid var(--line)}
+.stat{position:relative;padding:30px 22px 10px 0;border-right:1px solid var(--line)}
+.stat::before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;background:linear-gradient(90deg,var(--petrol),transparent);transform:scaleX(0);transform-origin:0 50%;transition:transform 1.4s var(--ease) .2s}
+.stat.on::before{transform:scaleX(1)}
 .stat:last-child{border-right:0}
 .stat b{display:block;font-family:var(--serif);font-weight:500;font-size:clamp(40px,4.4vw,64px);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;
   background:linear-gradient(180deg,var(--ink-1),var(--ink-2));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -233,19 +335,28 @@ img{display:block;max-width:100%}
 .sec{padding:150px 0;position:relative;overflow:hidden}
 .vault{position:absolute;right:-12vmax;top:50%;width:60vmax;height:60vmax;transform:translateY(-50%);border-radius:50%;
   background:repeating-radial-gradient(circle,transparent 0 38px,rgba(168,190,222,.07) 38px 39px);-webkit-mask-image:radial-gradient(circle,#000 30%,transparent 70%);mask-image:radial-gradient(circle,#000 30%,transparent 70%);animation:spin 80s linear infinite}
+.vault::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 80%,rgba(108,194,184,.16) 92%,transparent 100%)}
 @keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
 .pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px;position:relative}
-.pillar{padding:26px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(21,30,42,.6),rgba(10,18,30,.6));backdrop-filter:blur(6px);transition:transform .4s var(--ease),border-color .4s}
+.pillar{position:relative;padding:26px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(21,30,42,.6),rgba(10,18,30,.6));backdrop-filter:blur(6px);transition:transform .5s var(--ease),border-color .4s}
 .pillar:hover{transform:translateY(-4px);border-color:var(--line-2)}
-.pillar .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(108,194,184,.12);color:var(--petrol);margin-bottom:18px}
+.pillar .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(108,194,184,.12);color:var(--petrol);margin-bottom:18px;box-shadow:inset 0 0 0 1px rgba(108,194,184,.18)}
 .pillar h3{font-size:17px;font-weight:600;margin-bottom:8px}
 .pillar p{font-size:14.5px;color:var(--ink-2)}
+/* Tarjetas: inclinación y luz que sigue al cursor (solo con ratón) */
+.tilt{transform-style:preserve-3d}
+.tilt::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .4s;
+  background:radial-gradient(360px circle at var(--lx,50%) var(--ly,0%),rgba(157,188,230,.13),transparent 45%);
+  -webkit-mask:linear-gradient(#000,#000);box-shadow:inset 0 0 0 1px rgba(157,188,230,.0)}
+.tilt:hover::after{opacity:1}
+.tilt.moving{transition:transform .18s ease-out,border-color .4s}
 
 /* ─── Precios ─── */
 .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:56px}
-.plan{position:relative;padding:30px;border-radius:22px;border:1px solid var(--line);background:rgba(15,27,46,.55);display:flex;flex-direction:column}
+.plan{position:relative;padding:30px;border-radius:22px;border:1px solid var(--line);background:rgba(15,27,46,.55);display:flex;flex-direction:column;transition:transform .5s var(--ease),border-color .4s}
+.plan:hover{border-color:var(--line-2)}
 .plan.rec{border-color:rgba(157,188,230,.45);background:radial-gradient(120% 70% at 50% 0,rgba(44,90,146,.4),transparent 70%),rgba(15,27,46,.7);box-shadow:0 40px 100px -50px rgba(44,90,146,.9)}
-.plan .tag{position:absolute;top:-11px;left:30px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--ink-1);color:var(--night)}
+.plan .tag{position:absolute;top:-11px;left:30px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--ink-1);color:var(--night);z-index:1}
 .plan h3{font-size:18px;font-weight:600}
 .plan .who{color:var(--ink-3);font-size:14px;margin-top:4px}
 .plan .price{font-family:var(--serif);font-size:56px;letter-spacing:-.03em;margin:22px 0 2px;line-height:1}
@@ -254,7 +365,9 @@ img{display:block;max-width:100%}
 .plan ul{list-style:none;margin:22px 0 26px;display:grid;gap:10px;font-size:14.5px;color:var(--ink-2)}
 .plan li::before{content:"✓";color:var(--petrol);margin-right:10px;font-weight:700}
 .plan .btn{margin-top:auto}
-.founder{margin-top:16px;padding:26px 30px;border-radius:22px;border:1px solid rgba(224,196,138,.35);background:linear-gradient(100deg,rgba(224,196,138,.12),rgba(224,196,138,.02));display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.founder{position:relative;overflow:hidden;margin-top:16px;padding:26px 30px;border-radius:22px;border:1px solid rgba(224,196,138,.35);background:linear-gradient(100deg,rgba(224,196,138,.12),rgba(224,196,138,.02));display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.founder::before{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(224,196,138,.12),transparent);transform:translateX(-120%);animation:gold 7s 1s var(--ease-io) infinite}
+@keyframes gold{0%{transform:translateX(-120%)}30%,100%{transform:translateX(320%)}}
 .founder .eyebrow{color:var(--gold)}
 .founder b{display:block;font-family:var(--serif);font-weight:500;font-size:26px;margin-top:6px}
 .founder p{color:var(--ink-2);font-size:14px;max-width:620px;margin-top:6px}
@@ -262,14 +375,19 @@ img{display:block;max-width:100%}
 .legal-note a{text-decoration:underline;text-underline-offset:3px}
 
 /* ─── Cierre ─── */
-.final{padding:170px 0 150px;text-align:center;position:relative;overflow:hidden}
-.final::before{content:"";position:absolute;left:50%;top:60%;width:900px;height:900px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.45),transparent);filter:blur(20px)}
+.final{padding:170px 0 150px;text-align:center;position:relative;overflow:hidden;isolation:isolate}
+.final::before{content:"";position:absolute;left:50%;top:60%;width:900px;height:900px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.45),transparent);filter:blur(20px);z-index:-1}
+.final::after{content:"";position:absolute;left:50%;top:62%;width:1100px;height:1100px;margin:-550px 0 0 -550px;z-index:-1;pointer-events:none;opacity:.55;
+  background:conic-gradient(from 0deg,transparent 0 12%,rgba(108,194,184,.10) 18%,transparent 26% 46%,rgba(157,188,230,.10) 54%,transparent 62% 80%,rgba(224,196,138,.07) 86%,transparent 92%);
+  -webkit-mask-image:radial-gradient(closest-side,#000 20%,transparent 75%);mask-image:radial-gradient(closest-side,#000 20%,transparent 75%);animation:rays 60s linear infinite}
+@keyframes rays{to{transform:rotate(360deg)}}
 .final h2{position:relative;font-family:var(--serif);font-weight:500;font-size:clamp(40px,6vw,92px);line-height:1;letter-spacing:-.035em;max-width:14ch;margin:16px auto 0}
 .final p{position:relative;color:var(--ink-2);max-width:560px;margin:22px auto 0}
 .final .ctas{position:relative;display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
 footer{border-top:1px solid var(--line);padding:34px 0 48px;font-size:13px;color:var(--ink-3)}
 footer .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 footer nav{display:flex;gap:20px;flex-wrap:wrap}
+footer a{transition:color .25s}
 footer a:hover{color:var(--ink-1)}
 
 /* ─── Móvil ─── */
@@ -280,29 +398,42 @@ footer a:hover{color:var(--ink-1)}
   .copy p{font-size:15px}
   .copy ul{display:none}
   .doc{transform-origin:center;width:124px;height:166px;margin:-83px 0 0 -62px;padding:12px 10px}
-  .doc.dni{width:150px;height:94px;margin:-47px 0 0 -75px}
+  .dsh{width:124px;height:166px;margin:-83px 0 0 -62px}
+  .doc.dni,.dsh.dni{width:150px;height:94px;margin:-47px 0 0 -75px}
   .doc.dni .ph{top:24px;width:32px;height:42px}.doc.dni .tx{left:52px;top:24px}
-  .desk{height:calc(100svh - 330px)}
+  .bed{width:190px;height:220px;margin:-110px 0 0 -95px}
+  .desk{height:calc(100svh - 330px);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 64px);mask-image:linear-gradient(to bottom,transparent,#000 64px)}
   .folder{left:50%;right:auto;top:auto;bottom:12px;width:min(92vw,400px);padding:14px 16px;transform:translateX(-50%)}
   .folder .hd{padding-bottom:10px}
   .field{padding:6px 0}.field .v{font-size:13.5px}.field .k{font-size:11px}
   .ledger{padding:20px}.ledger .row{padding:11px 0}
   .ledger .bar{left:20px;right:20px}
-  .laptop-scene{top:62%;width:96vw}
-  .callout{display:none}
+  .laptop-scene{top:50%;width:94vw}
+  .callouts{left:16px;right:16px;top:auto;bottom:calc(18px + env(safe-area-inset-bottom));width:auto;aspect-ratio:auto;transform:none;display:grid;gap:8px}
+  .callout{position:relative;left:auto!important;right:auto!important;top:auto!important;max-width:none;grid-column:1;font-size:12.5px;padding:10px 13px}
+  .callout:nth-child(1),.callout:nth-child(3){grid-row:1}
+  .callout:nth-child(2),.callout:nth-child(4){grid-row:2}
+  .callout b{font-size:13.5px}
   .stat-grid{grid-template-columns:repeat(2,1fr)}
   .stat{border-right:0;border-bottom:1px solid var(--line);padding:24px 12px 20px 0}
   .stat:last-child{grid-column:1/-1}
   .pillars,.plans{grid-template-columns:1fr}
   .stats,.sec{padding:100px 0}
+  .final::after{width:700px;height:700px;margin:-350px 0 0 -350px}
 }
 @media (min-width:901px) and (max-width:1100px){.pillars{grid-template-columns:repeat(2,1fr)}}
 
-/* Movimiento reducido: todo en su estado final, sin escenas fijadas */
+/* Movimiento reducido: todo en su estado final, quieto y sin escenas fijadas */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .hero h1 .ln span,.fade-in{transform:none;opacity:1}
+  .hero h1 .ln>span,.fade-in{transform:none;opacity:1;filter:none}
+  .hero h1 em{background-position:-40% 0,0 0}
   .grain{display:none}
+  .reveal{opacity:1;translate:none;filter:none;clip-path:none!important}
+  #s-docs,#s-cifras,#s-arbol,#s-app{height:auto}
+  .scene .stage{position:relative;height:auto;min-height:100svh;padding:40px 0}
+  #s-app .stage{height:100svh}
+  .chapters{display:none}
 }
 </style>
 </head>
@@ -322,22 +453,30 @@ footer a:hover{color:var(--ink-1)}
   <a class="btn btn-primary" href="/app/">Probar 30 días</a>
 </header>
 
+<nav class="chapters" aria-label="Capítulos">
+  <a href="#s-docs"><b>1</b>Los documentos<i></i></a>
+  <a href="#s-cifras"><b>2</b>El cálculo<i></i></a>
+  <a href="#s-arbol"><b>3</b>La familia<i></i></a>
+  <a href="#s-app"><b>4</b>Cada mañana<i></i></a>
+</nav>
+
 <main id="contenido">
 <!-- ═══ Portada ═══ -->
 <section class="hero" aria-labelledby="h-hero">
   <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <canvas class="fx" aria-hidden="true"></canvas>
   <div class="spot" aria-hidden="true"></div>
   <div class="floor" aria-hidden="true"></div>
   <div class="hero-inner">
-    <div class="mark fade-in" aria-hidden="true"><img src="/icons/hereda-marca.svg" alt=""></div>
+    <div class="mark" aria-hidden="true"><div class="glass"><img src="/icons/hereda-marca.svg" alt="" width="96" height="96"></div></div>
     <div class="eyebrow fade-in" style="animation-delay:.1s">Software de sucesiones para despachos de abogados</div>
     <h1 id="h-hero"><span class="ln"><span>La herencia,</span></span><span class="ln"><span>lista en <em>una tarde.</em></span></span></h1>
-    <p class="lead fade-in" style="animation-delay:.5s">Arrastra los documentos del cliente. Hereda+ los lee en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Tú revisas, decides y firmas.</p>
-    <div class="ctas fade-in" style="animation-delay:.7s">
-      <a class="btn btn-primary" href="/app/">Probar 30 días</a>
+    <p class="lead fade-in" style="animation-delay:.32s">Arrastra los documentos del cliente. Hereda+ los lee en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Tú revisas, decides y firmas.</p>
+    <div class="ctas fade-in" style="animation-delay:.45s">
+      <a class="btn btn-primary sheen" href="/app/">Probar 30 días</a>
       <a class="btn btn-ghost" href="/contratar.html">Hablar con nosotros</a>
     </div>
-    <div class="fine fade-in" style="animation-delay:.85s">Con todas las funciones y sin tarjeta. En el navegador, en Windows y Mac.</div>
+    <div class="fine fade-in" style="animation-delay:.55s">Con todas las funciones y sin tarjeta. En el navegador, en Windows y Mac.</div>
   </div>
   <div class="scroll-cue" aria-hidden="true">Desliza<i></i></div>
 </section>
@@ -345,6 +484,7 @@ footer a:hover{color:var(--ink-1)}
 <!-- ═══ 1 · Los papeles se ordenan solos ═══ -->
 <section class="scene" id="s-docs" aria-labelledby="h-docs">
   <div class="stage">
+    <div class="amb" aria-hidden="true"></div>
     <div class="wrap grid">
       <div class="copy">
         <div class="eyebrow step"><b>1</b> Los documentos</div>
@@ -357,6 +497,7 @@ footer a:hover{color:var(--ink-1)}
         </ul>
       </div>
       <div class="desk" aria-hidden="true">
+        <div class="bed"></div>
         <div class="doc" data-i="0"><span class="scan"></span><h6>Certificado de defunción</h6><div class="l"></div><div class="l m"></div><div class="l s"></div><span class="hl">20 abr 2026</span><div class="l"></div><div class="l m"></div><div class="seal">REGISTRO CIVIL</div></div>
         <div class="doc" data-i="1"><span class="scan"></span><h6>Testamento</h6><div class="l"></div><div class="l"></div><div class="l m"></div><span class="hl">Usufructo al cónyuge</span><div class="l"></div><div class="l s"></div><div class="l m"></div><div class="seal">NOTARÍA</div></div>
         <div class="doc" data-i="2"><span class="scan"></span><h6>Nota simple</h6><div class="l m"></div><div class="l"></div><span class="hl">Finca registral</span><div class="l s"></div><div class="l"></div><div class="l m"></div><div class="seal">REGISTRO</div></div>
@@ -366,6 +507,7 @@ footer a:hover{color:var(--ink-1)}
         <div class="doc" data-i="6"><span class="scan"></span><h6>Últimas voluntades</h6><div class="l"></div><div class="l m"></div><span class="hl">Último testamento</span><div class="l"></div><div class="l s"></div><div class="seal">MINISTERIO</div></div>
 
         <div class="folder">
+          <span class="sweep"></span>
           <div class="hd"><img src="/icons/icon-192.png" alt=""><div><small>EXP-2026-001 · Andalucía · caso ficticio</small><b>Eduardo Tébar Rosado</b></div></div>
           <div class="field" data-at="0"><span class="k">Fallecimiento</span><span class="v"><i class="ck"></i>20 abr 2026</span><span class="src">Certificado de defunción</span></div>
           <div class="field" data-at="1"><span class="k">Título sucesorio</span><span class="v"><i class="ck"></i>Testamento: usufructo al cónyuge</span><span class="src">Testamento</span></div>
@@ -382,6 +524,7 @@ footer a:hover{color:var(--ink-1)}
 <!-- ═══ 2 · Las cifras se calculan ═══ -->
 <section class="scene" id="s-cifras" aria-labelledby="h-cifras">
   <div class="stage">
+    <div class="amb" aria-hidden="true"></div>
     <div class="wrap grid">
       <div class="copy">
         <div class="eyebrow step"><b>2</b> El cálculo</div>
@@ -394,12 +537,15 @@ footer a:hover{color:var(--ink-1)}
         </ul>
       </div>
       <div class="ledger" aria-label="Ejemplo de cálculo de un caso ficticio">
+        <div class="hi" aria-hidden="true"></div>
+        <div class="flare" aria-hidden="true"></div>
         <div class="row" data-at="0"><span class="k">Caudal relicto</span><span class="n" data-to="206742">0<small>€</small></span><span class="law">Ley 29/1987 del Impuesto sobre Sucesiones, art. 9</span></div>
         <div class="row" data-at="1"><span class="k">Deudas y gastos deducibles</span><span class="n" data-to="25833" data-sign="−">0<small>€</small></span><span class="law">Ley 29/1987, arts. 13 y 14</span></div>
         <div class="row" data-at="2"><span class="k">Impuesto sobre Sucesiones</span><span class="n" data-to="0">0<small>€</small></span><span class="law">Andalucía · Decreto Legislativo 1/2018</span></div>
         <div class="row" data-at="3"><span class="k">Plusvalía municipal</span><span class="n" data-to="3071">0<small>€</small></span><span class="law">TRLRHL, art. 107 · ordenanza del municipio</span></div>
         <div class="row total" data-at="4"><span class="k">Caudal neto</span><span class="n" data-to="180909">0<small>€</small></span><span class="law">Caso ficticio del despacho de demostración</span></div>
         <div class="bar"></div>
+        <div class="spec" aria-hidden="true"><i></i></div>
       </div>
     </div>
   </div>
@@ -408,6 +554,7 @@ footer a:hover{color:var(--ink-1)}
 <!-- ═══ 3 · El árbol se dibuja y se reparte ═══ -->
 <section class="scene" id="s-arbol" aria-labelledby="h-arbol">
   <div class="stage">
+    <div class="amb" aria-hidden="true"></div>
     <div class="wrap grid">
       <div class="copy">
         <div class="eyebrow step"><b>3</b> La familia</div>
@@ -418,6 +565,7 @@ footer a:hover{color:var(--ink-1)}
         <defs>
           <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9DBCE6"/><stop offset="1" stop-color="#6CC2B8"/></linearGradient>
           <linearGradient id="rootg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B3A63"/><stop offset="1" stop-color="#0F2440"/></linearGradient>
+          <filter id="eglow" filterUnits="userSpaceOnUse" x="-40" y="-40" width="720" height="560"><feGaussianBlur stdDeviation="3.2"/></filter>
         </defs>
         <path class="edge" d="M320 112 V170 M320 170 H170 V214"/>
         <path class="edge" d="M320 170 H470 V214"/>
@@ -438,6 +586,7 @@ footer a:hover{color:var(--ink-1)}
 <!-- ═══ 4 · La app aparece ═══ -->
 <section class="scene" id="s-app" aria-labelledby="h-app">
   <div class="stage">
+    <div class="amb" aria-hidden="true"></div>
     <div class="app-copy">
       <div class="eyebrow">4 · Cada mañana</div>
       <h2 id="h-app">Todo el despacho, en una pantalla.</h2>
@@ -448,20 +597,23 @@ footer a:hover{color:var(--ink-1)}
       <div class="laptop">
         <div class="lid">
           <div class="screen">
-            <img class="shot a" src="/img/web/exp-leido-osc-1400.webp" alt="Expediente de ejemplo en Hereda+: caudal, impuestos, herederos y qué hacer en este expediente" width="1400" height="1061">
-            <img class="shot b" src="/img/web/midia-osc-1400.webp" alt="Mi día en el despacho de demostración: lo vencido, lo de esta semana y lo que espera a terceros" width="1400" height="1061" style="opacity:0" loading="lazy">
-            <div class="glare"></div>
+            <!-- Capturas del portátil: las rutas de las dos imágenes están solo aquí (a = expediente, b = Mi día). -->
+            <img class="shot a" src="/img/web/exp-leido-osc-1400.webp" alt="Expediente de ejemplo en Hereda+: caudal, impuestos, herederos y qué hacer en este expediente" width="1400" height="1061" loading="lazy" decoding="async">
+            <img class="shot b" src="/img/web/midia-osc-1400.webp" alt="Mi día en el despacho de demostración: lo vencido, lo de esta semana y lo que espera a terceros" width="1400" height="1061" loading="lazy" decoding="async">
+            <div class="power" aria-hidden="true"></div>
+            <div class="bloom" aria-hidden="true"></div>
+            <div class="glare" aria-hidden="true"></div>
           </div>
           <div class="back" aria-hidden="true"><img src="/icons/hereda-marca.svg" alt=""></div>
         </div>
-        <div class="base" aria-hidden="true"></div>
+        <div class="deck" aria-hidden="true"><div class="ground"></div><div class="keys"></div><div class="pad"></div><div class="spill"></div><div class="lip"></div></div>
       </div>
-      <div class="callouts" aria-hidden="true">
-        <div class="callout" data-at="0" style="left:-6%;top:22%"><b>Caudal, impuestos, herederos</b><span>El expediente, calculado al cargar los documentos.</span></div>
-        <div class="callout" data-at="0" style="right:-6%;top:44%"><b>Qué hacer en este expediente</b><span>Plazos próximos y bloqueos, con su acción.</span></div>
-        <div class="callout" data-at="1" style="left:-4%;top:58%"><b>Mi día</b><span>Lo vencido y lo que vence esta semana, de todo el despacho.</span></div>
-        <div class="callout" data-at="1" style="right:-5%;top:18%"><b>Esperando a terceros</b><span>La familia, el banco o la notaría, y desde cuándo.</span></div>
-      </div>
+    </div>
+    <div class="callouts" aria-hidden="true">
+      <div class="callout" data-at="0" style="left:-6%;top:22%"><b>Caudal, impuestos, herederos</b><span>El expediente, calculado al cargar los documentos.</span></div>
+      <div class="callout" data-at="0" style="right:-6%;top:44%"><b>Qué hacer en este expediente</b><span>Plazos próximos y bloqueos, con su acción.</span></div>
+      <div class="callout" data-at="1" style="left:-4%;top:58%"><b>Mi día</b><span>Lo vencido y lo que vence esta semana, de todo el despacho.</span></div>
+      <div class="callout" data-at="1" style="right:-5%;top:18%"><b>Esperando a terceros</b><span>La familia, el banco o la notaría, y desde cuándo.</span></div>
     </div>
   </div>
 </section>
@@ -545,153 +697,468 @@ footer a:hover{color:var(--ink-1)}
 <script>
 (() => {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const easeIO = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const lerp = (a, b, t) => a + (b - a) * t;
   const seg = (p, a, b) => clamp((p - a) / (b - a));
+  const bell = (p, a, b, c) => seg(p, a, b) * (1 - seg(p, b, c)); // sube de a a b y baja de b a c
   const fmt = (n) => Math.round(n).toLocaleString("es-ES").replace(/^(\d)(\d{3})$/, "$1.$2"); // es-ES no agrupa los de 4 cifras
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const mobile = () => innerWidth <= 900;
+  const el = (tag, cls, parent, before) => { const e = document.createElement(tag); e.className = cls; parent.insertBefore(e, before || null); return e; };
+  const f2 = (x) => Math.round(x * 100) / 100;
 
-  // Luz que sigue al ratón en la portada
-  const hero = $(".hero");
+  /* ── Un único bucle rAF: scroll + tareas animadas (portada, contadores) ── */
+  const tickers = new Set();
+  let raf = 0, dirty = true;
+  const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
+  function loop() {
+    raf = 0;
+    const now = performance.now();
+    if (dirty) { dirty = false; scrollFrame(); }
+    for (const f of tickers) if (!f(now)) tickers.delete(f);
+    if (tickers.size) kick();
+  }
+  const addTicker = (f) => { tickers.add(f); kick(); };
+
+  /* Geometría cacheada: en el scroll no se lee el layout, solo scrollY */
+  let vw = innerWidth, vh = innerHeight, mob = vw <= 900, maxScroll = 1;
+  const G = {};
+
+  /* ════════ Portada: luz volumétrica, polvo y monograma de partículas ════════ */
+  const hero = $(".hero"), mark = $(".hero .mark");
+  let mx = .5, my = .38, tmx = .5, tmy = .38;
   hero.addEventListener("pointermove", (e) => {
     const r = hero.getBoundingClientRect();
-    hero.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
-    hero.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
+    tmx = (e.clientX - r.left) / r.width; tmy = (e.clientY - r.top) / r.height;
+    hero.style.setProperty("--mx", tmx * 100 + "%");
+    hero.style.setProperty("--my", tmy * 100 + "%");
+    if (heroTick) addTicker(heroTick);
   });
+  let heroTick = null;
+  (function heroFX() {
+    if (reduce || !document.documentElement.classList.contains("fx")) return;
+    const cv = $(".hero canvas.fx"), ctx = cv.getContext("2d");
+    const lo = document.createElement("canvas"), lc = lo.getContext("2d");
+    const small = matchMedia("(max-width: 700px)").matches;
+    const N = small ? 520 : 900, M = small ? 46 : 110, LS = small ? 6 : 5;
+    let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, ms = 96, visible = true;
+    const T0 = performance.now();
+    let rs = 7; const rnd = () => ((rs = (rs * 16807) % 2147483647) / 2147483647); // pseudoaleatorio estable
+    // Puntos del monograma H+ en unidades de 0 a 100 (mismo dibujo que /icons/hereda-marca.svg)
+    const rects = [[17.5, 26, 11, 48, 0], [44.5, 26, 11, 48, 0], [28.5, 46.5, 16, 7, 0], [55.5, 46.5, 28, 7, 1], [68.5, 38.5, 7, 23, 1]];
+    const area = rects.reduce((a, r) => a + r[2] * r[3], 0);
+    const P = [];
+    for (let i = 0; i < N; i++) {
+      let tx, ty, c;
+      if (rnd() < .3) { // contorno de la superelipse
+        const a = rnd() * Math.PI * 2, co = Math.cos(a), si = Math.sin(a);
+        tx = 50 + 49 * Math.sign(co) * Math.pow(Math.abs(co), .4); ty = 50 + 49 * Math.sign(si) * Math.pow(Math.abs(si), .4); c = 2;
+      } else {
+        let k = rnd() * area, r = rects[0];
+        for (const q of rects) { if ((k -= q[2] * q[3]) <= 0) { r = q; break; } }
+        tx = r[0] + rnd() * r[2]; ty = r[1] + rnd() * r[3]; c = r[4];
+      }
+      const ang = rnd() * Math.PI * 2, rad = 140 + Math.pow(rnd(), .7) * 620;
+      P.push({ tx, ty, c, sa: ang, sr: rad, d: rnd() * .38, z: .6 + rnd() * .9, ph: rnd() * 6.28, sp: (rnd() - .5) * 2.4 });
+    }
+    const D = [];
+    for (let i = 0; i < M; i++) D.push({ x: rnd(), y: rnd(), z: .3 + rnd() * .7, vx: (rnd() - .5) * .012, vy: -.004 - rnd() * .01, ph: rnd() * 6.28 });
+    const beams = [[-.46, .10, [157, 188, 230], .15], [-.17, .07, [108, 194, 184], .13], [.08, .12, [190, 210, 240], .12], [.36, .08, [224, 196, 138], .08]];
+    function size() {
+      const r = hero.getBoundingClientRect();
+      W = r.width; H = r.height; dpr = Math.min(devicePixelRatio || 1, small ? 1.5 : 1.6);
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      lo.width = Math.max(1, Math.round(W / LS)); lo.height = Math.max(1, Math.round(H / LS));
+      // Centro del monograma respecto a la portada (sin transformaciones)
+      let x = mark.offsetLeft + mark.offsetWidth / 2, y = mark.offsetTop + mark.offsetHeight / 2, n = mark.offsetParent;
+      while (n && n !== hero) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+      cx = x; cy = y; ms = mark.offsetWidth;
+    }
+    size();
+    new ResizeObserver(() => { size(); addTicker(heroTick); }).observe(hero);
+    new IntersectionObserver((es) => { visible = es[0].isIntersecting; if (visible) addTicker(heroTick); }).observe(hero);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) addTicker(heroTick); });
+    const beamAt = (x, y, ax, ay, t) => {
+      const a = Math.atan2(x - ax, y - ay); let s = 0;
+      for (let i = 0; i < beams.length; i++) { const b = beams[i], th = b[0] + Math.sin(t * .13 + i * 1.7) * .06, q = (a - th) / b[1]; s += Math.exp(-q * q) * b[3]; }
+      return s;
+    };
+    heroTick = (now) => {
+      if (!visible || document.hidden) return false;
+      const t = (now - T0) / 1000;
+      mx += (tmx - mx) * .05; my += (tmy - my) * .05;
+      // Monograma de cristal: flota y se orienta hacia el cursor
+      const fy = Math.sin(t * 1.05) * -6;
+      mark.style.transform = `translateY(${f2(fy)}px) rotateX(${f2((my - .4) * -16 + Math.sin(t * .7) * 4)}deg) rotateY(${f2((mx - .5) * 22 + Math.sin(t * .5) * 7)}deg)`;
+      const fade = clamp(t / 1.6), ax = W * (.5 + (mx - .5) * .14), ay = -H * .2;
+      // 1) Haces de luz en un búfer pequeño (el escalado los suaviza)
+      const lw = lo.width, lh = lo.height, s = 1 / LS;
+      lc.globalCompositeOperation = "source-over"; lc.clearRect(0, 0, lw, lh);
+      lc.globalCompositeOperation = "lighter";
+      const L = Math.hypot(W, H) * 1.15 * s;
+      for (let i = 0; i < beams.length; i++) {
+        const [b0, bw, col, ba] = beams[i];
+        const th = b0 + Math.sin(t * .13 + i * 1.7) * .06, br = ba * fade * (.75 + .25 * Math.sin(t * .4 + i * 2.1));
+        for (const k of [1, .62, .34]) {
+          const g = lc.createRadialGradient(ax * s, ay * s, 0, ax * s, ay * s, L);
+          g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(.18, `rgba(${col},${f2(br * .55)})`); g.addColorStop(.55, `rgba(${col},${f2(br * .3)})`); g.addColorStop(1, `rgba(${col},0)`);
+          lc.fillStyle = g; lc.beginPath(); lc.moveTo(ax * s, ay * s);
+          lc.lineTo(ax * s + Math.sin(th - bw * k) * L, ay * s + Math.cos(th - bw * k) * L);
+          lc.lineTo(ax * s + Math.sin(th + bw * k) * L, ay * s + Math.cos(th + bw * k) * L);
+          lc.closePath(); lc.fill();
+        }
+      }
+      // Cáustica suave donde la luz toca el monograma
+      const mcy = cy + fy;
+      const gl = lc.createRadialGradient(cx * s, mcy * s, 0, cx * s, mcy * s, ms * 1.6 * s);
+      gl.addColorStop(0, `rgba(170,215,230,${f2(.22 * fade)})`); gl.addColorStop(1, "rgba(170,215,230,0)");
+      lc.fillStyle = gl; lc.fillRect(0, 0, lw, lh);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, W, H);
+      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+      ctx.globalCompositeOperation = "lighter";
+      ctx.drawImage(lo, 0, 0, W, H);
+      // 2) Polvo en suspensión: brilla más dentro de los haces
+      for (const d of D) {
+        const x = ((d.x + d.vx * t + Math.sin(t * .3 + d.ph) * .01) % 1 + 1) % 1 * W;
+        const y = ((d.y + d.vy * t) % 1 + 1) % 1 * H;
+        const b = beamAt(x, y, ax, ay, t) * 4.2 * fade, tw = .6 + .4 * Math.sin(t * 2 + d.ph);
+        const a = clamp((.05 + b) * tw * d.z, 0, .9);
+        if (a < .02) continue;
+        const r = .6 + d.z * 1.3;
+        ctx.fillStyle = `rgba(225,236,250,${f2(a)})`; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      // 3) Partículas que forman el monograma y se apagan cuando aparece el cristal
+      const life = 1 - seg(t, 1.25, 2.1);
+      if (life > 0) {
+        const k = ms / 100, cols = ["rgba(255,255,255,", "rgba(108,194,184,", "rgba(157,188,230,"];
+        const flash = bell(t, .95, 1.15, 1.9);
+        for (let c = 0; c < 3; c++) {
+          ctx.fillStyle = cols[c] + f2((c === 2 ? .7 : .95) * life) + ")";
+          ctx.beginPath();
+          for (const q of P) {
+            if (q.c !== c) continue;
+            const e = easeIO(seg(t, .08 + q.d, .92 + q.d * .5)), u = 1 - e;
+            const a = q.sa + u * q.sp;
+            const ox = (q.tx - 50) * k, oy = (q.ty - 50) * k;
+            const burst = seg(t, 1.25, 2.1) * (8 + q.z * 10);
+            const len = Math.hypot(ox, oy) || 1;
+            const x = cx + ox * e + Math.cos(a) * q.sr * u + (ox / len) * burst + Math.sin(t * 3 + q.ph) * u * 6;
+            const y = mcy + oy * e + Math.sin(a) * q.sr * u * .7 + (oy / len) * burst;
+            const r = (.55 + q.z * .55) * (1 + u * 1.2);
+            ctx.rect(x - r, y - r, r * 2, r * 2);
+          }
+          ctx.fill();
+        }
+        if (flash > 0) { // destello al encajar
+          const R = ms * (.7 + seg(t, .95, 1.9) * 2.2);
+          const g = ctx.createRadialGradient(cx, mcy, R * .55, cx, mcy, R);
+          g.addColorStop(0, "rgba(157,220,215,0)"); g.addColorStop(.85, `rgba(157,220,215,${f2(.28 * flash)})`); g.addColorStop(1, "rgba(157,220,215,0)");
+          ctx.fillStyle = g; ctx.fillRect(cx - R, mcy - R, R * 2, R * 2);
+        }
+      }
+      return true;
+    };
+    addTicker(heroTick);
+  })();
 
-  // Progreso de una escena fijada: 0 al empezar a fijarse, 1 al soltarse
-  const prog = (el) => {
-    const r = el.getBoundingClientRect();
-    return clamp(-r.top / (r.height - innerHeight));
-  };
-
-  // ── Escena 1: papeles que caen y entran en el expediente
-  const docs = $$("#s-docs .doc");
-  const fields = $$("#s-docs .field");
-  const folder = $("#s-docs .folder");
+  /* ════════ Escena 1: papeles que caen, se escanean y entran en el expediente ════════ */
+  const desk = $("#s-docs .desk"), docs = $$("#s-docs .doc"), fields = $$("#s-docs .field");
+  const folder = $("#s-docs .folder"), fsweep = $("#s-docs .folder .sweep"), bed = $("#s-docs .bed");
+  // Posición esparcida [x, y, giro, inclinación, profundidad 0 cerca … 1 lejos]
   const scatter = [
-    [-150, -150, -14, 18], [40, -170, 9, -22], [170, -60, 16, 12], [-190, 60, -8, -16],
-    [10, 40, 5, 20], [150, 140, -18, -10], [-60, 160, 12, 14],
+    [-150, -150, -14, 18, .9], [40, -170, 9, -22, .25], [170, -60, 16, 12, .6], [-190, 60, -8, -16, .15],
+    [10, 40, 5, 20, .45], [150, 140, -18, -10, 0], [-60, 160, 12, 14, .75],
   ];
+  const D1 = docs.map((d) => ({
+    d, scan: $(".scan", d),
+    spec: el("span", "spec", d), dim: el("span", "dim", d),
+    sh: el("div", "dsh" + (d.classList.contains("dni") ? " dni" : ""), desk, docs[0]),
+    blur: -1, lit: null, h: 0,
+  }));
+  D1.forEach((o) => { o.spec.innerHTML = "<i></i>"; o.specI = o.spec.firstChild; });
+  const flashes = fields.map((f) => el("i", "fl", f));
+  const landAt = (i) => .445 + i * .07;
   function docsUpdate(p) {
-    const m = mobile();
-    const k = m ? .62 : 1;
-    const dw = $("#s-docs .desk").clientWidth;
-    const fx = m ? 0 : dw / 2 - Math.min(dw, 430) / 2; // centro del expediente respecto al centro de la mesa
-    // Montón ordenado a la izquierda del expediente (en móvil, encima de él)
-    const px = m ? 0 : -dw / 2 + 120, py = m ? -$("#s-docs .desk").clientHeight * .28 : 0;
-    docs.forEach((d, i) => {
-      const [x, y, rz, rx] = scatter[i];
-      const fall = ease(seg(p, i * .02, .16 + i * .02));             // caen desde arriba y se esparcen
-      const pile = ease(seg(p, .2 + i * .01, .3 + i * .01));          // se recogen en un montón
-      const read = seg(p, .34 + i * .07, .38 + i * .07);              // se leen uno a uno
-      const go = ease(seg(p, .38 + i * .07, .44 + i * .07));          // y entran en el expediente
-      const y0 = -innerHeight * 1.1;
+    const m = mob, k = m ? .62 : 1, dw = G.deskW, dh = G.deskH;
+    const fx = m ? 0 : dw / 2 - Math.min(dw, 430) / 2;                 // centro del expediente respecto al centro de la mesa
+    const px = m ? 0 : -dw / 2 + 120, py = m ? -dh * .28 : 0;          // montón (escáner) a la izquierda del expediente; en móvil, encima
+    const fy = m ? dh / 2 - G.folderH / 2 - 12 : 0;
+    const y0 = m ? -dh * .62 : -vh * 1.05;
+    let reading = 0;
+    D1.forEach((o, i) => {
+      const [x, y, rz, rx, dz] = scatter[i];
+      const fall = ease(seg(p, i * .02, .16 + i * .02));               // caen desde arriba y se esparcen
+      const pile = ease(seg(p, .2 + i * .01, .3 + i * .01));            // se recogen en el escáner
+      const rd = seg(p, .34 + i * .07, .385 + i * .07);                 // se leen uno a uno
+      const go = easeIO(seg(p, .385 + i * .07, .445 + i * .07));        // y vuelan al expediente
+      const lift = ease(seg(rd, 0, .35)) * (1 - go);
+      const arc = Math.sin(Math.PI * go);
       const sx = lerp(x * k, px + (i - 3) * 4, pile), sy = lerp(lerp(y0, y * k, fall), py + (i - 3) * -3, pile);
       const sr = lerp(rz * (1 + (1 - fall) * 3), (i - 3) * 2.5, pile);
-      const fy = m ? $("#s-docs .desk").clientHeight / 2 - folder.offsetHeight / 2 - 12 : 0;
-      const tx = lerp(sx, fx, go), ty = lerp(sy, fy, go);
-      const s = lerp(lerp(1, m ? .8 : .9, pile), .12, go), rot = lerp(sr, 0, go);
-      d.style.transform = `translate3d(${tx}px,${ty}px,0) rotateX(${lerp(rx + (1 - fall) * 50, 0, fall)}deg) rotateZ(${rot}deg) scale(${s})`;
-      d.style.opacity = String(fall * (1 - seg(go, .6, 1)));
-      d.style.zIndex = String(read > 0 ? 20 : 2 + i);
-      d.classList.toggle("lit", read > 0 && go < 1);
+      const tx = lerp(sx, fx, go), ty = lerp(sy, fy, go) - arc * (m ? 46 : 96);
+      const depth = lerp(1 - .2 * dz, 1, pile);
+      const s = lerp(lerp(1, m ? .8 : .9, pile) * depth * (1 + .06 * lift), .12, go);
+      const rot = lerp(sr, 0, go);
+      const rX = lerp(rx + (1 - fall) * 55, 0, fall) * (1 - pile * .85) - lift * 10;
+      const rY = arc * -22;
+      const vis = fall * (1 - seg(go, .62, 1));
+      o.d.style.transform = `translate3d(${f2(tx)}px,${f2(ty)}px,${f2(lift * 40)}px) rotateX(${f2(rX)}deg) rotateY(${f2(rY)}deg) rotateZ(${f2(rot)}deg) scale(${f2(s * 1000) / 1000})`;
+      o.d.style.opacity = f2(vis);
+      o.d.style.zIndex = String(rd > 0 ? 20 : 2 + i);
+      // Profundidad de campo: los papeles lejanos, desenfocados y en sombra hasta que se recogen
+      const bl = Math.round(dz * 2.8 * (1 - pile) * 4) / 4 + Math.round((1 - fall) * 3 * 4) / 4 * (fall > 0 ? 1 : 0);
+      if (bl !== o.blur) { o.blur = bl; o.d.style.filter = bl > 0 ? `blur(${bl}px)` : "none"; }
+      o.dim.style.opacity = f2(dz * .42 * (1 - pile));
+      // Brillo especular: cruza el papel según gira y, al leerse, lo barre entero
+      const sw = rd > 0 && go < 1 ? rd : clamp(.5 + rot * .025 + rX * .012 + tx / (dw || 1) * .5);
+      o.specI.style.transform = `translateX(${f2(lerp(-120, 260, sw))}%) rotate(18deg)`;
+      o.spec.style.opacity = f2(.35 + .65 * Math.abs(Math.sin((rot + rX) * .06)) * (1 - pile * .6) + lift * .5);
+      // Sombra que sigue a la altura del papel
+      const alt = (1 - fall) * 1.2 + lift * .35 + arc * .9;
+      o.sh.style.transform = `translate3d(${f2(tx + 12 + alt * 60)}px,${f2(ty + 22 + alt * 100)}px,0) rotate(${f2(rot)}deg) scale(${f2(s * (1 + alt * .3))})`;
+      o.sh.style.opacity = f2(vis * clamp(.62 - alt * .38, .08, .62) * (1 - go * .85));
+      // Línea de escaneo, ligada al scroll
+      const scanning = rd > 0 && rd < 1 && go === 0;
+      o.scan.style.opacity = scanning ? 1 : 0;
+      if (scanning) o.scan.style.transform = `translateY(${f2(rd * o.h)}px)`;
+      const lit = rd >= .45 && go < 1;
+      if (lit !== o.lit) { o.lit = lit; o.d.classList.toggle("lit", lit); }
+      if (scanning) reading = 1;
+      reading = Math.max(reading, bell(rd, 0, .2, 1) * (1 - go));
     });
-    const fo = ease(seg(p, .24, .34));
-    folder.style.opacity = String(fo);
-    folder.style.transform = (m ? "translateX(-50%)" : "translateY(-50%)") + ` scale(${lerp(.94, 1, fo)})`;
-    fields.forEach((f) => f.classList.toggle("on", p > .44 + (+f.dataset.at) * .07));
+    // Placa del escáner: se enciende mientras se lee
+    const bedOn = seg(p, .3, .34) * (1 - seg(p, .86, .9));
+    bed.style.transform = `translate3d(${f2(px)}px,${f2(py)}px,0) scale(${f2(.9 + .14 * reading)})`;
+    bed.style.opacity = f2(bedOn * (.45 + .55 * reading));
+    // Expediente: entra en perspectiva, late con cada dato y se sella con un barrido de luz
+    const fo = ease(seg(p, .24, .36));
+    let bump = 0;
+    fields.forEach((f, j) => {
+      const L = landAt(j);
+      f.classList.toggle("on", p > L - .004);
+      const fl = bell(p, L - .006, L + .004, L + .07);
+      flashes[j].style.opacity = f2(fl);
+      bump += fl;
+    });
+    bump += bell(p, landAt(6) - .006, landAt(6) + .004, landAt(6) + .06);
+    folder.style.opacity = f2(fo);
+    folder.style.transform = (m ? "translateX(-50%)" : "translateY(-50%)") +
+      ` perspective(1200px) rotateY(${f2(lerp(m ? 0 : -18, 0, fo))}deg) rotateX(${f2(lerp(m ? 16 : 6, 0, fo))}deg) scale(${f2(lerp(.92, 1, fo) * (1 + .014 * bump) * 1000) / 1000})`;
+    const sp = seg(p, .875, .975);
+    fsweep.style.transform = `translateX(${f2(lerp(-110, 190, easeIO(sp)))}%)`;
+    fsweep.style.opacity = f2(Math.sin(Math.PI * sp));
   }
 
-  // ── Escena 2: cifras que se calculan
-  const rows = $$("#s-cifras .row");
-  const bar = $("#s-cifras .bar");
-  function cifrasUpdate(p) {
-    rows.forEach((r) => {
-      const i = +r.dataset.at, t = ease(seg(p, .08 + i * .15, .2 + i * .15));
-      r.classList.toggle("on", t > 0);
-      const n = $(".n", r), to = +n.dataset.to;
-      n.firstChild.nodeValue = (to && n.dataset.sign && t > 0 ? n.dataset.sign + " " : "") + fmt(to * t) + " ";
+  /* ════════ Escena 2: cifras que se calculan ════════ */
+  const ledger = $("#s-cifras .ledger"), rows = $$("#s-cifras .row"), bar = $("#s-cifras .bar");
+  const hi = $("#s-cifras .hi"), lspec = $("#s-cifras .ledger .spec i"), flare = $("#s-cifras .flare");
+  const rowN = rows.map((r) => ({ r, n: $(".n", r), on: null, txt: "" }));
+  function cifrasUpdate(p, en) {
+    const a = ease(seg(en, .15, 1));
+    ledger.style.transform = `perspective(1400px) translate3d(0,${f2(lerp(50, 0, a))}px,${f2(lerp(-120, 0, a))}px) rotateY(${f2(lerp(-16, 0, a))}deg) rotateX(${f2(lerp(9, 0, a))}deg)`;
+    let idx = 0, active = 0;
+    rowN.forEach((o, i) => {
+      const t = ease(seg(p, .08 + i * .15, .2 + i * .15));
+      const on = t > 0;
+      if (on !== o.on) { o.on = on; o.r.classList.toggle("on", on); }
+      const to = +o.n.dataset.to;
+      const txt = (to && o.n.dataset.sign && t > 0 ? o.n.dataset.sign + " " : "") + fmt(to * t) + " ";
+      if (txt !== o.txt) { o.txt = txt; o.n.firstChild.nodeValue = txt; }
+      idx += seg(p, .08 + i * .15, .2 + i * .15) * (i ? 1 : 0);
+      if (t > 0 && t < 1) active = 1;
     });
-    bar.style.transform = `scaleX(${ease(seg(p, .7, .9))})`;
+    // Banda que acompaña a la fila que se está calculando
+    const i0 = Math.min(rowN.length - 1, Math.floor(idx)), fr = idx - i0, i1 = Math.min(rowN.length - 1, i0 + 1);
+    const top = lerp(G.rows[i0][0], G.rows[i1][0], easeIO(fr)), hh = lerp(G.rows[i0][1], G.rows[i1][1], easeIO(fr));
+    hi.style.transform = `translateY(${f2(top)}px) scaleY(${f2(hh / 100)})`;
+    hi.style.opacity = f2(seg(p, .05, .1) * (.55 + .45 * active) * (1 - .55 * seg(p, .78, .9)));
+    bar.style.transform = `scaleX(${f2(ease(seg(p, .7, .88)))})`;
+    // Llegada: barrido de luz por el cristal y resplandor sobre el total
+    lspec.style.transform = `translateX(${f2(lerp(-120, 420, easeIO(seg(p, .84, .97))))}%) rotate(16deg)`;
+    flare.style.opacity = f2(seg(p, .82, .9) * (1 - .45 * seg(p, .92, 1)));
   }
 
-  // ── Escena 3: el árbol se dibuja
-  const edges = $$("#s-arbol .edge");
-  const nodes = $$("#s-arbol .node");
-  const pulse = $("#s-arbol .pulse");
-  edges.forEach((e) => { const L = e.getTotalLength(); e.style.strokeDasharray = L; e.dataset.len = L; });
+  /* ════════ Escena 3: el árbol se dibuja ════════ */
+  const tree = $("#s-arbol .tree"), edges = $$("#s-arbol .edge"), nodes = $$("#s-arbol .node"), pulse = $("#s-arbol .pulse");
+  const NS = "http://www.w3.org/2000/svg";
+  const glows = edges.map((e) => { const g = e.cloneNode(); g.classList.add("glow"); e.parentNode.insertBefore(g, edges[0]); return g; });
+  const lens = edges.map((e) => e.getTotalLength());
+  [...edges, ...glows].forEach((e, i) => { e.style.strokeDasharray = lens[i % 3]; e.style.strokeDashoffset = lens[i % 3]; });
+  const trails = [.022, .045, .07].map((d, i) => { const c = document.createElementNS(NS, "circle"); c.setAttribute("class", "trail"); c.setAttribute("r", String(3 - i * .7)); c.style.opacity = 0; pulse.parentNode.insertBefore(c, pulse); return [c, d, .6 - i * .17]; });
+  const ripples = [[320, 76], [170, 248], [470, 248], [80, 394], [250, 394], [390, 394], [560, 394]].map(([x, y], i) => {
+    const c = document.createElementNS(NS, "circle"); c.setAttribute("class", "ripple"); c.setAttribute("cx", x); c.setAttribute("cy", y); c.setAttribute("r", "40");
+    c.style.transformBox = "fill-box"; c.style.transformOrigin = "center"; tree.insertBefore(c, pulse); return [c, i ? (i < 3 ? .66 : .76) : .58];
+  });
   const edgeWin = [[.12, .3], [.12, .3], [.36, .58]];
-  function arbolUpdate(p) {
+  const nodeOn = nodes.map(() => [null, null]);
+  function arbolUpdate(p, en) {
+    const a = ease(seg(en, .15, 1));
+    tree.style.transform = `perspective(1300px) translate3d(0,${f2(lerp(40, 0, a))}px,0) rotateX(${f2(lerp(24, 0, a))}deg) scale(${f2(lerp(.94, 1, a))})`;
     edges.forEach((e, i) => {
-      const t = ease(seg(p, ...edgeWin[i]));
-      e.style.strokeDashoffset = String(e.dataset.len * (1 - t));
+      const t = ease(seg(p, ...edgeWin[i])), off = f2(lens[i] * (1 - t));
+      e.style.strokeDashoffset = off; glows[i].style.strokeDashoffset = off;
     });
-    nodes.forEach((n) => {
-      const i = +n.dataset.at;
-      n.classList.toggle("on", p > [0, .28, .56][i]);
-      n.classList.toggle("paid", p > [1, .66, .76][i]);
+    nodes.forEach((n, j) => {
+      const i = +n.dataset.at, on = p > [0, .28, .56][i], paid = p > [1, .66, .76][i];
+      if (on !== nodeOn[j][0]) { nodeOn[j][0] = on; n.classList.toggle("on", on); }
+      if (paid !== nodeOn[j][1]) { nodeOn[j][1] = paid; n.classList.toggle("paid", paid); }
     });
-    // Un punto de luz recorre la rama que se está dibujando
-    const active = p < .32 ? edges[0] : edges[2];
-    const t = p < .32 ? ease(seg(p, .12, .3)) : ease(seg(p, .36, .58));
-    if (t > 0 && t < 1) {
-      const pt = active.getPointAtLength(t * active.dataset.len);
-      pulse.setAttribute("cx", pt.x); pulse.setAttribute("cy", pt.y); pulse.style.opacity = 1;
-    } else pulse.style.opacity = 0;
+    // Un punto de luz con estela recorre la rama que se está dibujando
+    const k = p < .33 ? 0 : 2, win = edgeWin[k], t = ease(seg(p, ...win));
+    const put = (c, tt, op) => {
+      if (tt > 0 && tt < 1) { const pt = edges[k].getPointAtLength(tt * lens[k]); c.setAttribute("cx", f2(pt.x)); c.setAttribute("cy", f2(pt.y)); c.style.opacity = op; } else c.style.opacity = 0;
+    };
+    put(pulse, t, 1);
+    trails.forEach(([c, d, op]) => put(c, t - d, op * (t < 1 ? 1 : 0)));
+    // Llegada: ondas desde cada nodo cuando se reparte
+    ripples.forEach(([c, at]) => {
+      const r = seg(p, at, at + .14);
+      c.style.opacity = f2((r > 0 && r < 1 ? 1 - r : 0) * .7);
+      c.style.transform = `scale(${f2(.8 + r * 1.1)})`;
+    });
   }
 
-  // ── Escena 4: el portátil se abre y la cámara entra
+  /* ════════ Escena 4: el portátil se abre, se enciende y la cámara entra en la pantalla ════════ */
   const laptop = $("#s-app .laptop"), lid = $("#s-app .lid");
-  const shotB = $("#s-app .shot.b"), callouts = $$("#s-app .callout"), appCopy = $("#s-app .app-copy");
+  const shotB = $("#s-app .shot.b"), power = $("#s-app .power"), bloom = $("#s-app .bloom"), glare = $("#s-app .glare");
+  const spill = $("#s-app .spill"), halo = $("#s-app .halo"), callouts = $$("#s-app .callout"), appCopy = $("#s-app .app-copy");
+  const cOn = callouts.map(() => null);
   function appUpdate(p) {
-    const open = ease(seg(p, .04, .34));
-    lid.style.transform = `rotateX(${lerp(-90, 0, open)}deg)`;
-    const tilt = ease(seg(p, .1, .45)), zoom = ease(seg(p, .45, .85));
-    const s = lerp(.62, .86, tilt) * lerp(1, mobile() ? 1.12 : 1.22, zoom);
-    laptop.style.transform = `translateY(${lerp(innerHeight * .2, 0, tilt) - zoom * innerHeight * .04}px) rotateX(${lerp(30, 8, tilt) * (1 - zoom)}deg) rotateY(${lerp(-16, 0, tilt)}deg) scale(${s})`;
-    shotB.style.opacity = p > .62 ? 1 : 0;
-    callouts.forEach((c) => {
-      const i = +c.dataset.at;
-      c.classList.toggle("on", i === 0 ? p > .5 && p < .64 : p > .72 && p < .97);
+    const st = reduce;                       // movimiento reducido: portátil abierto y quieto bajo el titular
+    const open = st ? 1 : ease(seg(p, .04, .36));
+    const pw = st ? 1 : ease(seg(p, .22, .36));
+    const tilt = st ? 1 : ease(seg(p, .06, .46));
+    const zoom = st ? 0 : easeIO(seg(p, .46, .7));
+    lid.style.transform = `rotateX(${f2(lerp(-90, 0, open))}deg)`;
+    const S = G.fill;                         // escala final: la pantalla llena la vista
+    const base = lerp(.58, .84, tilt);
+    const sc = st ? .7 : base * lerp(1, S / .84, zoom);
+    const ty = st ? vh * (mob ? .06 : .1) : lerp(vh * .2, 0, tilt) - zoom * vh * (mob ? 0 : .06);
+    laptop.style.transform = `translate3d(0,${f2(ty)}px,0) rotateX(${f2(lerp(58, 7, tilt) * (1 - zoom))}deg) rotateY(${f2(lerp(-20, 0, tilt))}deg) scale(${f2(sc * 1000) / 1000})`;
+    power.style.opacity = f2(1 - pw);
+    bloom.style.opacity = f2(st ? 0 : bell(p, .22, .27, .42) * .9);
+    glare.style.transform = `translateX(${f2(lerp(-35, 45, ease(seg(p, .04, .7))))}%)`;
+    glare.style.opacity = f2(lerp(1, .35, zoom));
+    spill.style.opacity = f2(pw * (1 - zoom) * .95);
+    halo.style.opacity = f2(.25 + .75 * pw);
+    const b = st ? 0 : easeIO(seg(p, .64, .72));
+    shotB.style.opacity = f2(b);
+    shotB.style.transform = `scale(${f2(lerp(1.04, 1, b) * 1000) / 1000})`;
+    callouts.forEach((c, j) => {
+      const i = +c.dataset.at, on = !st && (i === 0 ? p > .54 && p < .65 : p > .74 && p < .985);
+      if (on !== cOn[j]) { cOn[j] = on; c.classList.toggle("on", on); }
     });
-    appCopy.style.opacity = String(1 - seg(p, .18, .32));
-    appCopy.style.transform = `translateY(${-40 * seg(p, .18, .32)}px)`;
+    const ct = st ? 0 : seg(p, .16, .3);
+    appCopy.style.opacity = f2(1 - ct);
+    appCopy.style.transform = `translateY(${f2(-50 * ct)}px) scale(${f2(1 - .04 * ct)})`;
   }
 
-  const scenes = [["#s-docs", docsUpdate], ["#s-cifras", cifrasUpdate], ["#s-arbol", arbolUpdate], ["#s-app", appUpdate]].map(([s, f]) => [$(s), f]);
+  /* ════════ Entrada de cada escena: el texto llega con desenfoque y escalonado ════════ */
+  const scenes = [["#s-docs", docsUpdate], ["#s-cifras", cifrasUpdate], ["#s-arbol", arbolUpdate], ["#s-app", appUpdate]].map(([s, f]) => {
+    const e = $(s);
+    return { el: e, f, amb: $(".amb", e), copy: $$(".copy > *", e), last: -1, cb: [] };
+  });
+  function enterCopy(sc, en) {
+    sc.copy.forEach((c, i) => {
+      const t = ease(seg(en, .28 + i * .08, .78 + i * .07));
+      if (sc.cb[i] === t) return; sc.cb[i] = t;
+      c.style.opacity = f2(t);
+      c.style.transform = t >= 1 ? "none" : `translate3d(0,${f2((1 - t) * 34)}px,0)`;
+      c.style.filter = t >= 1 ? "none" : `blur(${f2((1 - t) * 8)}px)`;
+    });
+  }
+
+  /* ════════ Índice de capítulos ════════ */
+  const chap = $(".chapters"), chapA = $$(".chapters a"), chapBar = chapA.map((a) => $("i", a));
+  let chapShow = null, chapCur = -2;
+
   const bar0 = $(".progress");
-  let ticking = false;
-  function frame() {
-    ticking = false;
-    scenes.forEach(([el, f]) => {
-      const r = el.getBoundingClientRect();
-      if (r.bottom > -innerHeight && r.top < innerHeight * 2) f(reduce ? 1 : prog(el));
+  function scrollFrame() {
+    const y = scrollY;
+    let cur = -1;
+    scenes.forEach((sc, i) => {
+      const top = sc.top, len = sc.h - vh;
+      const p = reduce ? 1 : clamp((y - top) / len), en = reduce ? 1 : clamp((y - (top - vh)) / vh);
+      if (y > top - vh * 1.6 && y < top + sc.h + vh * .5) {
+        sc.f(p, en);
+        if (!reduce) { enterCopy(sc, en); sc.amb.style.opacity = f2(en * (1 - seg(y, top + len, top + len + vh * .8))); }
+        else sc.amb.style.opacity = 1;
+      }
+      if (y >= top - vh * .5) cur = i;
+      sc.p = p;
     });
-    const max = document.documentElement.scrollHeight - innerHeight;
-    bar0.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+    // Índice: visible dentro de las escenas, oculto cuando la cámara entra en la pantalla
+    const s0 = scenes[0], s3 = scenes[3];
+    const show = !reduce && y > s0.top - vh * .35 && y < s3.top + (s3.h - vh) * .44;
+    if (show !== chapShow) { chapShow = show; chap.classList.toggle("show", show); }
+    if (cur !== chapCur) { chapCur = cur; chapA.forEach((a, i) => { a.classList.toggle("on", i === cur); a.classList.toggle("done", i < cur); if (i === cur) a.setAttribute("aria-current", "step"); else a.removeAttribute("aria-current"); }); }
+    chapBar.forEach((b, i) => { b.style.transform = `scaleX(${i === cur ? f2(scenes[i].p) : i < cur ? 1 : 0})`; });
+    bar0.style.transform = `scaleX(${f2(clamp(y / maxScroll) * 1000) / 1000})`;
   }
-  const req = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
-  addEventListener("scroll", req, { passive: true });
-  addEventListener("resize", req);
-  frame();
 
-  // Apariciones y contadores al entrar en pantalla
+  function measure() {
+    vw = innerWidth; vh = innerHeight; mob = vw <= 900;
+    scenes.forEach((sc) => { sc.top = sc.el.getBoundingClientRect().top + scrollY; sc.h = sc.el.offsetHeight; });
+    G.deskW = desk.clientWidth; G.deskH = desk.clientHeight; G.folderH = folder.offsetHeight;
+    D1.forEach((o) => { o.h = o.d.offsetHeight; });
+    G.rows = rows.map((r) => [r.offsetTop, r.offsetHeight]);
+    const lw = laptop.offsetWidth, sw = lw * .968, sh = lw * (10.4 / 16) - lw * .032;
+    G.fill = mob ? Math.max(1, (vw * 1.06) / sw) : Math.min((vh * .9) / sh, (vw * .96) / sw);
+    maxScroll = Math.max(1, document.documentElement.scrollHeight - vh);
+    dirty = true; kick();
+  }
+  addEventListener("scroll", () => { dirty = true; kick(); }, { passive: true });
+  let mq = 0;
+  const remeasure = () => { cancelAnimationFrame(mq); mq = requestAnimationFrame(measure); };
+  addEventListener("resize", remeasure);
+  new ResizeObserver(remeasure).observe(document.body);
+  if (document.fonts) document.fonts.ready.then(remeasure);
+  measure();
+
+  /* ════════ Apariciones y contadores al entrar en pantalla ════════ */
+  $$(".reveal").forEach((e) => {
+    const sib = [...e.parentNode.children].filter((x) => x.classList.contains("reveal"));
+    const i = sib.indexOf(e);
+    if (i > 0) e.style.transitionDelay = Math.min(i * 80, 400) + "ms";
+  });
   const io = new IntersectionObserver((es) => es.forEach((e) => {
     if (!e.isIntersecting) return;
     e.target.classList.add("on");
     const b = $("[data-count]", e.target);
     if (b) {
-      const to = +b.dataset.count, t0 = performance.now(), d = reduce ? 0 : 1600;
-      const step = () => { const k = d ? ease(clamp((performance.now() - t0) / d)) : 1; b.textContent = fmt(to * k); if (k < 1) requestAnimationFrame(step); };
-      requestAnimationFrame(step);
+      const to = +b.dataset.count, t0 = performance.now() + 150, d = reduce ? 0 : 1700;
+      if (!d) b.textContent = fmt(to);
+      else addTicker((now) => { const k = ease(clamp((now - t0) / d)); b.textContent = fmt(to * k); return k < 1; });
     }
     io.unobserve(e.target);
-  }), { threshold: .2 });
-  $$(".reveal").forEach((el) => io.observe(el));
+  }), { threshold: .2, rootMargin: "0px 0px -6% 0px" });
+  $$(".reveal").forEach((e) => io.observe(e));
+
+  /* ════════ Microinteracciones (solo con ratón) ════════ */
+  if (finePointer && !reduce) {
+    $$(".btn").forEach((b) => {
+      b.addEventListener("pointermove", (e) => {
+        const r = b.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+        b.style.setProperty("--sx", x + "px"); b.style.setProperty("--sy", y + "px");
+        b.style.translate = `${f2((x - r.width / 2) * .16)}px ${f2((y - r.height / 2) * .3)}px`;
+      });
+      b.addEventListener("pointerleave", () => { b.style.translate = ""; });
+    });
+    $$(".pillar, .plan").forEach((c) => {
+      c.classList.add("tilt");
+      c.addEventListener("pointermove", (e) => {
+        const r = c.getBoundingClientRect(), u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
+        c.classList.add("moving");
+        c.style.setProperty("--lx", f2(u * 100) + "%"); c.style.setProperty("--ly", f2(v * 100) + "%");
+        c.style.transform = `perspective(900px) translateY(-4px) rotateX(${f2((.5 - v) * 7)}deg) rotateY(${f2((u - .5) * 9)}deg)`;
+      });
+      c.addEventListener("pointerleave", () => { c.classList.remove("moving"); c.style.transform = ""; });
+    });
+  }
 })();
 </script>
 </body>
