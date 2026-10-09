@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hereda+ · La herencia, lista en una tarde</title>
+<meta name="description" content="Hereda+, software de sucesiones para despachos de abogados: lee los documentos en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Sin IA. Los datos se quedan en el despacho.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#060B14">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}
+@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}
+@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}
+@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}
+
+/* Hereda+ · portada «noche». Página independiente: no comparte CSS ni JS con la app ni con la portada actual. */
+:root{
+  --night:#060B14; --night-2:#0A1322; --night-3:#0F1B2E;
+  --line:rgba(168,190,222,.12); --line-2:rgba(168,190,222,.22);
+  --ink-1:#EEF2F8; --ink-2:#B3BCC9; --ink-3:#8590A0;
+  --brand:#9DBCE6; --brand-deep:#2C5A92; --petrol:#6CC2B8; --gold:#E0C48A;
+  --paper:#F6F3EA; --paper-ink:#1B2433; --paper-line:#D9D3C4;
+  --sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style",Georgia,serif;
+  --ease:cubic-bezier(.22,.8,.2,1);
+  --max:1200px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--night);color:var(--ink-1);-webkit-text-size-adjust:100%}
+body{font-family:var(--sans);font-size:16px;line-height:1.55;background:var(--night);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.serif{font-family:var(--serif);font-weight:500;letter-spacing:-.015em}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--petrol);font-weight:600}
+.muted{color:var(--ink-2)}
+.skip{position:absolute;left:-9999px}.skip:focus{left:16px;top:16px;z-index:100;background:#fff;color:#000;padding:8px 12px;border-radius:8px}
+
+/* Grano de película, encima de todo y sin capturar clics */
+.grain{position:fixed;inset:-50%;z-index:90;pointer-events:none;opacity:.06;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation:grain 1.2s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+
+/* Barra de progreso del relato */
+.progress{position:fixed;left:0;top:0;height:2px;width:100%;transform-origin:0 50%;transform:scaleX(0);z-index:80;
+  background:linear-gradient(90deg,var(--brand),var(--petrol))}
+
+/* Navegación de cristal */
+.nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:70;width:min(calc(100% - 24px),var(--max));
+  display:flex;align-items:center;gap:20px;padding:10px 12px 10px 16px;border-radius:16px;
+  background:rgba(10,19,34,.55);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%)}
+.nav .logo{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.01em}
+.nav .logo img{width:28px;height:28px;border-radius:7px}
+.nav ul{display:flex;gap:22px;list-style:none;margin-left:auto;font-size:14px;color:var(--ink-2)}
+.nav ul a:hover{color:var(--ink-1)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:12px;font-weight:600;font-size:15px;transition:transform .25s var(--ease),background .25s,box-shadow .25s;white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--ink-1);color:var(--night)}
+.btn-primary:hover{box-shadow:0 0 0 6px rgba(238,242,248,.12)}
+.btn-ghost{border:1px solid var(--line-2);color:var(--ink-1)}
+.btn-ghost:hover{background:rgba(168,190,222,.08)}
+.nav .btn{height:38px;padding:0 16px;font-size:14px}
+@media (max-width:860px){.nav ul{display:none}.nav .btn{margin-left:auto}}
+
+/* ─── Portada ─── */
+.hero{position:relative;min-height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;padding:120px 0 80px}
+.aurora{position:absolute;inset:-20%;z-index:0;filter:blur(60px);opacity:.9}
+.aurora i{position:absolute;border-radius:50%;mix-blend-mode:screen}
+.aurora i:nth-child(1){width:60vmax;height:60vmax;left:5%;top:10%;background:radial-gradient(circle,rgba(44,90,146,.55),transparent 60%);animation:drift1 18s ease-in-out infinite alternate}
+.aurora i:nth-child(2){width:50vmax;height:50vmax;right:0;top:25%;background:radial-gradient(circle,rgba(108,194,184,.28),transparent 60%);animation:drift2 22s ease-in-out infinite alternate}
+.aurora i:nth-child(3){width:40vmax;height:40vmax;left:35%;bottom:-5%;background:radial-gradient(circle,rgba(157,188,230,.22),transparent 60%);animation:drift1 26s ease-in-out infinite alternate-reverse}
+@keyframes drift1{to{transform:translate(8vmax,-6vmax) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-10vmax,6vmax) scale(.9)}}
+.hero .spot{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(600px circle at var(--mx,50%) var(--my,40%),rgba(157,188,230,.10),transparent 60%)}
+.hero .floor{position:absolute;left:0;right:0;bottom:0;height:45%;z-index:1;pointer-events:none;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;transform:perspective(600px) rotateX(62deg);transform-origin:50% 100%;
+  -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 85%);mask-image:linear-gradient(to top,#000 10%,transparent 85%);opacity:.55}
+.hero-inner{position:relative;z-index:2;padding:0 20px}
+.mark{width:96px;height:96px;margin:0 auto 34px;position:relative;transform-style:preserve-3d;animation:float 6s ease-in-out infinite}
+.mark img{width:100%;height:100%;border-radius:24px;box-shadow:0 30px 80px -20px rgba(44,90,146,.9),0 0 0 1px rgba(157,188,230,.25)}
+.mark::after{content:"";position:absolute;inset:-40px;border-radius:50%;background:radial-gradient(circle,rgba(108,194,184,.35),transparent 65%);z-index:-1;filter:blur(10px)}
+@keyframes float{0%,100%{transform:translateY(0) rotateX(8deg) rotateY(-10deg)}50%{transform:translateY(-10px) rotateX(-6deg) rotateY(10deg)}}
+.hero h1{font-family:var(--serif);font-weight:500;font-size:clamp(44px,7.6vw,112px);line-height:.98;letter-spacing:-.035em;max-width:none;margin:18px auto 0}
+.hero h1 .ln{display:block;overflow:hidden;padding-bottom:.08em}
+.hero h1 .ln span{display:inline-block;transform:translateY(105%);animation:rise 1.2s var(--ease) forwards}
+.hero h1 .ln:nth-child(2) span{animation-delay:.14s}
+.hero h1 em{font-style:italic;background:linear-gradient(100deg,var(--brand) 10%,var(--petrol) 60%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes rise{to{transform:translateY(0)}}
+.fade-in{opacity:0;transform:translateY(16px);animation:fin 1s var(--ease) forwards}
+@keyframes fin{to{opacity:1;transform:none}}
+.hero p.lead{max-width:600px;margin:28px auto 0;font-size:clamp(16px,1.6vw,19px);color:var(--ink-2)}
+.hero .ctas{display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+.hero .fine{margin-top:18px;font-size:13px;color:var(--ink-3)}
+.scroll-cue{position:absolute;pointer-events:none;left:50%;bottom:28px;transform:translateX(-50%);z-index:2;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:10px}
+.scroll-cue i{width:1px;height:46px;background:linear-gradient(var(--ink-3),transparent);position:relative;overflow:hidden}
+.scroll-cue i::after{content:"";position:absolute;left:0;top:-40%;width:1px;height:40%;background:var(--ink-1);animation:cue 2s var(--ease) infinite}
+@keyframes cue{to{top:110%}}
+
+/* ─── Escenas fijadas al scroll ─── */
+.scene{position:relative}
+.scene .stage{position:sticky;top:0;height:100svh;overflow:hidden;display:grid;align-items:center}
+.scene .grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:56px;align-items:center;width:100%}
+.copy .step{display:inline-flex;align-items:center;gap:10px}
+.copy .step b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--line-2);font-size:12px;color:var(--ink-1);font-weight:600}
+.copy h2{font-family:var(--serif);font-weight:500;font-size:clamp(34px,4.6vw,64px);line-height:1.02;letter-spacing:-.03em;margin:18px 0 20px}
+.copy p{color:var(--ink-2);font-size:17px;max-width:460px}
+.copy ul{list-style:none;margin-top:22px;display:grid;gap:10px;font-size:14.5px;color:var(--ink-2)}
+.copy li{display:flex;gap:10px;align-items:flex-start}
+.copy li::before{content:"";flex:none;width:6px;height:6px;margin-top:9px;border-radius:50%;background:var(--petrol);box-shadow:0 0 12px var(--petrol)}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.reveal.on{opacity:1;transform:none}
+
+/* Escena 1 · papeles → expediente */
+#s-docs{height:340vh}
+.desk{position:relative;height:min(78svh,620px);perspective:1400px}
+.doc{position:absolute;left:50%;top:50%;width:168px;height:224px;margin:-112px 0 0 -84px;border-radius:6px;padding:16px 14px;
+  background:var(--paper);color:var(--paper-ink);box-shadow:0 30px 60px -20px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.05);
+  will-change:transform,opacity;transform-style:preserve-3d;z-index:2;font-size:7px;line-height:1.3}
+.doc::before{content:"";position:absolute;inset:0;border-radius:6px;background:linear-gradient(135deg,rgba(255,255,255,.6),transparent 40%,rgba(0,0,0,.06));pointer-events:none}
+.doc h6{font-family:var(--serif);font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--paper-line);padding-bottom:6px;margin-bottom:8px}
+.doc .l{height:4px;border-radius:2px;background:var(--paper-line);margin:6px 0}
+.doc .l.s{width:60%}.doc .l.m{width:82%}
+.doc .hl{display:inline-block;padding:1px 4px;border-radius:3px;background:rgba(108,194,184,.0);transition:background .4s;font-weight:600;font-size:8px;margin-top:6px}
+.doc.lit .hl{background:rgba(108,194,184,.35)}
+.doc .seal{position:absolute;right:12px;bottom:12px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(44,90,146,.5);display:grid;place-items:center;font-size:6px;color:rgba(44,90,146,.8);transform:rotate(-14deg);font-weight:700}
+.doc.dni{width:200px;height:126px;margin:-63px 0 0 -100px;background:linear-gradient(135deg,#DDE7F2,#F3EEE2);padding:12px}
+.doc.dni .ph{position:absolute;left:12px;top:30px;width:44px;height:56px;border-radius:4px;background:linear-gradient(#B9C5D3,#97A6B8)}
+.doc.dni .tx{position:absolute;left:66px;top:32px;right:12px}
+.scan{position:absolute;left:0;right:0;height:2px;top:0;background:linear-gradient(90deg,transparent,var(--petrol),transparent);box-shadow:0 0 18px var(--petrol);opacity:0;border-radius:2px}
+.doc.lit .scan{animation:scan 1.1s var(--ease)}
+@keyframes scan{0%{top:0;opacity:1}100%{top:100%;opacity:0}}
+
+.folder{position:absolute;right:0;top:50%;width:min(100%,430px);transform:translateY(-50%);border-radius:18px;padding:22px;
+  background:linear-gradient(180deg,rgba(21,30,42,.92),rgba(13,20,32,.92));border:1px solid var(--line-2);
+  box-shadow:0 40px 120px -40px rgba(44,90,146,.8),inset 0 1px 0 rgba(255,255,255,.04);backdrop-filter:blur(10px);opacity:0}
+.folder .hd{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.folder .hd img{width:30px;height:30px;border-radius:8px}
+.folder .hd b{display:block;font-family:var(--serif);font-size:19px;font-weight:500}
+.folder .hd small{color:var(--ink-3);font-size:12px}
+.field{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 0;border-bottom:1px solid var(--line);opacity:.15;transition:opacity .5s}
+.field.on{opacity:1}
+.field .k{font-size:12px;color:var(--ink-3)}
+.field .v{font-size:15px;font-weight:550;grid-column:1}
+.field .src{grid-column:2;grid-row:1/3;align-self:center;font-size:11px;padding:4px 8px;border-radius:999px;color:var(--petrol);background:rgba(108,194,184,.1);border:1px solid rgba(108,194,184,.25);white-space:nowrap}
+.field .ck{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--ink-3);margin-right:8px;vertical-align:-2px;transition:all .3s}
+.field.on .ck{background:var(--petrol);border-color:var(--petrol);box-shadow:inset 0 0 0 2px var(--night-2)}
+.field.doubt .src{color:var(--gold);background:rgba(224,196,138,.1);border-color:rgba(224,196,138,.3)}
+.field.doubt.on .ck{background:transparent;border-color:var(--gold);box-shadow:none}
+
+/* Escena 2 · las cifras */
+#s-cifras{height:300vh}
+.ledger{position:relative;border-radius:22px;padding:30px;border:1px solid var(--line-2);
+  background:radial-gradient(120% 80% at 100% 0,rgba(44,90,146,.25),transparent 60%),linear-gradient(180deg,#0E1828,#0A1220);
+  box-shadow:0 50px 140px -50px rgba(44,90,146,.7)}
+.ledger .row{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 16px;padding:16px 0;border-bottom:1px dashed var(--line-2);opacity:.12;transform:translateX(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.ledger .row.on{opacity:1;transform:none}
+.ledger .row .k{font-size:14px;color:var(--ink-2)}
+.ledger .row .n{font-family:var(--serif);font-size:clamp(28px,3.4vw,44px);font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right}
+.ledger .row .n small{font-size:.5em;color:var(--ink-3);margin-left:4px}
+.ledger .row .law{grid-column:1/-1;font-size:11.5px;color:var(--brand);display:flex;gap:6px;align-items:center}
+.ledger .row .law::before{content:"§";color:var(--petrol);font-weight:700}
+.ledger .row.total{border-bottom:0;padding-top:22px}
+.ledger .row.total .n{font-size:clamp(40px,5.2vw,72px);background:linear-gradient(100deg,var(--ink-1),var(--brand));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ledger .bar{position:absolute;left:30px;right:30px;bottom:0;height:2px;background:linear-gradient(90deg,var(--brand),var(--petrol));transform-origin:0 50%;transform:scaleX(0);border-radius:2px}
+
+/* Escena 3 · el árbol */
+#s-arbol{height:300vh}
+.tree{width:100%;height:auto;overflow:visible}
+.tree .edge{fill:none;stroke:url(#tg);stroke-width:1.6}
+.tree .node rect{fill:#0E1828;stroke:var(--line-2)}
+.tree .node .nm{font:600 14px var(--sans);fill:var(--ink-1)}
+.tree .node .rl{font:12px var(--sans);fill:var(--ink-3)}
+.tree .node .sh{font:600 12.5px var(--sans);fill:var(--petrol)}
+.tree .node{opacity:0;transition:opacity .6s var(--ease),transform .6s var(--ease);transform-box:fill-box;transform-origin:center;transform:translateY(10px) scale(.96)}
+.tree .node.on{opacity:1;transform:none}
+.tree .node.root rect{fill:url(#rootg);stroke:rgba(157,188,230,.5)}
+.tree .pulse{fill:var(--petrol);filter:drop-shadow(0 0 6px var(--petrol))}
+.tree .share{opacity:0;transition:opacity .5s}
+.tree .node.paid .share{opacity:1}
+
+/* Escena 4 · la app en un portátil */
+#s-app{height:340vh}
+#s-app .stage{display:block}
+.app-copy{position:absolute;left:0;right:0;top:11svh;text-align:center;z-index:3;padding:0 20px}
+.app-copy h2{font-family:var(--serif);font-weight:500;font-size:clamp(34px,5vw,72px);line-height:1;letter-spacing:-.03em;margin-top:14px}
+.app-copy p{color:var(--ink-2);max-width:560px;margin:16px auto 0}
+.laptop-scene{position:absolute;left:50%;top:56%;width:min(1000px,92vw);transform:translate(-50%,-50%);perspective:1800px;z-index:2}
+.laptop{position:relative;transform-style:preserve-3d;will-change:transform}
+.lid{position:relative;width:100%;aspect-ratio:16/10.4;border-radius:18px 18px 6px 6px;padding:1.6%;background:linear-gradient(180deg,#2A3343,#141B26);
+  transform-origin:50% 100%;transform-style:preserve-3d;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;will-change:transform}
+.lid::before{content:"";position:absolute;top:.7%;left:50%;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:#000;box-shadow:0 0 0 1px #2c3444}
+.screen{position:relative;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#0F1621}
+.screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left;transition:opacity .8s var(--ease)}
+.screen .glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.12),transparent 35%);pointer-events:none}
+.lid .back{position:absolute;inset:0;border-radius:18px 18px 6px 6px;background:linear-gradient(180deg,#3A4558,#1E2633);transform:rotateY(180deg) translateZ(1px);backface-visibility:hidden;display:grid;place-items:center}
+.lid .back img{width:12%;opacity:.5;border-radius:12px}
+.screen{backface-visibility:hidden}
+.base{position:relative;width:114%;margin-left:-7%;height:clamp(10px,1.8vw,18px);border-radius:0 0 22px 22px;background:linear-gradient(180deg,#BAC4D2,#7B8697 60%,#4E5869);box-shadow:0 40px 80px -10px rgba(0,0,0,.8)}
+.base::before{content:"";position:absolute;left:50%;top:0;width:16%;height:40%;transform:translateX(-50%);border-radius:0 0 10px 10px;background:rgba(0,0,0,.25)}
+.halo{position:absolute;left:50%;top:55%;width:120%;height:90%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.55),transparent);filter:blur(30px);z-index:-1}
+.callouts{position:absolute;inset:0;pointer-events:none;z-index:4}
+.callout{position:absolute;padding:10px 14px;border-radius:12px;font-size:13px;background:rgba(10,19,34,.82);border:1px solid var(--line-2);backdrop-filter:blur(10px);box-shadow:0 20px 40px -20px #000;opacity:0;transform:translateY(10px);transition:opacity .6s var(--ease),transform .6s var(--ease);max-width:240px}
+.callout b{display:block;font-size:14px;color:var(--ink-1)}
+.callout span{color:var(--ink-2)}
+.callout.on{opacity:1;transform:none}
+
+/* ─── Cifras ─── */
+.stats{padding:140px 0 120px;position:relative}
+.stats h2,.sec h2{font-family:var(--serif);font-weight:500;font-size:clamp(34px,4.6vw,60px);line-height:1.04;letter-spacing:-.03em;margin:14px 0 18px;max-width:18ch}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:56px;border-top:1px solid var(--line)}
+.stat{padding:30px 22px 10px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-family:var(--serif);font-weight:500;font-size:clamp(40px,4.4vw,64px);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,var(--ink-1),var(--ink-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{display:block;margin-top:12px;font-size:14px;color:var(--ink-2);max-width:20ch}
+.stats .note{margin-top:34px;font-size:13px;color:var(--ink-3);max-width:760px}
+
+/* ─── Marquee de documentos ─── */
+.marquee{overflow:hidden;border-block:1px solid var(--line);padding:18px 0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.marquee .track{display:flex;gap:40px;width:max-content;animation:mq 40s linear infinite;font-family:var(--serif);font-size:22px;color:var(--ink-3);white-space:nowrap}
+.marquee .track span::before{content:"✦";color:var(--petrol);margin-right:40px;font-size:12px;vertical-align:4px}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* ─── Seguridad ─── */
+.sec{padding:150px 0;position:relative;overflow:hidden}
+.vault{position:absolute;right:-12vmax;top:50%;width:60vmax;height:60vmax;transform:translateY(-50%);border-radius:50%;
+  background:repeating-radial-gradient(circle,transparent 0 38px,rgba(168,190,222,.07) 38px 39px);-webkit-mask-image:radial-gradient(circle,#000 30%,transparent 70%);mask-image:radial-gradient(circle,#000 30%,transparent 70%);animation:spin 80s linear infinite}
+@keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:56px;position:relative}
+.pillar{padding:26px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(21,30,42,.6),rgba(10,18,30,.6));backdrop-filter:blur(6px);transition:transform .4s var(--ease),border-color .4s}
+.pillar:hover{transform:translateY(-4px);border-color:var(--line-2)}
+.pillar .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(108,194,184,.12);color:var(--petrol);margin-bottom:18px}
+.pillar h3{font-size:17px;font-weight:600;margin-bottom:8px}
+.pillar p{font-size:14.5px;color:var(--ink-2)}
+
+/* ─── Precios ─── */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:56px}
+.plan{position:relative;padding:30px;border-radius:22px;border:1px solid var(--line);background:rgba(15,27,46,.55);display:flex;flex-direction:column}
+.plan.rec{border-color:rgba(157,188,230,.45);background:radial-gradient(120% 70% at 50% 0,rgba(44,90,146,.4),transparent 70%),rgba(15,27,46,.7);box-shadow:0 40px 100px -50px rgba(44,90,146,.9)}
+.plan .tag{position:absolute;top:-11px;left:30px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--ink-1);color:var(--night)}
+.plan h3{font-size:18px;font-weight:600}
+.plan .who{color:var(--ink-3);font-size:14px;margin-top:4px}
+.plan .price{font-family:var(--serif);font-size:56px;letter-spacing:-.03em;margin:22px 0 2px;line-height:1}
+.plan .price small{font-family:var(--sans);font-size:15px;color:var(--ink-3);letter-spacing:0;margin-left:6px}
+.plan .yr{font-size:13px;color:var(--ink-3)}
+.plan ul{list-style:none;margin:22px 0 26px;display:grid;gap:10px;font-size:14.5px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--petrol);margin-right:10px;font-weight:700}
+.plan .btn{margin-top:auto}
+.founder{margin-top:16px;padding:26px 30px;border-radius:22px;border:1px solid rgba(224,196,138,.35);background:linear-gradient(100deg,rgba(224,196,138,.12),rgba(224,196,138,.02));display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.founder .eyebrow{color:var(--gold)}
+.founder b{display:block;font-family:var(--serif);font-weight:500;font-size:26px;margin-top:6px}
+.founder p{color:var(--ink-2);font-size:14px;max-width:620px;margin-top:6px}
+.legal-note{margin-top:22px;font-size:13px;color:var(--ink-3);max-width:860px}
+.legal-note a{text-decoration:underline;text-underline-offset:3px}
+
+/* ─── Cierre ─── */
+.final{padding:170px 0 150px;text-align:center;position:relative;overflow:hidden}
+.final::before{content:"";position:absolute;left:50%;top:60%;width:900px;height:900px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(44,90,146,.45),transparent);filter:blur(20px)}
+.final h2{position:relative;font-family:var(--serif);font-weight:500;font-size:clamp(40px,6vw,92px);line-height:1;letter-spacing:-.035em;max-width:14ch;margin:16px auto 0}
+.final p{position:relative;color:var(--ink-2);max-width:560px;margin:22px auto 0}
+.final .ctas{position:relative;display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+footer{border-top:1px solid var(--line);padding:34px 0 48px;font-size:13px;color:var(--ink-3)}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+footer nav{display:flex;gap:20px;flex-wrap:wrap}
+footer a:hover{color:var(--ink-1)}
+
+/* ─── Móvil ─── */
+@media (max-height:820px){.scroll-cue{display:none}}
+@media (max-width:900px){
+  .scene .grid{grid-template-columns:1fr;gap:18px;align-content:start;padding-top:96px}
+  .copy h2{font-size:clamp(30px,8.4vw,44px);margin:12px 0 10px}
+  .copy p{font-size:15px}
+  .copy ul{display:none}
+  .doc{transform-origin:center;width:124px;height:166px;margin:-83px 0 0 -62px;padding:12px 10px}
+  .doc.dni{width:150px;height:94px;margin:-47px 0 0 -75px}
+  .doc.dni .ph{top:24px;width:32px;height:42px}.doc.dni .tx{left:52px;top:24px}
+  .desk{height:calc(100svh - 330px)}
+  .folder{left:50%;right:auto;top:auto;bottom:12px;width:min(92vw,400px);padding:14px 16px;transform:translateX(-50%)}
+  .folder .hd{padding-bottom:10px}
+  .field{padding:6px 0}.field .v{font-size:13.5px}.field .k{font-size:11px}
+  .ledger{padding:20px}.ledger .row{padding:11px 0}
+  .ledger .bar{left:20px;right:20px}
+  .laptop-scene{top:62%;width:96vw}
+  .callout{display:none}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .stat{border-right:0;border-bottom:1px solid var(--line);padding:24px 12px 20px 0}
+  .stat:last-child{grid-column:1/-1}
+  .pillars,.plans{grid-template-columns:1fr}
+  .stats,.sec{padding:100px 0}
+}
+@media (min-width:901px) and (max-width:1100px){.pillars{grid-template-columns:repeat(2,1fr)}}
+
+/* Movimiento reducido: todo en su estado final, sin escenas fijadas */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .hero h1 .ln span,.fade-in{transform:none;opacity:1}
+  .grain{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<div class="grain" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="logo" href="#" aria-label="Hereda+, inicio"><img src="/icons/icon-192.png" alt="">Hereda+</a>
+  <ul>
+    <li><a href="#s-docs">Cómo funciona</a></li>
+    <li><a href="#seguridad">Seguridad</a></li>
+    <li><a href="#precios">Precios</a></li>
+    <li><a href="/#preguntas">Preguntas</a></li>
+  </ul>
+  <a class="btn btn-primary" href="/app/">Probar 30 días</a>
+</header>
+
+<main id="contenido">
+<!-- ═══ Portada ═══ -->
+<section class="hero" aria-labelledby="h-hero">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="spot" aria-hidden="true"></div>
+  <div class="floor" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <div class="mark fade-in" aria-hidden="true"><img src="/icons/hereda-marca.svg" alt=""></div>
+    <div class="eyebrow fade-in" style="animation-delay:.1s">Software de sucesiones para despachos de abogados</div>
+    <h1 id="h-hero"><span class="ln"><span>La herencia,</span></span><span class="ln"><span>lista en <em>una tarde.</em></span></span></h1>
+    <p class="lead fade-in" style="animation-delay:.5s">Arrastra los documentos del cliente. Hereda+ los lee en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Tú revisas, decides y firmas.</p>
+    <div class="ctas fade-in" style="animation-delay:.7s">
+      <a class="btn btn-primary" href="/app/">Probar 30 días</a>
+      <a class="btn btn-ghost" href="/contratar.html">Hablar con nosotros</a>
+    </div>
+    <div class="fine fade-in" style="animation-delay:.85s">Con todas las funciones y sin tarjeta. En el navegador, en Windows y Mac.</div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true">Desliza<i></i></div>
+</section>
+
+<!-- ═══ 1 · Los papeles se ordenan solos ═══ -->
+<section class="scene" id="s-docs" aria-labelledby="h-docs">
+  <div class="stage">
+    <div class="wrap grid">
+      <div class="copy">
+        <div class="eyebrow step"><b>1</b> Los documentos</div>
+        <h2 id="h-docs">Arrastra los papeles. Hereda+ los lee.</h2>
+        <p>Defunción, testamento, notas simples, Catastro, bancos, DNI: en PDF, Word, escaneados o fotografiados. Cada dato dice de qué documento sale.</p>
+        <ul>
+          <li>Se leen en tu ordenador: no se suben a ningún servidor</li>
+          <li>Sin IA: reglas escritas para cada tipo de documento</li>
+          <li>Lo dudoso llega sin marcar. Tú eliges qué entra</li>
+        </ul>
+      </div>
+      <div class="desk" aria-hidden="true">
+        <div class="doc" data-i="0"><span class="scan"></span><h6>Certificado de defunción</h6><div class="l"></div><div class="l m"></div><div class="l s"></div><span class="hl">20 abr 2026</span><div class="l"></div><div class="l m"></div><div class="seal">REGISTRO CIVIL</div></div>
+        <div class="doc" data-i="1"><span class="scan"></span><h6>Testamento</h6><div class="l"></div><div class="l"></div><div class="l m"></div><span class="hl">Usufructo al cónyuge</span><div class="l"></div><div class="l s"></div><div class="l m"></div><div class="seal">NOTARÍA</div></div>
+        <div class="doc" data-i="2"><span class="scan"></span><h6>Nota simple</h6><div class="l m"></div><div class="l"></div><span class="hl">Finca registral</span><div class="l s"></div><div class="l"></div><div class="l m"></div><div class="seal">REGISTRO</div></div>
+        <div class="doc" data-i="3"><span class="scan"></span><h6>Catastro · IBI</h6><div class="l"></div><span class="hl">Valor catastral</span><div class="l m"></div><div class="l s"></div><div class="l"></div><div class="l m"></div></div>
+        <div class="doc" data-i="4"><span class="scan"></span><h6>Certificado bancario</h6><div class="l s"></div><div class="l"></div><span class="hl">Saldo a la fecha</span><div class="l m"></div><div class="l"></div><div class="l s"></div></div>
+        <div class="doc dni" data-i="5"><span class="scan"></span><h6>DNI</h6><div class="ph"></div><div class="tx"><div class="l"></div><div class="l m"></div><span class="hl">Heredero</span></div></div>
+        <div class="doc" data-i="6"><span class="scan"></span><h6>Últimas voluntades</h6><div class="l"></div><div class="l m"></div><span class="hl">Último testamento</span><div class="l"></div><div class="l s"></div><div class="seal">MINISTERIO</div></div>
+
+        <div class="folder">
+          <div class="hd"><img src="/icons/icon-192.png" alt=""><div><small>EXP-2026-001 · Andalucía · caso ficticio</small><b>Eduardo Tébar Rosado</b></div></div>
+          <div class="field" data-at="0"><span class="k">Fallecimiento</span><span class="v"><i class="ck"></i>20 abr 2026</span><span class="src">Certificado de defunción</span></div>
+          <div class="field" data-at="1"><span class="k">Título sucesorio</span><span class="v"><i class="ck"></i>Testamento: usufructo al cónyuge</span><span class="src">Testamento</span></div>
+          <div class="field" data-at="2"><span class="k">Inmueble</span><span class="v"><i class="ck"></i>Vivienda habitual</span><span class="src">Nota simple</span></div>
+          <div class="field doubt" data-at="3"><span class="k">Valor catastral</span><span class="v"><i class="ck"></i>Choca con un dato anterior</span><span class="src">Revisar</span></div>
+          <div class="field" data-at="4"><span class="k">Cuentas</span><span class="v"><i class="ck"></i>Saldo a la fecha del fallecimiento</span><span class="src">Banco</span></div>
+          <div class="field" data-at="5"><span class="k">Herederos</span><span class="v"><i class="ck"></i>5 herederos identificados</span><span class="src">DNI</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 2 · Las cifras se calculan ═══ -->
+<section class="scene" id="s-cifras" aria-labelledby="h-cifras">
+  <div class="stage">
+    <div class="wrap grid">
+      <div class="copy">
+        <div class="eyebrow step"><b>2</b> El cálculo</div>
+        <h2 id="h-cifras">Las cifras se hacen delante de ti.</h2>
+        <p>Caudal, Impuesto sobre Sucesiones de cada heredero paso a paso y plusvalía de cada inmueble. Cada cifra, con su norma. El mismo caso da siempre el mismo resultado.</p>
+        <ul>
+          <li>22 normativas del Impuesto sobre Sucesiones, forales incluidas</li>
+          <li>Plusvalía de 8.132 municipios por los dos métodos</li>
+          <li>Prudente cuando falta un dato</li>
+        </ul>
+      </div>
+      <div class="ledger" aria-label="Ejemplo de cálculo de un caso ficticio">
+        <div class="row" data-at="0"><span class="k">Caudal relicto</span><span class="n" data-to="206742">0<small>€</small></span><span class="law">Ley 29/1987 del Impuesto sobre Sucesiones, art. 9</span></div>
+        <div class="row" data-at="1"><span class="k">Deudas y gastos deducibles</span><span class="n" data-to="25833" data-sign="−">0<small>€</small></span><span class="law">Ley 29/1987, arts. 13 y 14</span></div>
+        <div class="row" data-at="2"><span class="k">Impuesto sobre Sucesiones</span><span class="n" data-to="0">0<small>€</small></span><span class="law">Andalucía · Decreto Legislativo 1/2018</span></div>
+        <div class="row" data-at="3"><span class="k">Plusvalía municipal</span><span class="n" data-to="3071">0<small>€</small></span><span class="law">TRLRHL, art. 107 · ordenanza del municipio</span></div>
+        <div class="row total" data-at="4"><span class="k">Caudal neto</span><span class="n" data-to="180909">0<small>€</small></span><span class="law">Caso ficticio del despacho de demostración</span></div>
+        <div class="bar"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3 · El árbol se dibuja y se reparte ═══ -->
+<section class="scene" id="s-arbol" aria-labelledby="h-arbol">
+  <div class="stage">
+    <div class="wrap grid">
+      <div class="copy">
+        <div class="eyebrow step"><b>3</b> La familia</div>
+        <h2 id="h-arbol">El árbol se dibuja. Y se reparte.</h2>
+        <p>Cada heredero con su derecho, lo que recibe y lo que paga. Legítimas comunes y forales, cuadro de partición con excesos y compensaciones, y cuánto costará la segunda herencia según el reparto de hoy.</p>
+      </div>
+      <svg class="tree" viewBox="0 0 640 470" role="img" aria-label="Árbol familiar de ejemplo: el causante, el cónyuge con el usufructo universal y cuatro hijos con la nuda propiedad">
+        <defs>
+          <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9DBCE6"/><stop offset="1" stop-color="#6CC2B8"/></linearGradient>
+          <linearGradient id="rootg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B3A63"/><stop offset="1" stop-color="#0F2440"/></linearGradient>
+        </defs>
+        <path class="edge" d="M320 112 V170 M320 170 H170 V214"/>
+        <path class="edge" d="M320 170 H470 V214"/>
+        <path class="edge" d="M170 282 V330 M170 330 H80 V362 M170 330 H250 V362 M470 282 V330 M470 330 H390 V362 M470 330 H560 V362"/>
+        <circle class="pulse" r="4" cx="-20" cy="-20"/>
+        <g transform="translate(220 40)"><g class="node root" data-at="0"><rect width="200" height="72" rx="14"/><text class="nm" x="100" y="32" text-anchor="middle">Causante</text><text class="rl" x="100" y="53" text-anchor="middle">Fallecido el 20 abr 2026</text></g></g>
+        <g transform="translate(70 214)"><g class="node" data-at="1"><rect width="200" height="68" rx="14"/><text class="nm" x="100" y="28" text-anchor="middle">Cónyuge</text><text class="rl share" x="100" y="50" text-anchor="middle">Usufructo universal</text></g></g>
+        <g transform="translate(370 214)"><g class="node" data-at="1"><rect width="200" height="68" rx="14"/><text class="nm" x="100" y="28" text-anchor="middle">Cuatro hijos</text><text class="rl share" x="100" y="50" text-anchor="middle">Nuda propiedad</text></g></g>
+        <g transform="translate(10 362)"><g class="node" data-at="2"><rect width="140" height="64" rx="12"/><text class="nm" x="70" y="26" text-anchor="middle">Hija</text><text class="sh share" x="70" y="47" text-anchor="middle">25 % nuda prop.</text></g></g>
+        <g transform="translate(180 362)"><g class="node" data-at="2"><rect width="140" height="64" rx="12"/><text class="nm" x="70" y="26" text-anchor="middle">Hijo</text><text class="sh share" x="70" y="47" text-anchor="middle">25 % nuda prop.</text></g></g>
+        <g transform="translate(320 362)"><g class="node" data-at="2"><rect width="140" height="64" rx="12"/><text class="nm" x="70" y="26" text-anchor="middle">Hija</text><text class="sh share" x="70" y="47" text-anchor="middle">25 % nuda prop.</text></g></g>
+        <g transform="translate(490 362)"><g class="node" data-at="2"><rect width="140" height="64" rx="12"/><text class="nm" x="70" y="26" text-anchor="middle">Hijo</text><text class="sh share" x="70" y="47" text-anchor="middle">25 % nuda prop.</text></g></g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4 · La app aparece ═══ -->
+<section class="scene" id="s-app" aria-labelledby="h-app">
+  <div class="stage">
+    <div class="app-copy">
+      <div class="eyebrow">4 · Cada mañana</div>
+      <h2 id="h-app">Todo el despacho, en una pantalla.</h2>
+      <p>Mi día reúne lo vencido, lo que vence esta semana y lo que espera a la familia, al banco o a la notaría. Cada línea, con su acción a un clic.</p>
+    </div>
+    <div class="laptop-scene">
+      <div class="halo" aria-hidden="true"></div>
+      <div class="laptop">
+        <div class="lid">
+          <div class="screen">
+            <img class="shot a" src="/img/web/exp-leido-osc-1400.webp" alt="Expediente de ejemplo en Hereda+: caudal, impuestos, herederos y qué hacer en este expediente" width="1400" height="1061">
+            <img class="shot b" src="/img/web/midia-osc-1400.webp" alt="Mi día en el despacho de demostración: lo vencido, lo de esta semana y lo que espera a terceros" width="1400" height="1061" style="opacity:0" loading="lazy">
+            <div class="glare"></div>
+          </div>
+          <div class="back" aria-hidden="true"><img src="/icons/hereda-marca.svg" alt=""></div>
+        </div>
+        <div class="base" aria-hidden="true"></div>
+      </div>
+      <div class="callouts" aria-hidden="true">
+        <div class="callout" data-at="0" style="left:-6%;top:22%"><b>Caudal, impuestos, herederos</b><span>El expediente, calculado al cargar los documentos.</span></div>
+        <div class="callout" data-at="0" style="right:-6%;top:44%"><b>Qué hacer en este expediente</b><span>Plazos próximos y bloqueos, con su acción.</span></div>
+        <div class="callout" data-at="1" style="left:-4%;top:58%"><b>Mi día</b><span>Lo vencido y lo que vence esta semana, de todo el despacho.</span></div>
+        <div class="callout" data-at="1" style="right:-5%;top:18%"><b>Esperando a terceros</b><span>La familia, el banco o la notaría, y desde cuándo.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="marquee" aria-hidden="true"><div class="track">
+  <span>Certificado de defunción</span><span>Últimas voluntades</span><span>Testamento</span><span>Acta de herederos</span><span>Nota simple</span><span>Catastro e IBI</span><span>Certificados bancarios</span><span>DNI</span><span>Escrituras</span><span>Seguros</span><span>Facturas del funeral</span>
+  <span>Certificado de defunción</span><span>Últimas voluntades</span><span>Testamento</span><span>Acta de herederos</span><span>Nota simple</span><span>Catastro e IBI</span><span>Certificados bancarios</span><span>DNI</span><span>Escrituras</span><span>Seguros</span><span>Facturas del funeral</span>
+</div></div>
+
+<!-- ═══ En cifras ═══ -->
+<section class="stats" aria-labelledby="h-stats">
+  <div class="wrap">
+    <div class="eyebrow reveal">En cifras</div>
+    <h2 id="h-stats" class="reveal">Lo que ya hace la versión 1.7.</h2>
+    <p class="muted reveal" style="max-width:640px">Cifras del propio programa, comprobables en el despacho de demostración. Las pruebas automáticas se ejecutan antes de cada versión: si una falla, la versión no se publica.</p>
+    <div class="stat-grid">
+      <div class="stat reveal"><b data-count="28">0</b><span>tipos de documento que el programa lee y entiende</span></div>
+      <div class="stat reveal"><b data-count="22">0</b><span>normativas del Impuesto sobre Sucesiones, forales incluidas</span></div>
+      <div class="stat reveal"><b data-count="8132">0</b><span>municipios con su plusvalía, 322 con la ordenanza incorporada</span></div>
+      <div class="stat reveal"><b data-count="183">0</b><span>trámites con su plazo, su organismo y su enlace oficial</span></div>
+      <div class="stat reveal"><b data-count="1677">0</b><span>pruebas automáticas: 1.235 del cálculo y 442 de la lectura</span></div>
+    </div>
+    <p class="note reveal">Territorios: las 15 comunidades de régimen común, Navarra, Álava, Bizkaia, Gipuzkoa, Ceuta, Melilla y la norma estatal para no residentes.</p>
+  </div>
+</section>
+
+<!-- ═══ Seguridad ═══ -->
+<section class="sec" id="seguridad" aria-labelledby="h-seg">
+  <div class="vault" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="eyebrow reveal">Seguridad y datos</div>
+    <h2 id="h-seg" class="reveal">Nada sale del despacho.</h2>
+    <p class="muted reveal" style="max-width:600px">Hereda+ prepara el trabajo; la decisión y la firma son del abogado. Y los datos de tus clientes se quedan contigo.</p>
+    <div class="pillars">
+      <div class="pillar reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div><h3>Los datos se quedan en tus equipos</h3><p>Expedientes y documentos se guardan y se leen en el navegador de cada equipo. No los recibimos ni podemos verlos.</p></div>
+      <div class="pillar reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>RGPD sin encargo del tratamiento</h3><p>Como no recibimos los datos de tus clientes, en el uso local no somos encargados del tratamiento.</p></div>
+      <div class="pillar reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div><h3>Sin IA, con reglas</h3><p>Reglas escritas y 1.677 pruebas automáticas: el mismo caso da siempre el mismo resultado, y cada cifra enlaza a su norma.</p></div>
+      <div class="pillar reveal"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></div><h3>El abogado decide</h3><p>Nada entra en el expediente sin que lo marques. Hereda+ no presenta declaraciones ni firma nada.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Precios ═══ -->
+<section class="sec" id="precios" aria-labelledby="h-precios" style="padding-top:60px">
+  <div class="wrap">
+    <div class="eyebrow reveal">Precios</div>
+    <h2 id="h-precios" class="reveal">Un precio al mes. Todo el programa.</h2>
+    <p class="muted reveal" style="max-width:620px">Sin límite de expedientes. Las actualizaciones normativas y el soporte, incluidos. Solo cambia cuántas personas lo usan.</p>
+    <div class="plans">
+      <div class="plan reveal"><h3>Individual</h3><div class="who">Para el abogado que trabaja solo</div><div class="price">59 €<small>al mes</small></div><div class="yr">o 590 € al año · sin IVA</div>
+        <ul><li>1 usuario</li><li>Todo el programa y sus actualizaciones</li><li>Soporte por correo en un día hábil</li></ul><a class="btn btn-ghost" href="/contratar.html">Contratar Individual</a></div>
+      <div class="plan rec reveal"><span class="tag">Recomendado</span><h3>Despacho</h3><div class="who">Socio y equipo, hasta 5 personas</div><div class="price">129 €<small>al mes</small></div><div class="yr">o 1.290 € al año · sin IVA</div>
+        <ul><li>Hasta 5 usuarios</li><li>Todo el programa y sus actualizaciones</li><li>Puesta en marcha por videollamada, 30 minutos</li></ul><a class="btn btn-primary" href="/contratar.html">Contratar Despacho</a></div>
+      <div class="plan reveal"><h3>Despacho+</h3><div class="who">Despachos de hasta 15 personas</div><div class="price">249 €<small>al mes</small></div><div class="yr">o 2.490 € al año · sin IVA</div>
+        <ul><li>Hasta 15 usuarios</li><li>Atención prioritaria</li><li>Puesta en marcha por videollamada, 60 minutos</li></ul><a class="btn btn-ghost" href="/contratar.html">Contratar Despacho+</a></div>
+    </div>
+    <div class="founder reveal">
+      <div><div class="eyebrow">Oferta de lanzamiento · Plan Fundador</div><b>10 despachos, 49 € al mes, precio fijo.</b><p>Lo mismo que el plan Despacho, con el precio fijo mientras la licencia siga activa. Para los 10 primeros despachos que lo soliciten antes del 31 de diciembre de 2026.</p></div>
+      <a class="btn btn-primary" href="/contratar.html#solicitud">Solicitar plaza</a>
+    </div>
+    <p class="legal-note reveal">Precios sin IVA. Pago por adelantado por transferencia: trimestral, semestral o anual (el año, al precio de 10 meses). Prueba de 30 días con todas las funciones; si no contratas, los expedientes quedan en solo lectura y nunca se bloquean. <a href="/condiciones.html">Condiciones</a> · <a href="/#comparativa">Comparativa completa</a> · <a href="/#preguntas">Preguntas frecuentes</a></p>
+  </div>
+</section>
+
+<!-- ═══ Cierre ═══ -->
+<section class="final" aria-labelledby="h-final">
+  <div class="eyebrow reveal" style="position:relative">Empieza hoy</div>
+  <h2 id="h-final" class="reveal">Trae una herencia ya presentada y compara las cifras.</h2>
+  <p class="reveal">Abre la prueba con el despacho de demostración y recorre un expediente tú mismo, o pídenos una videollamada de 15 minutos con tus preguntas.</p>
+  <div class="ctas reveal"><a class="btn btn-primary" href="/app/">Probar 30 días</a><a class="btn btn-ghost" href="/contratar.html">Hablar con nosotros</a></div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Hereda+</span>
+    <nav><a href="/calculadora/">Calculadora</a><a href="/condiciones.html">Condiciones</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const seg = (p, a, b) => clamp((p - a) / (b - a));
+  const fmt = (n) => Math.round(n).toLocaleString("es-ES").replace(/^(\d)(\d{3})$/, "$1.$2"); // es-ES no agrupa los de 4 cifras
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mobile = () => innerWidth <= 900;
+
+  // Luz que sigue al ratón en la portada
+  const hero = $(".hero");
+  hero.addEventListener("pointermove", (e) => {
+    const r = hero.getBoundingClientRect();
+    hero.style.setProperty("--mx", ((e.clientX - r.left) / r.width) * 100 + "%");
+    hero.style.setProperty("--my", ((e.clientY - r.top) / r.height) * 100 + "%");
+  });
+
+  // Progreso de una escena fijada: 0 al empezar a fijarse, 1 al soltarse
+  const prog = (el) => {
+    const r = el.getBoundingClientRect();
+    return clamp(-r.top / (r.height - innerHeight));
+  };
+
+  // ── Escena 1: papeles que caen y entran en el expediente
+  const docs = $$("#s-docs .doc");
+  const fields = $$("#s-docs .field");
+  const folder = $("#s-docs .folder");
+  const scatter = [
+    [-150, -150, -14, 18], [40, -170, 9, -22], [170, -60, 16, 12], [-190, 60, -8, -16],
+    [10, 40, 5, 20], [150, 140, -18, -10], [-60, 160, 12, 14],
+  ];
+  function docsUpdate(p) {
+    const m = mobile();
+    const k = m ? .62 : 1;
+    const dw = $("#s-docs .desk").clientWidth;
+    const fx = m ? 0 : dw / 2 - Math.min(dw, 430) / 2; // centro del expediente respecto al centro de la mesa
+    // Montón ordenado a la izquierda del expediente (en móvil, encima de él)
+    const px = m ? 0 : -dw / 2 + 120, py = m ? -$("#s-docs .desk").clientHeight * .28 : 0;
+    docs.forEach((d, i) => {
+      const [x, y, rz, rx] = scatter[i];
+      const fall = ease(seg(p, i * .02, .16 + i * .02));             // caen desde arriba y se esparcen
+      const pile = ease(seg(p, .2 + i * .01, .3 + i * .01));          // se recogen en un montón
+      const read = seg(p, .34 + i * .07, .38 + i * .07);              // se leen uno a uno
+      const go = ease(seg(p, .38 + i * .07, .44 + i * .07));          // y entran en el expediente
+      const y0 = -innerHeight * 1.1;
+      const sx = lerp(x * k, px + (i - 3) * 4, pile), sy = lerp(lerp(y0, y * k, fall), py + (i - 3) * -3, pile);
+      const sr = lerp(rz * (1 + (1 - fall) * 3), (i - 3) * 2.5, pile);
+      const fy = m ? $("#s-docs .desk").clientHeight / 2 - folder.offsetHeight / 2 - 12 : 0;
+      const tx = lerp(sx, fx, go), ty = lerp(sy, fy, go);
+      const s = lerp(lerp(1, m ? .8 : .9, pile), .12, go), rot = lerp(sr, 0, go);
+      d.style.transform = `translate3d(${tx}px,${ty}px,0) rotateX(${lerp(rx + (1 - fall) * 50, 0, fall)}deg) rotateZ(${rot}deg) scale(${s})`;
+      d.style.opacity = String(fall * (1 - seg(go, .6, 1)));
+      d.style.zIndex = String(read > 0 ? 20 : 2 + i);
+      d.classList.toggle("lit", read > 0 && go < 1);
+    });
+    const fo = ease(seg(p, .24, .34));
+    folder.style.opacity = String(fo);
+    folder.style.transform = (m ? "translateX(-50%)" : "translateY(-50%)") + ` scale(${lerp(.94, 1, fo)})`;
+    fields.forEach((f) => f.classList.toggle("on", p > .44 + (+f.dataset.at) * .07));
+  }
+
+  // ── Escena 2: cifras que se calculan
+  const rows = $$("#s-cifras .row");
+  const bar = $("#s-cifras .bar");
+  function cifrasUpdate(p) {
+    rows.forEach((r) => {
+      const i = +r.dataset.at, t = ease(seg(p, .08 + i * .15, .2 + i * .15));
+      r.classList.toggle("on", t > 0);
+      const n = $(".n", r), to = +n.dataset.to;
+      n.firstChild.nodeValue = (to && n.dataset.sign && t > 0 ? n.dataset.sign + " " : "") + fmt(to * t) + " ";
+    });
+    bar.style.transform = `scaleX(${ease(seg(p, .7, .9))})`;
+  }
+
+  // ── Escena 3: el árbol se dibuja
+  const edges = $$("#s-arbol .edge");
+  const nodes = $$("#s-arbol .node");
+  const pulse = $("#s-arbol .pulse");
+  edges.forEach((e) => { const L = e.getTotalLength(); e.style.strokeDasharray = L; e.dataset.len = L; });
+  const edgeWin = [[.12, .3], [.12, .3], [.36, .58]];
+  function arbolUpdate(p) {
+    edges.forEach((e, i) => {
+      const t = ease(seg(p, ...edgeWin[i]));
+      e.style.strokeDashoffset = String(e.dataset.len * (1 - t));
+    });
+    nodes.forEach((n) => {
+      const i = +n.dataset.at;
+      n.classList.toggle("on", p > [0, .28, .56][i]);
+      n.classList.toggle("paid", p > [1, .66, .76][i]);
+    });
+    // Un punto de luz recorre la rama que se está dibujando
+    const active = p < .32 ? edges[0] : edges[2];
+    const t = p < .32 ? ease(seg(p, .12, .3)) : ease(seg(p, .36, .58));
+    if (t > 0 && t < 1) {
+      const pt = active.getPointAtLength(t * active.dataset.len);
+      pulse.setAttribute("cx", pt.x); pulse.setAttribute("cy", pt.y); pulse.style.opacity = 1;
+    } else pulse.style.opacity = 0;
+  }
+
+  // ── Escena 4: el portátil se abre y la cámara entra
+  const laptop = $("#s-app .laptop"), lid = $("#s-app .lid");
+  const shotB = $("#s-app .shot.b"), callouts = $$("#s-app .callout"), appCopy = $("#s-app .app-copy");
+  function appUpdate(p) {
+    const open = ease(seg(p, .04, .34));
+    lid.style.transform = `rotateX(${lerp(-90, 0, open)}deg)`;
+    const tilt = ease(seg(p, .1, .45)), zoom = ease(seg(p, .45, .85));
+    const s = lerp(.62, .86, tilt) * lerp(1, mobile() ? 1.12 : 1.22, zoom);
+    laptop.style.transform = `translateY(${lerp(innerHeight * .2, 0, tilt) - zoom * innerHeight * .04}px) rotateX(${lerp(30, 8, tilt) * (1 - zoom)}deg) rotateY(${lerp(-16, 0, tilt)}deg) scale(${s})`;
+    shotB.style.opacity = p > .62 ? 1 : 0;
+    callouts.forEach((c) => {
+      const i = +c.dataset.at;
+      c.classList.toggle("on", i === 0 ? p > .5 && p < .64 : p > .72 && p < .97);
+    });
+    appCopy.style.opacity = String(1 - seg(p, .18, .32));
+    appCopy.style.transform = `translateY(${-40 * seg(p, .18, .32)}px)`;
+  }
+
+  const scenes = [["#s-docs", docsUpdate], ["#s-cifras", cifrasUpdate], ["#s-arbol", arbolUpdate], ["#s-app", appUpdate]].map(([s, f]) => [$(s), f]);
+  const bar0 = $(".progress");
+  let ticking = false;
+  function frame() {
+    ticking = false;
+    scenes.forEach(([el, f]) => {
+      const r = el.getBoundingClientRect();
+      if (r.bottom > -innerHeight && r.top < innerHeight * 2) f(reduce ? 1 : prog(el));
+    });
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar0.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+  }
+  const req = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
+  addEventListener("scroll", req, { passive: true });
+  addEventListener("resize", req);
+  frame();
+
+  // Apariciones y contadores al entrar en pantalla
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add("on");
+    const b = $("[data-count]", e.target);
+    if (b) {
+      const to = +b.dataset.count, t0 = performance.now(), d = reduce ? 0 : 1600;
+      const step = (t) => { const k = d ? ease(clamp((t - t0) / d)) : 1; b.textContent = fmt(to * k); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
+    io.unobserve(e.target);
+  }), { threshold: .2 });
+  $$(".reveal").forEach((el) => io.observe(el));
+})();
+</script>
+</body>
+</html>
