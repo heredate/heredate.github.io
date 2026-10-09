@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Hereda+ · demo</title>
+<style>
+@font-face{font-family:"HS";font-weight:400 700;src:url(inter-var-latin.woff2) format("woff2")}
+@font-face{font-family:"HSerif";font-weight:450 650;src:url(source-serif-4-var-latin.woff2) format("woff2")}
+:root{--ink:#EEF2F8;--ink2:#B3BCC9;--ink3:#8590A0;--petrol:#6CC2B8;--brand:#9DBCE6;--gold:#E0C48A}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#05090F}
+body{font-family:HS,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+#v{position:relative;width:1920px;height:1080px;overflow:hidden;background:#05090F}
+.bg{position:absolute;inset:0}
+.blob{position:absolute;border-radius:50%;filter:blur(90px)}
+.dust{position:absolute;width:2px;height:2px;border-radius:50%;background:#9DBCE6}
+.world{position:absolute;inset:0;perspective:2400px;perspective-origin:960px 540px}
+.shot{position:absolute;inset:0;transform-style:preserve-3d}
+.plane{position:absolute;left:0;top:0;transform-origin:0 0;overflow:hidden;border-radius:16px;background:#0F1621;
+  box-shadow:0 0 0 1px rgba(168,190,222,.16),0 60px 160px -30px rgba(0,0,0,.9),0 0 220px -40px rgba(44,90,146,.55)}
+.plane img{position:absolute;left:0;top:0;display:block}
+.plane .glare{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.07),transparent 38%)}
+.spot{position:absolute;border-radius:14px;pointer-events:none;
+  box-shadow:0 0 0 6000px rgba(4,8,16,.62),0 0 0 2px rgba(108,194,184,.9),0 0 40px 4px rgba(108,194,184,.35)}
+.scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,rgba(3,6,12,.94) 0%,rgba(3,6,12,.82) 22%,rgba(3,6,12,.35) 38%,transparent 50%),radial-gradient(90% 70% at 0% 100%,rgba(3,6,12,.6),transparent 70%)}
+.cap{position:absolute;left:110px;bottom:104px;width:880px}
+.cap .eb{font-size:17px;letter-spacing:.22em;text-transform:uppercase;color:var(--petrol);font-weight:600;display:flex;align-items:center;gap:14px}
+.cap .eb i{display:inline-block;height:1px;width:46px;background:var(--petrol)}
+.cap h2{font-family:HSerif;font-weight:500;font-size:66px;line-height:1.04;letter-spacing:-.02em;margin-top:18px;text-shadow:0 4px 30px rgba(0,0,0,.6)}
+.cap p{font-size:25px;line-height:1.45;color:var(--ink2);margin-top:18px;max-width:820px;text-shadow:0 2px 16px rgba(0,0,0,.8)}
+.hudbg{position:absolute;left:0;right:0;top:0;height:200px;pointer-events:none;background:linear-gradient(180deg,rgba(3,6,12,.85),rgba(3,6,12,.5) 45%,transparent)}
+.hud{position:absolute;top:52px;left:110px;right:110px;display:flex;justify-content:space-between;align-items:center;font-size:15px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3)}
+.hud .brand{display:flex;align-items:center;gap:12px;letter-spacing:0;text-transform:none;font-weight:600;font-size:19px;color:var(--ink)}
+.hud .brand img{width:30px;height:30px;border-radius:8px}
+.hud .bar{position:absolute;left:0;right:0;top:44px;height:1px;background:rgba(168,190,222,.12)}
+.hud .bar b{position:absolute;left:0;top:0;height:1px;background:linear-gradient(90deg,var(--brand),var(--petrol))}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 100% at 50% 50%,transparent 55%,rgba(0,0,0,.55) 100%)}
+.grain{position:absolute;inset:-40px;pointer-events:none;opacity:.07;mix-blend-mode:overlay}
+.card{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.mark{width:150px;height:150px;border-radius:36px;box-shadow:0 40px 120px -20px rgba(44,90,146,.95),0 0 0 1px rgba(157,188,230,.25)}
+.halo{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(108,194,184,.35),transparent)}
+.big{font-family:HSerif;font-weight:500;letter-spacing:-.03em;line-height:1}
+.grad{background:linear-gradient(100deg,var(--brand) 10%,var(--petrol) 60%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stats{display:flex;gap:0;margin-top:70px}
+.stat{width:300px;padding:0 30px;border-left:1px solid rgba(168,190,222,.16);text-align:left}
+.stat:first-child{border-left:0}
+.stat b{display:block;font-family:HSerif;font-weight:500;font-size:84px;letter-spacing:-.03em;line-height:1}
+.stat span{display:block;margin-top:14px;font-size:19px;color:var(--ink2);line-height:1.35}
+.sweep{position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 40%,rgba(157,188,230,.10) 50%,transparent 60%);mix-blend-mode:screen}
+</style>
+</head>
+<body>
+<div id="v">
+  <div class="bg" id="bg"></div>
+  <div class="world" id="world"></div>
+  <div class="sweep" id="sweep"></div>
+  <div class="scrim" id="scrim"></div>
+  <div id="caps"></div>
+  <div id="cards"></div>
+  <div class="hudbg" id="hudbg"></div><div class="hud" id="hud"><span class="brand"><img src="hereda-marca.svg" alt="">Hereda+</span><span id="chap"></span><div class="bar"><b id="hudbar"></b></div></div>
+  <div class="vig"></div>
+  <canvas class="grain" id="grain" width="2000" height="1160"></canvas>
+</div>
+<script>
+// ───────── utilidades
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const io=(t)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;      // ease-in-out cúbica
+const eo=(t)=>1-Math.pow(1-t,3);
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const fade=(t,a,b,d=.6)=>Math.min(seg(t,a,a+d),1-seg(t,b-d,b)); // sube en a, baja hasta b
+const fmt=(n)=>Math.round(n).toLocaleString("es-ES").replace(/^(\d)(\d{3})$/,"$1.$2");
+
+// ───────── guion: cámara en coordenadas CSS de la captura (1600 × 1000), z = píxeles de vídeo por píxel CSS
+// k: [t, cx, cy, z, rx, ry, sy(scroll), ox]
+const F=(o)=>o;
+const SHOTS=[
+ {card:"open",dur:9},
+ {img:"radar.png",w:1600,h:1000,dur:15,chap:"Mi día",
+  k:[[0,800,500,.74,16,-22],[3.2,800,500,.94,5,-6],[6,640,195,1.85,0,0],[10,900,300,1.5,0,0],[13.6,1270,690,1.62,0,0],[15,1270,700,1.66,0,0]],
+  hl:[[6.3,9.6,300,112,770,150],[10.2,13.2,312,248,1236,96],[13.9,15.2,1000,490,545,500]],
+  cap:[[.8,14.4,"Cada mañana","Mi día.","Lo vencido, lo que vence esta semana y lo que espera a la familia, al banco o a la notaría. Cada línea, con su acción."]]},
+ {img:"lector-docs-osc-1200.webp",w:600,h:884,dur:7.5,chap:"Los documentos",
+  k:[[0,300,442,.98,8,-20,0,380],[7.5,300,442,1.04,3,-9,0,380]],
+  cap:[[.8,7.2,"Los documentos","Arrastra los papeles.<br>Se leen en tu ordenador.","Defunción, testamento, notas simples, Catastro, bancos y DNI. En PDF, escaneados o fotografiados con el móvil."]]},
+ {img:"lector-propuestas-osc-1200.webp",w:600,h:884,dur:8.5,chap:"Los documentos",
+  k:[[0,300,442,1.04,3,-9,0,380],[3.2,300,175,1.9,0,-4,0,380],[8.5,300,300,1.7,0,-2,0,380]],
+  hl:[[3.4,8.2,16,106,568,116]],
+  cap:[[.6,8.2,"Sin teclear","Cada dato dice<br>de dónde sale.","Lo dudoso llega sin marcar. Nada entra en el expediente sin que lo marques. Sin IA: reglas escritas para cada documento."]]},
+ {img:"dm02-resumen.png",w:1600,h:1000,dur:12,chap:"El expediente",
+  k:[[0,800,500,.9,10,14],[3,900,170,1.5,0,0],[7,940,400,1.5,0,0],[12,930,620,1.42,0,0]],
+  hl:[[3.3,6.7,300,82,1285,190],[7.3,11.6,312,356,1268,96]],
+  cap:[[.8,11.4,"El expediente","Calculado al cargar<br>los documentos.","Caudal, impuestos, herederos, deudas y trámites. Y qué hacer hoy en este expediente."]]},
+ {img:"dm02-diagnostico.png",w:1600,h:1000,dur:11,chap:"Diagnóstico",
+  k:[[0,800,500,.96,4,-8],[2.6,780,445,1.7,0,0],[7,900,800,1.55,0,0],[11,900,820,1.58,0,0]],
+  hl:[[2.9,6.6,300,368,1250,170],[7.2,11,310,690,1250,200]],
+  cap:[[.8,10.4,"Diagnóstico","Cada expediente<br>se revisa solo.","Riesgos con su artículo y el dinero en juego. Reglas escritas, no inteligencia artificial."]]},
+ {img:"dm02-herencia.png",w:1600,h:1000,dur:12,chap:"La familia",
+  k:[[0,800,500,.92,12,12],[3,950,560,1.65,0,0],[8,945,680,1.95,0,0],[12,950,610,1.7,0,0]],
+  hl:[[3.3,7.5,636,452,586,130],[8.2,11.6,500,622,890,128]],
+  cap:[[.8,11.4,"La familia","Quién hereda<br>y cuánto paga.","Cada heredero con su derecho, lo que recibe y lo que paga, en un árbol que se entiende de un vistazo."]]},
+ {img:"impuestos.png",w:1600,h:1000,full:2700,dur:17,chap:"Impuestos",
+  k:[[0,800,500,.95,6,-10,0],[3,880,390,1.55,0,0,0],[6.2,900,300,1.45,0,0,560],[10.2,900,330,1.4,0,0,900],[14,900,300,1.4,0,0,1560],[17,900,330,1.42,0,0,1570]],
+  hl:[[3.3,5.8,312,352,1260,90],[6.6,9.6,312,196,1262,178],[10.6,13.6,312,92,1262,470],[14.4,17,312,138,1262,360]],
+  cap:[[.8,9.9,"Impuestos","Sucesiones,<br>paso a paso.","Cada heredero con su reducción, su base y su cuota. Cada paso, con el artículo de su ley."],
+       [10.4,16.6,"Impuestos","Y la plusvalía<br>de cada inmueble.","22 normativas de Sucesiones y 8.132 municipios. Por los dos métodos, con la ordenanza que se aplica."]]},
+ {img:"dm02-particion.png",w:1600,h:1000,dur:10,chap:"Partición",
+  k:[[0,800,500,.94,8,12],[3,920,690,1.45,0,0],[10,925,720,1.55,0,0]],
+  hl:[[3.3,9.7,312,540,1262,440]],
+  cap:[[.8,9.6,"Partición","Qué entra en la herencia<br>y a quién va.","Inventario, masa hereditaria, cuotas y cuadro de partición, con excesos y compensaciones."]]},
+ {img:"dm01-terceros.png",w:1600,h:1000,dur:11,chap:"Bancos y terceros",
+  k:[[0,800,500,.94,10,-12],[3,800,410,1.75,0,0],[7,940,540,1.6,0,0],[11,940,740,1.5,0,0]],
+  hl:[[3.3,6.6,676,368,250,90],[7.2,10.8,310,472,1266,140]],
+  cap:[[.8,10.6,"Bancos y terceros","Quién debe qué,<br>y desde cuándo.","Bancos, familia, registros y notaría. Un clic y está el recordatorio o la reclamación."]]},
+ {img:"reunion-0.png",w:1600,h:1000,dur:4.5,chap:"Para la familia",flat:1,
+  k:[[0,800,470,1.22],[4.5,800,470,1.32]],
+  cap:[[.8,4.2,"Para la familia","La reunión,<br>en pantalla completa.",""]]},
+ {img:"reunion-1.png",w:1600,h:1000,dur:5.5,chap:"Para la familia",flat:1,
+  k:[[0,800,560,1.3],[5.5,800,575,1.4]],
+  cap:[[.5,5.2,"Para la familia","Quién recibe qué.","En palabras que la familia entiende: usufructo, nuda propiedad y lo que le toca a cada uno."]]},
+ {img:"reunion-3.png",w:1600,h:1000,dur:5.5,chap:"Para la familia",flat:1,
+  k:[[0,800,610,1.3],[5.5,815,625,1.4]],
+  cap:[[.5,5.2,"Para la familia","Cuánto paga cada uno.","Sucesiones y plusvalía de cada heredero, y lo que le queda."]]},
+ {img:"reunion-4.png",w:1600,h:1000,dur:5.5,chap:"Para la familia",flat:1,
+  k:[[0,640,640,1.28],[5.5,660,655,1.36]],
+  cap:[[.5,5.2,"Para la familia","Y qué parte de cada bien.","El reparto, bien por bien. Después se lleva una carpeta para el móvil."]]},
+ {img:"dm03-firma.png",w:1600,h:1000,dur:11,chap:"Firma",
+  k:[[0,800,500,.94,8,12],[3,880,440,1.6,0,0],[7,720,780,1.6,0,0],[11,720,790,1.62,0,0]],
+  hl:[[3.3,6.6,300,368,1250,150],[7.2,10.8,300,640,850,320]],
+  cap:[[.8,10.6,"Firma","Listo para<br>la notaría.","Comprueba NIF, referencias catastrales, títulos, cuadre de la partición y legítimas. Y prepara el paquete para el notario."]]},
+ {img:"pk-0.png",w:1600,h:1000,dur:3,chap:"Búsqueda",flat:1,
+  k:[[0,800,440,1.35],[3,800,430,1.5]]},
+ {img:"pk-1.png",w:1600,h:1000,dur:6,chap:"Búsqueda",flat:1,
+  k:[[0,800,430,1.5],[6,800,420,1.7]],
+  hl:[[1,5.8,486,236,632,120]],
+  cap:[[-2.2,5.6,"Búsqueda","Ctrl K.<br>Todo, en un segundo.","Expedientes, personas por NIF, inmuebles por referencia catastral, cuentas por IBAN y normas."]]},
+ {img:"socio.png",w:1600,h:1000,dur:8,chap:"El despacho",
+  k:[[0,800,500,.94,10,-10],[2.6,620,270,1.85,0,0],[5,920,600,1.45,0,0],[8,920,620,1.48,0,0]],
+  hl:[[2.8,4.7,300,212,580,120],[5.2,8,300,500,1262,280]],
+  cap:[[.8,13.8,"El despacho","El despacho entero,<br>de un vistazo.","Expedientes al día, carga de cada persona, lo facturado y lo cobrado, y euros por hora de cada herencia."]]},
+ {img:"rent.png",w:1600,h:1000,dur:7,chap:"El despacho",
+  k:[[0,880,300,1.45],[7,900,400,1.62]],
+  hl:[[1,6.8,300,392,1250,100]],
+  capFrom:-1},
+ {img:"biblio.png",w:1600,h:1000,dur:8.5,chap:"Normativa",
+  k:[[0,900,420,1.05,6,-8],[8.5,950,470,1.42,0,0]],
+  hl:[[2.2,8,350,368,1214,104]],
+  cap:[[.8,8.2,"Normativa","Cuando cambia la ley,<br>lo sabes.","Cada cambio, con los expedientes afectados. Cada cifra, con la norma que la sostiene."]]},
+ {card:"close",dur:19},
+];
+// tiempos absolutos con solapes de 1 s (fundido)
+const XF=1;
+let T0=0;SHOTS.forEach((s,i)=>{s.t0=T0;T0+=s.dur-(i<SHOTS.length-1?XF:0);});
+const TOTAL=T0;
+// El pie de foto de «rent» continúa el de «socio»: no se repite
+SHOTS.forEach((s,i)=>{if(s.capFrom){const p=SHOTS[i-1];p.cap[0][1]=p.dur+s.dur-XF-.6;}});
+window.TOTAL=TOTAL;
+
+// ───────── fondo: auroras y polvo, deterministas
+const bg=document.getElementById("bg");
+const blobs=[[900,700,"rgba(44,90,146,.55)",.11,.07],[700,520,"rgba(108,194,184,.22)",.07,.13],[600,460,"rgba(157,188,230,.18)",.05,.09]].map(([w,h,c,a,b],i)=>{const d=document.createElement("div");d.className="blob";Object.assign(d.style,{width:w+"px",height:h+"px",background:`radial-gradient(closest-side,${c},transparent)`});bg.appendChild(d);return{d,w,h,a,b,i};});
+let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+const dust=Array.from({length:70},()=>{const d=document.createElement("div");d.className="dust";bg.appendChild(d);return{d,x:rnd()*1920,y:rnd()*1080,s:.4+rnd()*1.6,v:4+rnd()*14,o:.15+rnd()*.5,p:rnd()*6};});
+function bgAt(T){
+  blobs.forEach(({d,w,h,a,b,i})=>{const x=[260,1180,620][i]+Math.sin(T*a+i)*260,y=[120,420,640][i]+Math.cos(T*b+i*2)*160;d.style.transform=`translate(${x-w/2}px,${y-h/2}px)`;});
+  dust.forEach((p)=>{const y=(p.y-T*p.v+1080*10)%1080,x=p.x+Math.sin(T*.3+p.p)*20;p.d.style.transform=`translate(${x}px,${y}px) scale(${p.s})`;p.d.style.opacity=p.o*(.6+.4*Math.sin(T*.8+p.p));});
+}
+// grano: cuatro texturas de ruido que se alternan
+const gc=document.getElementById("grain"),gx=gc.getContext("2d");
+const noises=Array.from({length:6},()=>{const c=document.createElement("canvas");c.width=256;c.height=256;const x=c.getContext("2d"),im=x.createImageData(256,256);for(let i=0;i<im.data.length;i+=4){const v=rnd()*255;im.data[i]=im.data[i+1]=im.data[i+2]=v;im.data[i+3]=255;}x.putImageData(im,0,0);return c;});
+function grainAt(f){gx.fillStyle=gx.createPattern(noises[f%6],"repeat");gx.fillRect(0,0,2000,1160);}
+
+// ───────── construcción de capas
+const world=document.getElementById("world"),capsEl=document.getElementById("caps"),cardsEl=document.getElementById("cards");
+SHOTS.forEach((s)=>{
+  if(s.card){const c=document.createElement("div");c.className="card";c.innerHTML=s.card==="open"?`
+    <div style="position:relative">
+      <div class="halo" id="o-halo" style="width:900px;height:900px"></div>
+      <img class="mark" id="o-mark" src="hereda-marca.svg" alt="" style="margin:0 auto;display:block">
+      <div id="o-l1" style="margin-top:56px;font-size:19px;letter-spacing:.3em;text-transform:uppercase;color:var(--petrol);font-weight:600">Software de sucesiones para despachos de abogados</div>
+      <div class="big" id="o-l2" style="font-size:132px;margin-top:30px">La herencia,</div>
+      <div class="big" id="o-l3" style="font-size:132px;margin-top:6px">lista en <em class="grad">una tarde.</em></div>
+    </div>`:`
+    <div style="position:relative;width:1700px">
+      <div id="c-a" style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%)">
+        <div style="font-size:19px;letter-spacing:.3em;text-transform:uppercase;color:var(--petrol);font-weight:600">Seguridad y datos</div>
+        <div class="big" style="font-size:118px;margin-top:28px">Nada sale del despacho.</div>
+        <div style="font-size:28px;color:var(--ink2);margin-top:30px;line-height:1.5">Los expedientes y los documentos se guardan y se leen en tus equipos.<br>No los recibimos. Sin IA y sin analítica. El abogado decide y firma.</div>
+      </div>
+      <div id="c-b" style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%)">
+        <div style="font-size:19px;letter-spacing:.3em;text-transform:uppercase;color:var(--petrol);font-weight:600">Versión 1.7, en cifras</div>
+        <div class="stats" style="justify-content:center">
+          ${[[28,"tipos de documento que lee y entiende"],[22,"normativas del Impuesto sobre Sucesiones"],[8132,"municipios con su plusvalía"],[183,"trámites con su plazo y su organismo"],[1677,"pruebas automáticas antes de cada versión"]].map(([n,l])=>`<div class="stat"><b data-n="${n}">0</b><span>${l}</span></div>`).join("")}
+        </div>
+      </div>
+      <div id="c-c" style="position:absolute;left:0;right:0;top:50%;transform:translateY(-50%)">
+        <div class="halo" id="c-halo" style="width:1000px;height:1000px"></div>
+        <img class="mark" src="hereda-marca.svg" alt="" style="margin:0 auto;display:block;position:relative">
+        <div class="big" style="position:relative;font-size:120px;margin-top:44px">Hereda+</div>
+        <div class="big grad" style="position:relative;font-size:56px;margin-top:20px;font-style:italic">La herencia, lista en una tarde.</div>
+        <div style="position:relative;margin-top:54px;display:inline-flex;gap:18px;align-items:center;font-size:24px;color:var(--ink2)"><span style="padding:16px 30px;border-radius:14px;background:var(--ink);color:#05090F;font-weight:650">Prueba 30 días, con todas las funciones</span><span>heredate.github.io</span></div>
+      </div>
+    </div>`;cardsEl.appendChild(c);s.el=c;return;}
+  const sh=document.createElement("div");sh.className="shot";
+  const winH=s.h,pl=document.createElement("div");pl.className="plane";pl.style.width=s.w+"px";pl.style.height=winH+"px";
+  if(s.flat)pl.style.borderRadius="0";
+  const im=document.createElement("img");im.src="img/"+s.img;im.style.width=s.w+"px";pl.appendChild(im);
+  const g=document.createElement("div");g.className="glare";pl.appendChild(g);
+  s.spots=(s.hl||[]).map(()=>{const d=document.createElement("div");d.className="spot";pl.appendChild(d);return d;});
+  sh.appendChild(pl);world.appendChild(sh);s.el=sh;s.pl=pl;s.im=im;s.gl=g;
+  s.capEls=(s.cap||[]).map(([a,b,eb,h,p])=>{const c=document.createElement("div");c.className="cap";c.innerHTML=`<div class="eb"><i></i>${eb}</div><h2>${h}</h2>${p?`<p>${p}</p>`:""}`;capsEl.appendChild(c);return c;});
+});
+
+// cámara interpolada entre fotogramas clave
+function cam(s,t){
+  const K=s.k;let i=0;while(i<K.length-2&&t>K[i+1][0])i++;
+  const a=K[i],b=K[i+1]||a,u=b===a?0:io(seg(t,a[0],b[0]));
+  const g=(j,d)=>lerp(a[j]??d,b[j]??d,u);
+  return{cx:g(1),cy:g(2),z:g(3),rx:g(4,0),ry:g(5,0),sy:g(6,0),ox:g(7,0)};
+}
+function shotAt(s,t,alpha){
+  s.el.style.opacity=alpha;s.el.style.display=alpha>0?"":"none";
+  if(s.card){cardAt(s,t);return;}
+  const c=cam(s,t);
+  const oy=s.flat?0:-90*clamp((c.z-1.05)/.4);
+  s.pl.style.transform=`translate(${960+c.ox}px,${540+oy}px) rotateX(${c.rx}deg) rotateY(${c.ry}deg) scale(${c.z}) translate(${-c.cx}px,${-c.cy}px)`;
+  s.im.style.transform=`translateY(${-c.sy}px)`;
+  s.gl.style.background=`linear-gradient(${110+t*2}deg,rgba(255,255,255,${.06*(1-clamp((c.z-1)/.6))}),transparent 40%)`;
+  (s.hl||[]).forEach(([a,b,x,y,w,h],i)=>{const d=s.spots[i],o=fade(t,a,b,.55);d.style.opacity=o;d.style.display=o>0?"block":"none";
+    const pad=lerp(18,6,eo(seg(t,a,a+.8)));Object.assign(d.style,{left:x-pad+"px",top:y-pad+"px",width:w+2*pad+"px",height:h+2*pad+"px"});});
+  (s.cap||[]).forEach(([a,b],i)=>{const el=s.capEls[i],o=fade(t,a,b,.9)*alpha;el.style.opacity=o;el.style.display=o>0?"block":"none";
+    const k=eo(seg(t,a,a+1.1));const h=el.querySelector("h2"),p=el.querySelector("p"),e=el.querySelector(".eb");
+    e.style.transform=`translateY(${(1-k)*14}px)`;h.style.transform=`translateY(${(1-eo(seg(t,a+.15,a+1.3)))*22}px)`;h.style.filter=`blur(${(1-eo(seg(t,a+.15,a+1.2)))*8}px)`;
+    if(p){const kp=eo(seg(t,a+.45,a+1.6));p.style.opacity=kp;p.style.transform=`translateY(${(1-kp)*16}px)`;}});
+}
+function cardAt(s,t){
+  const $=(id)=>document.getElementById(id);
+  if(s.card==="open"){
+    const m=eo(seg(t,.4,2.4));$("o-mark").style.transform=`translateY(${(1-m)*30}px) scale(${lerp(.8,1,m)}) rotateY(${(1-m)*40}deg)`;$("o-mark").style.opacity=m;
+    $("o-halo").style.opacity=m*(.8+.2*Math.sin(t*2));$("o-halo").style.transform=`translate(-50%,-62%) scale(${lerp(.6,1.1,seg(t,0,9))})`;
+    const l1=eo(seg(t,2,3.2));$("o-l1").style.opacity=l1;$("o-l1").style.letterSpacing=lerp(.5,.3,l1)+"em";
+    [["o-l2",3],["o-l3",3.6]].forEach(([id,a])=>{const k=eo(seg(t,a,a+1.4));const e=$(id);e.style.opacity=k;e.style.transform=`translateY(${(1-k)*40}px)`;e.style.filter=`blur(${(1-k)*12}px)`;});
+    s.el.style.transform=`scale(${lerp(1,1.06,seg(t,0,9))})`;
+  } else {
+    const A=fade(t,.2,6.4,.9),B=fade(t,6.4,12.4,.9),C=eo(seg(t,12.2,13.6));
+    [["c-a",A,0],["c-b",B,6.4],["c-c",C,12.2]].forEach(([id,o,a])=>{const e=$(id);e.style.opacity=o;e.style.display=o>0?"block":"none";e.style.filter=`blur(${(1-clamp(o))*10}px)`;e.style.transform=`translateY(-50%) scale(${lerp(1.03,1,eo(seg(t,a,a+1.5)))})`;});
+    document.querySelectorAll("#c-b [data-n]").forEach((b,i)=>{const k=eo(seg(t,6.8+i*.25,8.8+i*.25));b.textContent=fmt(+b.dataset.n*k);});
+    $("c-halo").style.transform=`translate(-50%,-64%) scale(${.9+.1*Math.sin(t)})`;
+  }
+}
+window.renderAt=function(T,f){
+  bgAt(T);grainAt(f||0);
+  let active=null;
+  SHOTS.forEach((s,i)=>{const t=T-s.t0;let a=0;
+    if(t>=0&&t<=s.dur){a=1;if(i>0&&t<XF)a=io(t/XF);}
+    // la que sale se mantiene opaca debajo mientras entra la siguiente
+    shotAt(s,clamp(t,0,s.dur),a);if(a>0)active=active||s;if(a===1)active=s;});
+  const cur=SHOTS.find((s)=>T>=s.t0&&T<s.t0+s.dur&&!(T-s.t0<XF&&SHOTS.indexOf(s)>0&&false))||SHOTS[SHOTS.length-1];
+  // HUD: capítulo y progreso; oculto en las tarjetas
+  const card=cur.card;const hudO=card?0:1;
+  const open=SHOTS[0],close=SHOTS[SHOTS.length-1];
+  const hv=clamp(Math.min(seg(T,open.dur-1,open.dur),1-seg(T,close.t0,close.t0+1)));
+  document.getElementById("hud").style.opacity=hv;document.getElementById("hudbg").style.opacity=hv;
+  const capO=Math.max(0,...[...document.querySelectorAll(".cap")].map((e)=>+e.style.opacity||0));document.getElementById("scrim").style.opacity=Math.max(capO,.25)*hv;
+  const chaps=[...new Set(SHOTS.filter((s)=>s.chap).map((s)=>s.chap))];
+  const lastWithChap=[...SHOTS].reverse().find((s)=>s.chap&&T>=s.t0);
+  if(lastWithChap){const n=chaps.indexOf(lastWithChap.chap)+1;document.getElementById("chap").textContent=`${String(n).padStart(2,"0")} / ${String(chaps.length).padStart(2,"0")} · ${lastWithChap.chap}`;}
+  document.getElementById("hudbar").style.width=(clamp((T-open.dur)/(close.t0-open.dur))*100)+"%";
+  // destello en cada fundido
+  const near=SHOTS.reduce((m,s,i)=>i?Math.min(m,Math.abs(T-(s.t0+XF/2))):m,99);
+  const sw=document.getElementById("sweep");sw.style.opacity=clamp(1-near/(XF*.8))*.9;sw.style.transform=`translateX(${(T%1)*60-30}%)`;
+};
+window.ready=Promise.all([...document.images].map((i)=>i.decode().catch(()=>{}))).then(()=>document.fonts.ready);
+</script>
+</body>
+</html>
