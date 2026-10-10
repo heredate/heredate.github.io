@@ -107,6 +107,7 @@ function rgSheetHTML(x, R) {
       ${(RG && (RG.ley === "VASCO" || RG.id === "comunicacion")) || g.aforado ? tog("regimen.aforado", g.aforado, "Vecindad vizcaína aforada (tierra llana, Aramaio o Llodio)", "Régimen supletorio: comunicación foral (art. 127 Ley 5/2015)") : ""}
       ${RG && RG.universal ? tog("regimen.hijosComunes", L ? L.hijosComunes : true, "Hay hijos o descendientes comunes", "Con ellos la comunicación se consolida al morir: todo por mitad") : ""}
     </div>
+    ${L && !L.defecto && RG && RG.estado === "PENDIENTE" ? `<div class="group" style="margin-top:12px">${tog("regimen.confirmado", g.confirmado, "Liquidación foral revisada por el abogado", "Las reglas de este régimen están en verificación: Listo para firmar lo bloquea hasta confirmarlo")}</div>` : ""}
     ${RG ? `<p class="group-foot">Ley aplicable: ${esc(RG.criterio)} (${esc(RG.normaCriterio)})${RG.normaLey ? ` · régimen supletorio: ${esc(RG.normaLey)}` : ""}.</p>` : ""}
     ${!L || L.comunidad ? `${fsecH("Reintegros y reembolsos", "Dinero de uno de los cónyuges gastado en lo común, o dinero común gastado en lo de uno de ellos (arts. 1358, 1362 y 1364 CC).")}${reint}<div style="margin:8px 0 14px"><button class="btn sm gray" data-lpadd="regimen.reintegros">${I.plus}Añadir reintegro o reembolso</button></div>` : ""}
     ${RG && RG.participacion ? `${fsecH("Participación en las ganancias", "Patrimonios inicial y final de cada cónyuge (arts. 1418-1424 CC). Sin el final del causante se usa el de la herencia.")}<div class="group">

@@ -123,6 +123,10 @@ for (const W of [1440, 390]) {
   check(`${W} · Bizkaia aforado: comunicación foral en la tarjeta`, /Comunicación foral de bienes/.test(t));
   const mb = await ev(() => calcular(DB.expedientes.find((q) => q.id === window.__ID)).isd.masa.bruto);
   check(`${W} · comunicación con hijos comunes: herencia 200.000 (todo por mitad)`, Math.abs(mb - 200000) < 0.01, mb);
+  // Listo para firmar: la liquidación foral en verificación bloquea hasta que el abogado la confirma; la escritura la titula por su nombre
+  const F = await ev(() => { const x = DB.expedientes.find((q) => q.id === window.__ID); const a = validarFirma(x).items.find((i) => i.id === "vf-regimen"); x.regimen.confirmado = true; const b = validarFirma(x).items.find((i) => i.id === "vf-regimen"); const esc = docTexto(x, calcular(x), "escritura"); return { a: a && a.sev, b: b && b.sev, esc: /Comunicación foral de bienes/.test(esc) && !/undefined|NaN/.test(esc) }; });
+  check(`${W} · Listo para firmar: liquidación foral en verificación bloquea y, confirmada, no`, F.a === "bloqueo" && F.b === "ok", JSON.stringify(F));
+  check(`${W} · escritura: la liquidación con el nombre del régimen, sin «undefined» ni «NaN»`, F.esc);
   // Sin desbordes horizontales a 390 px
   const desb = await ev(() => document.documentElement.scrollWidth - window.innerWidth);
   check(`${W} · sin desbordamiento horizontal`, desb <= 1, desb);

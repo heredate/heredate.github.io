@@ -89,7 +89,7 @@ function esrAvisos(x, c) {
 // ── Inventario a partir del cuadro de partición (mismos valores que el motor) ─────
 function esrInventario(x, R) {
   const PT = particion(x, R);
-  const car = (b) => (b.titularidad === "ganancial" ? "ganancial" : b.titularidad === "proindiviso" ? `privativo del causante en un ${esrPct(pctCausante(b.porcentaje) / 100)}` : "privativo");
+  const car = (b) => (b.titularidad === "ganancial" ? "ganancial" : b.titularidad === "mixto" ? `mixto: privativo del causante en un ${esrPct(num(b.pctPrivCausante) / 100)}${num(b.pctPrivConyuge) ? `, del cónyuge en un ${esrPct(num(b.pctPrivConyuge) / 100)}` : ""} y común el resto (art. 1354 CC)` : b.titularidad === "proindiviso" ? `privativo del causante en un ${esrPct(pctCausante(b.porcentaje) / 100)}` : "privativo");
   const lineas = PT.B.map((q, i) => {
     const b = q.b, L = [], ent = typeof tcEntidadDe === "function" ? tcEntidadDe(b.descripcion) : null;
     const cab = `${i + 1}. ${esrInm(b) ? (b.tipo === "vivienda" ? "URBANA (vivienda habitual del causante)" : "URBANA") : esrUp(TIPO_BIEN[b.tipo][0])}. ${esrNomB(b)}.`;
@@ -104,6 +104,17 @@ function esrInventario(x, R) {
     else if (b.tipo === "valores") L.push(`Valores o participaciones depositados en ${ent ? ent.nombre : "⟦entidad o gestora⟧"}, ⟦número de contrato o cuenta de valores⟧, valorados a la fecha del fallecimiento según certificado de posición.`);
     else if (b.tipo === "vehiculo") L.push("Marca, modelo y matrícula: ⟦…⟧. Valor según las tablas de precios medios de Hacienda o tasación.");
     else if (b.tipo === "empresa") L.push("Denominación, NIF y participaciones: ⟦…⟧.");
+    // G03: clases de bien del inventario completo, con su valoración
+    else if (b.tipo === "cripto") L.push(`${num(b.unidades) ? `${grp(num(b.unidades), 8).replace(/,?0+$/, "")} unidades` : "⟦unidades⟧"} de ⟦criptoactivo⟧ custodiadas en ⟦proveedor o monedero⟧, valoradas al precio de cierre del día del fallecimiento${b.fuentePrecio ? ` según ${b.fuentePrecio}` : " según ⟦fuente del precio⟧"}.`);
+    else if (b.tipo === "arte") L.push("Descripción, autor y estado: ⟦…⟧. Valor según tasación pericial de ⟦perito y fecha⟧.");
+    else if (b.tipo === "credito") L.push("Crédito contra ⟦deudor⟧ nacido de ⟦título⟧, por el principal pendiente y los intereses devengados a la fecha del fallecimiento.");
+    else if (b.tipo === "derechoReal") L.push(`${b.subtipo === "nudaPropiedad" ? `Nuda propiedad de ⟦finca o bien⟧, gravada con el usufructo ${num(b.aniosUsufructo) ? `temporal de ${num(b.aniosUsufructo)} años` : "vitalicio"} de ⟦usufructuario⟧, valorada conforme al art. 26 de la Ley 29/1987` : "Derecho de ⟦naturaleza⟧ sobre ⟦finca o bien⟧, constituido por ⟦título⟧"}. Inscripción: ⟦…⟧.`);
+    else if (b.tipo === "renta") L.push("Renta ⟦temporal o vitalicia⟧ constituida por ⟦título⟧ a favor del causante; se transmite ⟦lo que corresponda⟧.");
+    else if (b.tipo === "explotacion") L.push("Explotación agraria inscrita en ⟦registro⟧, con sus fincas, maquinaria, ganado y derechos: ⟦…⟧.");
+    else if (b.tipo === "embarcacion") L.push("Matrícula o marca de nacionalidad y matrícula, modelo y amarre o base: ⟦…⟧.");
+    else if (b.tipo === "intelectual") L.push("Obra o derecho, registro y plazo de protección restante: ⟦…⟧.");
+    else if (b.tipo === "seguroAhorro") L.push("Póliza ⟦número⟧ de ⟦aseguradora⟧, por su valor de rescate a la fecha del fallecimiento según certificado.");
+    if (b.enExtranjero) L.push(`Situado en ${b.extPais || "⟦país⟧"}${num(b.extImpuesto) ? `, donde se ha satisfecho un impuesto sucesorio de ${eur(num(b.extImpuesto))}` : ""}.`);
     L.push(`Carácter: ${car(b)}.`);
     const ref = num(b.valorReferencia);
     L.push(`Valor: ${eur(q.total)}${esrInm(b) && ref ? ` (valor de referencia catastral ${eur(ref)}${num(b.valor) < ref ? ", que se declara por ser superior al valor indicado" : ""})` : ""}.`);
@@ -165,14 +176,15 @@ function esrEscritura(x, R) {
   out.push("", "PASIVO", "", I.pasivo.length ? I.pasivo.join("\n") : "- No consta pasivo. ⟦confirmar que no existen deudas del causante⟧.");
   if (m.ajuar) out.push("", `Ajuar doméstico: ${eur(m.ajuar)}. Se computa solo a efectos del Impuesto sobre Sucesiones (art. 15 Ley 29/1987) y no es objeto de adjudicación.`);
   out.push("", `${E()}. Valoración. Los comparecientes asignan a los bienes los valores indicados, que son su valor real a la fecha del fallecimiento. Los inmuebles se declaran, como mínimo, por su valor de referencia catastral (art. 9.3 Ley 29/1987).`);
-  if (m.gananciales) out.push("", `${E()}. Sociedad de gananciales. ${K && K.gan ? K.gan.replace(/^Se adjudica[\s\S]*$/m, "").trim() : `El remanente ganancial se divide por mitad (art. 1404 CC): ${eur(m.mitadViudo)} para el cónyuge supérstite y ${eur(m.mitadViudo)} para la herencia.`}`);
+  const rgNom = m.liquidacion && !m.liquidacion.defecto && m.liquidacion.regimen ? m.liquidacion.regimen.nombre : "Sociedad de gananciales"; // G04
+  if (m.gananciales) out.push("", `${E()}. ${rgNom}. ${K && K.gan ? K.gan.replace(/^Se adjudica[\s\S]*$/m, "").trim() : `El remanente ganancial se divide por mitad (art. 1404 CC): ${eur(m.mitadViudo)} para el cónyuge supérstite y ${eur(m.mitadViudo)} para la herencia.`}`);
   const ded = [m.deudas ? `las deudas (${eur(m.deudas)})` : "", m.gastos ? `los gastos de última enfermedad, entierro y funeral (${eur(m.gastos)})` : "", m.legados ? `los legados (${eur(m.legados)})` : ""].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " y $1");
   out.push("", `${E()}. Caudal partible y cuotas. ${ded ? `Deducidos del activo de la herencia (${eur(m.bruto)}) ${ded}, el caudal partible es de ${eur(m.netoReparto)}` : `El caudal partible es de ${eur(m.netoReparto)}`}, que corresponde así:`, "", esrHaberes(x, R, I.PT));
   out.push("", `Y expuesto cuanto antecede, ${otorg}, según ${uno ? "interviene" : "intervienen"}, ${uno ? "OTORGA" : "OTORGAN"} las siguientes`, "", "ESTIPULACIONES");
   const hered = vivos.filter((p) => ((R.isd.derechos || {})[p.id] || []).some((d) => d.fraccion > 0)), unoH = hered.length === 1;
   out.push("", `${O()}. Aceptación. ${(hered.length ? hered : vivos).map((p) => `${gnTrat(p)}${p.nombre}`).join(", ").replace(/, ([^,]*)$/, " y $1")} ${unoH ? "acepta" : "aceptan"} pura y simplemente la herencia de ${c.trC}${c.causante} (arts. 988, 998 y 999 CC)${vivos.some(esrMenor) ? ", y los menores de edad la aceptan por medio de su representante ⟦pura y simplemente, con la autorización o aprobación que proceda / a beneficio de inventario⟧" : ""}.`);
   out.push(esrREV("aceptar pura y simplemente hace responder de las deudas del causante también con los bienes propios (art. 1003 CC). Si hay dudas sobre el pasivo, valorar la aceptación a beneficio de inventario ante notario (arts. 1010, 1011 y 1014 CC)."));
-  if (m.gananciales) out.push("", `${O()}. Liquidación de la sociedad de gananciales. ${otorg[0].toUpperCase() + otorg.slice(1)}${viudoRen ? `, con ${viudoRen.nombre},` : ""} ${uno && !viudoRen ? "aprueba" : "aprueban"} la liquidación expuesta. ${K && K.gan ? (/^Se adjudica[\s\S]*$/m.exec(K.gan) || [""])[0] : "Se adjudica al cónyuge supérstite, en pago de su mitad, la mitad indivisa de cada bien ganancial."}`.replace(/\.$/, "") + " (arts. 1392 y 1396 a 1404 CC).");
+  if (m.gananciales) out.push("", `${O()}. Liquidación de ${rgNom === "Sociedad de gananciales" ? "la sociedad de gananciales" : rgNom.charAt(0).toLowerCase() + rgNom.slice(1)}. ${otorg[0].toUpperCase() + otorg.slice(1)}${viudoRen ? `, con ${viudoRen.nombre},` : ""} ${uno && !viudoRen ? "aprueba" : "aprueban"} la liquidación expuesta. ${K && K.gan ? (/^Se adjudica[\s\S]*$/m.exec(K.gan) || [""])[0] : "Se adjudica al cónyuge supérstite, en pago de su mitad, la mitad indivisa de cada bien ganancial."}`.replace(/\.$/, "") + " (arts. 1392 y 1396 a 1404 CC).");
   const legs = I.PT.B.filter((q) => q.leg);
   if (legs.length) out.push("", `${O()}. Entrega de legados. ${otorg[0].toUpperCase() + otorg.slice(1)} que son herederos entregan ${legs.map((q) => `a ${persona(x, q.leg).nombre} el legado de ${esrNomB(q.b)}${q.cc < 0.9999 ? ` (la parte del causante, ${esrPct(q.cc)})` : ""}, valorado en ${eur(q.v)}`).join("; ")}, que ${legs.length > 1 || new Set(legs.map((q) => q.leg)).size > 1 ? "los legatarios aceptan y reciben" : "el legatario acepta y recibe"}. El legatario de cosa propia del testador adquiere su propiedad desde la muerte, pero debe pedir su entrega a los herederos (arts. 882 y 885 CC).`);
   out.push("", `${O()}. Adjudicaciones. En pago de su haber hereditario se adjudican:`, "", K ? K.lineas : "⟦adjudicaciones bien por bien⟧");
