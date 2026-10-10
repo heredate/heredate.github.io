@@ -158,6 +158,9 @@ function casoMotor(x) {
   return {
     fechaFallecimiento: x.fecha, ccaa: x.ccaa === "EST" && x.ccaaBienes ? x.ccaaBienes : x.ccaa, criterioVivienda: x.criterioVivienda || "DGT", viviendaA: x.viviendaA, noAplicarVivienda: !!x.noAplicarVivienda, ajuar: x.ajuar && x.ajuar !== "sts" ? x.ajuar : undefined, enPlazo: x.enPlazo !== false, conRequerimiento: x.requerimiento === true, aplicarEmpresa: !!x.aplicarEmpresa, reparto, ...(typeof casoMotorJur === "function" ? casoMotorJur(x) : {}), // C2 e I6 (control de calidad 07-10-2026): plazo derivado, recargo y vecindad civil, en diagnostico.js
     conyugeViviendaCatastral: casado && viv ? num(viv.valorCatastralTotal) : 0,
+    // Auditoría ISD 10-10-2026: DA 2.ª (causante no residente sin bienes en España), usufructo universal temporal y residencia en Ceuta o Melilla
+    sinBienesEnEspana: x.ccaa === "EST" && !x.ccaaBienes && x.sinBienesEspana === true, usufructoTemporalAnios: x.testamento === "usufructo" ? num(x.usufructoTemporalAnios) || undefined : undefined,
+    residenciaCeutaMelilla5: x.residenciaCeutaMelilla5 == null || x.residenciaCeutaMelilla5 === "" ? undefined : x.residenciaCeutaMelilla5 !== false && x.residenciaCeutaMelilla5 !== "no",
     bienes: (x.bienes || []).map(bienMotor),
     // G03: tipo, concepto y deducibilidad (arts. 13-14 Ley 29/1987); sin tipo ni marcas, se deduce como hasta la 1.7
     deudas: (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial, ...(d.tipo ? { tipo: d.tipo } : {}), ...(d.concepto ? { concepto: d.concepto } : {}), ...(d.acreditada === false ? { acreditada: false } : {}), ...(d.acreedorHeredero ? { acreedorHeredero: true } : {}) })),
@@ -166,7 +169,8 @@ function casoMotor(x) {
     planesPensiones: (x.personas || []).filter((p) => num(p.planPensiones) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.planPensiones) })),
     // G04: régimen económico matrimonial (estado civil del alta y, si los hay, datos del matrimonio, reintegros, participación…)
     estadoCivil: x.civil || undefined, regimen: regimenMotor(x.regimen),
-    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones) })),
+    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones),
+      discapacidadPsiquica: !!p.discapacidadPsiquica, especialVinculacion: !!p.especialVinculacion, reduccionConsumida: num(p.reduccionConsumida), impuestoTransmisionAnterior: num(p.impuestoTransmisionAnterior), impuestoExtranjero: num(p.impuestoExtranjero), valorBienesExtranjero: num(p.valorBienesExtranjero), ccaaResidencia: p.ccaaResidencia || undefined })),
   };
 }
 // G03: bien de la ficha → bien del motor (los campos de valoración solo viajan si existen: un expediente antiguo da el mismo objeto)

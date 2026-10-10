@@ -3,7 +3,7 @@
 //   validarFirma(x, R)        → { listo, bloqueos, avisos, ok, items } · cada elemento { id, grupo, sev, titulo, detalle, accion, enlace, norma, estado, dec?, foco? }
 //   tFirma(x, R)              → pestaña "Listo para firmar" (comprobación agrupada + datos para la escritura + hoja del 650)
 //   paqueteNotaria(x, R)      → PDF único para la notaría (pdfDocumento) · paqueteResumenTexto(x, R) → texto del correo
-//   hoja650(x, R)             → fichas por heredero en el orden del formulario, con "Copiar" por cifra
+//   hoja650(x, R)             → en modelos.js: fichas del 650 por heredero casilla a casilla, según el formulario de cada territorio
 //   vfResumen(x, R)           → tarjeta compacta para el Resumen · vfItems(x, R) → elementos para el Diagnóstico
 // `enlace` es un objeto { claveDataset: valor } que el manejador general ya entiende (sec/sub, editp, editb, topen, doc, docrec).
 // Las acciones propias usan [data-vf] y un único escuchador en captura registrado aquí. El software prepara; decide el abogado.
@@ -13,12 +13,6 @@
 const VF_GRUPOS = [["herederos", "Causante y herederos"], ["bienes", "Bienes"], ["titulos", "Títulos y certificados"], ["reparto", "Reparto"], ["impuestos", "Impuestos"]];
 const VF_EC = [["soltero", "Soltero/a"], ["casado_gananciales", "Casado/a en gananciales"], ["casado_separacion", "Casado/a en separación de bienes"], ["casado", "Casado/a (otro régimen)"], ["pareja", "Pareja de hecho"], ["viudo", "Viudo/a"], ["divorciado", "Divorciado/a"], ["separado", "Separado/a legalmente"]];
 const VF_CIVIL_CAUS = { gananciales: "casado/a en régimen de gananciales", separacion: "casado/a en régimen de separación de bienes", pareja: "con pareja de hecho", viudo: "viudo/a", soltero: "soltero/a", divorciado: "divorciado/a" };
-const VF_AEAT = ["EST", "CEU", "MEL"]; // autoliquidación con el modelo 650 de la AEAT (no residentes, Ceuta y Melilla)
-// Casillas del modelo 650 estatal (AEAT). VERIFICADO con las instrucciones oficiales del modelo (Orden HAP/2488/2014):
-// sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/Instrucciones_mod650_es_es.pdf
-// (22 = 19 + 20 + 21; 37 = 22 − 36; 40 = 38 × 39; 63 = 49 − 61 + 62). Para los formularios autonómicos no se numeran: estado del cotejo en MODELO650_AUT (motor.mjs).
-const VF_CAS = { porcion: 19, legados: 20, seguros: 21, bi: 22, parentesco: 23, discapacidad: 24, redSeguros: 25, empresa: 26, vivienda: 27, totalRed: 36, bl: 37, ci: 38, coef: 39, ct: 40, bonifCM: 50, total: 63 };
-const VF_FUENTE_CAS = "Instrucciones del modelo 650 (AEAT, Orden HAP/2488/2014)";
 const VF_I = {
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg>',
   no: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
@@ -309,71 +303,7 @@ function tFirma(x, R) {
     <p class="foot-note">La comprobación aplica reglas fijas sobre los datos del expediente. Señala lo que falta para firmar; la decisión y la redacción de la escritura son del abogado y del notario.</p></div>`;
 }
 
-// ───────────────────── 3. Hoja de presentación del 650/660 ─────────────────────
-function vf650Lineas(x, R, hh) {
-  const aeat = VF_AEAT.includes(x.ccaa), cas = (k) => (aeat && VF_CAS[k] ? VF_CAS[k] : null);
-  const p = (x.personas || []).find((q) => q.id === hh.id) || {};
-  const T = hh.traza || [], val = (re) => { const s = T.find((t) => re.test(t.paso)); return s ? s : null; };
-  const out = { sujeto: [], base: [], red: [], liq: [] };
-  const L = (sec, lab, v, o = {}) => out[sec].push({ lab, v, ...o });
-  // Sujeto pasivo y causante
-  const pp = num(p.patrimonioPreexistente) + (hh.relacion === "conyuge" && R.isd.masa.gananciales ? R.isd.masa.gananciales / 2 : 0);
-  out.datos = [["Sujeto pasivo", hh.nombre], ["NIF", p.nif ? vfNif(p.nif).v : "[NIF]"], ["Parentesco", RELACIONES[hh.relacion]?.label || hh.relacion], ["Grupo de parentesco", hh.grupo], ["Edad", vfEdadVale(p) ? num(p.edad) + " años" : "[edad]"], ["Discapacidad", num(p.discapacidad) ? `${num(p.discapacidad)} % o más` : "No"], ["Causante", x.nombre || "—"], ["NIF del causante", x.nifCausante ? vfNif(x.nifCausante).v : "[NIF]"], ["Fecha de devengo", fechaLarga(x.fecha)], ["Territorio", nombreTerr(x.ccaa)]];
-  L("sujeto", "Patrimonio preexistente", pp, { norma: hh.relacion === "conyuge" && R.isd.masa.gananciales ? "Incluye la mitad de los gananciales (art. 22.3 Ley 29/1987)" : "Declarado en la ficha del heredero" });
-  // Base imponible
-  const por = val(/^Porción hereditaria/), aj = val(/^Ajuar/), leg = val(/^Legados recibidos/), seg = val(/^Seguros de vida/), bi = val(/^Base imponible/);
-  if (aeat) L("base", "Valor de la porción del caudal hereditario (incluye ajuar)", (por ? por.valor : 0) + (aj ? aj.valor : 0), { cas: cas("porcion"), norma: aj && aj.valor ? `Ajuar imputado ${eur(aj.valor)} (art. 15 Ley 29/1987)` : "" });
-  else { if (por) L("base", "Porción hereditaria", por.valor); if (aj) L("base", "Ajuar doméstico", aj.valor, { norma: aj.norma }); }
-  if (leg) L("base", "Legados", leg.valor, { cas: cas("legados") });
-  if (seg) L("base", "Seguros de vida", seg.valor, { cas: cas("seguros"), norma: seg.norma });
-  if (bi) L("base", "Base imponible", bi.valor, { cas: cas("bi"), tot: 1 });
-  // Reducciones (una línea cada una, en positivo)
-  let sumR = 0;
-  for (const t of T.filter((q) => /^Reducción/.test(q.paso))) {
-    const k = /parentesco/i.test(t.paso) ? "parentesco" : /discapacidad/i.test(t.paso) ? "discapacidad" : /seguros/i.test(t.paso) ? "redSeguros" : /empresa/i.test(t.paso) ? "empresa" : /vivienda/i.test(t.paso) ? "vivienda" : "";
-    // Auditoría r5 (H10): la cifra que se copia al formulario es la reducción que realmente se aplica (lo que queda de base), no el importe legal
-    // máximo: antes la ficha decía «Reducción por parentesco 1.000.000,00 €» sobre una base de 27.136 € y un total de reducciones mayor que la base.
-    const ap = t.aplicado != null ? Math.abs(t.aplicado) : Math.abs(t.valor), leg = Math.abs(t.valor);
-    sumR += ap; L("red", t.paso, ap, { cas: k ? cas(k) : null, norma: [t.norma, ap < leg - 0.005 ? `Se aplican ${eur(ap)} de un máximo legal de ${eur(leg)}: la reducción no puede superar la base que queda` : ""].filter(Boolean).join(" · "), estado: t.estado });
-  }
-  if (!T.some((q) => /^Reducción/.test(q.paso))) L("red", "Sin reducciones", 0);
-  L("red", "Total reducciones", sumR, { cas: cas("totalRed"), tot: 1, norma: bi && sumR > bi.valor ? `Las reducciones superan la base imponible (${eur(bi.valor)}): la base liquidable queda en 0` : "" });
-  // Liquidación
-  const bl = val(/^Base liquidable/), ci = val(/^Cuota íntegra/), co = val(/^Coeficiente multiplicador/), ap = val(/^A pagar/);
-  if (bl) L("liq", "Base liquidable", bl.valor, { cas: cas("bl"), tot: 1 });
-  if (ci) L("liq", "Cuota íntegra", ci.valor, { cas: cas("ci"), norma: ci.norma, estado: ci.estado });
-  if (co) { const m = /×\s*([\d.,]+)/.exec(co.paso); const k = m ? Number(m[1].replace(",", ".")) : 1; L("liq", "Coeficiente multiplicador", k, { cas: cas("coef"), coef: 1, norma: co.norma, estado: co.estado }); L("liq", "Cuota tributaria", co.valor, { cas: cas("ct"), tot: 1 }); }
-  for (const t of T.filter((q) => /^Bonificación/.test(q.paso))) L("liq", t.paso, Math.abs(t.valor), { cas: aeat && ["CEU", "MEL"].includes(x.ccaa) ? VF_CAS.bonifCM : null, norma: t.norma, estado: t.estado });
-  const otros = T.filter((q) => !/^(Porción|Ajuar|Legados recibidos|Seguros de vida|Base imponible|Reducción|Base liquidable|Cuota íntegra|Coeficiente|Bonificación|A pagar)/.test(q.paso));
-  for (const t of otros) L("liq", t.paso, t.valor, { norma: t.norma, estado: t.estado });
-  L("liq", "A ingresar", ap ? ap.valor : hh.aIngresar, { cas: cas("total"), tot: 2 });
-  return out;
-}
-function hoja650(x, R) {
-  if (R === undefined) R = calcular(x);
-  if (!R) return `<div class="card empty" style="margin-top:14px"><b>Sin cálculo</b>Completa los datos del expediente para preparar las fichas del 650.</div>`;
-  const aeat = VF_AEAT.includes(x.ccaa);
-  const intro = `<div class="infobar vf-650i"><span class="ico gold">${I.info}</span><span>${x.ccaa === "AND" ? "Modelo 650 de la Agencia Tributaria de Andalucía: uno por heredero, con el 660 de relación de bienes. Para presentarlo por el cliente hace falta ser colaborador social y conservar el modelo de representación firmado." : aeat ? "Modelo 650 de la Agencia Tributaria: uno por heredero, con el 660 de relación de bienes." : `Modelo 650 de ${esc(nombreTerr(x.ccaa))}: uno por heredero, con el 660 de relación de bienes.`} Las cifras siguen el orden del formulario; «Copiar» las deja como las pide el programa (1234,56, sin puntos de miles).${aeat ? ` <b>Casillas</b> del modelo 650 estatal: verificadas con las ${VF_FUENTE_CAS}.` : ` No se indican números de casilla: el formulario de ${esc(nombreTerr(x.ccaa))} aún no se ha cotejado. Comprueba cada casilla en su programa de ayuda.`}</span></div>`;
-  const fila = (l, hid) => {
-    const v = l.coef ? vfFmtK(l.v) : vfFmt(l.v), vis = l.coef ? "×" + (l.v % 1 ? grp(l.v, 4).replace(/0+$/, "") : grp(l.v, 0)) : eur(l.v);
-    return `<div class="vf-l ${l.tot ? "t" + l.tot : ""}">${l.cas ? `<span class="vf-cas" title="Casilla del modelo 650 estatal · VERIFICADO">${l.cas}</span>` : `<span class="vf-cas e"></span>`}<span class="vf-lab">${esc(l.lab)}${l.norma ? `<small>${esc(l.norma)}${l.estado === "PENDIENTE" ? " · en verificación" : ""}</small>` : ""}</span><b class="num">${vis}</b><button class="vf-cp" data-vf="cp" data-v="${esc(v)}" data-l="${esc(l.lab)}" aria-label="Copiar ${esc(l.lab)}">${VF_I.cp}<span>Copiar</span></button></div>`;
-  };
-  const fichas = R.isd.herederos.map((hh) => {
-    const S = vf650Lineas(x, R, hh);
-    const datos = `<dl class="vf-dl">${S.datos.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd class="${/^\[/.test(String(v)) ? "vf-ph" : ""}">${esc(v)}${k === "NIF" && !/^\[/.test(String(v)) ? `<button class="vf-cp i" data-vf="cp" data-v="${esc(v)}" data-l="NIF" aria-label="Copiar NIF">${VF_I.cp}</button>` : ""}</dd></div>`).join("")}</dl>`;
-    const sec = (t, L) => `<div class="vf-sh">${t}</div>${L.map((l) => fila(l, hh.id)).join("")}`;
-    return `<section class="card vf-ficha${aeat ? "" : " nc"}" id="vf650-${hh.id}"><div class="vf-fh"><div><div class="k">${esc(RELACIONES[hh.relacion]?.label || "")} · grupo ${esc(hh.grupo)}</div><h3>${esc(hh.nombre)}</h3></div><div class="vf-fhr"><span class="vf-tot"><small>A ingresar</small><b class="num">${eur(hh.aIngresar)}</b></span><button class="btn sm tint" data-vf="cpall" data-id="${hh.id}">${VF_I.cp}Copiar todo</button></div></div>
-      ${datos}${sec("Sujeto pasivo", S.sujeto)}${sec("Base imponible", S.base)}${sec("Reducciones", S.red)}${sec("Liquidación", S.liq)}</section>`;
-  }).join("");
-  return `<div class="vf650">${intro}${R.isd.herederos.length > 1 ? `<nav class="vf-jump" aria-label="Herederos">${R.isd.herederos.map((hh) => `<button data-vf="ir" data-id="vf650-${hh.id}">${esc(hh.nombre)}<span class="num">${eur0(hh.aIngresar)}</span></button>`).join("")}</nav>` : ""}<div class="vf-fichas">${fichas}</div>
-    <p class="foot-note">Las cifras salen del cálculo del expediente con la normativa vigente a la fecha del fallecimiento. Cotéjalas con el programa de ayuda antes de presentar.</p></div>`;
-}
-function vf650Texto(x, R, id) {
-  const hh = R.isd.herederos.find((q) => q.id === id); if (!hh) return "";
-  const S = vf650Lineas(x, R, hh);
-  const ln = (l) => `${l.cas ? "[" + l.cas + "] " : ""}${l.lab}\t${l.coef ? vfFmtK(l.v) : vfFmt(l.v)}`;
-  return [`Modelo 650 · ${hh.nombre}`, ...S.datos.map(([k, v]) => `${k}\t${v}`), "", ...S.sujeto.map(ln), "", "BASE IMPONIBLE", ...S.base.map(ln), "", "REDUCCIONES", ...S.red.map(ln), "", "LIQUIDACIÓN", ...S.liq.map(ln)].join("\n");
-}
+// ───────────────────── 3. Hoja del 650/660: en modelos.js (hoja650, casillas por territorio desde MODELO650_AUT del motor) ─────────────────────
 
 // ───────────────────── 4. Paquete para la notaría (PDF) y texto del correo ─────────────────────
 function vfDerechos(R, id) { const L = (R.isd.derechos || {})[id] || []; return L.length ? L.map((d) => (typeof derTxt === "function" ? derTxt(d) : d.tipo + " " + d.fraccion)).join(" · ") : ""; }
@@ -533,7 +463,6 @@ function vfClick(e) {
   if (a === "ir") { const n = document.getElementById(d.id); if (n) n.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   if (a === "cp") { const v = d.v || ""; Promise.resolve(copiar(v)).then(() => toast(`Copiado · ${d.l || ""}: ${v}`)); return; }
   if (!x) return;
-  if (a === "cpall") { const R = calcular(x); if (!R) return; const h = R.isd.herederos.find((q) => q.id === d.id); Promise.resolve(copiar(vf650Texto(x, R, d.id))).then(() => toast(`Copiadas las cifras de ${h ? h.nombre : "la ficha"}`)); return; }
   if (a === "foco") {
     if (ui.vfv === "650") { ui.vfv = "check"; render(); }
     const n = document.getElementById(d.id); if (!n) return;
