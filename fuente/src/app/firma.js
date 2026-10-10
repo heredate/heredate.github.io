@@ -164,6 +164,11 @@ function validarFirma(x, R) {
   }
   const hip = (x.deudas || []).filter((d) => num(d.importe) > 0 && /hipot/i.test(d.concepto || ""));
   if (hip.length && !bienes.some((b) => vfInm(b) && /hipot/i.test(b.cargas || ""))) add({ id: "vf-hipoteca", grupo: "bienes", sev: "aviso", titulo: `Hipoteca de ${eur(hip.reduce((s, d) => s + num(d.importe), 0))} sin asociar a un inmueble`, detalle: "La deuda se descuenta del caudal, pero la escritura debe decir qué finca grava y quién asume el préstamo.", accion: "Anotar cargas", foco: (() => { const b = bienes.find(vfInm); return b ? `vf-b-${b.id}-cargas` : null; })() });
+  // G04: liquidación del régimen económico con reglas forales en verificación (bloquea hasta que el abogado la confirma) y reintegros sin justificar
+  { const LQ = R && R.isd && R.isd.masa.liquidacion, RG = LQ && LQ.regimen;
+    if (LQ && !LQ.defecto && RG && RG.estado === "PENDIENTE") add({ id: "vf-regimen", grupo: "bienes", sev: x.regimen && x.regimen.confirmado ? "ok" : "bloqueo", titulo: x.regimen && x.regimen.confirmado ? `${RG.nombre}: liquidación revisada por el abogado` : `${RG.nombre}: liquidación en verificación`, detalle: `Las reglas de ${RG.norma} no están cotejadas literalmente. Revisa la tabla de liquidación y confírmala en «Régimen económico».`, norma: RG.norma, estado: "PENDIENTE", accion: "Revisar el régimen" });
+    const sinJ = LQ ? LQ.reintegros.lista.filter((r) => !r.justificado) : [];
+    if (sinJ.length) add({ id: "vf-reintegros", grupo: "bienes", sev: "aviso", titulo: `${sinJ.length === 1 ? "Un reintegro o reembolso" : sinJ.length + " reintegros o reembolsos"} sin justificar`, detalle: "Sin documentos que prueben el origen del dinero rige la presunción de ganancialidad (art. 1361 CC).", norma: "arts. 1358 y 1361 CC" }); }
   if (bienes.some((b) => b.titularidad === "ganancial")) add({ id: "vf-gananciales", grupo: "bienes", sev: "ok", titulo: "Liquidación de la sociedad de gananciales", detalle: "Hay bienes gananciales: la escritura liquida antes la sociedad y adjudica la mitad al cónyuge viudo.", norma: "arts. 1392 y 1396-1404 CC", estado: "VERIFICADO" });
 
   // ── Títulos y certificados ──

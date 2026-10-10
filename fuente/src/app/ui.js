@@ -104,10 +104,10 @@ function ring(done, total, size = 118) {
 const stBtn = (t) => `<button class="st ${t.st === "hecho" ? "hecho" : t.st === "curso" ? "curso" : t.st === "na" ? "na" : ""}" data-tst="${t.id}" aria-label="Cambiar estado: ${esc(t.titulo)}">${t.st === "hecho" ? I.tick : ""}</button>`;
 const tagE = (e) => !e ? "" : e === "VERIFICADO" ? '<span class="tag V">Verificado</span>' : e === "PENDIENTE" || e === "PROBABLE" ? '<span class="tag P">En verificación</span>' : e === "ESTIMADO" ? '<span class="tag P">Estimación con el máximo legal</span>' : e === "INTRODUCIDO" ? '<span class="tag I">Introducido a mano</span>' : `<span class="tag I">${esc(e)}</span>`;
 const tagR = (r) => r ? `<span class="tag ${r}">${{ bajo: "Riesgo bajo", medio: "Riesgo medio", alto: "Riesgo alto", litigioso: "Litigioso" }[r]}</span>` : "";
-const icoBien = { vivienda: ["gold", I.house], inmueble: ["brown", I.house], cuenta: ["green", I.bank], valores: ["indigo", I.chart], vehiculo: ["blue", I.car], empresa: ["orange", I.brief], otro: ["gray", I.box] };
+const icoBien = { vivienda: ["gold", I.house], inmueble: ["brown", I.house], cuenta: ["green", I.bank], valores: ["indigo", I.chart], vehiculo: ["blue", I.car], empresa: ["orange", I.brief], cripto: ["indigo", I.coin], arte: ["gold", I.gem], credito: ["green", I.receipt], derechoReal: ["brown", I.key], renta: ["green", I.receipt], explotacion: ["green", I.leaf], embarcacion: ["blue", I.boat], intelectual: ["indigo", I.doc], seguroAhorro: ["green", I.bank], otro: ["gray", I.box] };
 function composicion(x) {
   const g = { inm: 0, fin: 0, otr: 0 };
-  for (const b of x.bienes || []) { const v = Math.max(num(b.valor), num(b.valorReferencia)) * (b.titularidad === "ganancial" ? 0.5 : b.titularidad === "proindiviso" ? (pctCausante(b.porcentaje)) / 100 : 1); if (b.tipo === "vivienda" || b.tipo === "inmueble") g.inm += v; else if (b.tipo === "cuenta" || b.tipo === "valores") g.fin += v; else g.otr += v; }
+  for (const b of x.bienes || []) { const v = (b.tipo === "vivienda" || b.tipo === "inmueble" ? Math.max(num(b.valor), num(b.valorReferencia)) : valorFicha(b, x)) * cuotaBien(b, x); /* G03-G04 */ if (b.tipo === "vivienda" || b.tipo === "inmueble") g.inm += v; else if (["cuenta", "valores", "cripto", "credito", "seguroAhorro"].includes(b.tipo)) g.fin += v; else g.otr += v; }
   return [{ n: "Inmuebles", v: g.inm, color: "var(--c3)" }, { n: "Dinero e inversiones", v: g.fin, color: "var(--c1)" }, { n: "Otros bienes", v: g.otr, color: "var(--c2)" }];
 }
 // H22: porcentajes sobre la misma base que los importes, redondeados para que sumen exactamente 100 (mayor resto)
@@ -316,7 +316,7 @@ function tTramites(x, R, T) {
 
 function listaBienes(x) {
   if (!(x.bienes || []).length) return `<div class="group"><div class="empty"><b>Todavía no hay bienes.</b><p>Añade la vivienda, las cuentas o el resto del patrimonio: con un valor aproximado ya se calculan el reparto y los impuestos.</p></div></div>`;
-  return `<div class="group" style="--inset:60px">${x.bienes.map((b) => { const [c, ic] = icoBien[b.tipo]; const adj = b.adjudicadoA && persona(x, b.adjudicadoA); return `<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion || TIPO_BIEN[b.tipo][0])}</b><small>${b.origen === "familia" ? "Aportado por la familia · " : b.origen === "documento" ? `<span class="orig-doc">Leído de documento</span> · ` : ""}${TIPO_BIEN[b.tipo][0]}${b.titularidad === "ganancial" ? " · gananciales" : b.titularidad === "proindiviso" ? " · " + num(b.porcentaje) + " %" : ""}${b.legatarioId ? " · legado" : ""}${adj ? " · para " + esc(adj.nombre) : ""}${b.municipio && b.municipio !== "OTRO" && ORDENANZAS[b.municipio] ? " · " + ORDENANZAS[b.municipio].nombre : ""}</small></span><span class="v num">${eur0(Math.max(num(b.valor), num(b.valorReferencia)))}</span>${I.chev}</button>`; }).join("")}</div>`;
+  return `<div class="group" style="--inset:60px">${x.bienes.map((b) => { const [c, ic] = icoBien[b.tipo]; const adj = b.adjudicadoA && persona(x, b.adjudicadoA); return `<button class="row" data-editb="${b.id}"><span class="ico ${c}">${ic}</span><span class="t"><b>${esc(b.descripcion || TIPO_BIEN[b.tipo][0])}</b><small>${b.origen === "familia" ? "Aportado por la familia · " : b.origen === "documento" ? `<span class="orig-doc">Leído de documento</span> · ` : ""}${TIPO_BIEN[b.tipo][0]}${b.titularidad === "ganancial" ? " · gananciales" : b.titularidad === "proindiviso" ? " · " + num(b.porcentaje) + " %" : b.titularidad === "mixto" ? " · mixto" : ""}${b.enExtranjero ? " · en el extranjero" + (b.extPais ? " (" + esc(b.extPais) + ")" : "") : ""}${b.legatarioId ? " · legado" : ""}${adj ? " · para " + esc(adj.nombre) : ""}${b.municipio && b.municipio !== "OTRO" && ORDENANZAS[b.municipio] ? " · " + ORDENANZAS[b.municipio].nombre : ""}</small></span><span class="v num">${eur0(b.tipo === "vivienda" || b.tipo === "inmueble" ? Math.max(num(b.valor), num(b.valorReferencia)) : valorFicha(b, x))}</span>${I.chev}</button>`; }).join("")}</div>`;
 }
 function listaPersonas(x, R) {
   if (!(x.personas || []).length) return `<div class="group"><div class="empty"><b>Todavía no hay herederos.</b><p>Añade al cónyuge, a los hijos o a quien corresponda: el reparto se calcula en cuanto hay una persona y un bien.</p></div></div>`;
@@ -345,17 +345,19 @@ function tHerencia(x, R) {
     <div class="sectitle flex"><b>Cómo se forma la herencia</b></div>
     <div class="grid g2"><div class="card" style="padding:6px 22px"><div class="kv">
       <span>Valor total de los bienes</span><span>${eur(m.brutoTotal)}</span>
-      ${m.gananciales ? `<span>Mitad de gananciales del viudo</span><span>${eur(-m.mitadViudo)}</span>` : ""}
-      ${m.brutoTotal - m.gananciales / 2 - m.bruto > 1 ? `<span>Partes de otros copropietarios</span><span>${eur(-(m.brutoTotal - m.gananciales / 2 - m.bruto))}</span>` : ""}
+      ${m.mitadViudo ? `<span>${m.liquidacion && !m.liquidacion.defecto ? "Parte del viudo (liquidación del régimen)" : "Mitad de gananciales del viudo"}</span><span>${eur(-m.mitadViudo)}</span>` : ""}
+      ${m.brutoTotal - m.mitadViudo - m.bruto > 1 ? `<span>Partes de otros copropietarios</span><span>${eur(-(m.brutoTotal - m.mitadViudo - m.bruto))}</span>` : ""}
       <span class="b">Caudal del causante</span><span class="b">${eur(m.bruto)}</span>
       <span>Deudas</span><span>${eur(-m.deudas)}</span>
       <span>Funeral y última enfermedad</span><span>${eur(-m.gastos)}</span>
       <span class="b">Herencia neta</span><span class="b">${eur(m.neto)}</span>
       ${m.legados ? `<span>Legados</span><span>${eur(-m.legados)}</span><span>Resto a repartir</span><span>${eur(m.netoReparto)}</span>` : ""}
       <span>Ajuar doméstico (solo para el impuesto)</span><span>${eur(m.ajuar)}</span>
+      ${m.noDeducible ? `<span>Deudas y gastos que no se restan en el impuesto</span><span>${eur(m.noDeducible)}</span>` : ""}
     </div></div><div class="card">${cascada(x, R)}</div></div>
     <p class="group-foot">${esc(m.notaAjuar)}</p>
-    <div class="group" style="margin-top:12px"><button class="row" data-act="deudas"><span class="ico red">${I.tax}</span><span class="t"><b>Deudas y gastos</b><small>Hipoteca, otras deudas y funeral</small></span><span class="v num">${eur0(m.deudas + m.gastos)}</span>${I.chev}</button></div>
+    ${typeof rgCardHTML === "function" ? rgCardHTML(x, R) : "" /* G04: régimen económico y su liquidación (regimen.js) */}
+    <div class="group" style="margin-top:12px"><button class="row" data-act="deudas"><span class="ico red">${I.tax}</span><span class="t"><b>Deudas y gastos</b><small>Con su tipo: lo que se resta en el impuesto y lo que no</small></span><span class="v num">${eur0(m.deudas + m.gastos)}</span>${I.chev}</button></div>
     <div style="margin-top:16px"><button class="btn gray sm" data-act="editar">Revisar con el asistente</button></div>`;
 }
 
@@ -562,7 +564,7 @@ function vAsistente() {
   if (p === "civil") { body = `<h2 class="q">Estado civil</h2><p class="qsub">En gananciales, la mitad de lo común es del viudo y no entra en la herencia.</p>` + opciones("civil", "civil", [["gananciales", "Casado/a en gananciales", "Lo habitual en la mayor parte de España"], ["separacion", "Casado/a en separación de bienes", "Lo habitual en Cataluña y Baleares"], ["pareja", "Pareja de hecho", "Sin testamento no hereda en derecho común; en el impuesto cuenta si está inscrita"], ["viudo", "Viudo/a", ""], ["soltero", "Soltero/a o divorciado/a", ""]]); puede = !!x.civil; }
   if (p === "testamento") { body = `<h2 class="q">Testamento</h2><p class="qsub">Si lo hay, manda lo que diga, respetando las legítimas.</p>` + opciones("testamento", "test", [["no", "Sin testamento", "Reparto legal por órdenes: se calcula solo"], ["usufructo", "Usufructo universal al cónyuge", "El «del uno para el otro»: usufructo al viudo, propiedad a los hijos"], ["porcentajes", "Otro reparto", "Porcentaje de cada heredero y legados"], ["nose", "Por confirmar", "Se sabrá con el certificado de últimas voluntades. Mientras, se calcula sin testamento."]]); puede = !!x.testamento; }
   if (p === "familia") { body = `<h2 class="q">Herederos</h2><p class="qsub">${x.testamento === "porcentajes" ? "Cada heredero o legatario del testamento." : "La familia más cercana: cónyuge, hijos (o nietos si un hijo falleció antes), padres o hermanos."}</p>${listaPersonas(x)}<div class="addrow">${addP(x).map(([r, t]) => `<button data-addp="${r}">+ ${t}</button>`).join("")}</div>`; puede = (x.personas || []).length > 0; }
-  if (p === "bienes") { body = `<h2 class="q">Patrimonio</h2><p class="qsub">Viviendas, cuentas, inversiones, vehículos. Un valor aproximado basta para empezar.</p>${listaBienes(x)}<div class="addrow">${Object.entries(TIPO_BIEN).map(([t, [n]]) => `<button data-addb="${t}">+ ${n}</button>`).join("")}</div>`; puede = (x.bienes || []).length > 0; }
+  if (p === "bienes") { body = `<h2 class="q">Patrimonio</h2><p class="qsub">Viviendas, cuentas, inversiones, vehículos. Un valor aproximado basta para empezar.</p>${listaBienes(x)}<div class="addrow">${TIPO_BIEN_PRINC.map((t) => `<button data-addb="${t}">+ ${TIPO_BIEN[t][0]}</button>`).join("")}<button data-act="addBien">+ Más clases</button></div>`; puede = (x.bienes || []).length > 0; }
   if (p === "deudas") body = `<h2 class="q">Deudas y gastos</h2><p class="qsub">Se restan de la herencia y bajan el impuesto.</p>${formDeudas(x)}`;
   if (p === "situaciones") body = `<h2 class="q">Situaciones del causante</h2><p class="qsub">Añaden o quitan trámites: bajas, pensiones, alquileres, seguros.</p>${formSitu(x)}`;
   if (p === "fin") { const R = calcular(x); const T = R ? tramitesExp(x, R) : []; const E = R ? estrategia(x) : null; body = `<h2 class="q">Expediente listo.</h2><p class="qsub">Reparto, impuestos, estrategia fiscal y ${plural(T.length, "trámite")} para ${esc(x.nombre || "esta herencia")}.</p>${R ? `<div class="kpis" style="grid-template-columns:repeat(2,1fr)">${kpi("Sucesiones", eur0(R.isd.total), "toda la familia")}${kpi("Plusvalía", eur0(R.totalPlus), plural(R.plus.length, "inmueble"))}${(() => { const pi = R.plazos.find((q) => q.id === "isd"), pp = R.plazos.find((q) => q.id === "prorroga_isd"); return kpi("Presentar antes del", fechaCorta(pi.limite), pp && pp.limite ? `Prórroga: pedirla antes del ${fechaCorta(pp.limite)} (+6 meses)` : "Prórroga de 6 meses si se pide en los 5 primeros"); })()}${kpi("Ahorro posible", E ? eur0(E.seguro) : "—", "ver Estrategia", "gold")}</div>` : `<div class="infobar"><span class="ico orange">${I.info}</span><span>Faltan datos para calcular. Revisa herederos y bienes.</span></div>`}`; }
@@ -697,6 +699,8 @@ function vSheet() {
     <div class="group">
       <div class="field"><label for="p-pp">Patrimonio previo del heredero (€)</label><input id="p-pp" inputmode="decimal" data-p="patrimonioPreexistente" value="${numStr(p.patrimonioPreexistente)}" placeholder="Aproximado"><span class="hint">${x.ccaa === "AND" ? "En Andalucía no influye en el impuesto." : "Solo influye si supera unos 400.000 €."}</span></div>
       <div class="field"><label for="p-s">Seguro de vida que cobra por este fallecimiento (€)</label><input id="p-s" inputmode="decimal" data-p="seguro" value="${numStr(p.seguro)}" placeholder="0"></div>
+      ${p.relacion === "conyuge" && (num(p.seguro) > 0 || p.seguroGanancial) ? `<div class="row toggle"><span class="t"><b>Primas pagadas con dinero ganancial</b><small>Solo tributa la mitad (art. 39.2 RD 1629/1991)</small></span><label class="switch"><input type="checkbox" data-p="seguroGanancial" ${p.seguroGanancial ? "checked" : ""}><span></span></label></div>` : ""}
+      <div class="field"><label for="p-pl">Plan de pensiones que cobra como beneficiario (€)</label><input id="p-pl" inputmode="decimal" data-p="planPensiones" value="${numStr(p.planPensiones)}" placeholder="0"><span class="hint">No tributa en Sucesiones sino en su IRPF (art. 17.2.a.3.ª Ley 35/2006).</span></div>
       <div class="field"><label for="p-do">Donaciones del causante en los 4 años anteriores (€)</label><input id="p-do" inputmode="decimal" data-p="donaciones" value="${numStr(p.donaciones)}" placeholder="0"></div>
       ${terrP(x) === "GAL" && (x.fecha || "") >= "2026-01-01" ? `<div class="field"><label for="p-rc">Reducción ya consumida con este causante (€)</label><input id="p-rc" inputmode="decimal" data-p="reduccionConsumida" value="${numStr(p.reduccionConsumida)}" placeholder="0"><span class="hint">Galicia: la reducción por parentesco y discapacidad es única entre el mismo causante y heredero desde 2026 (pactos sucesorios, donaciones).</span></div>` : ""}
       ${["hijo", "nieto", "bisnieto"].includes(p.relacion) ? `<div class="field"><label for="p-ita">Impuesto pagado por los mismos bienes en otra herencia de los 10 años anteriores (€)</label><input id="p-ita" inputmode="decimal" data-p="impuestoTransmisionAnterior" value="${numStr(p.impuestoTransmisionAnterior)}" placeholder="0"><span class="hint">Transmisiones sucesivas a descendientes: se deduce de la base imponible (art. 20.3 Ley 29/1987).</span></div>` : ""}
@@ -721,9 +725,11 @@ function vSheet() {
       ${inm ? `<div class="field"><label for="b-r">Valor de referencia del Catastro (€)</label><input id="b-r" inputmode="decimal" data-bn="valorReferencia" value="${numStr(b.valorReferencia)}" placeholder="Opcional"><span class="hint">Se declara el mayor de los dos. <a href="${SEDES.valorRef}" target="_blank" rel="noopener">Consultarlo en la sede del Catastro</a></span></div>` : ""}
     </div>
     ${inm ? registroBienHTML(b) : ""}
+    ${typeof rgBienValoracionHTML === "function" ? rgBienValoracionHTML(x, b) + rgBienExtranjeroHTML(x, b) : "" /* G03: cómo se valora y bienes en el extranjero */}
     ${fsecH("Titularidad y reparto", x.civil === "gananciales" ? "En gananciales, la mitad de lo común es del viudo y no entra en la herencia." : "Qué parte era del causante y a quién se adjudica.")}
     <div class="group">
-      <div class="field"><label>Titularidad</label><div class="seg"><button data-tit="privativo" aria-pressed="${(b.titularidad || "privativo") === "privativo"}">Privativo</button><button data-tit="ganancial" aria-pressed="${b.titularidad === "ganancial"}">Ganancial</button><button data-tit="proindiviso" aria-pressed="${b.titularidad === "proindiviso"}">Una parte</button></div></div>
+      <div class="field"><label>Titularidad</label><div class="seg"><button data-tit="privativo" aria-pressed="${(b.titularidad || "privativo") === "privativo"}">Privativo</button><button data-tit="ganancial" aria-pressed="${b.titularidad === "ganancial"}">Ganancial</button><button data-tit="proindiviso" aria-pressed="${b.titularidad === "proindiviso"}">Una parte</button>${x.civil === "gananciales" || b.titularidad === "mixto" ? `<button data-tit="mixto" aria-pressed="${b.titularidad === "mixto"}">Mixto</button>` : ""}</div></div>
+      ${typeof rgBienTitularidadHTML === "function" ? rgBienTitularidadHTML(x, b) : ""}
       ${b.titularidad === "proindiviso" ? `<div class="field"><label for="b-p">Porcentaje del causante</label><input id="b-p" inputmode="decimal" data-bn="porcentaje" data-valida="pct" value="${numStr(b.porcentaje)}" placeholder="50"><span class="hint">Porcentaje del bien que pertenecía al causante.</span></div>` : ""}
       ${x.testamento === "porcentajes" || x.testamento === "usufructo" || b.legatarioId || (x.personas || []).some((p) => p.notaLegado) ? `<div class="field"><label for="b-l">Legado</label><select id="b-l" data-bn="legatarioId"><option value="">No, forma parte del reparto</option>${pers}</select></div>` : ""}
       ${inm && !b.legatarioId ? `<div class="field"><label for="b-adj">Adjudicación en la partición</label><select id="b-adj" data-bn="adjudicadoA"><option value="">Pro indiviso entre los herederos</option>${persAdj}</select><span class="hint">Quien se lo adjudica paga la plusvalía. Estrategia propone el reparto que menos cuesta.</span></div>` : ""}
@@ -786,7 +792,8 @@ function vSheet() {
   if (s.tipo === "novedades") return sheetNovedades();
   if (s.tipo === "widget") return wgSheet();
   if (s.tipo === "situ") return sheetHTML("Ajustar al caso", `<p class="lead">Marca lo que aplique. Se añaden o quitan los trámites correspondientes.</p>${formSitu(x)}`, "Hecho");
-  if (s.tipo === "deudas") return sheetHTML("Deudas y gastos", formDeudas(x), "Hecho");
+  if (s.tipo === "deudas") return sheetHTML("Deudas y gastos", typeof rgDeudasHTML === "function" ? rgDeudasHTML(x) : formDeudas(x), "Hecho");
+  if (s.tipo === "regimen" && typeof rgSheetHTML === "function") return rgSheetHTML(x, calcular(x));
   if (s.tipo === "doc") {
     const R = calcular(x); const t = docTexto(x, R, s.id);
     return sheetHTML(DOC_TIT[s.id], `<div style="display:flex;gap:10px;margin:4px 0 18px;justify-content:center;flex-wrap:wrap"><button class="btn sm" data-pdfdoc="${s.id}">${I.dl}Descargar en PDF</button><button class="btn sm gray" data-dl="${s.id}">Descargar en Word</button><button class="btn sm gray" data-copy="${s.id}">Copiar texto</button></div><div class="paperview">${esrVista(t)}</div><p class="foot-note" style="text-align:center">Borrador. Lo marcado en amarillo lo completa o revisa el abogado antes de firmarlo o presentarlo.</p>`, "Cerrar", "wide");
@@ -1112,6 +1119,9 @@ $app.addEventListener("click", (e) => {
   if (d.tdoc != null) { const s = estadoT(x, ui.sheet.id); s.docs = s.docs || {}; s.docs[d.tdoc] = !s.docs[d.tdoc]; guardar(); render(); return; }
   if (d.act === "situ") { ui.sheet = { tipo: "situ" }; render(); return; }
   if (d.act === "deudas") { ui.sheet = { tipo: "deudas" }; render(); return; }
+  if (d.act === "regimen") { ui.sheet = { tipo: "regimen" }; render(); return; }
+  if (d.lpadd || d.lpdel) { if (!licPuedeEditar()) { toast(licMotivoEdicion()); return; } if (d.lpadd) lpAdd(x, d.lpadd); else lpDel(x, d.lpdel); persistir(); render(); return; } // G03-G04 (regimen.js)
+  if (d.usarval) { const b = (x.bienes || []).find((q) => q.id === d.usarval); if (b) { const V = valoracionBien(bienMotor(b), x.fecha); if (V.sugerido != null) { b.valor = String(V.sugerido); persistir(); render(); } } return; }
   if (d.act === "menu") { ui.sheet = { tipo: "menu" }; render(); return; }
   if (d.act === "editar") { const B = DB.borradorAsist; if (B && B.editando && B.b && B.b.id === ui.id) { ui.borrador = JSON.parse(JSON.stringify(B.b)); go({ vista: "asist", paso: B.paso || 1, sheet: null, editando: true }); toast("Retomas los cambios que dejaste a medias"); return; } ui.borrador = JSON.parse(JSON.stringify(exp())); ui.borrador.ejemplo = false; go({ vista: "asist", paso: 1, sheet: null, editando: true }); return; }
   if (d.act === "duplicar") { if (!licPuedeCrear()) { toast(licMotivoBloqueo()); ui.sheet = { tipo: "ajustes" }; render(); return; } const c = JSON.parse(JSON.stringify(exp())); c.id = uid(); c.nombre = (c.nombre || "Herencia") + " (escenario)"; c.ejemplo = false; c.tiempos = []; c.solicitudes = []; c.recordatorios = []; delete c.demo; c.despacho = { ...(c.despacho || {}), ref: rbRefUnica(c.despacho?.ref || nuevaRef()) }; DB.expedientes.unshift(c); guardar(); go({ vista: "exp", id: c.id, sheet: null }); toast("Escenario duplicado"); return; }
@@ -1166,6 +1176,7 @@ $app.addEventListener("input", (e) => {
   if (d.p && ui.sheet?.tipo === "persona") { const p = (x.personas || []).find((q) => q.id === ui.sheet.id); if (p) { if (d.p === "edad") rbEdadAsignar(p, t.value); else p[d.p] = t.value; } rdGuardarPronto(); return; }
   if (d.bn && ui.sheet?.tipo === "bien") { const b = (x.bienes || []).find((q) => q.id === ui.sheet.id); if (b) b[d.bn] = t.value; rdGuardarPronto(); return; }
   if (d.gasto != null || d.deuda != null) { camposDeuda(x, d, t.value); rdGuardarPronto(); return; }
+  if (d.lp) { lpSet(x, d.lp, t.value); rdGuardarPronto(); return; } // G03-G04 (regimen.js)
   if (d.dsp) { x.despacho = x.despacho || {}; if (t.inputMode === "decimal" && !t.value.trim()) delete x.despacho[d.dsp]; else x.despacho[d.dsp] = t.inputMode === "decimal" ? num(t.value) : t.value; rdGuardarPronto(); return; }
   if (d.tnota && ui.sheet?.tipo === "tramite") { estadoT(x, ui.sheet.id).nota = t.value; rdGuardarPronto(); return; }
 });
@@ -1175,7 +1186,7 @@ function rdGuardarPronto() { clearTimeout(rdGuardarT); rdGuardarT = setTimeout((
 // Deudas y gastos del asistente y de la ficha «Deudas»: un único sitio para escribir el modelo (input y change)
 function hipotecaGananDef(x) { return x.civil === "gananciales" && (x.bienes || []).some((b) => (b.tipo === "vivienda" || b.tipo === "inmueble") && b.titularidad === "ganancial"); }
 function camposDeuda(x, d, val) {
-  if (d.gasto != null) { x.gastos = x.gastos || []; x.gastos[d.gasto] = { concepto: "Funeral", importe: rbNumOTexto(val) }; return; }
+  if (d.gasto != null) { x.gastos = x.gastos || []; x.gastos[d.gasto] = { ...(x.gastos[d.gasto] || {}), concepto: (x.gastos[d.gasto] || {}).concepto || "Funeral", importe: rbNumOTexto(val) }; return; }
   x.deudas = x.deudas || [];
   const prev = x.deudas[d.deuda] || {};
   x.deudas[d.deuda] = { ...prev, concepto: d.deuda === "0" ? "Hipoteca" : "Otras deudas", importe: rbNumOTexto(val) };
@@ -1206,6 +1217,7 @@ $app.addEventListener("change", (e) => {
   if (d.bd) { x.despacho = x.despacho || {}; x.despacho[d.bd] = val; return; }
   if (d.resp) { if (x.responsable !== val) { if (ui.vista === "exp") anotar(x, `Responsable: ${abogado(val)?.nombre || "sin asignar"}`, "sistema"); x.responsable = val; } persistir(); if (ui.vista === "exp") render(); return; }
   if (d.gasto != null || d.deuda != null) { camposDeuda(x, d, val); persistir(); render(); return; }
+  if (d.lp) { lpSet(x, d.lp, val); persistir(); render(); return; } // G03-G04 (regimen.js)
   if (d.deudagan != null) { x.deudas = x.deudas || []; x.deudas[d.deudagan] = { ...(x.deudas[d.deudagan] || { concepto: "Hipoteca", importe: 0 }), ganancial: val }; persistir(); render(); return; }
   if (d.situ) { x.situ = x.situ || {}; x.situ[d.situ] = val; persistir(); render(); return; }
   if (d.tnota) { estadoT(x, ui.sheet.id).nota = val; guardar(); return; }

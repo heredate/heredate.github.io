@@ -21,8 +21,9 @@ const m6Fecha = (s) => (s ? String(s).split("-").reverse().join("/") : "");
 function m6Caso(x) {
   const c = casoMotor(x), B = Object.fromEntries((x.bienes || []).map((b) => [b.id, b]));
   c.bienes = c.bienes.map((b) => { const o = B[b.id] || {}; return { ...b, descripcion: o.descripcion || "", refCatastral: o.refCatastral || "", municipio: o.municipio || "", muniNombre: o.muniNombre || "", iban: o.iban || "", entidad: o.entidad || "", isin: o.isin || "", titulos: o.titulos || "", matricula: o.matricula || "", nifSociedad: o.nifSociedad || "" }; });
-  c.deudas = (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial, concepto: d.concepto || "" }));
-  c.gastos = (x.gastos || []).map((g) => ({ importe: num(g.importe), concepto: g.concepto || "" }));
+  // G03: casoMotor ya trae concepto, tipo y deducibilidad de cada deuda y gasto
+  c.deudas = c.deudas.map((d) => ({ ...d, concepto: d.concepto || "" }));
+  c.gastos = c.gastos.map((g) => ({ ...g, concepto: g.concepto || "" }));
   return c;
 }
 function m6Hojas(x, R) { const c = m6Caso(x); return R.isd.herederos.map((hh) => modelo650(c, R.isd, hh.id, { territorio: x.ccaa })).filter(Boolean); }

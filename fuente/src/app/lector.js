@@ -1117,6 +1117,19 @@ function lecListaHijos(T, quien = "El documento") {
   if (out.n && noms.length !== out.n) out.aviso = `${quien} habla de ${out.n} hijos y se han leído ${noms.length} nombres: revisa la lista.`;
   return out;
 }
+// G04 (auditoría civil 10-10-2026, hallazgo 10): cada régimen leído va a su sitio. «Separación» y «participación» son matrimonios sin bienes
+// comunes (estado civil «separacion»); consorcio aragonés, conquistas navarras y comunicación foral vizcaína son regímenes de comunidad con
+// reglas propias (estado civil «gananciales» y el régimen concreto en x.regimen.tipo). «Comunidad de bienes» a secas no se identifica: se avisa.
+function lecRegimen(txt, T) {
+  const r = String(txt || "").toLowerCase();
+  if (/participaci/.test(r)) return { civil: "separacion", tipo: "participacion" };
+  if (/separaci/.test(r)) return { civil: "separacion" };
+  if (/conquista/.test(r)) return { civil: "gananciales", tipo: "conquistas" };
+  if (/consorci/.test(r)) return { civil: "gananciales", tipo: "consorcio" };
+  if (/comunicaci[óo]n/.test(r) || (/comunidad/.test(r) && /\bforal\b|bizkaia|vizcaya|fuero/i.test(T || ""))) return { civil: "gananciales", tipo: "comunicacion" };
+  if (/comunidad/.test(r)) return { civil: "gananciales", dudoso: true };
+  return { civil: "gananciales" };
+}
 function lecTestamento(t) {
   const out = { campos: [], personas: [], bienes: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
   // Testador: tras COMPARECE / OTORGA / «el testador» o el primer DON/DOÑA
@@ -1124,8 +1137,8 @@ function lecTestamento(t) {
   if (tes) out.campos.push({ k: "nombre", etiqueta: "Testador (causante)", valor: lecNombre(tes[1]), conf: tes[0].match(/COMPARECE|OTORGANTE|testador/i) ? 2 : 1 });
   // Cónyuge y régimen
   const cony = new RegExp(`${lecCI("casad")}[oaOA]\\s+(?:${lecCI("en")}\\s+(?:[úuÚU]${lecCI("nicas")}|${lecCI("segundas")}|${lecCI("primeras")})\\s+${lecCI("nupcias")}\\s+)?(?:(?:[yY]\\s+)?(?:${lecCI("en")}|${lecCI("bajo")})\\s+(?:${lecCI("el")}\\s+)?[rR][ée]${lecCI("gimen")}\\s+(?:${lecCI("econ")}[óo]${lecCI("mico")}[- ]${lecCI("matrimonial")}\\s+)?(?:${lecCI("legal")}\\s+)?${lecCI("de")}\\s+([a-záéíóúñüA-ZÁÉÍÓÚÑÜ ]{5,40}?)\\s+)?${lecCI("con")}\\s+${LEC_TRAT}\\s*${LEC_NOMBRE_RE}`).exec(T);
-  const reg = /r[ée]gimen\s+(?:econ[óo]mico[- ]matrimonial\s+)?(?:legal\s+)?de\s+(gananciales|separaci[óo]n de bienes|participaci[óo]n)/i.exec(T);
-  if (cony) { out.personas.push({ nombre: lecNombre(cony[2]), relacion: "conyuge", conf: 2 }); const r = reg ? reg[1] : cony[1] || ""; out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: /separaci/i.test(r) ? "separacion" : "gananciales", mostrar: `casado/a${r ? " en régimen de " + r.toLowerCase() : " (régimen no indicado: se propone gananciales)"}`, conf: r ? 2 : 1 }); }
+  const reg = /r[ée]gimen\s+(?:econ[óo]mico[- ]matrimonial\s+)?(?:legal\s+)?de\s+(?:la\s+)?(gananciales|separaci[óo]n de bienes|participaci[óo]n|conquistas|consorcio conyugal|consorcial|comunicaci[óo]n foral(?:\s+de\s+bienes)?)/i.exec(T);
+  if (cony) { out.personas.push({ nombre: lecNombre(cony[2]), relacion: "conyuge", conf: 2 }); const r = reg ? reg[1] : cony[1] || "", rg = lecRegimen(r, T); out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: rg.civil, ...(rg.tipo ? { regimen: rg.tipo } : {}), mostrar: `casado/a${r ? " en régimen de " + r.toLowerCase() : " (régimen no indicado: se propone gananciales)"}`, conf: r ? 2 : 1 }); }
   else if (/viud[oa]/i.test(T)) out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: "viudo", mostrar: "viudo/a", conf: 1 });
   else if (/solter[oa]/i.test(T)) out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: "soltero", mostrar: "soltero/a", conf: 1 });
   // Hijos: «tiene cuatro hijos llamados MERCEDES, GUSTAVO, RAQUEL y AMADOR TÉBAR POZAS» / «hijos llamados DON X, DOÑA Y y DON Z»
@@ -1249,13 +1262,15 @@ function lecFamilia(t) {
     if (!out.personas.some((p) => p.inscrito)) { const ins = new RegExp(`(?:${lecCI("nacimiento")}\\s+${lecCI("de")}|${lecCI("inscrit")}[oa]\\s*[:：]?|${lecCI("nombre")}\\s+${lecCI("del")}\\s+${lecCI("inscrit")}[oa]\\s*[:：]?)\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`).exec(T1); if (ins) { const nombre = lecNombre(ins[1]); const nac = nacCerca(T1.slice(ins.index, ins.index + 300)) || lecFechaCerca(T1, /naci[óo]\s+(?:en\s+[^,]{0,60}?\s*,?\s*)?(?:el\s+(?:d[ií]a\s+)?)?/i, 90); if (nombre && !out.personas.some((p) => p.nombre === nombre)) out.personas.unshift({ nombre, relacion: "", inscrito: true, nacimiento: nac, edad: edad(nac), conf: 1 }); } }
   }
   // Régimen económico matrimonial y fecha del matrimonio. Lo pactado en capitulaciones (nota marginal o escritura) manda sobre el régimen inicial
-  const cap = /capitulaciones(?:\s+matrimoniales)?[^.]{0,220}?(separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|gananciales|participaci[óo]n)|(?:han\s+|hab[ií]an\s+)?pactad[oa]s?\s+(?:el\s+)?r[ée]gimen\s+(?:econ[óo]mico\s+)?(?:matrimonial\s+)?de\s+(separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|gananciales|participaci[óo]n)/i.exec(T1);
-  const REGS = [...T1.matchAll(/r[ée]gimen\s+(?:econ[óo]mico[- ]?(?:matrimonial|del\s+matrimonio)?\s*)?(?:[:：]\s*)?(?:el\s+)?(?:legal\s+)?(?:de\s+)?(?:la\s+)?(?:sociedad\s+de\s+)?(gananciales|separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|participaci[óo]n|comunidad\s+de\s+bienes|conquistas|consorcial)/gi)];
+  const cap = /capitulaciones(?:\s+matrimoniales)?[^.]{0,220}?(separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|gananciales|participaci[óo]n|conquistas|consorcio conyugal|comunicaci[óo]n foral)|(?:han\s+|hab[ií]an\s+)?pactad[oa]s?\s+(?:el\s+)?r[ée]gimen\s+(?:econ[óo]mico\s+)?(?:matrimonial\s+)?de\s+(separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|gananciales|participaci[óo]n|conquistas|consorcio conyugal|comunicaci[óo]n foral)/i.exec(T1);
+  const REGS = [...T1.matchAll(/r[ée]gimen\s+(?:econ[óo]mico[- ]?(?:matrimonial|del\s+matrimonio)?\s*)?(?:[:：]\s*)?(?:el\s+)?(?:legal\s+)?(?:de\s+)?(?:la\s+)?(?:sociedad\s+de\s+)?(gananciales|separaci[óo]n\s+(?:absoluta\s+)?de\s+bienes|participaci[óo]n|comunicaci[óo]n\s+foral(?:\s+de\s+bienes)?|comunidad\s+de\s+bienes|conquistas|consorcio\s+conyugal|consorcial)/gi)];
   const reg = cap ? [cap[0], cap[1] || cap[2]] : REGS.length ? REGS[REGS.length - 1] : null;
   if (reg) {
-    const sep = /separaci|participaci/i.test(reg[1]); const fCap = cap ? lecFechas(T1.slice(Math.max(0, cap.index - 200), cap.index + 300)).map((q) => q.f).find((f) => !fm0 || f !== fm0) : null;
-    out.campos.push({ k: "civil", etiqueta: cap ? "Régimen económico (capitulaciones)" : "Régimen económico matrimonial", valor: sep ? "separacion" : "gananciales", manda: !!cap, mostrar: `casado/a en régimen de ${reg[1].toLowerCase()}${cap ? ` pactado en capitulaciones${fCap ? " de " + fechaLarga(fCap) : ""} (manda sobre el «casado» de otros documentos)` : ""}${/consorcial|conquistas|comunidad/i.test(reg[1]) ? " (foral: se propone gananciales como equivalente)" : ""}`, conf: 2 });
-    if (/participaci/i.test(reg[1])) out.avisos.push("Régimen de participación: durante el matrimonio los bienes son privativos (se carga como separación de bienes), pero al morir nace un crédito de participación en las ganancias (arts. 1411 y ss. CC) que hay que calcular aparte.");
+    const rg = lecRegimen(reg[1], T1), sep = rg.civil === "separacion"; const fCap = cap ? lecFechas(T1.slice(Math.max(0, cap.index - 200), cap.index + 300)).map((q) => q.f).find((f) => !fm0 || f !== fm0) : null;
+    out.campos.push({ k: "civil", etiqueta: cap ? "Régimen económico (capitulaciones)" : "Régimen económico matrimonial", valor: rg.civil, ...(rg.tipo ? { regimen: rg.tipo } : {}), manda: !!cap, mostrar: `casado/a en régimen de ${reg[1].toLowerCase()}${cap ? ` pactado en capitulaciones${fCap ? " de " + fechaLarga(fCap) : ""} (manda sobre el «casado» de otros documentos)` : ""}${rg.tipo && rg.tipo !== "participacion" ? " (régimen foral: se liquida con sus reglas)" : ""}`, conf: rg.dudoso ? 1 : 2 });
+    if (rg.dudoso) out.avisos.push("Régimen de «comunidad de bienes»: no se identifica con un régimen español concreto (¿comunicación foral vizcaína, consorcio aragonés o un régimen extranjero?). Se propone gananciales con confianza baja: confírmalo en «Régimen económico».");
+    if (rg.tipo === "comunicacion") out.avisos.push("Comunicación foral de bienes (Bizkaia): con hijos comunes, al morir se consolida y el viudo es dueño de la mitad de todos los bienes, también de los privativos (Ley 5/2015). Revisa la liquidación en «Régimen económico».");
+    if (/participaci/i.test(reg[1])) out.avisos.push("Régimen de participación: durante el matrimonio los bienes son privativos, pero al morir nace un crédito de participación en las ganancias (arts. 1411 y ss. CC). Indica los patrimonios inicial y final en «Régimen económico».");
     if (cap && REGS.some((q) => /gananciales/i.test(q[1])) && sep) out.avisos.push("El matrimonio empezó en gananciales y después pactó separación de bienes: los bienes comprados antes de las capitulaciones pudieron quedar gananciales si no se liquidó la sociedad. Revisa la titularidad de cada inmueble en la nota simple.");
   }
   else if (esMat && out.personas.filter((p) => p.pareja).length === 2) out.campos.push({ k: "civil", etiqueta: "Estado civil", valor: "gananciales", mostrar: "casado/a según el Registro Civil (régimen no indicado: se propone gananciales; cambia a separación si hay capitulaciones)", conf: 1 });
@@ -1625,7 +1640,7 @@ function lecPropuestas(x, R) {
       const add = (p) => { p.k = c.k; p.valor = c.valor; const clave = JSON.stringify([c.k, c.valor]); const ya = vistos.get(clave); if (ya) { ya.doc += " + " + doc; ya.conf = Math.max(ya.conf, p.conf); ya.on = ya.on || p.on; if (p.confOrig != null) ya.confOrig = Math.max(ya.confOrig || 0, p.confOrig); if (p.manda) ya.manda = true; return ya; } const otro = [...vistos.values()].find((q) => q.k === c.k && q.k !== "testamentoDatos" && q.k !== "aseguradoras"); if (otro && c.k !== "testamento") { p.conf = 0; p.etiqueta += " (otro valor en " + doc + ")"; } const q = addP(p); vistos.set(clave, q); return q; };
       if (c.k === "nombre") { if (x.nombre && lecMismoNombre(x.nombre, c.valor)) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar || c.valor, conf: x.nombre ? 0 : c.conf, aplicar: (x) => { x.nombre = c.valor; } }); }
       else if (c.k === "fecha") { if (x.fecha === c.valor) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar || c.valor, conf: x.fecha && x.fecha !== c.valor ? 0 : c.conf, aplicar: (x) => { x.fecha = c.valor; } }); }
-      else if (c.k === "civil") { if (x.civil === c.valor) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: x.civil ? 0 : c.conf, confOrig: c.conf, manda: !!c.manda, aplicar: (x) => { x.civil = c.valor; } }); }
+      else if (c.k === "civil") { if (x.civil === c.valor) continue; add({ doc, grupo: "Causante", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: x.civil ? 0 : c.conf, confOrig: c.conf, manda: !!c.manda, aplicar: (x) => { x.civil = c.valor; if (c.regimen) x.regimen = { ...(x.regimen || {}), tipo: c.regimen }; } }); }
       else if (c.k === "arrendamiento") arrs.push({ c, doc });
       else if (c.k === "planPensiones") add({ doc, grupo: "Seguros y previsión", etiqueta: c.etiqueta || "Plan de pensiones", mostrar: c.mostrar, conf: c.conf, aplicar: (x) => { x.planesPensiones = (x.planesPensiones || []).filter((q) => JSON.stringify(q) !== JSON.stringify(c.valor)).concat([c.valor]); } });
       else if (c.k === "datosFiscales") add({ doc, grupo: "Impuestos", etiqueta: c.etiqueta, mostrar: c.mostrar, conf: c.conf, aplicar: (x) => { x.datosFiscales = { ...(x.datosFiscales || {}), ...c.valor }; } });

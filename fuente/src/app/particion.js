@@ -52,7 +52,7 @@ function pColacion(x, R, P, share, netoReparto) {
 }
 
 function particion(x, R) {
-  const m = R.isd.masa;
+  const m = R.isd.masa, LQb = (m.liquidacion && m.liquidacion.porBien) || {};
   const P = (x.personas || []).filter((p) => !p.renuncia && !p.indigno);
   const edad = (p) => (p && p.edad !== "" && p.edad != null && !isNaN(num(p.edad)) ? num(p.edad) : 40);
   const porId = Object.fromEntries((x.personas || []).map((p) => [p.id, p]));
@@ -61,14 +61,16 @@ function particion(x, R) {
   const share = Object.fromEntries(P.map((p) => [p.id, (der[p.id] || []).reduce((s, d) => s + d.fraccion * fEco(p, d), 0)]));
   const B = (x.bienes || []).map((b) => {
     const inm = b.tipo === "vivienda" || b.tipo === "inmueble";
-    const total = inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
-    const cc = cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) });
+    const lq = LQb[b.id]; // G04: cuota de la liquidación del régimen económico (y valor del motor: valoración G03 si falta el de la ficha)
+    const total = lq ? lq.total : inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
+    const cc = lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) });
     const ok = (id) => id && porId[id] && !porId[id].renuncia && !porId[id].indigno;
     const leg = ok(b.legatarioId) ? b.legatarioId : "";
     const adj = !leg && ok(b.adjudicadoA) ? b.adjudicadoA : "";
-    return { b, inm, total, cc, v: total * cc, leg, adj };
+    return { b, inm, total, cc, v: total * cc, vg: lq ? total * lq.cuotaConyuge : 0, leg, adj };
   }).filter((q) => q.total > 0);
   const cols = P.filter((p) => (der[p.id] || []).length || B.some((q) => q.leg === p.id));
+  const GJ = pcConjunta(x, R, B, cols); // G04: liquidación del régimen y partición en un solo cuadro (viudo que interviene)
   const DG = (m.deudas || 0) + (m.gastos || 0);
   // Colación: lo que el colacionante toma de menos se reparte entre los demás del grupo. Sin adjudicaciones, cada uno recibe en proindiviso la
   // fracción que cuadra su nuevo haber (bienes − cargas = haber); las cargas siguen las cuotas (art. 1084 CC).
@@ -86,20 +88,42 @@ function particion(x, R) {
       cell[q.b.id][p.id] = v > 0.004 ? { v, lab: L.map((d) => derTxt(Math.abs(k - 1) > 1e-9 ? { ...d, fraccion: d.fraccion * k } : d)).join(" · ") } : null;
     }
   }
+  if (GJ) pcCeldasConjuntas(GJ, B, cell);
   const H = cols.map((p) => {
-    const bienes = B.filter((q) => !q.leg).reduce((s, q) => s + (cell[q.b.id][p.id]?.v || 0), 0);
-    const cargas = share[p.id] * DG;
+    const bienes = B.reduce((s, q) => s + (q.leg ? cell[q.b.id][p.id]?.vg || 0 : cell[q.b.id][p.id]?.v || 0), 0);
+    const esV = GJ && GJ.V.id === p.id, haberGan = esV ? GJ.haberGan : 0;
+    const cargas = share[p.id] * DG + (esV ? GJ.pasivo : 0);
     // D2 (control de calidad 07-10-2026): el usufructuario no paga el capital de las deudas ni los gastos: se pagan con bienes de la herencia y su
     // usufructo recae sobre el caudal líquido (la cuota usufructuaria del viudo se calcula sobre el haber líquido, art. 818 CC; en el usufructo de
     // todo un patrimonio, el usufructuario solo responde de las deudas en los casos del art. 643 CC, por remisión del art. 510 CC). Las cifras no
     // cambian (su parte económica es menor en la misma proporción), pero se separa la parte que «reduce el usufructo» de la que se paga.
     const cargasUsufructo = (der[p.id] || []).filter((d) => d.tipo === "usufructo").reduce((s, d) => s + d.fraccion * fEco(p, d), 0) * DG;
     const adjud = bienes - cargas;
-    const haber = COL.aplica && COL.grupo.includes(p.id) ? COL.haber[p.id] : share[p.id] * m.netoReparto;
+    const haberHer = COL.aplica && COL.grupo.includes(p.id) ? COL.haber[p.id] : share[p.id] * m.netoReparto, haber = haberHer + haberGan; // G04: más, para el viudo, su haber en la sociedad
     const legados = B.filter((q) => q.leg === p.id).reduce((s, q) => s + q.v, 0);
-    return { p, bienes, cargas, cargasUsufructo, cargasCapital: cargas - cargasUsufructo, adjud, haber, legados, dif: adjud - haber, share: share[p.id], colacion: COL.colacion[p.id] || 0 };
+    return { p, bienes, cargas, cargasUsufructo, cargasCapital: cargas - cargasUsufructo, adjud, haber, haberHer, haberGan, legados, dif: adjud - haber, share: share[p.id], colacion: COL.colacion[p.id] || 0 };
   });
-  return { B, cols, cell, H, DG, share, fEco, COL };
+  return { B, cols, cell, H, DG, share, fEco, COL, conjunta: GJ };
+}
+// G04 · Liquidación conjunta (auditoría civil 10-10-2026, ficha 7.7.b). Si el viudo interviene en la partición y tiene parte en los bienes por el
+// régimen económico, su parte entra en el cuadro: el haber del viudo es su haber en la sociedad (bienes comunes menos su parte de las deudas
+// comunes, con los reintegros de la liquidación) más su haber hereditario. Así, adjudicarle entera la vivienda común solo da exceso por lo que
+// supera la suma de los dos haberes (arts. 1404, 1406 y 1062 CC). El exceso que nace de la liquidación de la sociedad sigue la STS 1502/2019.
+function pcConjunta(x, R, B, cols) {
+  const LQ = R.isd.masa.liquidacion, V = cols.find((p) => p.relacion === "conyuge" && !p.separado);
+  // Solo cuando un bien con parte del viudo se adjudica entero: con todo pro indiviso el cuadro separado da el mismo resultado (diferencia 0)
+  if (!LQ || !V || !B.some((q) => q.vg > 0.004 && q.adj)) return null;
+  const pasivo = (x.deudas || []).reduce((s, d) => s + Math.max(0, num(d.importe)) * (1 - LQ.cuotaDeuda(d)), 0);
+  return { V, LQ, pasivo, haberGan: B.reduce((s, q) => s + q.vg, 0) - pasivo };
+}
+function pcCeldasConjuntas(GJ, B, cell) {
+  const id = GJ.V.id;
+  for (const q of B) {
+    if (!(q.vg > 0.004)) continue;
+    const c = cell[q.b.id], dest = q.adj || id, prev = c[dest];
+    if (q.adj) { c[dest] = { v: q.v + q.vg, vg: q.vg, lab: "Adjudicado entero" + (dest === id ? " (su parte en la sociedad y la de la herencia)" : " (con la parte del viudo en la sociedad)") }; continue; }
+    c[dest] = { v: (prev ? prev.v : 0) + q.vg, vg: q.vg, lab: ["Su parte en la sociedad conyugal", prev ? prev.lab : ""].filter(Boolean).join(" · ") };
+  }
 }
 
 // ───────────────────── Cuadro de adjudicación: ÚNICA fuente de las cifras del exceso ─────────────────────
@@ -198,9 +222,10 @@ function cuadroParticion(x, R) {
   const H = PT.H.map((h) => {
     const id = h.p.id, enteros = PT.B.filter((q) => q.adj === id), indiv = enteros.filter((q) => CP_INDIV(q.b));
     // Unidad indivisible: el bien indivisible de mayor valor, o el conjunto que el abogado marca como inseparable (art. 1062 CC, por acuerdo o pericial)
-    const conj = indiv.filter((q) => q.b.art1062), sueltos = indiv.filter((q) => !q.b.art1062).sort((a, b) => b.v - a.v);
-    const vConj = conj.reduce((s, q) => s + q.v, 0), U = sueltos.length && sueltos[0].v > vConj ? [sueltos[0]] : conj.length ? conj : [];
-    const vIndiv = U.reduce((s, q) => s + q.v, 0), vInmIndiv = U.filter((q) => q.inm).reduce((s, q) => s + q.v, 0);
+    const vq = (q) => PT.cell[q.b.id][id].v; // G04: valor adjudicado, con la parte del viudo si la liquidación es conjunta
+    const conj = indiv.filter((q) => q.b.art1062), sueltos = indiv.filter((q) => !q.b.art1062).sort((a, b) => vq(b) - vq(a));
+    const vConj = conj.reduce((s, q) => s + vq(q), 0), U = sueltos.length && vq(sueltos[0]) > vConj ? [sueltos[0]] : conj.length ? conj : [];
+    const vIndiv = U.reduce((s, q) => s + vq(q), 0), vInmIndiv = U.filter((q) => q.inm).reduce((s, q) => s + vq(q), 0);
     const exceso = h.dif >= 1 ? cpR2(h.dif) : 0, defecto = h.dif <= -1 ? cpR2(-h.dif) : 0;
     const inevitable = exceso ? cpR2(Math.max(0, Math.min(exceso, vIndiv - h.cargas - h.haber))) : 0;
     const evitable = cpR2(exceso - inevitable);
@@ -208,8 +233,8 @@ function cuadroParticion(x, R) {
     const otros = PT.B.filter((q) => !U.includes(q) && !q.leg && PT.cell[q.b.id][id]);
     const vOtros = otros.reduce((s, q) => s + PT.cell[q.b.id][id].v, 0), vOtrosInm = otros.filter((q) => q.inm).reduce((s, q) => s + PT.cell[q.b.id][id].v, 0);
     // Liquidez para compensar: dinero propio (su mitad de gananciales en cuentas y fondos) + dinero que recibe en pleno dominio
-    const liqPropio = cpViudo(h.p) && x.civil === "gananciales" ? (x.bienes || []).filter((b) => CP_LIQ(b) && b.titularidad === "ganancial").reduce((s, b) => s + num(b.valor) * 0.5, 0) : 0;
-    const liqHerencia = PT.B.filter((q) => CP_LIQ(q.b)).reduce((s, q) => s + (q.leg ? (q.leg === id ? q.v : 0) : q.adj ? (q.adj === id ? q.v : 0) : q.v * pleno(id)), 0);
+    const liqPropio = !PT.conjunta && cpViudo(h.p) && x.civil === "gananciales" ? (x.bienes || []).filter((b) => CP_LIQ(b) && b.titularidad === "ganancial").reduce((s, b) => s + num(b.valor) * 0.5, 0) : 0;
+    const liqHerencia = PT.B.filter((q) => CP_LIQ(q.b)).reduce((s, q) => s + (q.leg ? (q.leg === id ? q.v : 0) : q.adj ? (q.adj === id ? q.v : 0) : q.v * pleno(id)) + (PT.cell[q.b.id][id]?.vg || 0), 0); // G04: su parte de los bienes líquidos comunes, si es conjunta
     const trib = cpTributar(terr, { inevitable, evitable, fInmInev: vIndiv ? vInmIndiv / vIndiv : 0, fInmEv: vOtros ? vOtrosInm / vOtros : 0, fecha: x.fechaParticion });
     return { id, p: h.p, nombre: nom(h.p), haber: cpR2(h.haber), adjudicado: cpR2(h.adjud), legados: cpR2(h.legados), cargas: cpR2(h.cargas), dif: cpR2(h.dif), colacion: cpR2(h.colacion || 0), exceso, defecto, inevitable, evitable, inevitableDe: U.map((q) => q.b), evitableInm: evitable > 0.5 && vOtrosInm > 0.5, bienesEnteros: enteros.map((q) => ({ b: q.b, v: q.v, indivisible: CP_INDIV(q.b), inm: q.inm, unidad: U.includes(q) })), liqPropio: cpR2(liqPropio), liqHerencia: cpR2(liqHerencia), liquido: cpR2(liqPropio + liqHerencia), trib };
   });
@@ -287,8 +312,8 @@ function tParticion(x, R) {
 
   if (k === 0) {
     const vhTot = PT.B.reduce((s, q) => s + q.v, 0), tot = PT.B.reduce((s, q) => s + q.total, 0);
-    body = cab("Qué era del fallecido", "De cada bien, solo entra en la herencia la parte que le pertenecía. En gananciales, la mitad es del cónyuge viudo; en un bien compartido, solo su porcentaje.") +
-      `<div class="card" style="padding:6px 22px"><div class="pinv hd"><span>Bien</span><span>Parte del fallecido</span><span class="pi-v"><span>Valor</span><b>En la herencia</b></span></div>${PT.B.map((q) => `<div class="pinv"><div class="pi-l"><b>${esc(q.b.descripcion || TIPO_BIEN[q.b.tipo][0])}</b><small>${esc(TIPO_BIEN[q.b.tipo][0])} · ${q.b.titularidad === "ganancial" ? "ganancial: mitad del viudo" : q.b.titularidad === "proindiviso" ? `suyo el ${grp(q.cc * 100, 2)} %` : "privativo: todo suyo"}${q.inm && num(q.b.valorReferencia) > num(q.b.valor) ? " · por valor de referencia" : ""}</small></div><div class="pi-b"><i style="width:${q.cc * 100}%"></i></div><div class="pi-v num"><span>${eur0(q.total)}</span><b>${eur0(q.v)}</b></div></div>`).join("")}
+    body = cab("Qué era del fallecido", "De cada bien, solo entra en la herencia la parte que le pertenecía. En gananciales, la mitad es del cónyuge viudo; en un bien compartido, solo su porcentaje.") + (typeof rgPartHTML === "function" ? rgPartHTML(x, R, PT) : "") /* G04: liquidación del régimen antes del inventario */ +
+      `<div class="card" style="padding:6px 22px"><div class="pinv hd"><span>Bien</span><span>Parte del fallecido</span><span class="pi-v"><span>Valor</span><b>En la herencia</b></span></div>${PT.B.map((q) => `<div class="pinv"><div class="pi-l"><b>${esc(q.b.descripcion || TIPO_BIEN[q.b.tipo][0])}</b><small>${esc(TIPO_BIEN[q.b.tipo][0])} · ${q.cc < 0.9999 && q.vg > 0.004 && (q.b.titularidad !== "ganancial" || Math.abs(q.cc - 0.5) > 1e-9) ? `suyo el ${grp(q.cc * 100, 2)} %; del viudo el ${grp(q.vg / q.total * 100, 2)} %` : q.b.titularidad === "ganancial" ? "ganancial: mitad del viudo" : q.b.titularidad === "proindiviso" ? `suyo el ${grp(q.cc * 100, 2)} %` : "privativo: todo suyo"}${q.inm && num(q.b.valorReferencia) > num(q.b.valor) ? " · por valor de referencia" : ""}</small></div><div class="pi-b"><i style="width:${q.cc * 100}%"></i></div><div class="pi-v num"><span>${eur0(q.total)}</span><b>${eur0(q.v)}</b></div></div>`).join("")}
         <div class="pinv tot"><div class="pi-l"><b>Total</b><small>Valor de los bienes · parte del fallecido</small></div><div class="pi-b"><i style="width:${tot ? vhTot / tot * 100 : 0}%"></i></div><div class="pi-v num"><span>${eur0(tot)}</span><b>${eur0(vhTot)}</b></div></div></div>
       <p class="caption pnote">Los inmuebles se computan por el mayor entre el valor declarado y el de referencia (${linkNorma("art. 9 Ley 29/1987", terr)}). La liquidación de gananciales sigue los ${linkNorma("arts. 1344 y 1392 CC", terr)}.</p>`;
   }
@@ -302,10 +327,10 @@ function tParticion(x, R) {
       <p class="caption pnote">Deducibles según los ${linkNorma("arts. 13 y 14 Ley 29/1987", terr)}. Las deudas las asumen los herederos (${linkNorma("art. 1003 CC", terr)}); los legatarios solo responden si toda la herencia se reparte en legados (${linkNorma("art. 891 CC", terr)}).</p>`;
   }
   if (k === 2) {
-    const tot = PT.H.reduce((s, h) => s + h.haber, 0) || 1;
+    const hh = (h) => h.haberHer ?? h.haber, tot = PT.H.reduce((s, h) => s + hh(h), 0) || 1; // G04: aquí, solo el haber hereditario
     body = cab("Qué proporción corresponde a cada uno", x.testamento === "porcentajes" ? "Según el testamento. El usufructo se valora por la edad de quien lo recibe." : x.testamento === "usufructo" ? "Usufructo universal al cónyuge y nuda propiedad a los hijos. El usufructo vale más cuanto más joven es el usufructuario." : "Sin testamento, la ley llama a los herederos por órdenes. El cónyuge viudo recibe su usufructo.") +
-      `<div class="card" style="padding:22px"><div class="pstack">${PT.H.filter((h) => h.haber > 0.5).map((h) => `<i style="width:${h.haber / tot * 100}%;background:${col(h.p.id)}" title="${nom(h.p)}"></i>`).join("")}</div>
-      <div class="pcuotas">${PT.H.map((h) => `<div class="pc"><div class="pc-l">${dot(h.p.id)}<span><b>${nom(h.p)}</b><small>${esc(gnCap(gnRel(h.p)))}${h.p.edad !== "" && h.p.edad != null ? ` · ${esc(h.p.edad)} años` : ""}</small></span></div><div class="pc-d">${(R.isd.derechos[h.p.id] || []).map((d) => `<span class="chip-d ${d.tipo}">${derTxt(d)}${d.tipo !== "pleno" ? ` · vale el ${grp(PT.fEco(h.p, d) * 100, 0)} %` : ""}</span>`).join("")}${h.legados ? `<span class="chip-d leg">Legado ${eur0(h.legados)}</span>` : ""}${h.colacion ? `<span class="chip-d leg">Trae a colación ${eur0(h.colacion)}</span>` : ""}</div><div class="pc-v num"><b>${eur0(h.haber)}</b><small>${h.colacion ? `${grp(h.share * 100, 2)} % de la cuota, menos lo colacionado` : `${grp(h.share * 100, 2)} % de lo que se reparte`}</small></div></div>`).join("")}</div></div>
+      `<div class="card" style="padding:22px"><div class="pstack">${PT.H.filter((h) => hh(h) > 0.5).map((h) => `<i style="width:${hh(h) / tot * 100}%;background:${col(h.p.id)}" title="${nom(h.p)}"></i>`).join("")}</div>
+      <div class="pcuotas">${PT.H.map((h) => `<div class="pc"><div class="pc-l">${dot(h.p.id)}<span><b>${nom(h.p)}</b><small>${esc(gnCap(gnRel(h.p)))}${h.p.edad !== "" && h.p.edad != null ? ` · ${esc(h.p.edad)} años` : ""}</small></span></div><div class="pc-d">${(R.isd.derechos[h.p.id] || []).map((d) => `<span class="chip-d ${d.tipo}">${derTxt(d)}${d.tipo !== "pleno" ? ` · vale el ${grp(PT.fEco(h.p, d) * 100, 0)} %` : ""}</span>`).join("")}${h.legados ? `<span class="chip-d leg">Legado ${eur0(h.legados)}</span>` : ""}${h.colacion ? `<span class="chip-d leg">Trae a colación ${eur0(h.colacion)}</span>` : ""}</div><div class="pc-v num"><b>${eur0(hh(h))}</b><small>${h.colacion ? `${grp(h.share * 100, 2)} % de la cuota, menos lo colacionado` : `${grp(h.share * 100, 2)} % de lo que se reparte`}${h.haberGan ? ` · más ${eur0(h.haberGan)} de su haber en la sociedad` : ""}</small></div></div>`).join("")}</div></div>
       ${PT.COL && PT.COL.notas.length ? `<div class="group" style="margin-top:12px"><ul class="notes">${PT.COL.notas.map((t) => `<li><i class="dot gold"></i><span>${esc(t)}</span></li>`).join("")}</ul></div>` : ""}
       ${R.isd.notasReparto.length ? `<div class="group" style="margin-top:12px"><ul class="notes">${frLeyRepartoHTML(R)}${R.isd.notasReparto.map((n) => `<li><i class="dot gold"></i><span>${esc(n)}</span></li>`).join("")}</ul></div>` : ""}
       ${R.isd.alertas.filter((a) => /legítima|Renuncia|menores/i.test(a)).map((a) => `<div class="infobar" style="margin-top:10px"><span class="ico orange">${I.info}</span><span>${esc(a)}</span></div>`).join("")}
@@ -396,14 +421,18 @@ function cpCuaderno(x, R) {
   const pasivoG = deudasG.reduce((s, d) => s + num(d.importe), 0), remanente = activoG - pasivoG;
   const deudasP = (x.deudas || []).filter((d) => !d.ganancial && num(d.importe) > 0);
   const viudo = (x.personas || []).find((p) => cpViudo(p));
-  const gan = ganB.length ? `Activo ganancial: ${eur(activoG)} (${ganB.map(nomB).join(", ")}).\nPasivo ganancial: ${pasivoG ? `${eur(pasivoG)} (${deudasG.map((d) => `${d.concepto || "deuda"}, ${eur(num(d.importe))}`).join("; ")})` : "no consta"}.\nRemanente líquido: ${eur(remanente)}, que se divide por mitad (arts. 1404 y 1344 CC): ${eur(remanente / 2)} para ${viudo ? `${gnTrat(viudo)}${viudo.nombre}, ${gnO(viudo, "cónyuge viudo", "cónyuge viuda", "cónyuge supérstite")}` : "el cónyuge supérstite"}, y ${eur(remanente / 2)} para la herencia.\nSe adjudica ${viudo ? `a ${viudo.nombre}` : "al cónyuge supérstite"}, en pago de su mitad, la mitad indivisa de cada bien ganancial, y asume la mitad del pasivo ganancial${pasivoG ? ` (${eur(pasivoG / 2)})` : ""}. La otra mitad de cada bien y del pasivo integra la herencia.` : "";
+  const gan0 = ganB.length ? `Activo ganancial: ${eur(activoG)} (${ganB.map(nomB).join(", ")}).\nPasivo ganancial: ${pasivoG ? `${eur(pasivoG)} (${deudasG.map((d) => `${d.concepto || "deuda"}, ${eur(num(d.importe))}`).join("; ")})` : "no consta"}.\nRemanente líquido: ${eur(remanente)}, que se divide por mitad (arts. 1404 y 1344 CC): ${eur(remanente / 2)} para ${viudo ? `${gnTrat(viudo)}${viudo.nombre}, ${gnO(viudo, "cónyuge viudo", "cónyuge viuda", "cónyuge supérstite")}` : "el cónyuge supérstite"}, y ${eur(remanente / 2)} para la herencia.\nSe adjudica ${viudo ? `a ${viudo.nombre}` : "al cónyuge supérstite"}, en pago de su mitad, la mitad indivisa de cada bien ganancial, y asume la mitad del pasivo ganancial${pasivoG ? ` (${eur(pasivoG / 2)})` : ""}. La otra mitad de cada bien y del pasivo integra la herencia.` : "";
+  const LQ = m.liquidacion, gan = LQ && (!LQ.defecto || PT.conjunta) && typeof rgCuadernoGan === "function" ? rgCuadernoGan(x, R, PT) : gan0; // G04
   // Adjudicaciones por heredero
   const lineas = PT.H.map((h) => {
     const id = h.p.id, L = [];
     for (const q of PT.B) {
       const c = PT.cell[q.b.id][id]; if (!c) continue;
       const parte = q.cc < 0.9999 ? ` (la parte de la herencia, ${grp(q.cc * 100, q.cc * 100 % 1 ? 2 : 0)} %)` : "";
-      if (q.leg === id) L.push(`por legado, el pleno dominio de ${nomB(q.b)}${parte}, valorado en ${eur(c.v)}`);
+      const vgc = c.vg || 0; // G04: parte del viudo en la sociedad conyugal incluida en la celda (liquidación conjunta)
+      if (vgc > 0.004 && q.adj === id) { L.push(`el pleno dominio de ${nomB(q.b)}, valorado en ${eur(c.v)}: ${eur(q.v)} de la herencia y ${eur(vgc)} de la parte del cónyuge supérstite en la sociedad conyugal${cpViudo(h.p) && PT.conjunta && PT.conjunta.V.id === id ? ", en pago de su haber en ella" : ", que se le cede en la liquidación conjunta"}${CP_INDIV(q.b) ? ", bien indivisible que se adjudica entero (arts. 1062 y 1406 CC)" : ""}`); continue; }
+      if (vgc > 0.004) { L.push(`en pago de su haber en la sociedad conyugal, su parte de ${nomB(q.b)} (${grp(vgc / q.total * 100, 2)} %), valorada en ${eur(vgc)}`); if (c.v - vgc > 0.004 && q.leg !== id) L.push(`${(der[id] || []).filter((d) => d.fraccion > 0).map(derF).join(" y ")} de la parte de la herencia en ${nomB(q.b)}, valorado en ${eur(c.v - vgc)}`); if (q.leg !== id) continue; }
+      if (q.leg === id) L.push(`por legado, el pleno dominio de ${nomB(q.b)}${parte}, valorado en ${eur(q.v)}`);
       else if (q.adj === id) L.push(`el pleno dominio de ${nomB(q.b)}${parte}, valorado en ${eur(c.v)}${CP_INDIV(q.b) ? ", bien indivisible que se adjudica entero (art. 1062 CC)" : ""}`);
       else L.push(`${(der[id] || []).filter((d) => d.fraccion > 0).map(derF).join(" y ")} de ${nomB(q.b)}${parte}, valorado en ${eur(c.v)}`);
     }
