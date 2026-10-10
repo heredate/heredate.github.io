@@ -780,8 +780,35 @@ function lecDefuncion(t) {
   const cj = pluri ? /(?:conjoint|c[óo]nyuge|spouse|ehegatt)[^:]{0,60}[:：]\s*([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' \-]{2,40}?)\s+(?:\d{1,2}\s+)?(?:Pr[ée]noms?|Nombre|Forenames?)[^:]{0,60}[:：]\s*([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' \-]{2,30}?)(?=\s+\d{1,2}\s+|\s+(?:Nom|Apellidos|Surname|$))/.exec(T) : null;
   if (cj) { const n = lecNombre(`${cj[2]} ${cj[1]}`); if (n) out.personas.push({ nombre: n, relacion: "conyuge", conf: 1 }); }
   else { const cj2 = new RegExp(`${lecCI("casad")}[oa]\\s+(?:${lecCI("en")}\\s+[a-záéíóúñüA-Z]+\\s+${lecCI("nupcias")}\\s+)?${lecCI("con")}\\s+${LEC_TRAT}\\s*${LEC_NOMBRE_RE}`).exec(T); if (cj2) { const n = lecNombre(cj2[1]); if (n && n !== nombre) out.personas.push({ nombre: n, relacion: "conyuge", conf: 1 }); } }
+  lecDefuncionDatos(t, T, nombre, out);
   if (pluri) out.avisos.push("Certificado plurilingüe (Convenio de Viena): sirve sin traducción ante las administraciones españolas.");
   return out;
+}
+// Datos del causante para el modelo 790 y la escritura (G01): fecha y lugar de nacimiento, padres e inscripción de la defunción (Registro Civil,
+// sección, tomo y folio). Se proponen como campos del expediente (exp.*): el abogado los revisa antes de cargarlos.
+function lecDefuncionDatos(t, T, nombre, out) {
+  const P = (k, etiqueta, valor, conf, mostrar) => { if (valor) out.campos.push({ k: "exp." + k, grupo: "Causante", etiqueta, valor, mostrar: mostrar || valor, conf }); };
+  const fn = lecFechaCerca(T, /fecha\s+de\s+nacimiento|date\s+(?:et\s+lieu\s+)?de\s+naissance|date\s+(?:and\s+place\s+)?of\s+birth|naci[óo]\s+(?:en\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü' \-]{2,40}?\s*,?\s*)?el(?:\s+d[ií]a)?|nacid[oa]\s+(?:en\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü' \-]{2,40}?\s*,?\s*)?el(?:\s+d[ií]a)?/i, 60);
+  P("fechaNacimiento", "Fecha de nacimiento del causante", fn, 2, fn ? fechaLarga(fn) : "");
+  const stop = "(?=\\s+(?:Provincia|Pa[íi]s|Estado|Fecha|Hijo|Hija|Nombre|Padre|Madre|Sexo|DNI|Nacionalidad|Hora|Lugar|Datos|Domicilio|Filiaci[óo]n|Inscripci[óo]n|Secci[óo]n|Tomo|$)|\\s*[,.;]|$)";
+  const ln = new RegExp(`lugar\\s+de\\s+nacimiento\\s*[:：]?\\s*([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' \\-]{1,40}?)${stop}`, "i").exec(T) || new RegExp(`(?:natural\\s+de|nacid[oa]\\s+en)\\s+([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' \\-]{1,40}?)${stop}`, "i").exec(T);
+  if (ln) { const pv = /lugar\s+de\s+nacimiento/i.test(ln[0]) ? /^\s*Provincia\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' \-]{1,30}?)(?=\s+(?:Pa[íi]s|Estado|Fecha|Nombre|Padre|Madre|Sexo|Hora|Lugar|$)|\s*[,.;]|$)/i.exec(T.slice(ln.index + ln[0].length)) : null; const l = lecTitulo(ln[1]), p = pv ? lecTitulo(pv[1]) : ""; P("lugarNacimiento", "Lugar de nacimiento del causante", p && p !== l ? `${l} (${p})` : l, 1); }
+  // Padres: «Nombre del padre: X», «Padre: X», «hijo de X y de Y», «Filiación: hijo de X y de Y»
+  const NOM = "([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' \\-]{1,50}?)";
+  const pa = new RegExp(`(?:nombre\\s+del\\s+)?\\bpadre\\s*[:：]\\s*${NOM}${stop}`, "i").exec(T), ma = new RegExp(`(?:nombre\\s+de\\s+la\\s+)?\\bmadre\\s*[:：]\\s*${NOM}${stop}`, "i").exec(T);
+  const hj = new RegExp(`\\bhij[oa]\\s+de\\s+(?:${LEC_TRAT}\\s*)?${NOM}\\s+y\\s+(?:de\\s+)?(?:${LEC_TRAT}\\s*)?${NOM}(?=\\s*[,.;]|\\s+(?:de\\s+estado|natural|nacid|vecin|falleci|casad|viud|solter|divorciad|con\\s+D)|$)`).exec(T);
+  const padre = pa ? lecTitulo(pa[1]) : hj ? lecTitulo(hj[1]) : "", madre = ma ? lecTitulo(ma[1]) : hj ? lecTitulo(hj[2]) : "";
+  if (padre && !lecMismoNombre(padre, nombre || "")) P("padre", "Padre del causante", padre, pa ? 2 : 1);
+  if (madre && !lecMismoNombre(madre, nombre || "")) P("madre", "Madre del causante", madre, ma ? 2 : 1);
+  // Inscripción de la defunción: Registro Civil, sección, tomo y folio
+  const rc = /REGISTRO\s+CIVIL\s+(?:EXCLUSIVO\s+)?(?:DE\s+|DEL\s+)?([^\n,.·(:]{2,40}?)\s*(?:\n|,|\.|·|\(|$)/i.exec(t);
+  if (rc && !/^(central|consular)$/i.test(rc[1].trim())) P("rcDefuncion", "Registro Civil de la defunción", lecTitulo(rc[1].replace(/\s+(?:secci[óo]n|tomo|folio|certificad|certifica)\b.*$/i, "")), 1);
+  else if (rc) P("rcDefuncion", "Registro Civil de la defunción", lecTitulo(rc[1]), 1);
+  const sc = /\bsecci[óo]n\s*[:：]?\s*(\d{1,2})\s*(?:\.?\s*[ªaº])?(?!\d)/i.exec(T) || /\bsecci[óo]n\s+(primera|segunda|tercera|cuarta)\b/i.exec(T);
+  const tm = /\btomo\s*[:：.]?\s*(?:n[.º°o]{0,2}\s*)?(\d{1,2}\.\d{3}|\d{1,5})\b/i.exec(T), fo = /\bfolio\s*[:：.]?\s*(?:n[.º°o]{0,2}\s*)?(\d{1,2}\.\d{3}|\d{1,5})\b/i.exec(T);
+  if (sc) P("seccionDefuncion", "Sección del Registro Civil", lecOrdinal(sc[1]), 1);
+  if (tm) P("tomoDefuncion", "Tomo de la inscripción de defunción", lecNumReg(tm[1]), 1);
+  if (fo) P("folioDefuncion", "Folio de la inscripción de defunción", lecNumReg(fo[1]), 1);
 }
 function lecUltimas(t) {
   const out = { campos: [], avisos: [] }; const T = t.replace(/\s+/g, " ");
@@ -936,12 +963,63 @@ function lecNotaSimple(t) {
   out.avisos.unshift(`La nota simple contiene ${out.bienes.length} fincas: se propone cada una por separado.`);
   return out;
 }
+// Datos registrales de la finca (G01): tomo, libro, folio, inscripción y sección; descripción, superficie, linderos y cuota; notario, fecha y
+// protocolo de la escritura del título. Formatos: «Tomo: 2.345 Libro: 456 Folio: 78 Inscripción: 4ª», «inscrita al tomo 1.234, libro 567 de la
+// sección 2ª, folio 89, … inscripción 3ª» y la tabla de la nota telemática «TITULAR NIF TOMO LIBRO FOLIO ALTA» (ALTA es el número de inscripción).
+const LEC_REG_CAMPOS = ["seccion", "tomo", "libro", "folio", "inscripcion", "descripcionRegistral", "linderos", "superficieRegistral", "cuotaParticipacion", "tituloNotario", "tituloFecha", "tituloProtocolo"];
+const LEC_ORD_PAL = { primera: 1, segunda: 2, tercera: 3, cuarta: 4, quinta: 5, sexta: 6, septima: 7, octava: 8, novena: 9, decima: 10 };
+const lecNumReg = (v) => String(v || "").replace(/\./g, "");
+const lecOrdinal = (v) => { const t = lecN(v).toLowerCase(); const n = /^\d+$/.test(t) ? Number(t) : LEC_ORD_PAL[t]; return n ? n + ".ª" : ""; };
+const lecRegResumen = (b) => [b.fincaRegistral ? "finca " + b.fincaRegistral : "", b.tomo || b.libro || b.folio ? [b.tomo ? "tomo " + b.tomo : "", b.libro ? "libro " + b.libro : "", b.folio ? "folio " + b.folio : ""].filter(Boolean).join(", ") : "", b.cru ? "CRU " + b.cru : ""].filter(Boolean).join(" · ");
+// Texto registral en mayúsculas → frase: «NÚMERO CINCO.- PISO SEGUNDO, letra C» → «Número cinco.- piso segundo, letra C» (las siglas se respetan)
+const lecFraseReg = (s) => { const t = String(s || "").replace(/\s+/g, " ").trim().split(" ").map((w) => w.replace(/^([A-ZÁÉÍÓÚÑÜ]{2,})([.,;:\-–)]*)$/, (m, a, b) => (LEC_SIGLAS.has(a) ? m : a.toLowerCase() + b))).join(" "); return t.charAt(0).toUpperCase() + t.slice(1); };
+function lecRegistral(T, T1, desc, zonaTit, tt) {
+  const r = {}, N = "(\\d{1,2}\\.\\d{3}|\\d{1,5})";
+  const tab = /\bTOMO\s+LIBRO\s+FOLIO\s+(?:ALTA|INSCRIPCI[ÓO]N|INSC\.?)\b[\s\S]{0,240}?(?:\d{8}\s?-?\s?[A-Z]|[XYZ]\s?-?\s?\d{7}\s?-?\s?[A-Z])\s+(\d{1,5})\s+(\d{1,5})\s+(\d{1,5})\s+(\d{1,3})\b/i.exec(T);
+  if (tab) Object.assign(r, { tomo: tab[1], libro: tab[2], folio: tab[3], inscripcion: tab[4] + ".ª" });
+  else {
+    const g = (pal) => { const m = new RegExp(`\\b${pal}\\s*[:：.]?\\s*(?:n[.º°o]{0,2}\\s*)?${N}\\b`, "i").exec(T1); return m ? lecNumReg(m[1]) : ""; };
+    const tomo = g("tomo"), libro = g("libro"), folio = g("folio");
+    if (tomo) r.tomo = tomo; if (libro) r.libro = libro; if (folio) r.folio = folio;
+    const ins = /\binscripci[óo]n\s*[:：.]?\s*(?:n[.º°o]{0,2}\s*)?(\d{1,3})\s*(?:\.?\s*[ªaº])?(?![\d.,])/i.exec(T1) || /\binscripci[óo]n\s+(primera|segunda|tercera|cuarta|quinta|sexta|s[ée]ptima|octava|novena|d[ée]cima)\b/i.exec(T1);
+    if (ins) r.inscripcion = lecOrdinal(ins[1]);
+  }
+  const sec = /\bsecci[óo]n\s*[:：]?\s*(\d{1,2})\s*(?:\.?\s*[ªaº])?(?!\d)/i.exec(T1) || /\bsecci[óo]n\s+(primera|segunda|tercera|cuarta|quinta|sexta)\b/i.exec(T1);
+  if (sec) r.seccion = lecOrdinal(sec[1]);
+  // Descripción registral completa: desde «URBANA:» o «RÚSTICA:» hasta la referencia catastral, la titularidad o las cargas
+  const i0 = desc ? T1.indexOf(desc[0]) : -1;
+  if (i0 >= 0) {
+    let d = T1.slice(i0).replace(/^(?:URBANA|R[ÚU]STICA|RUSTICA)\s*[:.\-–]+\s*/i, "").replace(/^C[óo]digo\s+Registral\s+[ÚU]nico\s*[:：]?\s*\d{14}\s*[.\-–]?\s*/i, "");
+    const fin = d.search(/\s(?:Referencia\s+catastral|REFERENCIA\s+CATASTRAL|Ref\.\s*catastral|TITULAR[A-Z]*\b|Titularidad|CARGAS\b|C[ÀA]RREGUES|IDUFIR|C[óo]digo\s+Registral|Inscrita\s+(?:al|en)|INSCRITA|INSCRIPCI[ÓO]N\b|Inscripci[óo]n\s*:|(?:TOMO|Tomo)\s*[:.]?\s*\d|DATOS\s+REGISTRALES|NOTA\s|ESTADO\s+DE\s+COORDINACI|Estado\s+de\s+coordinaci)/);
+    d = (fin > 0 ? d.slice(0, fin) : d.slice(0, 700)).trim().replace(/[\s.;,:\-–]+$/, "");
+    if (d.length >= 15) r.descripcionRegistral = lecFraseReg(d);
+  }
+  const lin = /\bLind(?:a|ando|eros?)\s*[:：]?\s*(.{5,320}?)(?=\.\s+(?:[A-ZÁÉÍÓÚÑ][A-Za-záéíóúñ]{2,}|$)|\s+(?:Cuota|CUOTA|Coeficiente|COEFICIENTE|Referencia|REFERENCIA|TITULAR|CARGAS|IDUFIR)\b|$)/.exec(T1);
+  if (lin) r.linderos = lin[1].trim().replace(/[\s.;,]+$/, "");
+  const sup = /\bsuperficie\s+((?:[uú]til|construida|total|de\s+suelo|registral|del\s+solar|de\s+la\s+parcela)\s+)?(?:de\s+)?(?:[:：]\s*)?((?:\d[\d.]*(?:,\d+)?\s*(?:m2|m²|metros?\s+cuadrados))|(?:[a-záéíóúñ]+(?:\s+(?:y\s+)?[a-záéíóúñ]+){0,7}\s+metros\s+cuadrados)|(?:[a-záéíóúñ]+(?:\s+(?:y\s+)?[a-záéíóúñ]+){0,4}\s+hect[áa]reas(?:[^.]{0,60}?(?:[áa]reas|centi[áa]reas))?))/i.exec(T1)
+    || /\bde\s+((?:[a-záéíóúñ]+(?:\s+(?:y\s+)?[a-záéíóúñ]+){0,4})\s+hect[áa]reas(?:[^.]{0,60}?(?:[áa]reas|centi[áa]reas))?)/i.exec(T1);
+  const SUP_Q = { util: "útiles", construida: "construidos", total: "en total", "de suelo": "de suelo", "del solar": "de solar", "de la parcela": "de parcela", registral: "" };
+  if (sup) { const q = sup[1] ? SUP_Q[lecN(sup[1]).toLowerCase().trim()] || "" : ""; r.superficieRegistral = `${sup[2] || sup[1]}${q && sup[2] ? " " + q : ""}`.replace(/\s+/g, " ").replace(/\bm2\b/i, "m²").trim(); }
+  const cu = /\b(?:cuota|coeficiente)(?:\s+de\s+participaci[óo]n)?\s*[:：]?\s*(\d{1,3}(?:[.,]\d{1,6})?)\s*(?:%|por\s*ciento)/i.exec(T1);
+  if (cu) r.cuotaParticipacion = cu[1].replace(".", ",") + " %";
+  // Escritura del título: notario, fecha y protocolo (tras «por título de compraventa…»)
+  if (tt) {
+    const z = zonaTit.slice(tt.index, tt.index + 320);
+    const nt = new RegExp(`notari[oa]\\s+(?:de\\s+[A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñü]+(?:\\s+[A-Za-záéíóúñü]+){0,2}?\\s*,?\\s+)?(?:[Dd]o(?:n|ña)\\s+)?${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`).exec(z);
+    const nom = nt ? lecNombre(nt[1].replace(/\s+(?:con|el|en|y|bajo|de)\s*$/i, "")) : "";
+    if (nom && !/^(Notario|Notaria)$/i.test(nom)) r.tituloNotario = nom;
+    const pr = /(\d{1,2}\.\d{3}|\d{1,5})\s+de\s+(?:su\s+)?protocolo|protocolo\s*(?:n[úu]mero|n[.º°o]{1,2})?\s*[:：]?\s*(\d{1,2}\.\d{3}|\d{1,5})\b/i.exec(z);
+    if (pr) r.tituloProtocolo = lecNumReg(pr[1] || pr[2]);
+    const F = lecFechas(z); if (F.length) r.tituloFecha = F[0].f;
+  }
+  return r;
+}
 function lecNotaFinca(T) {
   const out = { campos: [], bienes: [], deudas: [], personas: [], avisos: [] };
   const ref = lecRefCat(T);
   const fm = new RegExp(LEC_FINCA_RE.source, "i").exec(T); const finca = fm ? fm[1] || fm[2] || fm[3] : "";
   const cru = /(?:IDUFIR|CRU|C[óo]digo\s+Registral\s+[ÚU]nico)\s*(?:\([^)]{0,30}\))?\s*[:：]?\s*(\d{14})/i.exec(T);
-  const reg = /REGISTRO DE LA PROPIEDAD\s+(?:DE\s+)?([A-ZÁÉÍÓÚÑÜa-záéíóúñü'\- ]{2,40}?(?:\s+(?:N[.º°ºo]{0,2}|N[úu]mero)\s*\d{1,2})?)(?=\s*[\n,.·(]|\s+(?:Colegio|NOTA|Nota|$))/.exec(T)
+  const reg = /REGISTRO DE LA PROPIEDAD\s+(?:DE\s+)?([A-ZÁÉÍÓÚÑÜa-záéíóúñü'\- ]{2,40}?(?:\s+(?:N[.º°ºo]{0,2}|N[úuÚU][mM][eE][rR][oO])\s*\d{1,2})?)(?=\s*[\n,.·(]|\s+(?:Colegio|NOTA|Nota|$))/.exec(T)
     || ((m) => m && [m[0], `${m[2]} nº ${m[1]}`])(/REGISTRO DE LA PROPIEDAD\s+N[.º°ºo]{0,2}\s*(\d{1,2})\s+DE\s+([A-ZÁÉÍÓÚÑÜa-záéíóúñü'\- ]{2,40}?)(?=\s*[\n,.·(]|$)/i.exec(T)) // «REGISTRO DE LA PROPIEDAD Nº 2 DE ÁVILA»
     || /Registrador(?:a)?\s+de\s+la\s+Propiedad\s+de\s+([A-ZÁÉÍÓÚÑÜa-záéíóúñü'\- ]{2,40}?(?:\s+(?:N[.º°ºo]{0,2}|N[úu]mero)\s*\d{1,2})?)(?=\s*[\n,.·(]|$)/i.exec(T);
   const T1 = T.replace(/\s+/g, " ");
@@ -998,6 +1076,7 @@ function lecNotaFinca(T) {
     });
   }
   if (titulares.length) b.titulares = titulares;
+  Object.assign(b, lecRegistral(T, T1, desc, zonaTit, tt));
   // Cargas
   const zonaCar = (() => { const i = T1.search(/\bCARGAS\b|C[ÀA]RREGUES/i); return i >= 0 ? T1.slice(i) : T1; })();
   b.cargasTxt = zonaCar.slice(0, 200);
@@ -1623,10 +1702,10 @@ function lecPropuestas(x, R) {
       // Participaciones sociales: la parte del causante sale de la lista de socios; el valor, del patrimonio neto del último balance si consta
       if (Array.isArray(b.socios)) { const tc = b.socios.find((q) => esCausante(q.nombre)); if (tc) { const v = b.patrimonioNeto && tc.pct ? Math.round(b.patrimonioNeto * tc.pct) / 100 : null; b = { ...b, descripcion: `${tc.titulos ? String(tc.titulos).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " " : ""}${b.descripcion.charAt(0).toLowerCase() + b.descripcion.slice(1)}${tc.pct != null ? " (" + String(tc.pct).replace(".", ",") + " %)" : ""}`, valor: v, ...(v ? { valorFuente: `valor teórico: ${String(tc.pct).replace(".", ",")} % del patrimonio neto${b.ejercicioPN ? " de " + b.ejercicioPN : ""}`, prioValor: 2 } : {}), nota: v ? "" : "sin valor: pide el último balance aprobado", conf: 1 }; } else b = { ...b, conf: 0, nota: nomsCausante.length ? "el causante no figura entre los socios leídos" : "no se sabe qué socio es el causante" }; }
       const ex = (x.bienes || []).find((q) => (b.refCatastral && q.refCatastral && q.refCatastral === b.refCatastral) || (b.matricula && q.matricula && lecN(q.matricula).replace(/[\s-]/g, "") === lecN(b.matricula).replace(/[\s-]/g, "")) || (b.iban && q.iban && q.iban === b.iban) || (b.descripcion && q.descripcion && lecMismoNombre(q.descripcion, b.descripcion) && (q.tipo === "vivienda" || q.tipo === "inmueble")));
-      const campos = {}; for (const k of ["refCatastral", "valorCatastralTotal", "valorCatastralSuelo", "valorReferencia", "fechaAdq", "valorAdq", "porcentaje", "cargas", "iban", "entidad", "matricula", "marca", "modelo", "fechaMatriculacion", "fincaRegistral", "cru", "registro", "superficie", "rustico", "poligono", "parcela", "valorCatastralSueloRustico", "tituloAdq", "isin", "nifSociedad", "valorFuente", "arrendadoOCedido"]) if (b[k] != null && b[k] !== "") campos[k] = b[k];
+      const campos = {}; for (const k of ["refCatastral", "valorCatastralTotal", "valorCatastralSuelo", "valorReferencia", "fechaAdq", "valorAdq", "porcentaje", "cargas", "iban", "entidad", "matricula", "marca", "modelo", "fechaMatriculacion", "fincaRegistral", "cru", "registro", "superficie", "rustico", "poligono", "parcela", "valorCatastralSueloRustico", "tituloAdq", "isin", "nifSociedad", "valorFuente", "arrendadoOCedido", ...LEC_REG_CAMPOS]) if (b[k] != null && b[k] !== "") campos[k] = b[k];
       if (b.titularidad) campos.titularidad = b.titularidad;
       if (b.usoResidencial != null && b.tipo !== "cuenta") campos.usoResidencial = b.usoResidencial;
-      const resumen = [b.refCatastral ? "ref. catastral " + b.refCatastral : "", b.matricula ? "matrícula " + b.matricula : "", b.valorCatastralTotal ? "valor catastral " + eur0(b.valorCatastralTotal) : "", b.valorCatastralSuelo ? "suelo " + eur0(b.valorCatastralSuelo) : "", b.valorReferencia ? "valor de referencia " + eur0(b.valorReferencia) + (b.anioValorReferencia ? " (" + b.anioValorReferencia + ")" : "") : "", (b.tipo === "vivienda" || b.tipo === "inmueble") && !b.valor && !b.valorReferencia ? "SIN VALOR: anótalo" : "", b.titularidad ? b.titularidad + (b.porcentaje ? " " + b.porcentaje + " %" : "") : b.cotitular ? "con cotitular" + (b.porcentaje ? " (" + b.porcentaje + " % del causante)" : "") : "", b.fechaAdq ? "adquirido " + fechaCorta(b.fechaAdq) : "", b.valorAdq ? "por " + eur0(b.valorAdq) : "", b.cargas || "", b.muniNombre ? b.muniNombre + (b.muniProv ? " (" + b.muniProv + ")" : "") : "", b.soloUsufructo ? "el causante solo era usufructuario: el usufructo se extingue y no entra en la herencia" : "", b.nota || ""].filter(Boolean).join(" · ");
+      const resumen = [b.refCatastral ? "ref. catastral " + b.refCatastral : "", lecRegResumen(b), b.matricula ? "matrícula " + b.matricula : "", b.valorCatastralTotal ? "valor catastral " + eur0(b.valorCatastralTotal) : "", b.valorCatastralSuelo ? "suelo " + eur0(b.valorCatastralSuelo) : "", b.valorReferencia ? "valor de referencia " + eur0(b.valorReferencia) + (b.anioValorReferencia ? " (" + b.anioValorReferencia + ")" : "") : "", (b.tipo === "vivienda" || b.tipo === "inmueble") && !b.valor && !b.valorReferencia ? "SIN VALOR: anótalo" : "", b.titularidad ? b.titularidad + (b.porcentaje ? " " + b.porcentaje + " %" : "") : b.cotitular ? "con cotitular" + (b.porcentaje ? " (" + b.porcentaje + " % del causante)" : "") : "", b.fechaAdq ? "adquirido " + fechaCorta(b.fechaAdq) : "", b.valorAdq ? "por " + eur0(b.valorAdq) : "", b.cargas || "", b.muniNombre ? b.muniNombre + (b.muniProv ? " (" + b.muniProv + ")" : "") : "", b.soloUsufructo ? "el causante solo era usufructuario: el usufructo se extingue y no entra en la herencia" : "", b.nota || ""].filter(Boolean).join(" · ");
       // El importe va aparte: si otro documento trae un valor de más prioridad (banco a la fecha del fallecimiento, valor de referencia), sustituye al anterior
       const valTxt = b.valor && !b.valorReferencia ? eur0(b.valor) + (b.valorFuente ? " (" + b.valorFuente + ")" : "") + (b.notaValor ? " · " + b.notaValor : "") : "";
       const mat = (v) => lecN(v || "").replace(/[\s-]/g, "");
@@ -1899,8 +1978,8 @@ async function lecNuevoDesdeArchivos(files) {
 function lecResumenHTML(x) {
   const D = x.docsLeidos || []; const td = x.testamentoDatos || {}; const A = x.aseguradoras || [];
   const PP = x.planesPensiones || [], AR = (x.bienes || []).filter((b) => b.arrendamiento);
-  if (!D.length && !x.nifCausante && !x.lugarFallecimiento && !td.notario && !td.fecha && !A.length && !x.actaHerederos && !x.municipioCausante && !(x.isdPresentados || []).length && !PP.length && !AR.length) return "";
-  const filas = [x.nifCausante ? ["NIF del causante", x.nifCausante] : null, x.lugarFallecimiento ? ["Lugar del fallecimiento", x.lugarFallecimiento] : null, td.notario ? ["Notario del testamento", td.notario] : null, td.fecha ? ["Fecha del testamento", fechaCorta(td.fecha)] : null, td.protocolo ? ["Protocolo", td.protocolo] : null, A.length ? ["Seguros de vida", A.map((a) => typeof a === "string" ? a : (a.entidad || "") + (a.poliza ? " (" + a.poliza + ")" : "") + (a.capital ? " · " + eur0(a.capital) : "") + (a.beneficiarios ? " · " + a.beneficiarios.slice(0, 60) : "")).join(", ")] : null, x.actaHerederos && (x.actaHerederos.notario || x.actaHerederos.fecha) ? ["Acta de herederos", [x.actaHerederos.fecha ? fechaCorta(x.actaHerederos.fecha) : "", x.actaHerederos.notario ? "ante " + x.actaHerederos.notario : "", x.actaHerederos.protocolo ? "nº " + x.actaHerederos.protocolo : ""].filter(Boolean).join(", ")] : null, x.municipioCausante ? ["Residencia habitual (padrón)", x.municipioCausante] : null, x.matrimonioFecha ? ["Fecha del matrimonio", fechaCorta(x.matrimonioFecha)] : null, ...(x.isdPresentados || []).map((q) => ["Modelo " + (q.modelo || "650") + (q.sujeto ? " · " + q.sujeto : ""), [q.base != null ? "base " + eur0(q.base) : "", q.cuota != null ? "cuota " + eur0(q.cuota) : "", q.estado || ""].filter(Boolean).join(" · ")]), x.capitulacionesFecha ? ["Capitulaciones matrimoniales", fechaCorta(x.capitulacionesFecha)] : null, x.datosFiscales && x.datosFiscales.ejercicio ? ["Datos fiscales leídos", "ejercicio " + x.datosFiscales.ejercicio] : null,
+  if (!D.length && !x.nifCausante && !x.lugarFallecimiento && !x.fechaNacimiento && !x.padre && !x.madre && !x.rcDefuncion && !td.notario && !td.fecha && !A.length && !x.actaHerederos && !x.municipioCausante && !(x.isdPresentados || []).length && !PP.length && !AR.length) return "";
+  const filas = [x.nifCausante ? ["NIF del causante", x.nifCausante] : null, x.lugarFallecimiento ? ["Lugar del fallecimiento", x.lugarFallecimiento] : null, x.fechaNacimiento || x.lugarNacimiento ? ["Nacimiento", [x.lugarNacimiento || "", x.fechaNacimiento ? fechaCorta(x.fechaNacimiento) : ""].filter(Boolean).join(", ")] : null, x.padre || x.madre ? ["Padres", [x.padre, x.madre].filter(Boolean).join(" y ")] : null, x.rcDefuncion || x.tomoDefuncion ? ["Inscripción de la defunción", [x.rcDefuncion ? "Registro Civil de " + x.rcDefuncion : "", x.seccionDefuncion ? "sección " + x.seccionDefuncion : "", x.tomoDefuncion ? "tomo " + x.tomoDefuncion : "", x.folioDefuncion ? "folio " + x.folioDefuncion : ""].filter(Boolean).join(", ")] : null, td.notario ? ["Notario del testamento", td.notario] : null, td.fecha ? ["Fecha del testamento", fechaCorta(td.fecha)] : null, td.protocolo ? ["Protocolo", td.protocolo] : null, A.length ? ["Seguros de vida", A.map((a) => typeof a === "string" ? a : (a.entidad || "") + (a.poliza ? " (" + a.poliza + ")" : "") + (a.capital ? " · " + eur0(a.capital) : "") + (a.beneficiarios ? " · " + a.beneficiarios.slice(0, 60) : "")).join(", ")] : null, x.actaHerederos && (x.actaHerederos.notario || x.actaHerederos.fecha) ? ["Acta de herederos", [x.actaHerederos.fecha ? fechaCorta(x.actaHerederos.fecha) : "", x.actaHerederos.notario ? "ante " + x.actaHerederos.notario : "", x.actaHerederos.protocolo ? "nº " + x.actaHerederos.protocolo : ""].filter(Boolean).join(", ")] : null, x.municipioCausante ? ["Residencia habitual (padrón)", x.municipioCausante] : null, x.matrimonioFecha ? ["Fecha del matrimonio", fechaCorta(x.matrimonioFecha)] : null, ...(x.isdPresentados || []).map((q) => ["Modelo " + (q.modelo || "650") + (q.sujeto ? " · " + q.sujeto : ""), [q.base != null ? "base " + eur0(q.base) : "", q.cuota != null ? "cuota " + eur0(q.cuota) : "", q.estado || ""].filter(Boolean).join(" · ")]), x.capitulacionesFecha ? ["Capitulaciones matrimoniales", fechaCorta(x.capitulacionesFecha)] : null, x.datosFiscales && x.datosFiscales.ejercicio ? ["Datos fiscales leídos", "ejercicio " + x.datosFiscales.ejercicio] : null,
     ...PP.map((q) => ["Plan de pensiones (no es herencia)", [q.plan || "", q.entidad ? "en " + q.entidad : "", q.importe ? eur0(q.importe) : "", q.beneficiarios ? "beneficiarios: " + String(q.beneficiarios).slice(0, 60) : ""].filter(Boolean).join(" · ")]),
     ...AR.map((b) => ["Arrendado: " + String(b.descripcion || "inmueble").slice(0, 40), [b.arrendamiento.arrendatario || "", b.arrendamiento.renta ? eur0(b.arrendamiento.renta) + " al mes" : "", b.arrendamiento.fecha ? "desde " + fechaCorta(b.arrendamiento.fecha) : ""].filter(Boolean).join(" · ")])].filter(Boolean);
   const tipos = D.map((d) => LEC_TIPOS[d.tipo] || d.tipo).filter((v, i, a) => a.indexOf(v) === i);

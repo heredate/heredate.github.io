@@ -3679,3 +3679,59 @@ export function simularAplazamiento(o = {}) {
   return { importe, finVoluntario: fin, regimen: reg, modo: frac ? "fraccionamiento" : "aplazamiento", periodicidad: per, filas, intereses, total: r2(importe + intereses), tipo, garantia, dispensa, deudaTotal,
     importeGarantia: dispensa ? 0 : r2((importe + intereses) * 1.25), norma: `${reg.norma}; art. 53 RD 939/2005 (intereses)`, estado: reg.estado === V && APLAZ_GARANTIA.estado === V ? V : P, avisos };
 }
+// ─────────────────────────── G07 · Defensa tributaria: plazos de cada escrito y simulador de tasación pericial contradictoria ───────────────────────────
+// Los plazos son los de «Después de presentar» (G06): plazosProcedimiento para las notificaciones y prescripcionTributo para la rectificación de
+// una autoliquidación, con el mismo calendario de inhábiles (G09). Aquí solo se reparten por escrito: el recurso de reposición y la reclamación
+// económico-administrativa (alternativos, art. 222.2 LGT) se muestran por separado; en la plusvalía, la reposición previa obligatoria del art. 14.2 TRLRHL.
+// o: { tributo: "ISD" | "IIVTNU", tipo (PROC_TIPOS o «autoliquidacion»), fechaNotificacion, diasAlegaciones (10 a 15; 10 si no consta),
+//      finPlazoPresentacion, fechaPresentacion, fechaIngreso, cal (calendarioDe), foral }. Devuelve { items, avisos, estado }.
+export function plazosDefensa(o = {}) {
+  const f = o.fechaNotificacion, okF = /^\d{4}-\d{2}-\d{2}$/.test(f || ""), local = o.tributo === "IIVTNU", items = [], avisos = [];
+  const add = (it) => items.push({ trasladado: false, ...it });
+  if (o.tipo === "autoliquidacion") {
+    const P = prescripcionTributo({ finPlazo: o.finPlazoPresentacion, presentacion: o.fechaPresentacion, pago: o.fechaIngreso });
+    const d = P ? P.devolucion : null;
+    const nota = d ? `Cuatro años desde el día siguiente al ${d.motivo} (${d.desde}), mientras no se haya practicado liquidación definitiva. Se resuelve en seis meses; sin respuesta, se entiende desestimada. La prescripción no se traslada al día hábil siguiente.` : "Indica el fin del plazo de presentación para calcular el límite de cuatro años.";
+    add({ id: "rectificacion", nombre: "Pedir la rectificación de la autoliquidación y la devolución", limite: d ? d.hasta : null, norma: "art. 120.3 LGT; arts. 126 a 129 RD 1065/2007; arts. 66.c y 67.1 LGT", nota });
+    if (!local) add({ id: "valorReferencia", nombre: "Impugnar el valor de referencia del inmueble (por la rectificación)", limite: d ? d.hasta : null, norma: "art. 9.3 Ley 29/1987; art. 120.3 LGT; disposición final tercera TRLCI", nota: "Mismo plazo que la rectificación: con ella se pide el informe del Catastro sobre el valor de referencia." });
+  } else if (okF) {
+    const dias = Math.min(15, Math.max(10, Math.round(Number(o.diasAlegaciones) || 10)));
+    const P = plazosProcedimiento(o.tipo, f, { cal: o.cal || null, tributo: local ? "IIVTNU" : "ISD", dias });
+    for (const q of (P && P.plazos) || []) {
+      const base = { limite: q.limite, limiteNatural: q.limiteNatural, trasladado: q.trasladado, aviso: q.aviso || "" };
+      if (q.id === "recurso" && local) add({ id: "reposicionLocal", nombre: "Recurso de reposición ante el ayuntamiento (obligatorio antes del contencioso)", ...base, norma: "art. 14.2.c TRLRHL; art. 30.4 Ley 39/2015", nota: q.nota });
+      else if (q.id === "recurso") {
+        add({ id: "reposicion", nombre: "Recurso de reposición (potestativo)", ...base, norma: "art. 223.1 LGT; art. 30.4 Ley 39/2015", nota: "Un mes desde el día siguiente a la notificación. Si se interpone, no cabe la reclamación económico-administrativa hasta que se resuelva o se entienda desestimado (art. 222.2 LGT)." });
+        add({ id: "reclamacionEA", nombre: "Reclamación económico-administrativa", ...base, norma: "art. 235.1 LGT; art. 30.4 Ley 39/2015", nota: "Un mes desde el día siguiente a la notificación; si antes se recurrió en reposición, un mes desde la notificación de su resolución." });
+      } else if (q.id === "alegaciones") add({ id: "alegaciones", nombre: `Alegaciones a la propuesta (${dias} días hábiles)`, ...base, norma: "art. 99.8 LGT; art. 30.2 Ley 39/2015", nota: q.nota });
+      else if (q.id === "tpc") add({ id: "tpc", nombre: "Solicitud de tasación pericial contradictoria", ...base, norma: "arts. 57.2 y 135.1 LGT", nota: "Dentro del plazo del primer recurso o reclamación contra la liquidación. La solicitud suspende la ejecución de la liquidación y el plazo para recurrirla. No cabe contra el valor de referencia del Catastro." });
+      else if (q.id === "pago") add({ id: "pago", nombre: q.nombre, ...base, norma: q.norma, nota: q.nota, informativo: true });
+    }
+    if (P && ["liquidacion", "comprobacionValores", "sancion"].includes(o.tipo)) add({ id: "contencioso", nombre: "Después: recurso contencioso-administrativo", limite: null, norma: "art. 46.1 Ley 29/1998 (LJCA)", nota: "Dos meses desde el día siguiente a la notificación de la resolución expresa del recurso o de la reclamación; agosto es inhábil (art. 128.2 LJCA).", informativo: true });
+    if (P) avisos.push(...P.avisos, P.calendario);
+  }
+  if (!okF && o.tipo !== "autoliquidacion") avisos.push("Falta la fecha de notificación: sin ella no se pueden calcular los plazos.");
+  if (o.foral) avisos.push("Territorio foral: la Ley General Tributaria no rige; los recursos y sus plazos son los de la Norma Foral General Tributaria del territorio. Verifícalos antes de presentar (PENDIENTE).");
+  return { items, avisos: avisos.filter(Boolean), estado: o.foral ? P : V };
+}
+// Simulador de la tasación pericial contradictoria (orientativo): lo que se discute frente al coste del perito propio.
+// o: { valorDeclarado, valorComprobado, cuotaAdicional (si se conoce; si no, diferencia × tipoMedio), tipoMedio, honorariosPerito, diasIntereses,
+//      interes, valorPeritoPropio }. Reglas del art. 135 LGT: si la diferencia entre el perito de la Administración y el propio no supera 120.000 €
+// ni el 10 % de la tasación propia, vale la propia (135.2); si hace falta perito tercero, sus honorarios los paga el obligado tributario cuando su
+// valoración supera en más de un 20 % el valor declarado (135.3).
+export const DF_COSTE_PERITO = 600; // estimación de los honorarios del perito propio si no se indican (PENDIENTE: varía por tipo de bien y provincia)
+export function simularTPC(o = {}) {
+  const dec = Math.max(0, Number(o.valorDeclarado) || 0), com = Math.max(0, Number(o.valorComprobado) || 0), dif = r2(Math.max(0, com - dec));
+  const cuota = r2(o.cuotaAdicional != null && o.cuotaAdicional !== "" ? Math.max(0, Number(o.cuotaAdicional) || 0) : dif * (Number(o.tipoMedio) || 0));
+  const interes = o.interes != null ? Number(o.interes) : INTERES_DEMORA, dias = Math.max(0, Number(o.diasIntereses) || 0);
+  const intereses = r2(cuota * interes * dias / 365), enJuego = r2(cuota + intereses);
+  const estimado = !(Number(o.honorariosPerito) > 0), coste = estimado ? DF_COSTE_PERITO : r2(Number(o.honorariosPerito));
+  const neto = r2(enJuego - coste), umbralTercero = r2(dec * 1.2);
+  const propio = Number(o.valorPeritoPropio) || 0, dProp = propio ? Math.abs(com - propio) : null;
+  const valePropia = propio ? dProp <= 120000 && dProp <= 0.1 * propio : null;
+  const recomendacion = dif <= 0 ? "no procede" : neto <= 0 ? "no compensa" : enJuego < 2 * coste ? "dudoso" : "compensa";
+  const texto = { "no procede": "El valor comprobado no supera el declarado: no hay nada que discutir con una tasación pericial.", "no compensa": "Lo que se discute no cubre el coste del perito propio: no compensa salvo que haya otros motivos (por ejemplo, defectos de motivación, que se alegan en el recurso).", dudoso: "El ahorro posible es menor que el doble del coste del perito: solo compensa si la valoración de la Administración es claramente excesiva.", compensa: "Lo que se discute supera con holgura el coste del perito propio: compensa estudiarla con un informe pericial." }[recomendacion];
+  return { diferencia: dif, cuotaAdicional: cuota, intereses, enJuego, costePerito: coste, costeEstimado: estimado, neto, umbralTercero, valePropia, recomendacion, texto,
+    riesgo: `Si interviene un perito tercero y valora por encima de ${umbralTercero.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € (el declarado más un 20 %), sus honorarios los pagas tú (art. 135.3 LGT).`,
+    norma: "arts. 57.2, 134 y 135 LGT", estado: P };
+}

@@ -42,7 +42,10 @@ await ev(() => {
   c.nifCausante = "00000014Z"; c.domicilioCausante = "Calle Pedregalejo 00, 29017 Málaga";
   c.personas[0] = { ...c.personas[0], nif: "00000015S", domicilio: "Calle Victoria 00, 29012 Málaga", estadoCivil: "casado_gananciales", genero: "f" };
   c.personas[1] = { ...c.personas[1], nif: "00000016Q", domicilio: "Avenida de Andalucía 00, 29006 Málaga", estadoCivil: "soltero", genero: "m" };
-  c.bienes.forEach((q, i) => { if (q.tipo === "vivienda" || q.tipo === "inmueble") { q.refCatastral = `00000${i}0DEMO0001QA`.slice(0, 20); q.cargas = "Libre de cargas según nota simple"; } });
+  c.bienes.forEach((q, i) => { if (q.tipo === "vivienda" || q.tipo === "inmueble") { q.refCatastral = `00000${i}0DEMO0001QA`.slice(0, 20); q.cargas = "Libre de cargas según nota simple";
+    // G01: datos registrales completos y título de adquisición
+    Object.assign(q, { registro: "Málaga n.º 2", fincaRegistral: String(4100 + i), cru: "2901200000" + String(4100 + i), tomo: "1845", libro: String(210 + i), folio: "112", inscripcion: "3.ª", descripcionRegistral: `Vivienda número ${i + 1} del edificio ficticio en calle Pedregalejo 00 de Málaga. Superficie construida de noventa metros cuadrados. Linda: frente, rellano; derecha, vivienda B; izquierda, calle; fondo, patio. Cuota: 4,50 %`, tituloAdq: "compraventa", tituloNotario: "D. Notario Ficticio Dos", tituloFecha: "1994-03-10", tituloProtocolo: String(800 + i) }); } });
+  Object.assign(c, { lugarFallecimiento: "Málaga", rcDefuncion: "Málaga", seccionDefuncion: "3.ª", tomoDefuncion: "245", folioDefuncion: "123", fechaNacimiento: "1950-02-11", lugarNacimiento: "Ronda (Málaga)", padre: "José Ruiz Ficticio", madre: "Carmen Pérez Ficticia" });
   c.firma = { tNotario: "D. Notario Ficticio Uno", tFecha: "2015-03-02", tProtocolo: "412", notaria: "Notaría ficticia de Málaga" };
   DB.expedientes.push(a, e, m, c); guardar();
 });
@@ -123,6 +126,13 @@ for (const E of R0) {
     if (E.ren.length) check(`${E.ref} · escritura: renuncias (art. 1008 CC)`, E.ren.every((n) => esc.includes(n)) && /art\. 1008 CC/.test(esc));
   }
   // Expediente con todos los datos de identificación: ningún escrito los deja como hueco
+  // G01: con los datos registrales y del causante completos, las fincas y el causante se describen sin huecos
+  if (E.id === "qa-completo") {
+    for (const k of ["escritura", "cuaderno"]) { const fin = (D[k] || "").split("\n").filter((l) => /^ {3}(Descripción|Inscripción|Código Registral Único \(CRU\/IDUFIR\)|Título|Referencia catastral|Cargas):/.test(l)); check(`${E.ref} · ${k}: descripciones de las fincas sin huecos (G01)`, fin.length >= 6 && fin.every((l) => !/[⟦⟧]/.test(l)) && fin.some((l) => /tomo 1845, libro 21\d, folio 112, finca número 41\d\d, inscripción 3\.ª/.test(l)) && fin.some((l) => /CRU\/IDUFIR\): 2901200000/.test(l)) && fin.some((l) => /Compraventa, en escritura autorizada por D\. Notario Ficticio Dos el 10 de marzo de 1994, con el número 80\d de su protocolo/.test(l)), fin.filter((l) => /[⟦⟧]/.test(l)).join(" / ") || fin.slice(0, 4).join(" / ")); }
+    check(`${E.ref} · escritura: causante con nacimiento, padres, lugar e inscripción de la defunción (G01)`, /nacida en Ronda \(Málaga\) el 11 de febrero de 1950, hija de José Ruiz Ficticio y de Carmen Pérez Ficticia/.test(D.escritura || "") && /falleció en Málaga el/.test(D.escritura || "") && /Registro Civil de Málaga \(sección 3\.ª, tomo 245, folio 123\)/.test(D.escritura || ""), (D.escritura || "").split("\n").find((l) => /Fallecimiento\./.test(l)));
+    const t790 = ((D.solicitud790 || "").split("3. DATOS DEL CAUSANTE")[1] || "").split("4. DATOS")[0].split("\n").filter((l) => /^\| /.test(l));
+    check(`${E.ref} · 790: datos del causante completos, sin huecos (G01)`, t790.length >= 9 && t790.every((l) => !/[⟦⟧]/.test(l)) && t790.some((l) => /José Ruiz Ficticio/.test(l)) && !/no constan en el expediente/.test(D.solicitud790 || ""), t790.filter((l) => /[⟦⟧]/.test(l)).join(" / "));
+  }
   if (E.id === "qa-completo") for (const [k, t] of Object.entries(D)) { const h = ["⟦NIF⟧", "⟦NIF del causante⟧", "⟦RC⟧", "⟦referencia catastral⟧", "⟦notario⟧", "⟦protocolo⟧", "⟦último domicilio del causante⟧"].filter((q) => t.includes(q)); check(`${E.ref} (datos completos) · ${k}: no marca como pendiente un dato que consta`, !h.length, h.join(", ")); }
   if (D.notaria) { const nums = D.notaria.split("\n").filter((l) => /^\d{1,2}\. [A-ZÁÉÍÓÚ]{3}/.test(l)).map((l) => parseInt(l, 10)); check(`${E.ref} · nota para la notaría: apartados numerados sin saltos`, nums.every((v, i) => v === i + 1), nums.join(",")); }
   if (D.renuncia) {

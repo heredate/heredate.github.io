@@ -1521,6 +1521,72 @@ CARGAS: Libre de cargas.`;
   const pct = Object.fromEntries(x.personas.map((p) => [p.nombre, p.pct || 0]));
   t("r5 H1 · testamento «por partes iguales» en un expediente vacío: 50 % a cada hijo y nada a los legatarios (antes, 0 herederos y 0 € de Sucesiones)", x.testamento === "porcentajes" && pct["Iñaki García O'Connor"] === 50 && pct["María José García O'Connor"] === 50 && !pct["África López-Álvarez Díaz"] && !pct["Lucía García Peña"], pct);
 }
+
+// ── G01 · Datos registrales de las fincas y datos completos del causante (escritura, cuaderno, instancia y modelo 790) ──
+// Tres notas simples con la estructura de las reales (anonimizadas): literal clásica con «Inscripción: Tomo…», rústica con «Inscrita al tomo…»
+// y telemática con la tabla «TITULAR NIF TOMO LIBRO FOLIO ALTA»; y dos certificados de defunción (extracto electrónico y literal en papel).
+{
+  const NIF_G = nif(44556677);
+  const NS_GR = `REGISTRO DE LA PROPIEDAD DE GRANADA NÚMERO 3
+NOTA SIMPLE INFORMATIVA · Fecha de emisión: 02/09/2026
+DESCRIPCIÓN DE LA FINCA
+FINCA DE GRANADA Nº 9876, SECCIÓN 1ª. CÓDIGO REGISTRAL ÚNICO: 18013000987654
+URBANA.- NÚMERO CINCO.- PISO SEGUNDO, letra C, del edificio en calle Recogidas número veinte de Granada. Superficie construida de noventa y dos metros cuadrados. Linderos: frente, rellano y caja de escalera; derecha entrando, piso letra D; izquierda, calle Recogidas; fondo, patio de luces. Cuota de participación: 3,15 por ciento. Referencia catastral: 1234567VK4713S0001OQ.
+INSCRIPCIÓN: Tomo 1.845, Libro 210, Folio 112, Inscripción 3ª.
+TITULARIDAD
+DOÑA ISABEL MORENO GARCÍA, con D.N.I. ${NIF_G}, titular del pleno dominio de la totalidad de esta finca con carácter privativo, por título de compraventa, en virtud de escritura autorizada por el notario de Granada, don Andrés Ruiz Molina, el día 15 de marzo de 2001, con el número 1.234 de su protocolo.
+CARGAS
+Sin cargas registradas.`;
+  const d = L.lecAnalizar(NS_GR, "nota granada.pdf"), b = d.bienes[0] || {};
+  t("G01 nota literal: finca, sección y CRU", d.tipo === "notasimple" && b.fincaRegistral === "9876" && b.seccion === "1.ª" && b.cru === "18013000987654" && /Granada/.test(b.registro), [b.fincaRegistral, b.seccion, b.cru, b.registro]);
+  t("G01 nota literal: tomo, libro, folio e inscripción (con punto de millar)", b.tomo === "1845" && b.libro === "210" && b.folio === "112" && b.inscripcion === "3.ª", [b.tomo, b.libro, b.folio, b.inscripcion]);
+  t("G01 nota literal: descripción registral completa, sin la referencia catastral ni la inscripción", /^Número cinco/.test(b.descripcionRegistral || "") && /patio de luces/.test(b.descripcionRegistral) && !/Referencia|Tomo|titular/i.test(b.descripcionRegistral), b.descripcionRegistral);
+  t("G01 nota literal: linderos, superficie y cuota", b.linderos === "frente, rellano y caja de escalera; derecha entrando, piso letra D; izquierda, calle Recogidas; fondo, patio de luces" && b.superficieRegistral === "noventa y dos metros cuadrados construidos" && b.cuotaParticipacion === "3,15 %", [b.linderos, b.superficieRegistral, b.cuotaParticipacion]);
+  t("G01 nota literal: título con notario, fecha y protocolo", b.tituloAdq === "compraventa" && b.tituloNotario === "Andrés Ruiz Molina" && b.tituloFecha === "2001-03-15" && b.tituloProtocolo === "1234" && b.fechaAdq === "2001-03-15", [b.tituloAdq, b.tituloNotario, b.tituloFecha, b.tituloProtocolo]);
+  const NS_SG = `REGISTRO DE LA PROPIEDAD Nº 3 DE SEGOVIA
+NOTA SIMPLE INFORMATIVA
+FINCA DE ESPIRDO Nº 1203
+IDUFIR: 40015000012031
+RÚSTICA: Tierra de labor al sitio de La Dehesa, término de Espirdo, con una superficie de dos hectáreas, cuarenta y cinco áreas. Linda: Norte, camino de servicio; Sur, parcela 111; Este, arroyo; Oeste, parcela 113. Polígono 8, parcela 112. Referencia catastral: 40080A008001120000JZ.
+Inscrita al tomo 2.101, libro 98 de Espirdo, folio 15, inscripción 2ª.
+TITULARIDAD: DON ANTONIO JIMÉNEZ SOLER, con N.I.F. ${NIF_C}, titular del pleno dominio de la totalidad con carácter privativo, por título de herencia, según escritura otorgada ante el notario don Pedro Sanz Vidal el 3 de febrero de 1999, número 345 de protocolo.
+CARGAS: No constan cargas.`;
+  const d2 = L.lecAnalizar(NS_SG, "nota segovia.pdf"), b2 = d2.bienes[0] || {};
+  t("G01 nota rústica «Inscrita al tomo…»: tomo, libro, folio, inscripción, finca e IDUFIR", b2.tomo === "2101" && b2.libro === "98" && b2.folio === "15" && b2.inscripcion === "2.ª" && b2.fincaRegistral === "1203" && b2.cru === "40015000012031" && b2.rustico === true, b2);
+  t("G01 nota rústica: superficie en hectáreas, linderos y descripción", /dos hectáreas, cuarenta y cinco áreas/.test(b2.superficieRegistral || "") && /^Norte, camino de servicio/.test(b2.linderos || "") && /^Tierra de labor/.test(b2.descripcionRegistral || "") && !/Inscrita/.test(b2.descripcionRegistral), [b2.superficieRegistral, b2.linderos, b2.descripcionRegistral]);
+  t("G01 nota rústica: título de herencia con notario («don» en minúscula), fecha en letra y protocolo; sin fecha de adquisición (art. 989 CC)", b2.tituloAdq === "herencia" && b2.tituloNotario === "Pedro Sanz Vidal" && b2.tituloFecha === "1999-02-03" && b2.tituloProtocolo === "345" && !b2.fechaAdq, [b2.tituloNotario, b2.tituloFecha, b2.tituloProtocolo, b2.fechaAdq]);
+  const NS_TEL = "NOTA SIMPLE INFORMATIVA TELEMATICA\nREGISTRO DE LA PROPIEDAD Nº 2 DE ÁVILA\nFINCA DE AVILA Nº: 56298\nCódigo Registral Único: 05010000562980\nREFERENCIA CATASTRAL: 1234567VK4713S0001OQ\nDESCRIPCION DE LA FINCA\nURBANA: Código Registral Unico: 05010000562980. VIVIENDA en calle Mayor número tres de Ávila, con una superficie útil de 85,40 m2. Linda: frente, calle Mayor; fondo, patio.\nTITULARIDADES\nTITULAR NIF TOMO LIBRO FOLIO ALTA\nJIMÉNEZ SOLER, ANTONIO " + NIF_C + " 2345 456 78 4\n100,000000% (CIEN POR CIENTO) del pleno dominio con carácter privativo por título de compraventa.\nCARGAS\nNO hay cargas registradas";
+  const b3 = L.lecAnalizar(NS_TEL, "nota avila.pdf").bienes[0] || {};
+  t("G01 nota telemática: tomo, libro, folio y número de inscripción (ALTA) de la tabla de titulares", b3.tomo === "2345" && b3.libro === "456" && b3.folio === "78" && b3.inscripcion === "4.ª", [b3.tomo, b3.libro, b3.folio, b3.inscripcion]);
+  t("G01 nota telemática: descripción sin el CRU ni el encabezado de titularidades; superficie útil en m²", b3.descripcionRegistral === "Vivienda en calle Mayor número tres de Ávila, con una superficie útil de 85,40 m2. Linda: frente, calle Mayor; fondo, patio" && b3.superficieRegistral === "85,40 m² útiles", [b3.descripcionRegistral, b3.superficieRegistral]);
+  // La propuesta del lector lleva los datos registrales y, al aplicarla, quedan en el bien del expediente
+  const x = { id: "g01", nombre: "Isabel Moreno García", personas: [], bienes: [], deudas: [], gastos: [], situ: {} };
+  L.DB.expedientes = [x];
+  const R = L.lecPropuestas(x, [{ nombre: "nota granada.pdf", tipo: d.tipo, titulo: d.titulo, datos: d }]);
+  const pB = R.propuestas.find((p) => p.grupo === "Inmuebles" && /finca 9876/.test(p.mostrar));
+  t("G01 propuesta del inmueble con finca, tomo y CRU en el resumen", pB && /tomo 1845, libro 210, folio 112/.test(pB.mostrar) && /CRU 18013000987654/.test(pB.mostrar), R.propuestas.map((p) => p.mostrar));
+  vm.runInContext("LEC", ctx).resultado = { docs: [{ nombre: "nota granada.pdf", tipo: d.tipo, titulo: d.titulo, datos: d }], propuestas: R.propuestas, separados: [] };
+  vm.runInContext("lecAplicar", ctx)(x, R.propuestas.filter((p) => p.on).map((p) => p.id));
+  const bx = x.bienes[0] || {};
+  t("G01 aplicado: el bien guarda Registro, finca, tomo, libro, folio, inscripción, CRU, descripción, linderos y título", bx.fincaRegistral === "9876" && bx.tomo === "1845" && bx.libro === "210" && bx.folio === "112" && bx.inscripcion === "3.ª" && bx.cru === "18013000987654" && /Granada/.test(bx.registro) && /patio de luces/.test(bx.descripcionRegistral) && bx.tituloNotario === "Andrés Ruiz Molina" && bx.tituloProtocolo === "1234", bx);
+  // Defunción: nacimiento, padres e inscripción
+  const DEFG = DEF.replace("Estado civil: Casado", "Nombre del padre: JOSÉ Nombre de la madre: CARMEN\nEstado civil: Casado").replace("Fecha de expedición", "Datos registrales: Sección 3ª Tomo 245 Folio 123\nFecha de expedición");
+  const e = L.lecAnalizar(DEFG, "certificado defuncion.pdf"), v = (k) => (campo(e, "exp." + k) || {}).valor;
+  t("G01 defunción: fecha y lugar de nacimiento (con provincia)", v("fechaNacimiento") === "1948-03-12" && v("lugarNacimiento") === "Antequera (Málaga)", [v("fechaNacimiento"), v("lugarNacimiento")]);
+  t("G01 defunción: nombres del padre y de la madre", v("padre") === "José" && v("madre") === "Carmen", [v("padre"), v("madre")]);
+  t("G01 defunción: Registro Civil, sección, tomo y folio de la inscripción", v("rcDefuncion") === "Málaga" && v("seccionDefuncion") === "3.ª" && v("tomoDefuncion") === "245" && v("folioDefuncion") === "123", [v("rcDefuncion"), v("seccionDefuncion"), v("tomoDefuncion"), v("folioDefuncion")]);
+  t("G01 defunción: lo de siempre no cambia (nombre, fecha, lugar del fallecimiento)", campo(e, "nombre")?.valor === "Antonio Jiménez Soler" && campo(e, "fecha")?.valor === "2026-04-20" && campo(e, "lugarFallecimiento")?.valor === "Málaga", e.campos.map((c) => c.k));
+  const LIT = `REGISTRO CIVIL DE TORREMOLINOS. CERTIFICACIÓN LITERAL DE DEFUNCIÓN. Sección tercera, tomo 88, folio 241. Don Pedro Gómez Vera, Encargado del Registro Civil, CERTIFICA: que la inscripción de defunción de DOÑA MARÍA DOLORES RUIZ CANO, hija de Manuel y de Dolores, viuda, natural de Sevilla, nacida el 4 de mayo de 1940, falleció el día tres de febrero de dos mil veintiséis a las veintidós horas en Torremolinos.`;
+  const e2 = L.lecAnalizar(LIT, "literal.pdf"), v2 = (k) => (campo(e2, "exp." + k) || {}).valor;
+  t("G01 literal en papel: «hija de Manuel y de Dolores», «natural de Sevilla», nacimiento y sección en letra", v2("padre") === "Manuel" && v2("madre") === "Dolores" && v2("lugarNacimiento") === "Sevilla" && v2("fechaNacimiento") === "1940-05-04" && v2("seccionDefuncion") === "3.ª" && v2("tomoDefuncion") === "88" && v2("folioDefuncion") === "241" && v2("rcDefuncion") === "Torremolinos", e2.campos.map((c) => c.k + "=" + c.valor));
+  // Al aplicar, los datos del causante pasan al expediente (campos exp.*) sin pisar los que ya tiene
+  const xc = { id: "g01c", nombre: "Antonio Jiménez Soler", padre: "José Jiménez", personas: [], bienes: [], deudas: [], gastos: [], situ: {} };
+  L.DB.expedientes = [xc];
+  const Rc = L.lecPropuestas(xc, [{ nombre: "defuncion.pdf", tipo: e.tipo, titulo: e.titulo, datos: e }]);
+  vm.runInContext("LEC", ctx).resultado = { docs: [{ nombre: "defuncion.pdf", tipo: e.tipo, titulo: e.titulo, datos: e }], propuestas: Rc.propuestas, separados: [] };
+  vm.runInContext("lecAplicar", ctx)(xc, Rc.propuestas.filter((p) => p.on).map((p) => p.id));
+  t("G01 aplicado: nacimiento, madre e inscripción al expediente; el padre que ya constaba no se pisa (propuesta sin marcar)", xc.fechaNacimiento === "1948-03-12" && xc.madre === "Carmen" && xc.padre === "José Jiménez" && xc.rcDefuncion === "Málaga" && xc.tomoDefuncion === "245" && xc.folioDefuncion === "123", xc);
+}
 // G04 (auditoría civil 10-10-2026, hallazgo 10): participación, conquistas, consorcio y comunicación foral ya no se convierten en gananciales
 {
   const matri = (reg) => `REGISTRO CIVIL DE BILBAO · CERTIFICACIÓN LITERAL DE INSCRIPCIÓN DE MATRIMONIO

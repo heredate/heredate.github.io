@@ -418,17 +418,19 @@ function tEstrategia(x, R) {
     <p class="foot-note">Cada palanca se calcula simulando el expediente con el cambio. «Probar como escenario» crea una copia con el cambio aplicado para compararla. Las propuestas no sustituyen el criterio del abogado.</p>`;
 }
 
-const DOCS = [["liquidacion", "Propuesta de liquidación", "Sucesiones, plusvalía, estrategia, adjudicación y plazos"], ["notaria", "Nota para la notaría", "Causante, título, herederos, inventario, adjudicación y documentación"], ["escritura", "Borrador de escritura de herencia", "Manifestación, aceptación y adjudicación, en estilo notarial"], ["cuaderno", "Cuaderno particional", "Inventario, avalúo, liquidación, lotes y adjudicaciones"], ["recibi", "Liquidación final y recibí", "Lo que recibe cada heredero, cuenta de fondos y recibí"], ["informe", "Informe para el cliente", "Qué hay, cuánto se paga, quién recibe qué y los próximos pasos"], ["cartaFamilia", "Carta a la familia", "Documentos que faltan, agrupados y con dónde se piden"], ["banco", "Carta al banco", "Comunica el fallecimiento y pide certificados sin aceptar la herencia"], ["solicitud790", "Solicitud de certificados (modelo 790)", "Últimas voluntades y seguros, con los datos del causante"], ["certificados", "Guía de certificados", "Últimas voluntades y seguros, paso a paso"], ["acuerdo", "Acuerdo entre herederos", "Quién coordina y cómo se reparten los gastos"], ["aplazamiento", "Solicitud de aplazamiento o fraccionamiento", "Sucesiones: plazos, intereses y garantía (art. 65 LGT y art. 38 Ley 29/1987)"], ["prorroga", "Solicitud de prórroga", "Seis meses más para el Impuesto sobre Sucesiones"], ["renuncia", "Escritura de renuncia", "Renuncia pura y simple ante notario (art. 1008 CC)"], ["unico", "Instancia de heredero único", "Inscribir inmuebles sin escritura (art. 14 LH)"], ["plusvalia", "Declaración de plusvalía", "Al ayuntamiento, con la liquidación de cada inmueble"], ["catastro", "Cambio de titular en el Catastro", "Modelo 900D, si no lo comunica el notario"], ["encargo", "Hoja de encargo y presupuesto", "Encargo profesional con honorarios y suplidos"]];
+const DOCS = [["liquidacion", "Propuesta de liquidación", "Sucesiones, plusvalía, estrategia, adjudicación y plazos"], ["notaria", "Nota para la notaría", "Causante, título, herederos, inventario, adjudicación y documentación"], ["escritura", "Borrador de escritura de herencia", "Manifestación, aceptación y adjudicación, en estilo notarial"], ["cuaderno", "Cuaderno particional", "Inventario, avalúo, liquidación, lotes y adjudicaciones"], ["recibi", "Liquidación final y recibí", "Lo que recibe cada heredero, cuenta de fondos y recibí"], ["informe", "Informe para el cliente", "Qué hay, cuánto se paga, quién recibe qué y los próximos pasos"], ["cartaFamilia", "Carta a la familia", "Documentos que faltan, agrupados y con dónde se piden"], ["banco", "Carta al banco", "Comunica el fallecimiento y pide certificados sin aceptar la herencia"], ["solicitud790", "Solicitud de certificados (modelo 790)", "Últimas voluntades y seguros, con los datos del causante"], ["certificados", "Guía de certificados", "Últimas voluntades y seguros, paso a paso"], ["acuerdo", "Acuerdo entre herederos", "Quién coordina y cómo se reparten los gastos"], ["aplazamiento", "Solicitud de aplazamiento o fraccionamiento", "Sucesiones: plazos, intereses y garantía (art. 65 LGT y art. 38 Ley 29/1987)"], ["prorroga", "Solicitud de prórroga", "Seis meses más para el Impuesto sobre Sucesiones"], ["renuncia", "Escritura de renuncia", "Renuncia pura y simple ante notario (art. 1008 CC)"], ["declaracionHerederos", "Declaración de herederos abintestato", "Requerimiento del acta: notaría competente, testigos y documentos (arts. 55-56 LN)"], ["unico", "Instancia de heredero único", "Inscribir inmuebles sin escritura (art. 14 LH)"], ["plusvalia", "Declaración de plusvalía", "Al ayuntamiento, con la liquidación de cada inmueble"], ["catastro", "Cambio de titular en el Catastro", "Modelo 900D, si no lo comunica el notario"], ["encargo", "Hoja de encargo y presupuesto", "Encargo profesional con honorarios y suplidos"]];
 function docsDisponibles(x) {
   const vivos = (x.personas || []).filter((p) => !p.renuncia);
   const unico = (x.personas || []).length === 1 && vivos.length === 1 && num(vivos[0].edad) >= 18 && !(x.bienes || []).some((b) => b.titularidad === "ganancial");
   const inm = (x.bienes || []).some((b) => b.tipo === "vivienda" || b.tipo === "inmueble");
-  return DOCS.filter(([k]) => (k !== "unico" || unico) && (k !== "encargo" || esDespacho()) && (k !== "acuerdo" || vivos.length > 1) && (k !== "cuaderno" || vivos.length > 1) && (k !== "escritura" || vivos.length > 0) && ((k !== "catastro" && k !== "plusvalia") || inm));
+  return DOCS.filter(([k]) => (k !== "unico" || unico) && (k !== "encargo" || esDespacho()) && (k !== "acuerdo" || vivos.length > 1) && (k !== "cuaderno" || vivos.length > 1) && (k !== "escritura" || vivos.length > 0) && ((k !== "catastro" && k !== "plusvalia") || inm) && (k !== "declaracionHerederos" || x.testamento === "no"));
 }
 function escritos(x) {
   const menores = (x.personas || []).some((p) => !p.renuncia && p.edad !== "" && p.edad != null && num(p.edad) < 18);
   return `${menores ? `<div class="infobar" style="margin-bottom:14px"><span class="ico orange">${I.info}</span><span>Hay herederos menores: sus padres los representan salvo conflicto de intereses (defensor judicial, art. 163 CC); para renunciar en su nombre hace falta autorización judicial (art. 166 CC).</span></div>` : ""}
+    ${typeof abPanelHTML === "function" ? abPanelHTML(x) : ""}
     <div class="docgrid">${docsDisponibles(x).map(([k, t, s]) => `<button class="doccard" data-doc="${k}"><span class="paper"><i style="top:9px"></i><i style="top:16px"></i><i style="top:22px;right:14px"></i><i style="top:28px"></i><i style="top:34px;right:18px"></i><i style="top:40px"></i></span><span><b>${t}</b><small>${s}</small></span></button>`).join("")}</div>
+    ${typeof dfPanelHTML === "function" ? dfPanelHTML(x) : ""}
     <p class="foot-note">Borradores con los datos del expediente, descargables en Word. Lo marcado en amarillo lo completa o revisa el abogado.</p>`;
 }
 function filaArchivo(d, x) {
@@ -633,6 +635,21 @@ function zonaPeligro(clave, txt, pregunta, accion, si, attr) {
     : `<div class="zona-peligro"><p>${txt}</p><button class="btn sm danger" data-conf="${clave}">${I.trash}${accion}</button></div>`;
 }
 const fsecH = (t, s) => `<div class="fsec-h"><b>${t}</b>${s ? `<small>${s}</small>` : ""}</div>`;
+// Datos registrales de la finca (G01): los usan la escritura, el cuaderno, la instancia de heredero único y la nota para la notaría.
+// Los rellena el lector con la nota simple; aquí se completan o corrigen. Mismos campos que «Listo para firmar» (firma.js).
+const REG_CAMPOS = ["registro", "fincaRegistral", "seccion", "tomo", "libro", "folio", "inscripcion", "cru", "descripcionRegistral", "linderos", "superficieRegistral", "cuotaParticipacion", "tituloAdq", "tituloNotario", "tituloFecha", "tituloProtocolo"];
+function registroBienHTML(b) {
+  const n = REG_CAMPOS.filter((k) => String(b[k] || "").trim()).length, ok = typeof esrRegistral === "function" && esrRegistral(b).completo;
+  const f = (k, t, ph, o = {}) => `<div class="field"><label for="br-${k}">${t}</label>${o.area ? `<textarea id="br-${k}" data-bn="${k}" rows="3" placeholder="${esc(ph)}">${esc(b[k] || "")}</textarea>` : `<input id="br-${k}" data-bn="${k}" value="${esc(b[k] || "")}" placeholder="${esc(ph)}"${o.type ? ` type="${o.type}"` : ""}${o.num ? ' inputmode="numeric"' : ""}${o.mono ? ' class="mono-in" spellcheck="false"' : ""} autocomplete="off">`}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</div>`;
+  return `<details class="fopt" data-fopt="b-registro" ${(ui.fopt?.["b-registro"] ?? false) ? "open" : ""}><summary><span><b>Datos registrales y título</b><br>Registro, finca, tomo, libro, folio, CRU, descripción y título del causante. Los lee la nota simple.</span>${ok ? `<span class="chip info">Completos</span>` : n ? `<span class="chip">${n} de ${REG_CAMPOS.length}</span>` : ""}</summary>
+    <div class="group">
+      ${f("registro", "Registro de la Propiedad", "Ej.: Málaga n.º 2")}${f("fincaRegistral", "Finca registral n.º", "Número de finca", { num: 1 })}${f("seccion", "Sección", "Si el Registro la indica")}
+      ${f("tomo", "Tomo", "Tomo", { num: 1 })}${f("libro", "Libro", "Libro", { num: 1 })}${f("folio", "Folio", "Folio", { num: 1 })}${f("inscripcion", "Inscripción", "Ej.: 4.ª")}
+      ${f("cru", "CRU (IDUFIR)", "Código Registral Único, 14 dígitos", { mono: 1, num: 1, hint: "Con el CRU y el número de finca, la finca queda identificada aunque falten tomo, libro y folio (art. 9 LH)." })}
+      ${f("descripcionRegistral", "Descripción registral", "Tal como figura en la nota simple: situación, superficie, linderos y cuota", { area: 1 })}${f("superficieRegistral", "Superficie registral", "Ej.: 120 m² construidos")}${f("linderos", "Linderos", "Frente, derecha, izquierda y fondo")}${f("cuotaParticipacion", "Cuota de participación", "Ej.: 2,50 %")}
+      ${f("tituloAdq", "Título de adquisición del causante", "Compraventa, herencia, donación…")}${f("tituloNotario", "Notario que autorizó la escritura", "Nombre")}${f("tituloFecha", "Fecha de la escritura", "", { type: "date" })}${f("tituloProtocolo", "Número de protocolo", "Número", { num: 1 })}
+    </div></details>`;
+}
 function sheetHTML(titulo, body, accion = "Cerrar", extra = "") {
   return `<div class="scrim" data-act="cerrarSheet"></div><div class="sheet ${extra}" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><div class="grab"></div><header><span></span><h2>${esc(titulo)}</h2><button class="tbtn${accion === "Hecho" ? " sh-ok" : ""}" data-act="cerrarSheet">${accion}</button></header><div class="body">${body}</div></div>`;
 }
@@ -707,6 +724,7 @@ function vSheet() {
       ${inm ? `<div class="field"><label for="b-rc">Referencia catastral</label><input id="b-rc" data-bn="refCatastral" value="${esc(b.refCatastral)}" placeholder="20 caracteres" autocomplete="off" autocapitalize="characters" maxlength="24" spellcheck="false" data-valida="rc" class="mono-in"></div><div class="field"><label for="b-cg">Cargas</label><input id="b-cg" data-bn="cargas" value="${esc(b.cargas)}" placeholder="Hipoteca, embargo… o «Libre de cargas»"><span class="hint">Según la nota simple del Registro.</span></div>` : ""}
       ${inm ? `<div class="field"><label for="b-r">Valor de referencia del Catastro (€)</label><input id="b-r" inputmode="decimal" data-bn="valorReferencia" value="${numStr(b.valorReferencia)}" placeholder="Opcional"><span class="hint">Se declara el mayor de los dos. <a href="${SEDES.valorRef}" target="_blank" rel="noopener">Consultarlo en la sede del Catastro</a></span></div>` : ""}
     </div>
+    ${inm ? registroBienHTML(b) : ""}
     ${typeof rgBienValoracionHTML === "function" ? rgBienValoracionHTML(x, b) + rgBienExtranjeroHTML(x, b) : "" /* G03: cómo se valora y bienes en el extranjero */}
     ${fsecH("Titularidad y reparto", x.civil === "gananciales" ? "En gananciales, la mitad de lo común es del viudo y no entra en la herencia." : "Qué parte era del causante y a quién se adjudica.")}
     <div class="group">
@@ -770,6 +788,7 @@ function vSheet() {
   if (s.tipo === "lecNuevo") return lecNuevoHTML();
   if (s.tipo === "carpeta") return rnSheetCarpeta(exp());
   if (s.tipo === "tc") return tcSheet(exp());
+  if (s.tipo === "df" && typeof dfSheetHTML === "function") return dfSheetHTML(exp());
   if (s.tipo === "novedades") return sheetNovedades();
   if (s.tipo === "widget") return wgSheet();
   if (s.tipo === "situ") return sheetHTML("Ajustar al caso", `<p class="lead">Marca lo que aplique. Se añaden o quitan los trámites correspondientes.</p>${formSitu(x)}`, "Hecho");

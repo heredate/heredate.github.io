@@ -2369,6 +2369,58 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   const PR = P4(); PR.regimen = { reintegros: [{ sentido: "privCausante", importe: 50000, actualizado: 50000, justificado: true }] };
   eq("36 · con reintegro de 50.000 a la herencia: haber de la viuda en la sociedad 175.000", cuadro(PR).PT.H.find((h) => h.p.id === "V").haberGan, 175000, 0.01);
 }
+// ── 37. G07 · Defensa tributaria: plazos de cada escrito (los de G06, con su calendario) y simulador de tasación pericial (art. 135 LGT)
+{
+  const { plazosDefensa, plazosProcedimiento, simularTPC, DF_COSTE_PERITO, calendarioDe } = await import("./motor.mjs");
+  const si = (n, c, extra) => { eq(n, c ? 1 : 0, 1, 0); if (!c && extra !== undefined) console.log("   ", JSON.stringify(extra).slice(0, 300)); };
+  const it = (o, id) => plazosDefensa(o).items.find((q) => q.id === id) || {};
+  // Meses «de fecha a fecha»: notificada el 16-03-2026 (lunes) → 16-04-2026 (jueves, hábil)
+  const L1 = { tributo: "ISD", tipo: "liquidacion", fechaNotificacion: "2026-03-16" };
+  si("37 · reposición: un mes de fecha a fecha (16-03 → 16-04-2026)", it(L1, "reposicion").limite === "2026-04-16" && !it(L1, "reposicion").trasladado, it(L1, "reposicion"));
+  si("37 · reclamación económico-administrativa: el mismo mes (art. 235.1 LGT) y escrito aparte de la reposición (art. 222.2)", it(L1, "reclamacionEA").limite === "2026-04-16" && /235\.1 LGT/.test(it(L1, "reclamacionEA").norma) && /222\.2/.test(it(L1, "reposicion").nota));
+  si("37 · mismas fechas que G06 (plazosProcedimiento): recurso y pago", (() => { const G = plazosProcedimiento("liquidacion", "2026-03-16", { tributo: "ISD" }).plazos; return G.find((q) => q.id === "recurso").limite === it(L1, "reposicion").limite && G.find((q) => q.id === "pago").limite === it(L1, "pago").limite; })());
+  si("37 · liquidación sin comprobación de valores: sin tasación pericial", !it(L1, "tpc").id);
+  const C1 = { ...L1, tipo: "comprobacionValores" };
+  si("37 · tasación pericial contradictoria: dentro del plazo del primer recurso (art. 135.1 LGT)", it(C1, "tpc").limite === it(C1, "reposicion").limite && /135\.1/.test(it(C1, "tpc").norma) && /valor de referencia/.test(it(C1, "tpc").nota));
+  // Fin de mes sin día equivalente y traslado al hábil: notificada el 31-01-2026 → 28-02-2026 (sábado) → lunes 02-03-2026
+  const L2 = { ...L1, fechaNotificacion: "2026-01-31" };
+  si("37 · notificada el 31-01: vence el último día de febrero (art. 30.4) y, por ser sábado, el lunes 02-03-2026 (art. 30.5)", it(L2, "reposicion").limiteNatural === "2026-02-28" && it(L2, "reposicion").limite === "2026-03-02" && it(L2, "reposicion").trasladado === true, it(L2, "reposicion"));
+  si("37 · vence en festivo nacional (08-12-2026): pasa al 09-12-2026", it({ ...L1, fechaNotificacion: "2026-11-08" }, "reposicion").limite === "2026-12-09");
+  // Calendario del órgano (G09): el 07-12-2026 es festivo en Andalucía; notificada el 07-11-2026 vence el lunes 07-12 → 09-12 (el 8 es nacional)
+  si("37 · con el calendario de Andalucía, el festivo autonómico también traslada el plazo", it({ ...L1, fechaNotificacion: "2026-11-07", cal: calendarioDe("AND") }, "reposicion").limite === "2026-12-09" && it({ ...L1, fechaNotificacion: "2026-11-07" }, "reposicion").limite === "2026-12-07");
+  // Alegaciones en días hábiles: notificada el viernes 27-03-2026; 10 días hábiles sin el Viernes Santo (03-04-2026) → 13-04-2026
+  const P1 = { tributo: "ISD", tipo: "propuestaLiquidacion", fechaNotificacion: "2026-03-27" };
+  si("37 · alegaciones: 10 días hábiles sin sábados, domingos ni el Viernes Santo → 13-04-2026", it(P1, "alegaciones").limite === "2026-04-13", it(P1, "alegaciones"));
+  si("37 · alegaciones: 15 días hábiles si lo fija la propuesta → 20-04-2026", it({ ...P1, diasAlegaciones: 15 }, "alegaciones").limite === "2026-04-20");
+  si("37 · alegaciones: fuera de 10-15 días se acota (art. 99.8 LGT)", it({ ...P1, diasAlegaciones: 30 }, "alegaciones").limite === "2026-04-20" && it({ ...P1, diasAlegaciones: 3 }, "alegaciones").limite === "2026-04-13");
+  si("37 · propuesta: no da plazo de recurso ni de tasación (aún no hay liquidación)", !it(P1, "reposicion").id && !it(P1, "tpc").id);
+  // Pago en periodo voluntario (art. 62.2 LGT)
+  si("37 · pago: notificada el 16-03-2026 (16 a fin de mes) → 05-05-2026", it(L1, "pago").limite === "2026-05-05" && it(L1, "pago").informativo === true);
+  si("37 · pago: notificada el 25-10-2026 → 05-12-2026 es sábado → 07-12-2026", it({ ...L1, fechaNotificacion: "2026-10-25" }, "pago").limite === "2026-12-07");
+  // Plusvalía: reposición previa obligatoria ante el ayuntamiento (art. 14.2 TRLRHL), sin TPC ni reclamación estatal
+  const M1 = { tributo: "IIVTNU", tipo: "liquidacion", fechaNotificacion: "2026-05-12" };
+  si("37 · plusvalía: reposición previa obligatoria, un mes (12-05 → 12-06-2026)", it(M1, "reposicionLocal").limite === "2026-06-12" && /14\.2/.test(it(M1, "reposicionLocal").norma) && !it(M1, "reclamacionEA").id && !it(M1, "tpc").id);
+  // Rectificación de autoliquidación: cuatro años desde el fin del plazo o desde el ingreso fuera de plazo (arts. 66.c y 67.1 LGT)
+  const A1 = { tributo: "ISD", tipo: "autoliquidacion", finPlazoPresentacion: "2026-10-20", fechaPresentacion: "2026-10-15", fechaIngreso: "2026-10-15" };
+  si("37 · rectificación: ingreso en plazo → cuatro años desde el fin del plazo (20-10-2030)", it(A1, "rectificacion").limite === "2030-10-20" && /120\.3 LGT/.test(it(A1, "rectificacion").norma), it(A1, "rectificacion"));
+  si("37 · rectificación: ingreso fuera de plazo (05-11-2026) → desde el ingreso (05-11-2030)", it({ ...A1, fechaIngreso: "2026-11-05" }, "rectificacion").limite === "2030-11-05");
+  si("37 · rectificación: la prescripción no se traslada al día hábil (20-10-2029 es sábado y se mantiene)", it({ ...A1, finPlazoPresentacion: "2025-10-20", fechaIngreso: "", fechaPresentacion: "" }, "rectificacion").limite === "2029-10-20");
+  si("37 · valor de referencia: se impugna por la rectificación, con el mismo plazo", it(A1, "valorReferencia").limite === "2030-10-20" && /9\.3 Ley 29\/1987/.test(it(A1, "valorReferencia").norma));
+  si("37 · sin fecha de notificación: aviso y sin plazos", plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).items.length === 0 && plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).avisos.some((a) => /fecha de notificación/.test(a)));
+  si("37 · territorio foral: aviso de norma foral y estado pendiente", plazosDefensa({ ...L1, foral: true }).estado === "PENDIENTE" && plazosDefensa({ ...L1, foral: true }).avisos.some((a) => /Norma Foral General Tributaria/.test(a)));
+  si("37 · sanción: reposición y reclamación, sin tasación pericial", !!it({ ...L1, tipo: "sancion" }, "reposicion").id && !it({ ...L1, tipo: "sancion" }, "tpc").id);
+  // Simulador de tasación pericial contradictoria (art. 135 LGT)
+  const s1 = simularTPC({ valorDeclarado: 200000, valorComprobado: 260000, tipoMedio: 0.15, diasIntereses: 365, interes: 0.04 });
+  eq("37 · TPC: diferencia comprobada", s1.diferencia, 60000);
+  eq("37 · TPC: cuota adicional = diferencia × tipo", s1.cuotaAdicional, 9000);
+  eq("37 · TPC: intereses de un año al 4 %", s1.intereses, 360);
+  eq("37 · TPC: coste del perito estimado si no se indica", s1.costePerito, DF_COSTE_PERITO);
+  si("37 · TPC: compensa (9.360 € frente a 600 €)", s1.recomendacion === "compensa" && s1.umbralTercero === 240000);
+  si("37 · TPC: cuota adicional conocida (del motor) manda sobre el tipo", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 450, tipoMedio: 0.3, honorariosPerito: 600 }).recomendacion === "no compensa");
+  si("37 · TPC: dudoso si lo que se discute es menor que el doble del perito", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 1000, honorariosPerito: 600 }).recomendacion === "dudoso");
+  si("37 · TPC: valor comprobado no superior → no procede", simularTPC({ valorDeclarado: 100000, valorComprobado: 90000, tipoMedio: 0.2 }).recomendacion === "no procede");
+  si("37 · TPC: regla de los 120.000 € y el 10 % (art. 135.2 LGT)", simularTPC({ valorDeclarado: 300000, valorComprobado: 380000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === true && simularTPC({ valorDeclarado: 300000, valorComprobado: 400000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === false);
+}
 
 console.log(`\n${ok} correctas · ${ko} fallidas`);
 process.exit(ko ? 1 : 0);

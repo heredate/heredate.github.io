@@ -8,7 +8,8 @@
 // `enlace` es un objeto { claveDataset: valor } que el manejador general ya entiende (sec/sub, editp, editb, topen, doc, docrec).
 // Las acciones propias usan [data-vf] y un único escuchador en captura registrado aquí. El software prepara; decide el abogado.
 // Datos nuevos que lee: persona.nif, persona.domicilio, persona.estadoCivil · bien.refCatastral, bien.cargas ·
-// x.nifCausante, x.domicilioCausante · x.firma = { notaria, email, fecha, tNotario, tFecha, tProtocolo, dec: { clave: { t, sig } } }.
+// bien.registro, fincaRegistral, cru, tomo, libro, folio, inscripcion (G01) · x.lugarFallecimiento, rcDefuncion, seccionDefuncion, tomoDefuncion,
+// folioDefuncion, fechaNacimiento, lugarNacimiento, padre, madre (G01) · x.nifCausante, x.domicilioCausante · x.firma = { notaria, email, fecha, tNotario, tFecha, tProtocolo, dec: { clave: { t, sig } } }.
 
 const VF_GRUPOS = [["herederos", "Causante y herederos"], ["bienes", "Bienes"], ["titulos", "Títulos y certificados"], ["reparto", "Reparto"], ["impuestos", "Impuestos"]];
 const VF_EC = [["soltero", "Soltero/a"], ["casado_gananciales", "Casado/a en gananciales"], ["casado_separacion", "Casado/a en separación de bienes"], ["casado", "Casado/a (otro régimen)"], ["pareja", "Pareja de hecho"], ["viudo", "Viudo/a"], ["divorciado", "Divorciado/a"], ["separado", "Separado/a legalmente"]];
@@ -142,6 +143,15 @@ function validarFirma(x, R) {
         const k = "vref-" + b.id, d = vfDec(x, k);
         add({ id: "vf-" + k, grupo: "bienes", sev: d ? "ok" : "aviso", titulo: d ? `${n}: se declara el valor de referencia` : `${n}: valor declarado inferior al de referencia`, detalle: `Valor en el expediente ${eur(num(b.valor))}; valor de referencia ${eur(num(b.valorReferencia))}. El impuesto se calcula sobre el de referencia salvo que se impugne; la escritura debe recoger el valor que se declara.`, norma: "art. 9.3 Ley 29/1987", estado: "VERIFICADO", accion: "Abrir bien", enlace: { editb: b.id }, dec: { k, txt: d ? "Deshacer" : "Declarar el valor de referencia" } });
       }
+      // Datos registrales (G01): la escritura identifica la finca por su inscripción (arts. 9 LH y 51 RH) o por su CRU (art. 9 LH, Ley 13/2015).
+      // Bloquea si no hay ni CRU ni finca y tomo; avisa si falta algo de lo demás (Registro, libro, folio).
+      {
+        const T = (k) => String(b[k] || "").trim(), cru = T("cru"), finca = T("fincaRegistral"), tomo = T("tomo");
+        const ident = !!(cru || (finca && tomo)), faltaR = [!T("registro") && "Registro", !finca && "número de finca", !cru && !tomo && "tomo", !cru && !T("libro") && "libro", !cru && !T("folio") && "folio"].filter(Boolean);
+        add({ id: "vf-rg-" + b.id, grupo: "bienes", sev: !ident ? "bloqueo" : faltaR.length ? "aviso" : "ok", titulo: !ident ? `${n}: finca sin datos registrales` : faltaR.length ? `${n}: datos registrales incompletos (falta ${faltaR.join(", ").replace(/, ([^,]*)$/, " y $1")})` : `${n}: finca ${finca}${T("registro") ? " · Registro de " + T("registro").replace(/^registro de la propiedad( de)?\s*/i, "") : ""}${cru ? " · CRU " + cru : ""}`,
+          detalle: !ident ? "Sin el CRU (IDUFIR) o el número de finca con su tomo, la escritura no identifica la finca para inscribirla. Están en la nota simple: súbela al lector o anótalos." : faltaR.length ? "La escritura describe cada finca con su Registro, tomo, libro, folio y número de finca, o con el CRU. Lo que falta queda marcado en el borrador." : "Datos registrales completos para la escritura.",
+          norma: ident && !faltaR.length ? "" : "arts. 9 LH y 51 RH", estado: ident && !faltaR.length ? "" : "VERIFICADO", accion: "Completar", foco: ident && !faltaR.length ? null : `vf-b-${b.id}-${!finca ? "fincaRegistral" : !cru && !tomo ? "tomo" : !T("registro") ? "registro" : "cru"}`, enlace: { editb: b.id } });
+      }
       // Cargas
       add({ id: "vf-cg-" + b.id, grupo: "bienes", sev: decCg ? "ok" : "aviso", titulo: decCg ? `${n}: ${decCg.length > 70 ? decCg.slice(0, 68) + "…" : decCg}` : `${n}: cargas sin anotar`, detalle: decCg ? "Cargas según el expediente." : vfDoc(x, "esc_" + b.id) ? "Anota las cargas que figuran en la nota simple (hipoteca, embargos, servidumbres) o confirma que está libre." : "Pide la nota simple para conocer las cargas vigentes y anótalas, o confirma que está libre.", norma: decCg ? "" : "arts. 221-222 Ley Hipotecaria", estado: decCg ? "" : "VERIFICADO", accion: decCg ? "" : "Anotar cargas", foco: decCg ? null : `vf-b-${b.id}-cargas`, dec: decCg ? null : { k: "libre-" + b.id, txt: "Libre de cargas", act: "libre" } });
     } else if (b.tipo === "cuenta" || b.tipo === "valores") {
@@ -268,6 +278,10 @@ function vfFormDatos(x, V) {
       <label class="vf-fl"><span>Correo de la notaría</span>${vfInput("vf-f-email", 'data-vff="email" type="email" inputmode="email"', F.email, "oficial@notaria.es")}</label></div>
     <div class="vf-fs"><div class="vf-fsh">Causante · ${esc(x.nombre || "—")}</div>
       <div class="vf-f2"><label class="vf-fl"><span>NIF</span>${vfInput("vf-x-nifCausante", `data-vfx="nifCausante" class="${nifCls(x.nifCausante)}"`, x.nifCausante, "00000000X")}</label><label class="vf-fl"><span>Último domicilio</span>${vfInput("vf-x-domicilioCausante", 'data-vfx="domicilioCausante"', x.domicilioCausante, "Calle, número, CP y localidad")}</label></div>
+      <div class="vf-f2"><label class="vf-fl"><span>Lugar del fallecimiento</span>${vfInput("vf-x-lugarFallecimiento", 'data-vfx="lugarFallecimiento"', x.lugarFallecimiento, "Municipio y provincia")}</label><label class="vf-fl"><span>Registro Civil de la defunción</span>${vfInput("vf-x-rcDefuncion", 'data-vfx="rcDefuncion"', x.rcDefuncion, "Ej.: Málaga")}</label></div>
+      <div class="vf-f3"><label class="vf-fl"><span>Inscripción: sección</span>${vfInput("vf-x-seccionDefuncion", 'data-vfx="seccionDefuncion"', x.seccionDefuncion, "3.ª")}</label><label class="vf-fl"><span>Tomo</span>${vfInput("vf-x-tomoDefuncion", 'data-vfx="tomoDefuncion" inputmode="numeric"', x.tomoDefuncion, "Tomo")}</label><label class="vf-fl"><span>Folio</span>${vfInput("vf-x-folioDefuncion", 'data-vfx="folioDefuncion" inputmode="numeric"', x.folioDefuncion, "Folio")}</label></div>
+      <div class="vf-f2"><label class="vf-fl"><span>Fecha de nacimiento</span><input id="vf-x-fechaNacimiento" type="date" data-vfx="fechaNacimiento" value="${esc(x.fechaNacimiento || "")}"></label><label class="vf-fl"><span>Lugar de nacimiento</span>${vfInput("vf-x-lugarNacimiento", 'data-vfx="lugarNacimiento"', x.lugarNacimiento, "Municipio, provincia y país")}</label></div>
+      <div class="vf-f2"><label class="vf-fl"><span>Nombre del padre</span>${vfInput("vf-x-padre", 'data-vfx="padre"', x.padre, "Para el modelo 790")}</label><label class="vf-fl"><span>Nombre de la madre</span>${vfInput("vf-x-madre", 'data-vfx="madre"', x.madre, "Para el modelo 790")}</label></div>
       <label class="vf-fl"><span>Tratamiento en los escritos</span><select id="vf-x-generoCausante" data-vfx="generoCausante"><option value="">Sin indicar (redacción neutra)</option><option value="f" ${x.generoCausante === "f" ? "selected" : ""}>Femenino (D.ª, fallecida)</option><option value="m" ${x.generoCausante === "m" ? "selected" : ""}>Masculino (D., fallecido)</option></select></label></div>
     <div class="vf-fs"><div class="vf-fsh">${test ? "Testamento" : x.testamento === "no" ? "Acta de declaración de herederos" : "Título sucesorio"}</div>
       <div class="vf-f3"><label class="vf-fl"><span>${test ? "Notario autorizante" : "Notario del acta"}</span>${vfInput("vf-f-tNotario", 'data-vff="tNotario"', F.tNotario, "Nombre")}</label><label class="vf-fl"><span>Fecha</span><input id="vf-f-tFecha" type="date" data-vff="tFecha" value="${esc(F.tFecha || "")}"></label><label class="vf-fl"><span>Protocolo</span>${vfInput("vf-f-tProtocolo", 'data-vff="tProtocolo" inputmode="numeric"', F.tProtocolo, "Número")}</label></div></div>
@@ -275,8 +289,16 @@ function vfFormDatos(x, V) {
       ${vivos.map((p) => `<div class="vf-pr"><button class="vf-pn" data-editp="${p.id}" title="Abrir ficha">${esc(vfNomP(p))}<small>${esc(RELACIONES[p.relacion]?.label || "")}</small></button>
         <div class="vf-pf"><label class="vf-fl ${malP(p, "nif") ? "vf-need" : ""}"><span>NIF</span>${vfInput(`vf-p-${p.id}-nif`, `data-vfp="${p.id}" data-vfk="nif" class="${nifCls(p.nif)}"`, p.nif, "00000000X")}</label><label class="vf-fl ${malP(p, "estadoCivil") ? "vf-need" : ""}"><span>Estado civil</span>${ecSel(p)}</label><label class="vf-fl vf-wide ${malP(p, "domicilio") ? "vf-need" : ""}"><span>Domicilio</span>${vfInput(`vf-p-${p.id}-domicilio`, `data-vfp="${p.id}" data-vfk="domicilio"`, p.domicilio, "Calle, número, CP y localidad")}</label></div></div>`).join("") || `<p class="caption">Sin herederos.</p>`}</div>
     ${inm.length ? `<div class="vf-fs"><div class="vf-fsh">Inmuebles</div>${inm.map((b) => `<div class="vf-pr"><button class="vf-pn" data-editb="${b.id}" title="Abrir bien">${esc(vfNomB(b))}<small>${esc(b.muniNombre || (typeof ORDENANZAS === "object" && ORDENANZAS[b.municipio] && b.municipio !== "OTRO" ? ORDENANZAS[b.municipio].nombre : "") || TIPO_BIEN[b.tipo][0])}</small></button>
-        <div class="vf-pf"><label class="vf-fl vf-wide"><span>Referencia catastral</span>${vfInput(`vf-b-${b.id}-refCatastral`, `data-vfb="${b.id}" data-vfk="refCatastral" class="vf-mono ${b.refCatastral && !vfRC(b.refCatastral).ok ? "vf-bad" : ""}" maxlength="24"`, b.refCatastral, "20 caracteres")}</label><label class="vf-fl vf-wide"><span>Cargas</span>${vfInput(`vf-b-${b.id}-cargas`, `data-vfb="${b.id}" data-vfk="cargas"`, b.cargas, "Hipoteca, embargo… o «Libre de cargas»")}</label></div></div>`).join("")}</div>` : ""}
+        <div class="vf-pf"><label class="vf-fl vf-wide"><span>Referencia catastral</span>${vfInput(`vf-b-${b.id}-refCatastral`, `data-vfb="${b.id}" data-vfk="refCatastral" class="vf-mono ${b.refCatastral && !vfRC(b.refCatastral).ok ? "vf-bad" : ""}" maxlength="24"`, b.refCatastral, "20 caracteres")}</label><label class="vf-fl vf-wide"><span>Cargas</span>${vfInput(`vf-b-${b.id}-cargas`, `data-vfb="${b.id}" data-vfk="cargas"`, b.cargas, "Hipoteca, embargo… o «Libre de cargas»")}</label>
+          ${vfRegistroCampos(b, (k) => V.items.some((i) => i.sev !== "ok" && i.foco === `vf-b-${b.id}-${k}`))}</div></div>`).join("")}</div>` : ""}
   </div>`;
+}
+// Datos registrales de la finca en «Para la escritura» (G01): los mismos campos que la ficha del bien
+function vfRegistroCampos(b, mal) {
+  const inp = (k, ph, extra = "") => vfInput(`vf-b-${b.id}-${k}`, `data-vfb="${b.id}" data-vfk="${k}" ${extra}`, b[k], ph);
+  const fl = (k, t, ph, cls = "", extra = "") => `<label class="vf-fl ${cls} ${mal(k) ? "vf-need" : ""}"><span>${t}</span>${inp(k, ph, extra)}</label>`;
+  return `${fl("registro", "Registro de la Propiedad", "Ej.: Málaga n.º 2", "vf-wide")}<div class="vf-pf vf-wide vf-reg2">${fl("fincaRegistral", "Finca n.º", "Número", "", 'inputmode="numeric"')}${fl("cru", "CRU (IDUFIR)", "14 dígitos", "", 'class="vf-mono" inputmode="numeric" maxlength="20"')}</div>
+    <div class="vf-f4 vf-wide">${fl("tomo", "Tomo", "Tomo", "", 'inputmode="numeric"')}${fl("libro", "Libro", "Libro", "", 'inputmode="numeric"')}${fl("folio", "Folio", "Folio", "", 'inputmode="numeric"')}${fl("inscripcion", "Inscripción", "Ej.: 4.ª")}</div>`;
 }
 function tFirma(x, R) {
   if (R === undefined) R = calcular(x);
@@ -495,6 +517,7 @@ function vfChange(e) {
   const k = d.vfk || d.vfx || d.vff;
   if (/^(nif|nifCausante)$/.test(k)) v = v.toUpperCase().replace(/[\s.\-]/g, "");
   if (k === "refCatastral") v = v.toUpperCase().replace(/[\s\-.]/g, "");
+  if (k === "cru") v = v.replace(/[\s.\-]/g, "");
   if (typeof v === "string") v = v.trim();
   if (d.vfp) { const p = (x.personas || []).find((q) => q.id === d.vfp); if (!p) return; p[k] = v; }
   else if (d.vfb) { const b = (x.bienes || []).find((q) => q.id === d.vfb); if (!b) return; b[k] = v; }

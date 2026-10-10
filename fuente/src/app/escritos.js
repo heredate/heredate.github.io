@@ -32,6 +32,42 @@ const esrFrac = (f) => (typeof fracTxt === "function" ? fracTxt(f) : esrPct(f));
 const esrDer = (d) => `${d.tipo === "pleno" ? "pleno dominio" : d.tipo === "usufructo" ? "usufructo vitalicio" : "nuda propiedad"} de ${Math.abs(d.fraccion - 1) < 1e-9 ? "la totalidad" : esrFrac(d.fraccion)}`;
 const esrDerechos = (R, id) => ((R.isd.derechos || {})[id] || []).filter((d) => d.fraccion > 0).map(esrDer).join(" y ");
 
+// ── Datos registrales de cada finca (G01) ───────────────────────
+// Campos del bien inmueble (planos, para editarlos con data-bn y data-vfb): registro, fincaRegistral, seccion, tomo, libro, folio, inscripcion,
+// cru, descripcionRegistral, linderos, superficieRegistral, cuotaParticipacion, tituloAdq, tituloNotario, tituloFecha, tituloProtocolo, cargas.
+// Inscripción y descripción de la finca: arts. 9 LH y 51 RH; CRU (IDUFIR): art. 9 LH tras la Ley 13/2015; referencia catastral: art. 38 TRLCI.
+// Lo que consta se usa; lo que falta queda marcado. Con finca y CRU, la finca está identificada aunque falten tomo, libro y folio, y no se marcan.
+const esrTxt = (v) => (v != null && String(v).trim() ? String(v).trim() : "");
+const esrSinPunto = (s) => esrTxt(s).replace(/[\s.;,]+$/, "");
+const esrRegNombre = (r) => { const t = esrSinPunto(r).replace(/\bN(?:\s*[º°o]|[úu]mero)\.?\s*(?=\d)/gi, "n.º ").replace(/\bn\.º\s+/g, "n.º "); return /^registro/i.test(t) ? t.replace(/^registro de la propiedad\s*/i, "Registro de la Propiedad ").replace(/\s+$/, "") : `Registro de la Propiedad de ${t}`; };
+const esrInsNum = (v) => { const t = esrSinPunto(v); return /^\d+$/.test(t) ? t + ".ª" : t; };
+function esrRegistral(b) {
+  const T = (k) => esrSinPunto(b && b[k]);
+  const reg = T("registro"), finca = T("fincaRegistral"), cru = T("cru").replace(/\s+/g, ""), tomo = T("tomo"), libro = T("libro"), folio = T("folio"), ins = T("inscripcion"), secc = T("seccion");
+  const porCru = !!(finca && cru);
+  const pTLF = tomo || libro || folio || !porCru ? [`tomo ${esrPh(tomo, "…")}`, `libro ${esrPh(libro, "…")}`, `folio ${esrPh(folio, "…")}`] : [];
+  const inscripcion = `${reg ? esrRegNombre(reg) : "Registro de la Propiedad de ⟦…⟧"}, ${[...pTLF, `finca número ${esrPh(finca, "…")}${secc ? ` de la sección ${secc}` : ""}`, ...(ins ? [`inscripción ${esrInsNum(ins)}`] : porCru ? [] : ["inscripción ⟦…⟧"])].join(", ")}`;
+  // Descripción: la registral, completada con superficie, linderos y cuota si no los recoge ya
+  const dr = T("descripcionRegistral"), lin = T("linderos"), sup = T("superficieRegistral"), cuota = T("cuotaParticipacion");
+  const extra = [sup && !/superficie|m2|m²|metros/i.test(dr) ? `Superficie: ${sup}` : "", lin && !/\blind/i.test(dr) ? `Linderos: ${lin}` : "", cuota && !/cuota|coeficiente/i.test(dr) ? `Cuota de participación: ${/%/.test(cuota) ? cuota : cuota + " %"}` : ""].filter(Boolean);
+  const descripcion = dr ? [dr, ...extra].join(". ") : extra.length ? [`⟦descripción según el título y la nota simple⟧`, ...extra].join(". ") : "⟦situación, superficie, linderos y cuota de participación, según el título y la nota simple⟧";
+  // Título de adquisición del causante: clase, notario, fecha y protocolo
+  const tipoT = T("tituloAdq").toLowerCase(), not = T("tituloNotario"), fT = esrTxt(b && b.tituloFecha) || "", prot = T("tituloProtocolo");
+  const fechaT = fT || esrTxt(b && b.fechaAdq);
+  const escT = not || fT || prot ? `, en escritura autorizada por ${not ? (/^(d\.|d\.ª|don|doña|el notario|la notaria)/i.test(not) ? not : "el notario " + not) : "el notario ⟦…⟧"} el ${fechaT ? fechaLarga(fechaT) : "⟦fecha⟧"}, con el número ${esrPh(prot, "…")} de su protocolo` : "";
+  const titulo = tipoT ? `${tipoT}${escT || (/herencia|sucesi/.test(tipoT) ? "" : `${fechaT ? `, el ${fechaLarga(fechaT)}` : ""}, ⟦notario y número de protocolo de la escritura⟧`)}` : `${fechaT ? `adquirida el ${fechaLarga(fechaT)} por ` : ""}⟦título de adquisición: compraventa, herencia…⟧${escT}`;
+  return { inscripcion, descripcion, titulo, cru, porCru, completo: !!(reg && finca && (porCru || (tomo && libro && folio))), linea: `Finca registral número ${esrPh(finca, "…")} del ${inscripcion.replace(/, finca número [^,]*(, |$)/, "$1").replace(/,\s*$/, "")}${cru ? `. CRU (IDUFIR): ${cru}` : ""}` };
+}
+// Datos del causante para la escritura y el modelo 790 (G01): nacimiento, padres, lugar e inscripción de la defunción
+function esrCausanteDatos(x) {
+  const T = (k) => esrSinPunto(x && x[k]);
+  const rc = T("rcDefuncion"), tomo = T("tomoDefuncion"), folio = T("folioDefuncion"), secc = T("seccionDefuncion");
+  const insc = [secc ? `sección ${secc}` : "", tomo ? `tomo ${tomo}` : "", folio ? `folio ${folio}` : ""].filter(Boolean).join(", ");
+  const nac = [T("lugarNacimiento") ? `en ${T("lugarNacimiento")}` : "", x && x.fechaNacimiento ? `el ${fechaLarga(x.fechaNacimiento)}` : ""].filter(Boolean).join(" ");
+  const padres = [T("padre"), T("madre")].filter(Boolean);
+  return { lugar: T("lugarFallecimiento"), rc, insc, nac, padres, fechaNac: x && x.fechaNacimiento ? fechaLarga(x.fechaNacimiento) : "", lugarNac: T("lugarNacimiento"), padre: T("padre"), madre: T("madre") };
+}
+
 // ── Datos comunes del expediente ───────────────────────────────
 function esrCtx(x, R) {
   const KD = typeof despachoContacto === "function" ? despachoContacto() : { nombre: "", linea: "", localidad: "", postal: "", tel: "", email: "" };
@@ -45,7 +81,7 @@ function esrCtx(x, R) {
   const conV = viudo ? ` con ${gnTrat(viudo)}${viudo.nombre}` : "";
   const civilC = ({ gananciales: `${gnO(cG, "casado", "casada")} en régimen de gananciales${conV}`, separacion: `${gnO(cG, "casado", "casada")} en régimen de separación de bienes${conV}`, pareja: `con pareja de hecho${viudo ? ", " + gnTrat(viudo) + viudo.nombre : ""}`, viudo: gnO(cG, "viudo", "viuda"), soltero: gnO(cG, "soltero o divorciado", "soltera o divorciada", "soltero, soltera o con matrimonio disuelto por divorcio") })[x.civil] || "";
   return {
-    KD, ab, abNom, cG, F, pl, vec, vecTxt, foral, civilC, viudo,
+    KD, ab, abNom, cG, F, pl, vec, vecTxt, foral, civilC, viudo, cd: esrCausanteDatos(x),
     causante: x.nombre || "⟦nombre del causante⟧", trC: gnTrat(cG), falC: gnO(cG, "fallecido", "fallecida", "que falleció"), fm: fechaLarga(x.fecha),
     nifC: esrPh(x.nifCausante, "NIF del causante"), domC: esrPh(x.domicilioCausante, "último domicilio del causante"),
     lugar: KD.localidad || "⟦localidad⟧", ref: (x.despacho && x.despacho.ref) || "",
@@ -60,7 +96,9 @@ function esrComp(p, i) {
 }
 // Título sucesorio (testamento o acta de declaración de herederos), con los datos de «Listo para firmar» si constan
 function esrTitulo(x, c, R) {
-  const F = c.F, quien = F.tNotario ? `el notario ${F.tNotario}` : "el notario ⟦nombre del notario⟧", cuando = F.tFecha ? fechaLarga(F.tFecha) : "⟦fecha⟧", nro = esrPh(F.tProtocolo, "número");
+  // Datos del título: los de «Listo para firmar» y, si faltan, los leídos del testamento o del acta (lector)
+  const L0 = (x.testamento === "no" ? x.actaHerederos : x.testamentoDatos) || {}, F = { tNotario: c.F.tNotario || L0.notario, tFecha: c.F.tFecha || L0.fecha, tProtocolo: c.F.tProtocolo || L0.protocolo };
+  const quien = F.tNotario ? `el notario ${F.tNotario}` : "el notario ⟦nombre del notario⟧", cuando = F.tFecha ? fechaLarga(F.tFecha) : "⟦fecha⟧", nro = esrPh(F.tProtocolo, "número");
   if (esrTest(x)) return `Falleció bajo el testamento otorgado ante ${quien}, el ${cuando}, con el número ${nro} de su protocolo, que es el último según el certificado del Registro General de Actos de Última Voluntad. En lo que interesa, dispone: ⟦transcribir las cláusulas de institución de herederos, legados, sustituciones y, en su caso, usufructo⟧.`;
   if (x.testamento === "no") return `Falleció sin haber otorgado testamento, según el certificado del Registro General de Actos de Última Voluntad. Por acta de notoriedad autorizada por ${quien}, el ${cuando}, con el número ${nro} de su protocolo, conforme a los artículos 55 y 56 de la Ley del Notariado (en la redacción de la Ley 15/2015, de 2 de julio, de la Jurisdicción Voluntaria), se declaró herederos abintestato a las personas que se indican en el apartado siguiente.`;
   return `${esrREV("aún no consta si hay testamento: el título sucesorio (testamento o acta de declaración de herederos, art. 14 de la Ley Hipotecaria) se completa con el certificado de últimas voluntades.")} ⟦título sucesorio⟧.`;
@@ -94,11 +132,13 @@ function esrInventario(x, R) {
     const b = q.b, L = [], ent = typeof tcEntidadDe === "function" ? tcEntidadDe(b.descripcion) : null;
     const cab = `${i + 1}. ${esrInm(b) ? (b.tipo === "vivienda" ? "URBANA (vivienda habitual del causante)" : "URBANA") : esrUp(TIPO_BIEN[b.tipo][0])}. ${esrNomB(b)}.`;
     if (esrInm(b)) {
-      L.push("Descripción: ⟦situación, superficie, linderos y cuota de participación, según el título y la nota simple⟧.");
-      L.push("Inscripción: Registro de la Propiedad de ⟦…⟧, tomo ⟦…⟧, libro ⟦…⟧, folio ⟦…⟧, finca número ⟦…⟧.");
+      const G = esrRegistral(b);
+      L.push(`Descripción: ${G.descripcion}.`);
+      L.push(`Inscripción: ${G.inscripcion}.`);
+      if (G.cru) L.push(`Código Registral Único (CRU/IDUFIR): ${G.cru}.`);
       L.push(`Referencia catastral: ${esrPh(b.refCatastral, "referencia catastral")}.`);
-      L.push(`Título: ${b.fechaAdq ? `adquirida el ${fechaLarga(b.fechaAdq)} por ⟦título de adquisición⟧` : "⟦título y fecha de adquisición⟧"}.`);
-      L.push(`Cargas: ${esrPh(b.cargas, "cargas según la nota simple")}.`);
+      L.push(`Título: ${G.titulo.charAt(0).toUpperCase() + G.titulo.slice(1)}.`);
+      L.push(`Cargas: ${esrPh(esrSinPunto(b.cargas), "cargas según la nota simple")}.`);
       L.push(`Situación posesoria: ${b.arrendadoOCedido ? "arrendada o cedida a terceros, ⟦datos del contrato⟧" : "⟦libre de arrendatarios y ocupantes, según manifiestan los comparecientes⟧"}.`);
     } else if (b.tipo === "cuenta") L.push(`Saldo a la fecha del fallecimiento en ${ent ? ent.nombre : "⟦entidad⟧"}, cuenta ⟦número de cuenta (IBAN)⟧, según certificado de la entidad.`);
     else if (b.tipo === "valores") L.push(`Valores o participaciones depositados en ${ent ? ent.nombre : "⟦entidad o gestora⟧"}, ⟦número de contrato o cuenta de valores⟧, valorados a la fecha del fallecimiento según certificado de posición.`);
@@ -166,7 +206,7 @@ function esrEscritura(x, R) {
   out.push("", uno && !viudoRen ? "INTERVIENE" : "INTERVIENEN", "", `En su propio nombre y derecho${vivos.some(esrMenor) ? ", salvo los menores de edad, que lo hacen por medio de su representante, cuya representación resulta de ⟦título: patria potestad o resolución que nombra al defensor judicial⟧" : ""}${viudoRen ? `. ${gnTrat(viudoRen)}${viudoRen.nombre} interviene a los solos efectos de liquidar la sociedad de gananciales, por haber renunciado a la herencia` : ""}.`);
   out.push("", `Identifico ${aOt} por sus documentos de identidad reseñados. Tienen, a mi juicio, la capacidad legal necesaria para formalizar esta escritura de MANIFESTACIÓN, ACEPTACIÓN Y ADJUDICACIÓN DE HERENCIA y, al efecto,`);
   out.push("", uno && !viudoRen ? "EXPONE" : "EXPONEN");
-  out.push("", `${E()}. Fallecimiento. ${c.trC}${c.causante}, con DNI/NIF ${c.nifC}, de vecindad civil ${c.vecTxt || "⟦vecindad civil⟧"}, falleció en ⟦lugar del fallecimiento⟧ el ${c.fm}, ${c.civilC ? `en estado de ${c.civilC}` : "⟦estado civil⟧"}, siendo su último domicilio ${c.domC}. Lo acreditan con certificado de defunción expedido por el Registro Civil de ⟦…⟧, que me exhiben y dejo unido a esta matriz.`);
+  out.push("", `${E()}. Fallecimiento. ${c.trC}${c.causante}, con DNI/NIF ${c.nifC}${c.cd.nac ? `, ${gnO(c.cG, "nacido", "nacida", "que nació")} ${c.cd.nac}` : ""}${c.cd.padres.length === 2 ? `, ${gnO(c.cG, "hijo", "hija")} de ${c.cd.padres[0]} y de ${c.cd.padres[1]}` : ""}, de vecindad civil ${c.vecTxt || "⟦vecindad civil⟧"}, falleció en ${esrPh(c.cd.lugar, "lugar del fallecimiento")} el ${c.fm}, ${c.civilC ? `en estado de ${c.civilC}` : "⟦estado civil⟧"}, siendo su último domicilio ${c.domC}. Lo acreditan con certificado de defunción expedido por el Registro Civil de ${esrPh(c.cd.rc, "…")}${c.cd.insc ? ` (${c.cd.insc})` : ""}, que me exhiben y dejo unido a esta matriz.`);
   out.push("", `${E()}. Título sucesorio. ${esrTitulo(x, c, R)}`);
   out.push("", `${E()}. Llamamiento. Conforme al título sucesorio, son llamados a la herencia: ${esrLlamados(x, R)}`);
   if (R.isd.notasReparto.length) out.push(esrREV(`reparto aplicado en el cálculo: ${R.isd.notasReparto.join(" ")}`));
@@ -219,7 +259,7 @@ function esrCuaderno(x, R) {
   out.push("", `En ${c.lugar}, a ⟦fecha de firma⟧.`, "", "REUNIDOS", "", vivos.map((p, i) => esrComp(p, i)).join("\n") + (viudoRen ? `\n${vivos.length + 1}. ${esrComp(viudoRen).replace(/\.$/, "")}, que ha renunciado a la herencia e interviene solo para liquidar la sociedad de gananciales.` : ""));
   out.push("", `Intervienen en su propio nombre y derecho${vivos.some(esrMenor) ? ", salvo los menores, que actúan por medio de su representante" : ""}, y manifiestan tener la libre disposición de sus bienes y no tener establecida ninguna medida de apoyo que afecte a este acto.`);
   out.push("", "ANTECEDENTES");
-  out.push("", `I. Fallecimiento. ${c.trC}${c.causante}, con DNI/NIF ${c.nifC} y vecindad civil ${c.vecTxt || "⟦vecindad civil⟧"}, falleció el ${c.fm}${c.civilC ? `, en estado de ${c.civilC}` : ""}. Su último domicilio fue ${c.domC}.`);
+  out.push("", `I. Fallecimiento. ${c.trC}${c.causante}, con DNI/NIF ${c.nifC} y vecindad civil ${c.vecTxt || "⟦vecindad civil⟧"}, falleció${c.cd.lugar ? " en " + c.cd.lugar : ""} el ${c.fm}${c.civilC ? `, en estado de ${c.civilC}` : ""}. Su último domicilio fue ${c.domC}.`);
   out.push("", `II. Título sucesorio. ${esrTitulo(x, c, R)}`);
   out.push("", `III. Llamados a la herencia. ${esrLlamados(x, R)}`);
   out.push(esrREV(`${R.isd.notasReparto.length ? `reparto aplicado en el cálculo: ${R.isd.notasReparto.join(" ")} ` : ""}Comprobar cuotas, legítimas (arts. 806 a 822 CC), sustituciones y derecho de acrecer si alguien renunció (arts. 774 y 981 a 985 CC), usufructo del viudo (arts. 834 a 840 CC) y legados.`));
@@ -266,7 +306,7 @@ function esrRenuncia(x, R) {
   out.push("", uno ? "COMPARECE" : "COMPARECEN", "", rs.map((p, i) => esrComp({ ...p, nombre: p.nombre || "" }, uno ? null : i).replace("⟦nombre y apellidos⟧", "⟦nombre y apellidos de quien renuncia⟧")).join("\n"));
   out.push("", uno ? "INTERVIENE" : "INTERVIENEN", "", `En su propio nombre y derecho. Tiene${uno ? "" : "n"}, a mi juicio, capacidad legal para otorgar esta escritura de RENUNCIA DE HERENCIA y, al efecto,`);
   out.push("", uno ? "EXPONE" : "EXPONEN");
-  out.push("", `I. Que ${c.trC}${c.causante}, con DNI/NIF ${c.nifC}, falleció en ⟦lugar del fallecimiento⟧ el ${c.fm}, con último domicilio en ${c.domC}, según certificado de defunción que me exhibe${uno ? "" : "n"} y dejo unido.`);
+  out.push("", `I. Que ${c.trC}${c.causante}, con DNI/NIF ${c.nifC}, falleció en ${esrPh(c.cd.lugar, "lugar del fallecimiento")} el ${c.fm}, con último domicilio en ${c.domC}, según certificado de defunción que me exhibe${uno ? "" : "n"} y dejo unido.`);
   out.push("", `II. Título sucesorio. ${esrTitulo(x, c, R).replace(/a las personas que se indican en el apartado siguiente/, "a los parientes con derecho a heredar")}`);
   out.push("", `III. Que ${rs.map((p) => `${p.nombre ? `${gnTrat(p)}${p.nombre}` : "⟦nombre⟧"}, como ${p.relacion ? gnRel(p) : "⟦parentesco⟧"} del causante,`).join(" y ")} ${uno ? "tiene" : "tienen"} derecho a la herencia y ${uno ? "conoce" : "conocen"} con certeza el fallecimiento y su llamamiento (art. 991 CC).`);
   out.push("", `IV. Que no ${uno ? "ha" : "han"} realizado ningún acto que suponga aceptación expresa o tácita de la herencia (arts. 999 y 1000 CC): no ${uno ? "ha" : "han"} dispuesto de bienes del causante, ni cobrado créditos, ni pagado deudas con dinero de la herencia, salvo actos de mera conservación o administración provisional.`);
@@ -288,7 +328,7 @@ function esrSolicitud790(x, R) {
   const c = esrCtx(x, R), D = x.despacho || {}, cli = (x.personas || []).find((p) => D.cliente && p.nombre === D.cliente) || null;
   const desde = c.pl.ultimas_voluntades && c.pl.ultimas_voluntades.desde;
   const sol = c.abNom ? { nombre: c.abNom, nif: "", dom: c.KD.direccion ? c.KD.postal : "", cal: `${gnAbogado(c.ab)}${c.KD.nombre ? " de " + c.KD.nombre : ""}, en nombre de los interesados en la herencia` } : { nombre: D.cliente || "", nif: D.nif || (cli && cli.nif), dom: D.domicilio || (cli && cli.domicilio), cal: cli ? `${gnRel(cli)} del causante` : "" };
-  const filas = [["Nombre y apellidos del causante", esrPh(x.nombre, "nombre y apellidos")], ["DNI, NIE o pasaporte", c.nifC], ["Fecha de nacimiento", "⟦fecha de nacimiento⟧"], ["Lugar de nacimiento (municipio, provincia y país)", "⟦lugar de nacimiento⟧"], ["Nombre del padre", "⟦nombre del padre⟧"], ["Nombre de la madre", "⟦nombre de la madre⟧"], ["Fecha de defunción", c.fm], ["Lugar de defunción (municipio y provincia)", "⟦lugar de defunción⟧"], ["Último domicilio", c.domC]];
+  const filas = [["Nombre y apellidos del causante", esrPh(x.nombre, "nombre y apellidos")], ["DNI, NIE o pasaporte", c.nifC], ["Fecha de nacimiento", esrPh(c.cd.fechaNac, "fecha de nacimiento")], ["Lugar de nacimiento (municipio, provincia y país)", esrPh(c.cd.lugarNac, "lugar de nacimiento")], ["Nombre del padre", esrPh(c.cd.padre, "nombre del padre")], ["Nombre de la madre", esrPh(c.cd.madre, "nombre de la madre")], ["Fecha de defunción", c.fm], ["Lugar de defunción (municipio y provincia)", esrPh(c.cd.lugar, "lugar de defunción")], ["Último domicilio", c.domC]];
   const out = [];
   out.push(`${c.membrete}SOLICITUD DE LOS CERTIFICADOS DE ÚLTIMAS VOLUNTADES Y DE CONTRATOS DE SEGUROS DE COBERTURA DE FALLECIMIENTO`, `Datos para el modelo 790, código 006 · herencia de ${c.trC}${c.causante}${c.ref ? " · referencia " + c.ref : ""}`);
   out.push("", "1. QUÉ SE PIDE", "", "- Certificado del Registro General de Actos de Última Voluntad: si el causante otorgó testamento, ante qué notario, en qué fecha y con qué número de protocolo (Reglamento Notarial, anexo II).", "- Certificado del Registro de Contratos de Seguros de Cobertura de Fallecimiento: qué seguros de vida o de accidentes tenía y con qué entidades (Ley 20/2005, de 14 de noviembre, y Real Decreto 398/2007). No indica los beneficiarios: se piden a cada aseguradora.", "", "Se rellena un modelo 790-006 por cada certificado y se paga la tasa de cada uno (importe vigente: el que figure en el propio modelo).");
@@ -297,7 +337,8 @@ function esrSolicitud790(x, R) {
   out.push("", "4. DATOS DEL SOLICITANTE", "", esrTabla(["Dato", "Contenido"], [["Nombre y apellidos", esrPh(sol.nombre, "nombre del solicitante")], ["DNI/NIF", esrPh(sol.nif, "DNI o NIF")], ["Domicilio a efectos de notificaciones", esrPh(sol.dom, "domicilio")], ["Calidad en que solicita", esrPh(sol.cal, "relación con el causante o representación")]]));
   out.push("", "5. CÓMO SE PRESENTA", "", "- Por internet, en la sede electrónica del Ministerio de Justicia, con certificado digital o Cl@ve.", "- En persona, en las gerencias territoriales del Ministerio de Justicia (con cita previa) o en cualquier registro público.", "- Por correo, dirigido al Registro General de Actos de Última Voluntad (Ministerio de Justicia), con el certificado de defunción y el justificante de la tasa.");
   out.push("", `6. DESPUÉS`, "", esrTest(x) ? "- Con el certificado de últimas voluntades se pide al notario la copia autorizada del último testamento." : x.testamento === "no" ? "- Si confirma que no hay testamento, se tramita el acta notarial de declaración de herederos (arts. 55 y 56 de la Ley del Notariado)." : "- Según lo que diga el certificado: copia autorizada del testamento o acta notarial de declaración de herederos (arts. 55 y 56 de la Ley del Notariado).", "- Con el certificado de seguros se escribe a cada aseguradora para conocer los beneficiarios y la documentación para el cobro.");
-  out.push("", esrREV("comprobar el importe vigente de la tasa y los canales de presentación en la sede del Ministerio de Justicia antes de enviarlo. El modelo pide también los nombres de los padres y los datos de nacimiento del causante, que no constan en el expediente."));
+  const faltan790 = [!c.cd.fechaNac || !c.cd.lugarNac ? "los datos de nacimiento" : "", !c.cd.padre || !c.cd.madre ? "los nombres de los padres" : "", !c.cd.lugar ? "el lugar de la defunción" : ""].filter(Boolean);
+  out.push("", esrREV(`comprobar el importe vigente de la tasa y los canales de presentación en la sede del Ministerio de Justicia antes de enviarlo.${faltan790.length ? ` El modelo pide también ${faltan790.join(", ").replace(/, ([^,]*)$/, " y $1")} del causante, que no constan en el expediente: están en el certificado literal de defunción o de nacimiento y se pueden anotar en Listo para firmar.` : ""}`));
   return out.join("\n");
 }
 
