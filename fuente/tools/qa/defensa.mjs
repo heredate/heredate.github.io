@@ -1,4 +1,5 @@
-// Prueba de navegador de G01 (datos registrales y del causante), G05 (declaración de herederos abintestato) y G07 (defensa tributaria),
+// Prueba de navegador de G01 (datos registrales y del causante), G05 (declaración de herederos abintestato) y G07 (defensa tributaria, sobre los
+// actos que anota G06 en Presentaciones y notificaciones, con sus mismos plazos),
 // con el despacho de demostración: pantallas, edición, escritos (texto, plazos iguales a los del motor, Word válido) y cero errores en la consola.
 // Uso: python3 src/build.py; node tools/qa/servidor.mjs 8806 dist/publicar; node tools/qa/defensa.mjs [url=http://127.0.0.1:8806/app/]
 import fs from "node:fs";
@@ -27,25 +28,30 @@ const sano = (n, t) => {
   check(`${n}: sin espacios dobles ni puntuación duplicada`, !/ {2,}\S|,,|(?<!\.)\.\.(?!\.)| ,/.test(prosa), (prosa.match(/.{0,30}( {2,}\S|,,|(?<!\.)\.\.(?!\.)| ,).{0,30}/) || [])[0]);
 };
 
-// ── G07 · escritos de defensa tributaria con los actos de cada tipo ──
+// ── G07 · escritos de defensa tributaria con los actos de cada tipo, anotados como en G06 (x.procedimientos y x.presentaciones) ──
 const ACTOS = [
-  { id: "q1", tributo: "ISD", tipo: "propuestaLiquidacion", fechaNotificacion: "2026-03-27", diasAlegaciones: "10", sujetoId: "p2", bienId: "b2", importe: 3100, valorComprobado: 185000, organo: "Oficina Liquidadora de Marbella", numero: "PL-1", escritos: ["alegaciones"], plazo: "alegaciones" },
-  { id: "q2", tributo: "ISD", tipo: "liquidacion", fechaNotificacion: "2026-01-31", sujetoId: "p3", bienId: "b2", importe: 5400, valorComprobado: 230000, organo: "Oficina Liquidadora de Marbella", numero: "LIQ-2", escritos: ["reposicion", "reclamacionEA", "tpc"], plazo: "reposicion" },
-  { id: "q3", tributo: "ISD", tipo: "sancion", fechaNotificacion: "2026-11-08", sujetoId: "p2", importe: 800, escritos: ["reposicion", "reclamacionEA"], plazo: "reposicion" },
-  { id: "q4", tributo: "ISD", tipo: "autoliquidacion", fechaIngreso: "2026-09-30", sujetoId: "p2", bienId: "b1", importe: 9000, esValorReferencia: true, valorDeclarado: 420000, valorComprobado: 452000, motivos: "no se dedujeron los gastos de última enfermedad", escritos: ["valorReferencia", "rectificacion"], plazo: "rectificacion" },
-  { id: "q5", tributo: "ISD", tipo: "liquidacion", fechaNotificacion: "2026-09-16", sujetoId: "p3", bienId: "b1", importe: 2200, esValorReferencia: true, valorDeclarado: 420000, valorComprobado: 452000, escritos: ["reposicion", "reclamacionEA", "valorReferencia"], plazo: "reposicion" },
-  { id: "q6", tributo: "IIVTNU", tipo: "liquidacion", fechaNotificacion: "2026-05-12", sujetoId: "p2", bienId: "b1", importe: 7000, organo: "Ayuntamiento de Marbella · Gestión Tributaria", escritos: ["plusvaliaRecurso"], plazo: "reposicionLocal" },
-  { id: "q7", tributo: "IIVTNU", tipo: "autoliquidacion", fechaIngreso: "2026-08-20", sujetoId: "p3", bienId: "b2", importe: 6000, escritos: ["plusvaliaDevolucion"], plazo: "rectificacion" },
+  { k: "p", o: { id: "q1", clave: "ISD:p2", tributo: "ISD", tipo: "propuestaLiquidacion", fechaNot: "2026-03-27", dias: 10, organo: "Oficina Liquidadora de Marbella", ref: "PL-1", importe: 3100, estado: "abierto", bienId: "b2", valorComprobado: 185000 }, escritos: ["alegaciones"], plazo: "alegaciones" },
+  { k: "p", o: { id: "q2", clave: "ISD:p3", tributo: "ISD", tipo: "comprobacionValores", fechaNot: "2026-01-31", organo: "Oficina Liquidadora de Marbella", ref: "LIQ-2", importe: 5400, estado: "abierto", bienId: "b2", valorComprobado: 230000 }, escritos: ["reposicion", "reclamacionEA", "tpc"], plazo: "reposicion" },
+  { k: "p", o: { id: "q3", clave: "ISD:p2", tributo: "ISD", tipo: "sancion", fechaNot: "2026-11-08", importe: 800, estado: "abierto" }, escritos: ["reposicion", "reclamacionEA"], plazo: "reposicion" },
+  { k: "r", o: { id: "q4", clave: "ISD:p2", tributo: "ISD", sujeto: "p2", fecha: "2026-09-30", importe: 9000, pago: "pagado", fechaPago: "2026-09-30", bienId: "b1", esValorReferencia: true, valorDeclarado: 420000, valorComprobado: 452000, motivos: "no se dedujeron los gastos de última enfermedad" }, escritos: ["valorReferencia", "rectificacion"], plazo: "rectificacion" },
+  { k: "p", o: { id: "q5", clave: "ISD:p3", tributo: "ISD", tipo: "liquidacion", fechaNot: "2026-09-16", importe: 2200, estado: "abierto", bienId: "b1", esValorReferencia: true, valorDeclarado: 420000, valorComprobado: 452000 }, escritos: ["reposicion", "reclamacionEA", "valorReferencia"], plazo: "reposicion" },
+  { k: "p", o: { id: "q6", clave: "IIVTNU:b1", tributo: "IIVTNU", tipo: "liquidacion", fechaNot: "2026-05-12", importe: 7000, organo: "Ayuntamiento de Marbella · Gestión Tributaria", estado: "abierto", sujetoId: "p2" }, escritos: ["plusvaliaRecurso"], plazo: "reposicionLocal" },
+  { k: "r", o: { id: "q7", clave: "IIVTNU:b2", tributo: "IIVTNU", sujeto: "b2", fecha: "2026-08-20", importe: 6000, pago: "pagado", fechaPago: "2026-08-20", sujetoId: "p3" }, escritos: ["plusvaliaDevolucion"], plazo: "rectificacion" },
 ];
 const R7 = await ev((ACTOS) => {
-  const x = DB.expedientes.find((q) => q.id === "dm-02"); x.procedimientos = ACTOS.map(({ escritos, plazo, ...a }) => ({ ...a })); guardar();
+  const x = DB.expedientes.find((q) => q.id === "dm-02");
+  x.procedimientos = ACTOS.filter((a) => a.k === "p").map((a) => ({ ...a.o })); x.presentaciones = ACTOS.filter((a) => a.k === "r").map((a) => ({ ...a.o })); guardar();
   const R = calcular(x), out = [];
   for (const A of ACTOS) {
-    const P = x.procedimientos.find((q) => q.id === A.id); ui.defProc = A.id;
+    const key = `${A.k}:${A.o.id}`, P = dfActos(x).find((q) => q.key === key); ui.defProc = key;
     const pz = dfPlazos(x, R, P), lim = (pz.items.find((q) => q.id === A.plazo) || {}).limite;
+    // Mismas fechas que «Presentaciones y notificaciones» (G06)
+    let g06 = null;
+    if (A.k === "p") { const G = fsPlazos(x, x.procedimientos.find((q) => q.id === A.o.id)); const id = A.plazo === "alegaciones" ? "alegaciones" : "recurso"; g06 = ((G && G.plazos) || []).find((q) => q.id === id); g06 = g06 && g06.limite; }
+    else { const G = fsPresc(x, x.presentaciones.find((q) => q.id === A.o.id), R); g06 = G && G.devolucion.hasta; }
     for (const k of A.escritos) {
       const t = docTexto(x, R, k), blob = docx(t, esrDocxOpts(x, DOC_TIT[k]));
-      out.push({ a: A.id, k, t, lim, limLarga: lim ? fechaLarga(lim) : "", aplic: dfEscritosDe(P), tit: DOC_TIT[k], tamWord: blob.size, tipoWord: blob.type });
+      out.push({ a: A.o.id, k, t, lim, g06, limLarga: lim ? fechaLarga(lim) : "", aplic: dfEscritosDe(P), tit: DOC_TIT[k], tamWord: blob.size, tipoWord: blob.type });
     }
   }
   ui.defProc = null; return out;
@@ -54,17 +60,18 @@ for (const E of R7) {
   const n = `G07 ${E.a} · ${E.k}`;
   sano(n, E.t);
   check(`${n}: corresponde al acto y tiene título`, E.aplic.includes(E.k) && !!E.tit, E.aplic.join(","));
-  check(`${n}: plazo del motor en el escrito (${E.limLarga})`, !!E.lim && E.t.includes(E.limLarga), E.lim);
+  check(`${n}: plazo igual al de G06 (${E.lim})`, !!E.lim && E.lim === E.g06, `${E.lim} / ${E.g06}`);
+  check(`${n}: plazo en el escrito (${E.limLarga})`, !!E.lim && E.t.includes(E.limLarga), E.lim);
   check(`${n}: Word generado`, E.tamWord > 4000 && /wordprocessingml/.test(E.tipoWord), E.tamWord);
 }
 const T = (a, k) => (R7.find((q) => q.a === a && q.k === k) || {}).t || "";
-check("G07 alegaciones: 10 días hábiles → 13 de abril de 2026, art. 99.8 LGT, motivación (art. 102.2.c) y STS 2018", /13 de abril de 2026/.test(T("q1", "alegaciones")) && /art\. 99\.8 LGT/.test(T("q1", "alegaciones")) && /102\.2\.c/.test(T("q1", "alegaciones")) && /4202\/2017/.test(T("q1", "alegaciones")));
-check("G07 reposición: 31-01 → 2 de marzo de 2026 (fin de febrero en sábado), arts. 223.1 y 224.1 LGT", /2 de marzo de 2026/.test(T("q2", "reposicion")) && /223\.1 LGT/.test(T("q2", "reposicion")) && /224\.1 LGT/.test(T("q2", "reposicion")) && /135\.1 LGT/.test(T("q2", "reposicion")));
+check("G07 alegaciones: art. 99.8 LGT, motivación (art. 102.2.c), STS 2018 y motivos propios", /art\. 99\.8 LGT/.test(T("q1", "alegaciones")) && /102\.2\.c/.test(T("q1", "alegaciones")) && /4202\/2017/.test(T("q1", "alegaciones")));
+check("G07 reposición: 31-01 → 2 de marzo de 2026 (fin de febrero en sábado y Día de Andalucía), arts. 223.1, 224.1 y 135.1 LGT", /2 de marzo de 2026/.test(T("q2", "reposicion")) && /223\.1 LGT/.test(T("q2", "reposicion")) && /224\.1 LGT/.test(T("q2", "reposicion")) && /135\.1 LGT/.test(T("q2", "reposicion")));
 check("G07 reclamación: tribunal regional de Andalucía por conducto del órgano (art. 235.3), art. 233 LGT", /TRIBUNAL ECONÓMICO-ADMINISTRATIVO REGIONAL DE ANDALUC/.test(T("q2", "reclamacionEA")) && /235\.3 LGT/.test(T("q2", "reclamacionEA")) && /art\. 233 LGT/.test(T("q2", "reclamacionEA")));
-check("G07 sanción: suspensión automática (art. 212.3 LGT) y vence el 9-12-2026 (8-12 festivo)", /212\.3 LGT/.test(T("q3", "reposicion")) && /9 de diciembre de 2026/.test(T("q3", "reposicion")) && /188\.3 LGT/.test(T("q3", "reposicion")));
+check("G07 sanción: suspensión automática (art. 212.3 LGT), pronto pago (188.3) y vence el 9-12-2026 (8-12 festivo)", /212\.3 LGT/.test(T("q3", "reposicion")) && /9 de diciembre de 2026/.test(T("q3", "reposicion")) && /188\.3 LGT/.test(T("q3", "reposicion")));
 check("G07 sanción de 800 €: procedimiento abreviado (arts. 245 y 246 LGT)", /procedimiento abreviado/.test(T("q3", "reclamacionEA")));
 check("G07 tasación pericial: arts. 57.2 y 135 LGT, perito, regla de 120.000 € y 20 %, simulación", /57\.2 LGT/.test(T("q2", "tpc")) && /135\.2 LGT/.test(T("q2", "tpc")) && /120\.000 €/.test(T("q2", "tpc")) && /20 %/.test(T("q2", "tpc")) && /simulación del despacho/.test(T("q2", "tpc")));
-check("G07 rectificación: art. 120.3 LGT, arts. 126 a 129 RGAT, interés del art. 32.2 y plazo de cuatro años", /120\.3 LGT/.test(T("q4", "rectificacion")) && /126 a 129/.test(T("q4", "rectificacion")) && /32\.2 LGT/.test(T("q4", "rectificacion")) && /gastos de última enfermedad/.test(T("q4", "rectificacion")));
+check("G07 rectificación: art. 120.3 LGT, arts. 126 a 129 RGAT, interés del art. 32.2 y motivos propios", /120\.3 LGT/.test(T("q4", "rectificacion")) && /126 a 129/.test(T("q4", "rectificacion")) && /32\.2 LGT/.test(T("q4", "rectificacion")) && /gastos de última enfermedad/.test(T("q4", "rectificacion")));
 check("G07 valor de referencia (autoliquidación): rectificación, informe vinculante del Catastro, art. 9.3 LISD, sin TPC", /SOLICITUD DE RECTIFICACIÓN DE AUTOLIQUIDACIÓN POR SER EL VALOR DE REFERENCIA/.test(T("q4", "valorReferencia")) && /informe preceptivo y vinculante de la Dirección General del Catastro/.test(T("q4", "valorReferencia")) && /9\.3 Ley 29\/1987/.test(T("q4", "valorReferencia")) && /no cabe la tasación pericial/.test(T("q4", "valorReferencia")));
 check("G07 valor de referencia (liquidación): recurso de reposición con suspensión", /RECURSO DE REPOSICIÓN CONTRA LA LIQUIDACIÓN BASADA EN EL VALOR DE REFERENCIA/.test(T("q5", "valorReferencia")) && /224\.1 LGT/.test(T("q5", "valorReferencia")));
 check("G07 plusvalía recurso: art. 14.2 TRLRHL, cifras del motor y suspensión (14.2.i)", /14\.2\.c TRLRHL/.test(T("q6", "plusvaliaRecurso")) && /14\.2\.i TRLRHL/.test(T("q6", "plusvaliaRecurso")) && /(107\.5|104\.5|108\.4) TRLRHL/.test(T("q6", "plusvaliaRecurso")));
@@ -73,23 +80,27 @@ check("G07 plusvalía devolución: arts. 104.5 y 107.5 TRLRHL, art. 12 TRLRHL y 
 const PL = await ev(() => { const x = DB.expedientes.find((q) => q.id === "dm-02"), R = calcular(x), e = R.plus.find((q) => q.b.id === "b1"); const p = x.personas.find((q) => q.id === "p2"); const t = e && (e.r.porTitular || []).find((q) => q.heredero === p.nombre); return e ? eur(e.r.noSujeto ? 0 : t ? t.aIngresar : e.r.total) : ""; });
 check(`G07 plusvalía recurso: cuota que corresponde = motor (${PL})`, !!PL && T("q6", "plusvaliaRecurso").includes(PL), PL);
 
-// ── G07 · interfaz: panel, alta de una notificación desde la pantalla, plazos y escrito ──
-await ev(() => { const x = DB.expedientes.find((q) => q.id === "dm-05") || DB.expedientes[4]; x.procedimientos = []; guardar(); go({ vista: "exp", id: x.id, sec: "documentos" }); ui.dsub = "escritos"; render(); });
+// ── G07 · interfaz: el acto anotado en G06 aparece en Escritos con sus plazos; datos para los escritos; escrito ──
+await ev(() => { const x = DB.expedientes.find((q) => q.id === "dm-05") || DB.expedientes[4]; x.presentaciones = []; x.procedimientos = []; guardar(); go({ vista: "exp", id: x.id, sec: "documentos" }); ui.dsub = "escritos"; render(); });
 await p.waitForTimeout(300);
-check("G07 panel: «Defensa tributaria» con «Registrar una notificación»", await ev(() => !!document.querySelector('[data-df="nuevo"]') && /Defensa tributaria/.test(document.body.textContent)));
-await p.click('[data-df="nuevo"]'); await p.waitForTimeout(300);
-check("G07 hoja de la notificación abierta", await ev(() => ui.sheet && ui.sheet.tipo === "df" && !!document.getElementById("df-fechaNotificacion")));
-await p.fill("#df-fechaNotificacion", "2026-03-16"); await p.dispatchEvent("#df-fechaNotificacion", "change"); await p.waitForTimeout(200);
-await p.fill("#df-importe", "1.250,50"); await p.dispatchEvent("#df-importe", "change"); await p.waitForTimeout(200);
-await p.fill("#df-numero", "LIQ-QA-9"); await p.dispatchEvent("#df-numero", "change"); await p.waitForTimeout(200);
-const G = await ev(() => { const P = exp().procedimientos[0]; return { f: P.fechaNotificacion, imp: P.importe, num: P.numero }; });
-check("G07 hoja: fecha, importe (1.250,50 → 1250,5) y referencia guardados", G.f === "2026-03-16" && G.imp === 1250.5 && G.num === "LIQ-QA-9", JSON.stringify(G));
-await ev(() => { ui.sheet = null; render(); }); await p.waitForTimeout(300);
+check("G07 panel vacío: enlace a Presentaciones y notificaciones", await ev(() => !!document.querySelector('.df-card [data-sec="impuestos"][data-sub="presentaciones"]') && /Defensa tributaria/.test(document.body.textContent)));
+const pid = await ev(() => { const x = exp(), h = (x.personas || []).find((q) => !q.renuncia), b = (x.bienes || []).find((q) => q.tipo === "vivienda" || q.tipo === "inmueble"); x.procedimientos = [{ id: "qa1", clave: "ISD:" + h.id, tributo: "ISD", tipo: "comprobacionValores", fechaNot: "2026-03-16", organo: "Oficina QA", ref: "LIQ-QA-9", importe: 1250.5, dias: 10, estado: "abierto", creado: "2026-03-17" }]; guardar(); render(); return b ? b.id : ""; });
+await p.waitForTimeout(300);
 const PZ = await ev(() => [...document.querySelectorAll(".df-pl")].map((n) => n.textContent));
-check("G07 panel: plazos de reposición, reclamación, tasación y pago con sus fechas", PZ.length >= 4 && PZ.some((t) => /Recurso de reposición/.test(t) && /16 de abril de 2026/.test(t)) && PZ.some((t) => /Pago en periodo voluntario/.test(t) && /5 de mayo de 2026/.test(t)), PZ.join(" | "));
+const G6 = await ev(() => { const x = exp(), G = fsPlazos(x, x.procedimientos[0]); return G.plazos.map((q) => [q.id, fechaLarga(q.limite)]); });
+check("G07 panel: plazos de reposición, reclamación, tasación y pago con las fechas de G06", PZ.length >= 4 && G6.every(([id, f]) => PZ.some((t) => t.includes(f))) && PZ.some((t) => /Recurso de reposición/.test(t)) && PZ.some((t) => /tasación pericial/.test(t)), PZ.join(" | ") + " // " + JSON.stringify(G6));
+await p.click('[data-df="editar"]'); await p.waitForTimeout(300);
+check("G07 hoja «Datos para los escritos» abierta", await ev(() => ui.sheet && ui.sheet.tipo === "df" && !!document.getElementById("df-valorComprobado")));
+if (pid) { await p.selectOption("#df-bienId", pid); await p.waitForTimeout(200); }
+await p.fill("#df-valorComprobado", "999.000"); await p.dispatchEvent("#df-valorComprobado", "change"); await p.waitForTimeout(200);
+await p.fill("#df-motivos", "Valoración sin visita del perito"); await p.dispatchEvent("#df-motivos", "change"); await p.waitForTimeout(200);
+const G = await ev(() => { const P = exp().procedimientos[0]; return { b: P.bienId, v: P.valorComprobado, m: P.motivos, f: P.fechaNot }; });
+check("G07 hoja: bien, valor comprobado (999.000 → 999000) y motivos guardados en el acto de G06, sin tocar su fecha", G.v === 999000 && /sin visita/.test(G.m) && G.f === "2026-03-16" && (!pid || G.b === pid), JSON.stringify(G));
+await ev(() => { if (document.activeElement) document.activeElement.blur(); ui.sheet = null; render(); }); await p.waitForTimeout(300);
+check("G07 simulador de tasación pericial en el panel", !pid || (await ev(() => /Tasación pericial contradictoria: /.test((document.querySelector(".df-sim") || {}).textContent || ""))));
 await p.click('[data-doc="reposicion"][data-dproc]'); await p.waitForTimeout(400);
 const V = await ev(() => { const v = document.querySelector(".paperview"); return v ? v.textContent : ""; });
-check("G07 vista previa del recurso con la referencia y el plazo del acto elegido", /LIQ-QA-9/.test(V) && /16 de abril de 2026/.test(V) && /1\.250,50 €/.test(V), V.slice(0, 300));
+check("G07 vista previa del recurso con la referencia, el importe, los motivos y el plazo del acto elegido", /LIQ-QA-9/.test(V) && /16 de abril de 2026/.test(V) && /1\.250,50 €/.test(V) && /sin visita/.test(V), V.slice(0, 300));
 await ev(() => { ui.sheet = null; render(); }); await p.waitForTimeout(700);
 await p.screenshot({ path: path.join(tmp, "defensa-1360.png"), fullPage: true });
 

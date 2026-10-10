@@ -1,6 +1,8 @@
 // ───────────────────── {{MARCA}} · defensa tributaria (G07 · defensa.js · prefijo df / DF_) ─────────────────────
-// Escritos de la fase posterior a la presentación, hechos con los datos del acto notificado y del expediente, con sus plazos calculados por el
-// motor (plazosDefensa, pagoVoluntarioLiquidacion y simularTPC de motor.mjs: los mismos que muestran las pruebas):
+// Escritos de la fase posterior a la presentación, hechos con los datos del acto y del expediente. Los actos son los que se anotan en
+// Impuestos › «Presentaciones y notificaciones» (G06, fiscal.js): las notificaciones (x.procedimientos) y las autoliquidaciones presentadas
+// (x.presentaciones), con los mismos plazos y el mismo calendario de inhábiles (plazosDefensa del motor, sobre plazosProcedimiento y
+// prescripcionTributo de G06). Aquí solo se añaden, en el propio acto, los datos que necesitan los escritos.
 //   alegaciones          → alegaciones a la propuesta de liquidación o de valoración (art. 99.8 LGT)
 //   reposicion           → recurso de reposición contra la liquidación o la sanción del ISD (arts. 222 a 225 LGT)
 //   reclamacionEA        → reclamación económico-administrativa ante el tribunal regional (arts. 226 a 236 y 245 a 248 LGT)
@@ -9,34 +11,55 @@
 //   valorReferencia      → impugnación del valor de referencia del Catastro por la rectificación o por el recurso contra la liquidación (art. 9.3 LISD)
 //   plusvaliaRecurso     → recurso de reposición contra la liquidación de la plusvalía (art. 14.2 TRLRHL): no incremento, método real, bonificación
 //   plusvaliaDevolucion  → rectificación de la autoliquidación de la plusvalía y devolución (arts. 104.5 y 107.5 TRLRHL; art. 120.3 LGT)
-// Datos: x.procedimientos = [{ id, tributo: "ISD" | "IIVTNU", tipo (DF_TIPOS del motor), organo, numero, fechaNotificacion, sujetoId, bienId, importe,
-//   valorDeclarado, valorComprobado, esValorReferencia, diasAlegaciones, fechaIngreso, motivos, honorariosPerito, valorPeritoPropio }] (la forma que
-//   prevé G06 para los procedimientos). El escrito se hace con el acto elegido en el panel (ui.defProc) o, si no, con el último al que corresponde.
+// Datos (los de G06 más los propios de los escritos, en el mismo objeto):
+//   x.procedimientos[] = { id, clave «ISD:persona» | «IIVTNU:bien», tributo, tipo, fechaNot, organo, ref, dias, importe, estado
+//                          + bienId (ISD), sujetoId (adquirente, IIVTNU), valorDeclarado, valorComprobado, esValorReferencia, motivos, honorariosPerito, valorPeritoPropio }
+//   x.presentaciones[]  = { id, clave, tributo, sujeto, fecha, importe, pago, fechaPago, justificante, nrc + los mismos campos propios }
+// El escrito se hace con el acto elegido en el panel (ui.defProc = «p:id» o «r:id») o, si no, con el último al que corresponde.
 
 const DF_DOCS = { alegaciones: "Alegaciones a la propuesta de liquidación", reposicion: "Recurso de reposición (Sucesiones)", reclamacionEA: "Reclamación económico-administrativa", tpc: "Solicitud de tasación pericial contradictoria", rectificacion: "Rectificación de autoliquidación y devolución", valorReferencia: "Impugnación del valor de referencia", plusvaliaRecurso: "Recurso de reposición: plusvalía municipal", plusvaliaDevolucion: "Plusvalía: rectificación y devolución" };
-const DF_TRIB = { ISD: ["propuestaLiquidacion", "liquidacion", "comprobacionValores", "sancion", "autoliquidacion"], IIVTNU: ["propuestaLiquidacion", "liquidacion", "autoliquidacion"] };
-const DF_ACTO = { propuestaLiquidacion: "la propuesta de liquidación", liquidacion: "la liquidación provisional", comprobacionValores: "el acuerdo de comprobación de valores y la liquidación que lo acompaña", sancion: "el acuerdo de imposición de sanción", autoliquidacion: "la autoliquidación" };
+const DF_TITULO = { propuestaLiquidacion: "Propuesta de liquidación", liquidacion: "Liquidación provisional", comprobacionValores: "Liquidación con comprobación de valores", sancion: "Acuerdo sancionador", autoliquidacion: "Autoliquidación presentada" };
+const DF_ACTO = { propuestaLiquidacion: "la propuesta de liquidación", liquidacion: "la liquidación provisional", comprobacionValores: "la liquidación con comprobación de valores", sancion: "el acuerdo de imposición de sanción", autoliquidacion: "la autoliquidación" };
 if (typeof DOC_TIT === "object") Object.assign(DOC_TIT, DF_DOCS);
-const dfProcs = (x) => (x.procedimientos = Array.isArray(x.procedimientos) ? x.procedimientos : []);
 const dfTxt = (v) => (v != null && String(v).trim() ? String(v).trim() : "");
+const DF_CON_ESCRITO = ["propuestaLiquidacion", "liquidacion", "comprobacionValores", "sancion"];
+// Actos con escrito: notificaciones del ISD y de la plusvalía y autoliquidaciones presentadas, en la forma común que usan los escritos
+function dfActo(o, k, tributo, suj) {
+  const aut = k === "r", local = tributo === "IIVTNU";
+  return { key: `${k}:${o.id}`, src: o, tributo, tipo: aut ? "autoliquidacion" : o.tipo, organo: dfTxt(o.organo), numero: aut ? dfTxt(o.justificante) || dfTxt(o.nrc) : dfTxt(o.ref),
+    fechaNotificacion: aut ? "" : o.fechaNot || "", fechaPresentacion: aut ? o.fecha || "" : "", fechaIngreso: aut ? o.fechaPago || o.fecha || "" : "", diasAlegaciones: o.dias, importe: o.importe,
+    sujetoId: local ? o.sujetoId || "" : suj || "", bienId: local ? suj || "" : o.bienId || "", valorDeclarado: o.valorDeclarado, valorComprobado: o.valorComprobado,
+    esValorReferencia: !local && !!o.esValorReferencia, motivos: o.motivos, honorariosPerito: o.honorariosPerito, valorPeritoPropio: o.valorPeritoPropio, estado: o.estado || "" };
+}
+function dfActos(x) {
+  const out = [], trib = (o) => o.tributo || String(o.clave || "").split(":")[0], suj = (o) => String(o.clave || "").split(":")[1] || "";
+  for (const q of Array.isArray(x.procedimientos) ? x.procedimientos : []) if (q && typeof q === "object" && ["ISD", "IIVTNU"].includes(trib(q)) && DF_CON_ESCRITO.includes(q.tipo)) out.push(dfActo(q, "p", trib(q), suj(q)));
+  for (const p of Array.isArray(x.presentaciones) ? x.presentaciones : []) if (p && typeof p === "object" && ["ISD", "IIVTNU"].includes(trib(p))) out.push(dfActo(p, "r", trib(p), p.sujeto || suj(p)));
+  return out;
+}
 function dfEscritosDe(P) {
   if (!P) return [];
   if (P.tributo === "IIVTNU") return P.tipo === "propuestaLiquidacion" ? ["alegaciones"] : P.tipo === "autoliquidacion" ? ["plusvaliaDevolucion"] : ["plusvaliaRecurso"];
   if (P.tipo === "propuestaLiquidacion") return ["alegaciones"];
   if (P.tipo === "autoliquidacion") return P.esValorReferencia ? ["valorReferencia", "rectificacion"] : ["rectificacion"];
   if (P.tipo === "sancion") return ["reposicion", "reclamacionEA"];
-  return P.esValorReferencia ? ["reposicion", "reclamacionEA", "valorReferencia"] : ["reposicion", "reclamacionEA", "tpc"];
+  if (P.esValorReferencia) return ["reposicion", "reclamacionEA", "valorReferencia"];
+  return P.tipo === "comprobacionValores" ? ["reposicion", "reclamacionEA", "tpc"] : ["reposicion", "reclamacionEA"];
 }
-const dfForal = (x, b) => ["NAV", "ALA", "BIZ", "GIP"].includes(x.ccaa) || !!(b && typeof muniProv === "function" && typeof ineBien === "function" && (() => { const pv = muniProv(ineBien(b)); return pv && ["ALA", "BIZ", "GIP", "NAV"].includes(pv.ccaa); })());
+const dfForalBien = (b) => !!(b && typeof muniProv === "function" && typeof ineBien === "function" && (() => { const pv = muniProv(ineBien(b)); return pv && ["ALA", "BIZ", "GIP", "NAV"].includes(pv.ccaa); })());
+// Plazos del acto: los de G06 (mismo calendario de inhábiles del órgano: fsCal) repartidos por escrito
 function dfPlazos(x, R, P) {
-  const b = (x.bienes || []).find((q) => q.id === P.bienId), fin = ((R && R.plazos) || []).find((q) => q.id === (P.tributo === "IIVTNU" ? "plusvalia" : "isd"));
-  return plazosDefensa({ tributo: P.tributo, tipo: P.tipo, fechaNotificacion: P.fechaNotificacion, diasAlegaciones: P.diasAlegaciones, finPlazoPresentacion: fin && fin.limite, fechaIngreso: P.fechaIngreso, foral: P.tributo === "IIVTNU" ? dfForal({ ccaa: "" }, b) : dfForal(x, null) });
+  const b = (x.bienes || []).find((q) => q.id === P.bienId), suj = P.tributo === "IIVTNU" ? P.bienId : P.sujetoId, clave = `${P.tributo}:${suj}`;
+  const cal = typeof fsCal === "function" ? fsCal(x, P.tributo, suj) : null;
+  const ob = typeof fsObligaciones === "function" ? fsObligaciones(x, R).find((o) => o.clave === clave) : null;
+  const fin = ob ? ob.finPlazo : (((R && R.plazos) || []).find((q) => q.id === (P.tributo === "IIVTNU" ? "plusvalia" : "isd")) || {}).limite;
+  return plazosDefensa({ tributo: P.tributo, tipo: P.tipo, fechaNotificacion: P.fechaNotificacion, diasAlegaciones: P.diasAlegaciones, finPlazoPresentacion: fin, fechaPresentacion: P.fechaPresentacion, fechaIngreso: P.fechaIngreso, cal, foral: P.tributo === "IIVTNU" ? dfForalBien(b) : ["NAV", "ALA", "BIZ", "GIP"].includes(x.ccaa) });
 }
 // Acto con el que se hace el escrito
 function dfProcPara(x, clave) {
-  const L = dfProcs(x), sel = L.find((p) => typeof ui === "object" && p.id === ui.defProc);
+  const L = dfActos(x), sel = L.find((p) => typeof ui === "object" && p.key === ui.defProc);
   if (sel && dfEscritosDe(sel).includes(clave)) return sel;
-  return [...L].reverse().find((p) => dfEscritosDe(p).includes(clave)) || { tributo: /^plusvalia/.test(clave) ? "IIVTNU" : "ISD", tipo: { alegaciones: "propuestaLiquidacion", rectificacion: "autoliquidacion", plusvaliaDevolucion: "autoliquidacion", valorReferencia: "autoliquidacion" }[clave] || "liquidacion" };
+  return [...L].reverse().find((p) => dfEscritosDe(p).includes(clave)) || { tributo: /^plusvalia/.test(clave) ? "IIVTNU" : "ISD", tipo: { alegaciones: "propuestaLiquidacion", rectificacion: "autoliquidacion", plusvaliaDevolucion: "autoliquidacion", valorReferencia: "autoliquidacion", tpc: "comprobacionValores" }[clave] || "liquidacion" };
 }
 // Cuota del ISD con un bien cambiado (valor comprobado, valor de mercado…): para el simulador y la devolución estimada. Mismo motor, sin memoria.
 function dfCuotaCon(x, R, P, cambios) {
@@ -48,7 +71,7 @@ function dfCuotaCon(x, R, P, cambios) {
   } catch (e) { return null; }
 }
 function dfSimulacion(x, R, P) {
-  const b = (x.bienes || []).find((q) => q.id === P.bienId); if (!b || P.tributo !== "ISD" || P.esValorReferencia) return null;
+  const b = (x.bienes || []).find((q) => q.id === P.bienId); if (!b || P.tributo !== "ISD" || P.esValorReferencia || P.tipo !== "comprobacionValores") return null;
   const vDec = num(P.valorDeclarado) || Math.max(num(b.valor), num(b.valorReferencia)), vCom = num(P.valorComprobado); if (!vCom) return null;
   const fin = ((R && R.plazos) || []).find((q) => q.id === "isd"), d = fin && fin.limite && P.fechaNotificacion ? Math.max(0, dias(fin.limite, P.fechaNotificacion)) : 0;
   const cuota = vCom > vDec ? dfCuotaCon(x, R, P, { valor: vCom }) : 0;
@@ -70,7 +93,7 @@ function dfCtx(x, R, clave) {
   const firmas = [s ? `Fdo.: ${s.nombre || "⟦nombre⟧"}` : "Fdo.: ⟦obligado tributario⟧", ...(c.abNom ? [`Fdo.: ${c.abNom}`] : [])].join("\n");
   const plazoTxt = (q, base) => (q && q.limite ? `${base}, que vence el ${fechaLarga(q.limite)}` : `${base} ⟦fecha límite: falta la fecha de notificación⟧`);
   const h = R && R.isd && s ? R.isd.herederos.find((q) => q.id === s.id) : null;
-  const fem = P.tipo !== "comprobacionValores" && P.tipo !== "sancion", nt = fem ? "notificada" : "notificado", rel = fem ? "relativa" : "relativo";
+  const fem = P.tipo !== "sancion", nt = fem ? "notificada" : "notificado", rel = fem ? "relativa" : "relativo";
   return { c, P, s, b, h, pz, pl, local, mu, imp, organo, sujeto, acto, fNot, importe, firmas, plazoTxt, nt, rel, ella: fem ? "ella" : "él", foral: pz.estado === "PENDIENTE" };
 }
 const dfMotivos = (C) => dfTxt(C.P.motivos) ? `${dfTxt(C.P.motivos)}` : "";
@@ -271,55 +294,51 @@ function dfVence(q) {
   const d = dias(hoy(), q.limite), cls = d < 0 ? "bad" : d <= 7 ? "warn" : "info";
   return `<span class="chip ${q.informativo && d >= 0 ? "" : cls} num">${d < 0 ? "Vencido" : d === 0 ? "Hoy" : `${d} ${d === 1 ? "día" : "días"}`}</span>`;
 }
+const dfIrG06 = (txt, cls = "gray") => `<button class="btn sm ${cls}" data-sec="impuestos" data-sub="presentaciones">${txt}</button>`;
 function dfPanelHTML(x) {
-  const L = dfProcs(x), R = typeof calcular === "function" ? calcular(x) : null;
-  const tit = (P) => `${DF_TIPOS[P.tipo] || "Acto"}${P.tributo === "IIVTNU" ? " · plusvalía" : " · Sucesiones"}`;
+  const L = dfActos(x), R = typeof calcular === "function" ? calcular(x) : null;
+  const persona = (id) => (x.personas || []).find((p) => p.id === id), bien = (id) => (x.bienes || []).find((b) => b.id === id);
   const proc = (P) => {
-    const pz = dfPlazos(x, R, P), S = R ? dfSimulacion(x, R, P) : null, s = (x.personas || []).find((p) => p.id === P.sujetoId);
-    const meta = [P.organo, s && s.nombre, P.fechaNotificacion ? "notificado el " + fechaCorta(P.fechaNotificacion) : P.tipo === "autoliquidacion" ? (P.fechaIngreso ? "ingresado el " + fechaCorta(P.fechaIngreso) : "") : "sin fecha de notificación", num(P.importe) ? eur(num(P.importe)) : ""].filter(Boolean).map(esc).join(" · ");
+    const pz = dfPlazos(x, R, P), S = R ? dfSimulacion(x, R, P) : null, s = persona(P.sujetoId), b = bien(P.bienId);
+    const quien = P.tributo === "IIVTNU" ? [b && esrNomB(b), s && s.nombre].filter(Boolean).join(" · ") : s ? s.nombre : "";
+    const meta = [quien, P.organo, P.tipo === "autoliquidacion" ? (P.fechaPresentacion ? "presentada el " + fechaCorta(P.fechaPresentacion) : "") : P.fechaNotificacion ? "notificada el " + fechaCorta(P.fechaNotificacion) : "sin fecha de notificación", num(P.importe) ? eur(num(P.importe)) : ""].filter(Boolean).map(esc).join(" · ");
     const filas = pz.items.map((q) => `<div class="df-pl"><span class="t"><b>${esc(q.nombre)}</b><small>${q.limite ? `Hasta el ${esc(fechaLarga(q.limite))}${q.trasladado ? " (trasladado al siguiente hábil)" : ""} · ` : `${esc(q.nota || "")} · `}${esc(q.norma || "")}</small></span>${dfVence(q)}</div>`).join("");
     const sim = S ? `<div class="df-sim"><b>Tasación pericial contradictoria: ${esc(S.recomendacion)}</b><div class="kv"><span>Diferencia de valor</span><span class="num">${eur(S.diferencia)}</span><span>Cuota adicional (cálculo del expediente)</span><span class="num">${eur(S.cuotaAdicional)}</span><span>Intereses de demora estimados</span><span class="num">${eur(S.intereses)}</span><span>Perito propio${S.costeEstimado ? " (estimado)" : ""}</span><span class="num">${eur(S.costePerito)}</span></div><p class="caption">${esc(S.texto)} ${esc(S.riesgo)}</p></div>` : "";
-    const docs = dfEscritosDe(P).map((k, i) => `<button class="btn sm ${i ? "gray" : ""}" data-doc="${k}" data-dproc="${esc(P.id)}">${i ? "" : I.doc}${esc(DF_DOCS[k])}</button>`).join("");
-    return `<div class="df-proc"><div class="df-h"><span class="t"><b>${esc(tit(P))}</b><small>${meta}</small></span><button class="btn sm gray" data-df="editar" data-id="${esc(P.id)}">Editar</button></div>${filas ? `<div class="df-pls">${filas}</div>` : ""}${pz.avisos.length > 1 || pz.estado === "PENDIENTE" ? `<p class="caption df-av">${esc(pz.avisos.join(" "))}</p>` : ""}${sim}<div class="df-docs">${docs}</div></div>`;
+    const docs = dfEscritosDe(P).map((k, i) => `<button class="btn sm ${i ? "gray" : ""}" data-doc="${k}" data-dproc="${esc(P.key)}">${i ? "" : I.doc}${esc(DF_DOCS[k])}</button>`).join("");
+    return `<div class="df-proc${P.estado === "cerrado" ? " df-cerrado" : ""}"><div class="df-h"><span class="t"><b>${esc(DF_TITULO[P.tipo] || "Acto")}${P.tributo === "IIVTNU" ? " · plusvalía" : " · Sucesiones"}</b><small>${meta}</small></span><button class="btn sm gray" data-df="editar" data-id="${esc(P.key)}">Datos para los escritos</button></div>${filas ? `<div class="df-pls">${filas}</div>` : ""}${pz.estado === "PENDIENTE" ? `<p class="caption df-av">${esc(pz.avisos.join(" "))}</p>` : ""}${sim}<div class="df-docs">${docs}</div></div>`;
   };
-  return `<div class="sectitle flex"><b>Defensa tributaria</b><span>${L.length ? plural(L.length, "acto notificado", "actos notificados") : "Después de presentar"}</span></div>
-    <div class="card df-card">${L.length ? L.map(proc).join("") : `<p class="caption" style="margin:0 0 10px">¿Ha llegado una propuesta de liquidación, una liquidación, una comprobación de valores o una sanción, o hay que rectificar una autoliquidación? Regístrala con su fecha de notificación: se calculan los plazos y se preparan las alegaciones, los recursos, la tasación pericial contradictoria o la devolución.</p>`}
-      <div class="df-docs"><button class="btn sm ${L.length ? "gray" : ""}" data-df="nuevo">${I.plus}Registrar una notificación</button></div></div>`;
+  return `<div class="sectitle flex"><b>Defensa tributaria</b><span>${L.length ? plural(L.length, "acto", "actos") : "Después de presentar"}</span></div>
+    <div class="card df-card">${L.length ? L.map(proc).join("") : `<p class="caption" style="margin:0 0 10px">Cuando llegue una propuesta de liquidación, una liquidación, una comprobación de valores o una sanción, o haya que rectificar una autoliquidación, anótala en Impuestos › Presentaciones y notificaciones: aquí aparecen sus plazos y se preparan las alegaciones, los recursos, la tasación pericial contradictoria o la devolución.</p>`}
+      <div class="df-docs">${dfIrG06(`${I.plus}Anotar una notificación o una presentación`, L.length ? "gray" : "")}</div></div>`;
 }
+// Hoja «Datos para los escritos»: lo que añade G07 al acto anotado en G06 (el acto en sí se edita allí)
 function dfSheetHTML(x) {
-  const P = dfProcs(x).find((q) => q.id === ui.sheet.id); if (!P) return "";
+  const P = dfActos(x).find((q) => q.key === ui.sheet.id); if (!P) return "";
   const pers = esrVivos(x), inm = (x.bienes || []).filter((b) => b.tipo === "vivienda" || b.tipo === "inmueble");
   const fld = (k, t, html, hint) => `<div class="field"><label for="df-${k}">${t}</label>${html}${hint ? `<span class="hint">${hint}</span>` : ""}</div>`;
-  const inp = (k, ph, o = {}) => `<input id="df-${k}" data-dfk="${k}" value="${esc(P[k] == null ? "" : P[k])}" placeholder="${esc(ph)}"${o.type ? ` type="${o.type}"` : ""}${o.dec ? ' inputmode="decimal"' : ""} autocomplete="off">`;
-  const sel = (k, opts) => `<select id="df-${k}" data-dfk="${k}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(P[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
-  const autol = P.tipo === "autoliquidacion", local = P.tributo === "IIVTNU", val = !local && P.tipo !== "sancion";
-  return sheetHTML("Notificación tributaria", `${fsecH("Acto", "Con la fecha de notificación se calculan los plazos (art. 30 Ley 39/2015).")}<div class="group">
-      <div class="field"><label>Impuesto</label><div class="seg"><button data-df="trib" data-v="ISD" aria-pressed="${!local}">Sucesiones</button><button data-df="trib" data-v="IIVTNU" aria-pressed="${local}">Plusvalía municipal</button></div></div>
-      ${fld("tipo", "Tipo de acto", sel("tipo", DF_TRIB[local ? "IIVTNU" : "ISD"].map((k) => [k, DF_TIPOS[k]])))}
-      ${fld("organo", "Órgano que lo dicta", inp("organo", local ? "Ayuntamiento · Gestión Tributaria" : "Oficina liquidadora o servicio de gestión"))}
-      ${fld("numero", "Referencia del acto", inp("numero", "Número de expediente o de liquidación"))}
-      ${autol ? fld("fechaIngreso", "Fecha del ingreso", inp("fechaIngreso", "", { type: "date" }), "Con el fin del plazo de presentación, fija los cuatro años para pedir la devolución.") : fld("fechaNotificacion", "Fecha de notificación", inp("fechaNotificacion", "", { type: "date" }))}
-      ${P.tipo === "propuestaLiquidacion" ? fld("diasAlegaciones", "Días hábiles para alegar", sel("diasAlegaciones", [["10", "10 días"], ["15", "15 días"]]), "Los que indique la propuesta (art. 99.8 LGT).") : ""}
-      ${fld("importe", autol ? "Importe ingresado (€)" : "Importe del acto (€)", inp("importe", "0", { dec: 1 }))}
-      ${fld("sujetoId", local ? "Adquirente" : "Heredero (obligado tributario)", sel("sujetoId", [["", "Elegir"], ...pers.map((p) => [p.id, p.nombre || "—"])]))}
-      ${local || val ? fld("bienId", "Inmueble", sel("bienId", [["", "Ninguno"], ...inm.map((b) => [b.id, esrNomB(b)])])) : ""}
-    </div>
-    ${val ? `${fsecH("Valoración", "Para las alegaciones, el recurso y la tasación pericial contradictoria.")}<div class="group">
-      ${fld("valorDeclarado", P.esValorReferencia ? "Valor de mercado que se defiende (€)" : "Valor declarado (€)", inp("valorDeclarado", "Si se deja vacío, el del bien", { dec: 1 }))}
-      ${fld("valorComprobado", P.esValorReferencia ? "Valor de referencia aplicado (€)" : "Valor comprobado por la Administración (€)", inp("valorComprobado", "0", { dec: 1 }))}
+  const inp = (k, ph) => `<input id="df-${k}" data-dfk="${k}" value="${esc(P.src[k] == null ? "" : P.src[k])}" placeholder="${esc(ph)}" inputmode="decimal" autocomplete="off">`;
+  const sel = (k, opts) => `<select id="df-${k}" data-dfk="${k}">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(P.src[k] || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+  const local = P.tributo === "IIVTNU", val = !local && P.tipo !== "sancion", s = (x.personas || []).find((p) => p.id === P.sujetoId), b = (x.bienes || []).find((q) => q.id === P.bienId);
+  const resumen = [DF_TITULO[P.tipo], local ? (b ? esrNomB(b) : "") : s ? s.nombre : "", P.fechaNotificacion ? "notificada el " + fechaCorta(P.fechaNotificacion) : P.fechaPresentacion ? "presentada el " + fechaCorta(P.fechaPresentacion) : "", P.organo, P.numero ? "ref. " + P.numero : "", num(P.importe) ? eur(num(P.importe)) : ""].filter(Boolean).map(esc).join(" · ");
+  return sheetHTML("Datos para los escritos", `<div class="infobar" style="margin-bottom:14px"><span class="ico teal">${I.info}</span><span>${resumen}. La fecha, el órgano, la referencia y el importe se editan en Impuestos › Presentaciones y notificaciones.</span></div>
+    ${local ? `${fsecH("Adquirente", "Quien recurre o pide la devolución (sujeto pasivo, art. 106.1.a TRLRHL).")}<div class="group">${fld("sujetoId", "Heredero", sel("sujetoId", [["", "Elegir"], ...pers.map((p) => [p.id, p.nombre || "—"])]))}</div>` : ""}
+    ${val ? `${fsecH("Valoración", "Para las alegaciones, el recurso, la tasación pericial contradictoria y el valor de referencia.")}<div class="group">
+      ${fld("bienId", "Inmueble", sel("bienId", [["", "Ninguno"], ...inm.map((q) => [q.id, esrNomB(q)])]))}
+      ${fld("valorDeclarado", P.esValorReferencia ? "Valor de mercado que se defiende (€)" : "Valor declarado (€)", inp("valorDeclarado", "Si se deja vacío, el del bien"))}
+      ${fld("valorComprobado", P.esValorReferencia ? "Valor de referencia aplicado (€)" : "Valor comprobado por la Administración (€)", inp("valorComprobado", "0"))}
       <div class="row toggle"><span class="t"><b>Se aplica el valor de referencia del Catastro</b><small>No cabe la tasación pericial contradictoria: se impugna por la rectificación o el recurso, con informe del Catastro</small></span><label class="switch"><input type="checkbox" data-dfk="esValorReferencia" ${P.esValorReferencia ? "checked" : ""}><span></span></label></div>
-      ${!P.esValorReferencia && !autol ? `${fld("honorariosPerito", "Honorarios del perito propio (€)", inp("honorariosPerito", `Estimación: ${DF_COSTE_PERITO}`, { dec: 1 }))}${fld("valorPeritoPropio", "Valoración del perito propio (€)", inp("valorPeritoPropio", "Si ya se tiene", { dec: 1 }))}` : ""}
+      ${P.tipo === "comprobacionValores" && !P.esValorReferencia ? `${fld("honorariosPerito", "Honorarios del perito propio (€)", inp("honorariosPerito", `Estimación: ${DF_COSTE_PERITO}`))}${fld("valorPeritoPropio", "Valoración del perito propio (€)", inp("valorPeritoPropio", "Si ya se tiene"))}` : ""}
     </div>` : ""}
-    ${fsecH("Motivos", "Se incorporan al escrito; lo que falte queda marcado para completar.")}<div class="group">${fld("motivos", "Motivos propios", `<textarea id="df-motivos" data-dfk="motivos" rows="4" placeholder="Por ejemplo: no se aplicó la reducción por parentesco; la deuda hipotecaria no se dedujo">${esc(P.motivos || "")}</textarea>`)}</div>
-    ${zonaPeligro("df:" + P.id, "Quitar esta notificación borra sus plazos del panel.", "¿Quitar esta notificación?", "Quitar la notificación", "Sí, quitar", `data-df="borrar" data-id="${esc(P.id)}"`)}`, "Hecho");
+    ${fsecH("Motivos", "Se incorporan al escrito; lo que falte queda marcado para completar.")}<div class="group">${fld("motivos", "Motivos propios", `<textarea id="df-motivos" data-dfk="motivos" rows="4" placeholder="Por ejemplo: no se aplicó la reducción por parentesco; la deuda hipotecaria no se dedujo">${esc(P.src.motivos || "")}</textarea>`)}</div>
+    <div class="df-docs">${dfIrG06("Ver en Presentaciones y notificaciones")}</div>`, "Hecho");
 }
-// Eventos propios (captura en document, como firma.js)
+// Eventos propios (captura en document, como firma.js): campos [data-dfk] de la hoja y clics [data-df] / [data-dproc]
 function dfCampo(t, final) {
   const k = t && t.dataset && t.dataset.dfk; if (!k) return false;
-  const x = typeof exp === "function" ? exp() : null, P = x && ui.sheet && ui.sheet.tipo === "df" ? dfProcs(x).find((q) => q.id === ui.sheet.id) : null; if (!P) return true;
+  const x = typeof exp === "function" ? exp() : null, P = x && ui.sheet && ui.sheet.tipo === "df" ? dfActos(x).find((q) => q.key === ui.sheet.id) : null; if (!P) return true;
   if (typeof licPuedeEditar === "function" && !licPuedeEditar()) { if (final) { toast(licMotivoEdicion()); render(); } return true; }
   const v = t.type === "checkbox" ? t.checked : String(t.value || "");
-  P[k] = ["importe", "valorDeclarado", "valorComprobado", "honorariosPerito", "valorPeritoPropio"].includes(k) ? (String(v).trim() ? num(v) : "") : v;
+  P.src[k] = ["valorDeclarado", "valorComprobado", "honorariosPerito", "valorPeritoPropio"].includes(k) ? (String(v).trim() ? num(v) : "") : v;
   if (final) { guardar(); render(); } else if (typeof rdGuardarPronto === "function") rdGuardarPronto();
   return true;
 }
@@ -331,11 +350,6 @@ if (typeof document !== "undefined") {
     const x = typeof exp === "function" ? exp() : null; if (!x) return;
     const d = b.dataset;
     if (d.dproc && !d.df) { ui.defProc = d.dproc; return; } // el manejador general abre el escrito (data-doc)
-    e.stopPropagation(); e.preventDefault();
-    if ((d.df === "nuevo" || d.df === "borrar" || d.df === "trib") && typeof licPuedeEditar === "function" && !licPuedeEditar()) { toast(licMotivoEdicion()); return; }
-    if (d.df === "nuevo") { const V = esrVivos(x); const P = { id: "df" + uid(), tributo: "ISD", tipo: "liquidacion", sujetoId: V.length === 1 ? V[0].id : "", creado: hoy() }; dfProcs(x).push(P); anotar(x, "Defensa tributaria: notificación registrada", "tramite"); guardar(); ui.sheet = { tipo: "df", id: P.id }; render(); return; }
-    if (d.df === "editar") { ui.sheet = { tipo: "df", id: d.id }; render(); return; }
-    if (d.df === "trib") { const P = dfProcs(x).find((q) => q.id === ui.sheet.id); if (P) { P.tributo = d.v; if (!DF_TRIB[d.v].includes(P.tipo)) P.tipo = "liquidacion"; if (d.v === "IIVTNU") delete P.esValorReferencia; guardar(); render(); } return; }
-    if (d.df === "borrar") { x.procedimientos = dfProcs(x).filter((q) => q.id !== d.id); if (ui.defProc === d.id) ui.defProc = null; ui.conf = null; ui.sheet = null; anotar(x, "Defensa tributaria: notificación quitada", "tramite"); guardar(); render(); return; }
+    if (d.df === "editar") { e.stopPropagation(); e.preventDefault(); ui.sheet = { tipo: "df", id: d.id }; render(); }
   }, true);
 }

@@ -12,6 +12,7 @@ export const VERSION = "0.4.3"; // 0.4.3 · 10-10-2026: auditoría del ISD (C-1 
 const r2 = (x) => Math.round((x + Number.EPSILON) * 100) / 100;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const V = "VERIFICADO", P = "PENDIENTE";
+import { FESTIVOS_NACIONALES, FESTIVOS_NACIONALES_ESTADO, FESTIVOS_CCAA, FESTIVOS_LOCALES, FESTIVOS_FUENTES, PROV_CCAA, CAPITALES_INE } from "./festivos.mjs";
 
 // ─────────────────────────── Personas y parentesco ───────────────────────────
 export const RELACIONES = {
@@ -2997,22 +2998,76 @@ export function documentos650(caso, o = {}) {
 // ─────────────────────────── Plazos ───────────────────────────
 export function sumarMeses(f, n) { const d = new Date(f + "T12:00:00"); const dia = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < dia) d.setDate(0); return d.toISOString().slice(0, 10); }
 export function sumarDias(f, n) { const d = new Date(f + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
-// Días inhábiles en todo el territorio nacional (art. 30.2 Ley 39/2015), además de sábados y domingos. Fuentes:
-// 2025: Resolución de 16-12-2024 de la SE de Función Pública (BOE-A-2024-26935) · 2026: Resolución de 18-11-2025 (BOE-A-2025-23702) — VERIFICADO.
-// 2027: calendario aún no publicado a 01-10-2026; se usan las fiestas nacionales de fecha fija que caen en día laborable y el Viernes Santo (26-03-2027) — PENDIENTE.
-// Los días inhábiles autonómicos y locales (p. ej. 07-12-2026 en Andalucía y Madrid) NO se incluyen: PENDIENTE.
-export const INHABILES_NACIONALES = {
-  2025: ["2025-01-01", "2025-01-06", "2025-04-18", "2025-05-01", "2025-08-15", "2025-12-08", "2025-12-25"],
-  2026: ["2026-01-01", "2026-01-06", "2026-04-03", "2026-05-01", "2026-10-12", "2026-12-08", "2026-12-25"],
-  2027: ["2027-01-01", "2027-01-06", "2027-03-26", "2027-10-12", "2027-11-01", "2027-12-06", "2027-12-08"],
-};
-const INHABILES_ESTADO = { 2025: V, 2026: V, 2027: P };
-const esInhabil = (f) => { const w = new Date(f + "T12:00:00").getDay(); return w === 0 || w === 6 || (INHABILES_NACIONALES[f.slice(0, 4)] || []).includes(f); };
+// ── Calendario de días inhábiles (G09, 10-10-2026) ──
+// Datos en festivos.mjs: nacionales, autonómicos (2025-2027) y locales de las capitales y de los municipios de la demostración, con fuente y estado.
+// cal: { ccaa, ine, nombre } o una lista (art. 30.6 Ley 39/2015: es inhábil si lo es en la residencia del interesado o en la sede del órgano).
+// Sin cal: solo sábados, domingos y festivos nacionales (comportamiento anterior). Los festivos autonómicos o locales PENDIENTES de cotejo no
+// trasladan el vencimiento (regla prudente: se presenta antes) y se avisan como «posible festivo».
+export const INHABILES_NACIONALES = FESTIVOS_NACIONALES;
+const INHABILES_ESTADO = FESTIVOS_NACIONALES_ESTADO;
+const calLista = (cal) => (Array.isArray(cal) ? cal : cal ? [cal] : []).filter((c) => c && (c.ccaa || c.ine));
+const ccaaFest = (c) => { const t = c.ccaa || (c.ine ? PROV_CCAA[String(c.ine).slice(0, 2)] : ""); return ["ALA", "BIZ", "GIP"].includes(t) ? "PV" : t; };
+const nombreFest = (t) => (t === "PV" ? "Euskadi" : (TERRITORIOS.find(([k]) => k === t) || [])[1] || t);
+const muniFest = (c, a) => (c.ine && (FESTIVOS_LOCALES[a] || {})[c.ine]) || null;
+const nombreMuni = (c) => { for (const a in FESTIVOS_LOCALES) { const L = FESTIVOS_LOCALES[a][c.ine]; if (L) return L.n; } return c.nombre || "el municipio " + c.ine; };
+// Calendario a partir de la comunidad y el municipio (código INE); la comunidad sale del INE si no se indica. EST (no residente): sin autonómicos.
+export function calendarioDe(ccaa, ine, nombre) { const c = { ccaa: ccaa && ccaa !== "EST" ? ccaa : ine ? PROV_CCAA[String(ine).slice(0, 2)] : "", ine: ine || "", nombre: nombre || "" }; return c.ccaa || c.ine ? c : null; }
+// ¿Es festivo f en ese calendario? null si no; si lo es { ambito, tipo: nacional | autonomico | local, estado, fuente }
+export function festivoEn(f, cal) {
+  const a = f.slice(0, 4);
+  if ((FESTIVOS_NACIONALES[a] || []).includes(f)) return { ambito: "toda España", tipo: "nacional", estado: INHABILES_ESTADO[a] || P, fuente: FESTIVOS_FUENTES[a] || "" };
+  let pend = null;
+  for (const c of calLista(cal)) {
+    const t = ccaaFest(c), R = (FESTIVOS_CCAA[a] || {})[t];
+    if (R && R.d.includes(f)) { const o = { ambito: nombreFest(t), tipo: "autonomico", estado: R.e, fuente: R.f }; if (R.e === V) return o; pend = pend || o; }
+    const L = muniFest(c, a);
+    if (L && L.d.includes(f)) { const o = { ambito: L.n, tipo: "local", estado: L.e, fuente: L.f }; if (L.e === V) return o; pend = pend || o; }
+  }
+  return pend;
+}
+const finDeSemana = (f) => { const w = new Date(f + "T12:00:00").getDay(); return w === 0 || w === 6; };
+// Inhábil: sábado o domingo (art. 30.2 Ley 39/2015), festivo nacional o festivo autonómico o local VERIFICADO del calendario
+export function esInhabil(f, cal) { if (finDeSemana(f)) return true; const x = festivoEn(f, cal); return !!x && (x.tipo === "nacional" || x.estado === V); }
 // Art. 30.5 Ley 39/2015: si el último día del plazo es inhábil, se prorroga al primer día hábil siguiente
-export function aHabil(f) { let d = f; while (esInhabil(d)) d = sumarDias(d, 1); return d; }
+export function aHabil(f, cal) { let d = f; while (esInhabil(d, cal)) d = sumarDias(d, 1); return d; }
+// Qué se ha contado y qué falta en el calendario de un año: { cuenta, pendientes, faltan, texto }
+export function infoCalendario(cal, anio) {
+  const a = String(anio), cuenta = ["nacionales"], pendientes = [], faltan = [];
+  if (!FESTIVOS_NACIONALES[a]) faltan.push(`el calendario de ${a}`);
+  for (const c of calLista(cal)) {
+    const t = ccaaFest(c);
+    if (t && t !== "EST") { const R = (FESTIVOS_CCAA[a] || {})[t], n = nombreFest(t); if (!R) faltan.push(`los festivos autonómicos de ${n}`); else (R.e === V ? cuenta : pendientes).push(n); }
+    if (c.ine) { const L = muniFest(c, a), n = nombreMuni(c); if (!L) faltan.push(`los festivos locales de ${n}`); else (L.e === V ? cuenta : pendientes).push(n); }
+  }
+  const lista = (L) => (L.length > 1 ? L.slice(0, -1).join(", ") + " y " + L[L.length - 1] : L[0] || "");
+  const cu = [...new Set(cuenta)], pe = [...new Set(pendientes)].filter((n) => !cu.includes(n)), fa = [...new Set(faltan)];
+  const texto = (cu.length > 1 ? `Contados los festivos ${lista(cu.map((n, i) => (i ? "de " + n : n)))}` : calLista(cal).length ? "Contados solo los festivos nacionales" : "Solo se descuentan los festivos nacionales: indica la comunidad y el municipio para contar los demás")
+    + (pe.length ? `; los de ${lista(pe)} están sin cotejar y no trasladan el plazo` : "") + (fa.length ? `. Faltan ${lista(fa)} de ${a}: revísalos` : "");
+  return { anio: Number(a), cuenta: cu, pendientes: pe, faltan: fa, texto, estado: fa.length || pe.length ? P : INHABILES_ESTADO[a] || P };
+}
+// Vencimiento de un plazo administrativo o tributario: fecha natural → primer día hábil, con el motivo, el posible festivo sin cotejar y la nota
+export function venceHabil(nat, cal) {
+  const motivos = []; let d = nat;
+  while (esInhabil(d, cal)) { const x = festivoEn(d, cal); motivos.push(x ? `festivo ${x.tipo === "nacional" ? "nacional" : x.tipo === "local" ? "local de " + x.ambito : "de " + x.ambito}` : ["domingo", "", "", "", "", "", "sábado"][new Date(d + "T12:00:00").getDay()]); d = sumarDias(d, 1); }
+  const fx = festivoEn(d, cal), posible = fx && fx.tipo !== "nacional" && fx.estado !== V ? { fecha: d, ambito: fx.ambito, tipo: fx.tipo, siSeConfirma: aHabil(sumarDias(d, 1), cal) } : null;
+  const info = infoCalendario(cal, d.slice(0, 4));
+  const nota = [d !== nat ? `Vence en día inhábil (${nat}, ${motivos[0]}): pasa al siguiente hábil (art. 30.5 Ley 39/2015)` : "",
+    posible ? `El ${posible.fecha} puede ser festivo ${posible.tipo === "local" ? "local en" : "en"} ${posible.ambito} (sin cotejar): si lo es, el plazo llega al ${posible.siSeConfirma}; por prudencia se cuenta el ${d}` : "", info.texto].filter(Boolean).join(". ");
+  return { limite: d, limiteNatural: nat, trasladado: d !== nat, motivo: motivos[0] || "", posible, calendario: info, estadoCalendario: info.estado, nota };
+}
 // Fin del plazo de presentación del ISD (6 meses; 12 con la prórroga concedida: art. 68 RD 1629/1991), ya trasladado al siguiente hábil.
 // Fuente única para calcularPlazos y para el catálogo de trámites (tramites.mjs), para que Diagnóstico, Trámites, Agenda y .ics coincidan.
-export function limiteISD(f, prorroga) { return aHabil(sumarMeses(f, prorroga ? 12 : 6)); }
+export function limiteISD(f, prorroga, cal) { return aHabil(sumarMeses(f, prorroga ? 12 : 6), cal); }
+// Plusvalía (art. 110.2 TRLRHL): seis meses desde el fallecimiento, prorrogables hasta un año a solicitud; cuenta el calendario del ayuntamiento de cada inmueble.
+// inmuebles: [{ ine, nombre }]. Devuelve el vencimiento más temprano (prudente) y el de cada municipio.
+export function plazoPlusvalia(f, inmuebles, meses = 6) {
+  const nat = sumarMeses(f, meses), L = (inmuebles || []).filter((b) => b && b.ine);
+  if (!L.length) return { ...venceHabil(nat, null), porMunicipio: [] };
+  const por = [...new Map(L.map((b) => [b.ine, b])).values()].map((b) => ({ ine: b.ine, nombre: nombreMuni(b), ...venceHabil(nat, calendarioDe(null, b.ine, b.nombre)) }));
+  const min = por.reduce((m, q) => (q.limite < m.limite ? q : m), por[0]);
+  const distintos = new Set(por.map((q) => q.limite)).size > 1;
+  return { ...min, porMunicipio: por, nota: [min.nota, distintos ? "Por municipio: " + por.map((q) => `${q.nombre} ${q.limite}`).join(", ") : ""].filter(Boolean).join(". ") };
+}
 
 // ── Control de calidad 07-10-2026 (C2/M13): ¿se presenta en plazo? y recargo del art. 27 LGT ──
 // Plazo de presentación: 6 meses desde el fallecimiento (art. 67.1.a RD 1629/1991), prorrogables otros 6 si la prórroga se pide
@@ -3021,8 +3076,8 @@ export function limiteISD(f, prorroga) { return aHabil(sumarMeses(f, prorroga ? 
 // Regla prudente: pasado el plazo de seis meses sin prórroga marcada, se calcula fuera de plazo (con aviso: si se concedió, márcala).
 export function plazoPresentacionISD(f, o = {}) {
   if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return null;
-  const hoy = o.hoy || f;
-  const limite6 = limiteISD(f, false), limite12 = limiteISD(f, true), limitePeticion = aHabil(sumarMeses(f, 5));
+  const hoy = o.hoy || f, cal = o.cal !== undefined ? o.cal : calendarioDe(o.ccaa, o.ine); // G09: calendario de la Hacienda autonómica (y del municipio, si consta)
+  const limite6 = limiteISD(f, false, cal), limite12 = limiteISD(f, true, cal), limitePeticion = aHabil(sumarMeses(f, 5), cal);
   const limite = o.prorroga ? limite12 : limite6;
   const fuera = hoy > limite;
   const F = PLAZO_ISD_FORAL[o.ccaa];
@@ -3126,24 +3181,28 @@ export function recargoPresentacion(ccaa, cuota, limite, fechaPresentacion, inte
 export const BAJA_AUTONOMO_DIAS = 3;
 export const BAJA_AUTONOMO_NOTA = "Tres días naturales (art. 32.3 RD 84/1996), trasladado al siguiente hábil; tras el fallecimiento la Tesorería suele tramitarla de oficio. Una reforma de 2026 que lo ampliaría a seis días no se ha podido verificar (PENDIENTE)";
 export const DESDE_ULTIMAS_HABILES = 16;
-export function sumarHabiles(f, n) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d)) k++; } return d; }
+// n días hábiles contados desde el día siguiente (art. 30.2 Ley 39/2015): el último es el día n hábil
+export function sumarHabiles(f, n, cal) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d, cal)) k++; } return d; }
 
 // o.prorrogaISD: prórroga del ISD concedida → el plazo de presentación y la prescripción se cuentan con los 12 meses
 export function calcularPlazos(f, o = {}) {
   const anio = Number(f.slice(0, 4)) + 1;
   // Plazos administrativos: cómputo de fecha a fecha y traslado al siguiente día hábil (art. 30.5 Ley 39/2015). Auditoría 01-10-2026, I-2.
-  const habil = (nat) => { const h = aHabil(nat); return { limite: h, limiteNatural: nat, trasladado: h !== nat, estadoCalendario: INHABILES_ESTADO[h.slice(0, 4)] || P }; };
-  const nTras = (x, txt) => (x.trasladado ? `${txt ? txt + ". " : ""}Vence en día inhábil (${x.limiteNatural}): pasa al siguiente hábil (art. 30.5 Ley 39/2015). Solo se descuentan los festivos nacionales; revisa los autonómicos y locales` : txt);
+  // G09: calendario de la Hacienda autonómica (o.ccaa) y, si consta, del municipio de la oficina o del domicilio del interesado (o.ine, art. 30.6);
+  // la plusvalía, el de cada ayuntamiento (o.inmuebles: [{ ine, nombre }]). Sin datos: solo sábados, domingos y festivos nacionales.
+  const cal = o.cal !== undefined ? o.cal : calendarioDe(o.ccaa, o.ine);
+  const habil = (v) => ({ limite: v.limite, limiteNatural: v.limiteNatural, trasladado: v.trasladado, estadoCalendario: v.estadoCalendario, aviso: v.nota, posible: v.posible, ...(v.porMunicipio ? { porMunicipio: v.porMunicipio } : {}) });
+  const nTras = (x, txt) => [txt, x.aviso].filter(Boolean).join(". ");
   const FPZ = PLAZO_ISD_FORAL[o.ccaa]; // territorios forales: plazo no cotejado (fiscal r4)
-  const pro = habil(sumarMeses(f, 5)), isd = habil(sumarMeses(f, 6)), isd12 = habil(sumarMeses(f, 12)), plv = habil(sumarMeses(f, 6)), plv12 = habil(sumarMeses(f, 12));
+  const pro = habil(venceHabil(sumarMeses(f, 5), cal)), isd = habil(venceHabil(sumarMeses(f, 6), cal)), isd12 = habil(venceHabil(sumarMeses(f, 12), cal)), plv = habil(plazoPlusvalia(f, o.inmuebles, 6)), plv12 = habil(plazoPlusvalia(f, o.inmuebles, 12));
   // isd.limite === limiteISD(f, false) e isd12.limite === limiteISD(f, true): misma regla que el catálogo de trámites (tramites.mjs), comprobado en test.mjs
   const p = [
     // Auditoría civil 10-10-2026 (F-4a/m5): mismo plazo que el catálogo de trámites (BAJA_AUTONOMO_DIAS). F-3/m4: el certificado se pide una vez
     // TRANSCURRIDOS 15 días hábiles, así que el primer día útil es el siguiente hábil al decimoquinto (DESDE_ULTIMAS_HABILES = 16).
-    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, BAJA_AUTONOMO_DIAS)), estado: P, nota: BAJA_AUTONOMO_NOTA, aplica: o.autonomo },
+    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, BAJA_AUTONOMO_DIAS), cal), estado: P, nota: BAJA_AUTONOMO_NOTA, aplica: o.autonomo },
     { id: "ultimas_voluntades", fase: 1, nombre: "Pedir el certificado de últimas voluntades", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, DESDE_ULTIMAS_HABILES), estado: V, nota: "Desde el día hábil siguiente a los 15 hábiles posteriores al fallecimiento. Se descuentan los festivos nacionales; los autonómicos y locales, no" },
     { id: "seguros_cert", fase: 1, nombre: "Pedir el certificado de seguros de fallecimiento", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, DESDE_ULTIMAS_HABILES), estado: V },
-    { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3)), recomendado: true, estado: P, aplica: o.hayConyuge },
+    { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3), cal), recomendado: true, estado: P, aplica: o.hayConyuge },
     // F-4b/m6: el plazo de 90 días corre desde el documento de adjudicación, no desde el fallecimiento (catálogo: «dgt»; el de 90 días desde la muerte
     // es la comunicación del poseedor si alguien usa el coche antes del reparto, «dgt_custodia», art. 32.6 RGV)
     { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", nota: "90 días desde la escritura o documento de adjudicación (Reglamento General de Vehículos, art. 32). Si alguien usa el vehículo antes del reparto, debe comunicarlo a Tráfico en 90 días desde el fallecimiento", estado: P, aplica: o.hayVehiculos },
@@ -3157,61 +3216,168 @@ export function calcularPlazos(f, o = {}) {
   return p.filter((x) => x.aplica !== false);
 }
 
-// ─────────────────────────── G07 · Defensa tributaria: plazos desde la notificación y simulador de tasación pericial contradictoria ───────────────────────────
-// Cómputo (art. 30 Ley 39/2015, supletoria en los procedimientos tributarios según el art. 7.2 LGT):
-// · Plazos en días: hábiles (sin sábados, domingos ni festivos), desde el día siguiente a la notificación (art. 30.2).
-// · Plazos en meses: desde el día siguiente a la notificación y hasta el mismo día del mes de vencimiento; si ese mes no tiene ese día, el último
-//   del mes (art. 30.4); si el último día es inhábil, el siguiente hábil (art. 30.5). Solo festivos nacionales (INHABILES_NACIONALES): los autonómicos
-//   y los locales se revisan aparte (en la plusvalía cuentan los del municipio).
-// · Rectificación de una autoliquidación: mientras no prescriba el derecho a la devolución (cuatro años, arts. 66.c y 67.1 LGT; art. 126.2 RGAT).
-//   La prescripción no se traslada al día hábil siguiente: el límite que se muestra es el último día seguro.
-export const DF_TIPOS = {
-  propuestaLiquidacion: "Propuesta de liquidación o de valoración (trámite de alegaciones)",
-  liquidacion: "Liquidación provisional notificada",
-  comprobacionValores: "Acuerdo de comprobación de valores con su liquidación",
-  sancion: "Acuerdo sancionador",
-  autoliquidacion: "Autoliquidación ya presentada (para rectificarla)",
-};
-const dfPlazoMes = (f, meses = 1) => { const nat = sumarMeses(f, meses), lim = aHabil(nat); return { limite: lim, limiteNatural: nat, trasladado: lim !== nat }; };
-// Pago en periodo voluntario de una liquidación notificada (art. 62.2 LGT): notificada del 1 al 15, hasta el día 20 del mes siguiente;
-// del 16 al último día, hasta el día 5 del segundo mes siguiente; si no es hábil, el siguiente hábil.
-export function pagoVoluntarioLiquidacion(fNot) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fNot || "")) return null;
-  const y = Number(fNot.slice(0, 4)), m = Number(fNot.slice(5, 7)), d = Number(fNot.slice(8, 10));
-  const sum = d <= 15 ? 1 : 2, mm = m + sum, Y = y + Math.floor((mm - 1) / 12), M = ((mm - 1) % 12) + 1;
-  const nat = `${Y}-${String(M).padStart(2, "0")}-${d <= 15 ? "20" : "05"}`, lim = aHabil(nat);
-  return { limite: lim, limiteNatural: nat, trasladado: lim !== nat, norma: "art. 62.2 LGT" };
+// ─────────────────────────── Después de presentar (G06) ───────────────────────────
+// Procedimientos que abre una notificación tributaria y sus plazos de respuesta, con el calendario de inhábiles del órgano (G09).
+// Meses de fecha a fecha desde el día siguiente a la notificación (art. 30.4 Ley 39/2015: vence el mismo ordinal; si no existe, el último día del mes)
+// y traslado al siguiente hábil (art. 30.5). Días: hábiles (art. 30.2). Supletoriedad de la Ley 39/2015 en materia tributaria: DA 1.ª y art. 7.2 LGT.
+// o: { cal, tributo: "ISD" | "IIVTNU" | "IRPF", dias (plazo que fija el acto, en días hábiles), importe }
+export const PROC_TIPOS = [
+  ["requerimiento", "Requerimiento de información o documentación"],
+  ["propuestaLiquidacion", "Propuesta de liquidación (y, en su caso, de valoración)"],
+  ["liquidacion", "Liquidación provisional"],
+  ["comprobacionValores", "Liquidación con comprobación de valores"],
+  ["sancion", "Acuerdo sancionador"],
+  ["providenciaApremio", "Providencia de apremio"],
+];
+const procNombre = (t) => (PROC_TIPOS.find(([k]) => k === t) || [, t])[1];
+// Pago en periodo voluntario de una liquidación notificada (art. 62.2 LGT): del 1 al 15, hasta el día 20 del mes siguiente; del 16 al último, hasta el 5 del segundo mes siguiente
+export function pagoLiquidacion(fNot, cal) {
+  const d = Number(fNot.slice(8, 10)), base = fNot.slice(0, 8) + "01";
+  return venceHabil(d <= 15 ? sumarMeses(base, 1).slice(0, 8) + "20" : sumarMeses(base, 2).slice(0, 8) + "05", cal);
 }
-// o: { tributo: "ISD" | "IIVTNU", tipo (DF_TIPOS), fechaNotificacion, diasAlegaciones (10 a 15; 10 si no consta), finPlazoPresentacion,
-//      fechaIngreso, foral }. Devuelve { items: [{ id, nombre, limite, limiteNatural, trasladado, norma, nota, informativo }], avisos }.
+// Pago tras la providencia de apremio (art. 62.5 LGT): del 1 al 15, hasta el 20 de ese mes; del 16 al último, hasta el 5 del mes siguiente
+export function pagoApremio(fNot, cal) {
+  const d = Number(fNot.slice(8, 10)), base = fNot.slice(0, 8) + "01";
+  return venceHabil(d <= 15 ? base.slice(0, 8) + "20" : sumarMeses(base, 1).slice(0, 8) + "05", cal);
+}
+// Un mes desde el día siguiente a la notificación (recurso de reposición, art. 223.1 LGT; reclamación económico-administrativa, art. 235.1 LGT)
+export function plazoMes(fNot, cal) { return venceHabil(sumarMeses(fNot, 1), cal); }
+export function plazosProcedimiento(tipo, fNot, o = {}) {
+  if (!fNot || !/^\d{4}-\d{2}-\d{2}$/.test(fNot)) return null;
+  const cal = o.cal || null, local = o.tributo === "IIVTNU", dias = Math.max(1, Math.round(Number(o.dias) || 10));
+  const pl = [], avisos = [];
+  const add = (id, nombre, v, norma, nota, extra = {}) => pl.push({ id, nombre, limite: v.limite, limiteNatural: v.limiteNatural, trasladado: v.trasladado, aviso: v.nota, posible: v.posible, norma, nota: nota || "", estado: V, ...extra });
+  const habiles = (n) => { const lim = sumarHabiles(fNot, n, cal); const v = venceHabil(lim, cal); return { ...v, limiteNatural: lim }; };
+  const recurso = (nombre) => {
+    const v = plazoMes(fNot, cal);
+    if (local) add("recurso", nombre || "Recurso de reposición ante el ayuntamiento (obligatorio antes del contencioso)", v, "art. 14.2 TRLRHL (RDLeg 2/2004)", "Un mes desde el día siguiente a la notificación. En los municipios de gran población (título X Ley 7/1985) cabe además reclamación ante su órgano económico-administrativo: compruébalo");
+    else add("recurso", nombre || "Recurso de reposición o reclamación económico-administrativa", v, "arts. 223.1 y 235.1 LGT", "Un mes desde el día siguiente a la notificación; son alternativos (no se pueden simultanear)");
+  };
+  if (tipo === "requerimiento") {
+    add("atender", "Atender el requerimiento", habiles(dias), "arts. 29.2.g y 136-140 LGT; art. 163 RD 1065/2007", `${dias} días hábiles desde el día siguiente a la notificación (los que fije el requerimiento; si no dice otro, diez)`);
+    avisos.push("Contestar en plazo evita la sanción por resistencia o excusa (art. 203 LGT). El requerimiento interrumpe la prescripción (art. 68.1.a LGT).");
+  } else if (tipo === "propuestaLiquidacion") {
+    add("alegaciones", "Alegaciones a la propuesta", habiles(dias), "art. 99.8 LGT; arts. 96 y 164.4 RD 1065/2007", `${dias} días hábiles desde el día siguiente a la notificación (el que fije la propuesta; normalmente diez)`);
+    avisos.push("Si la propuesta incluye una valoración distinta de la declarada, se alega también contra ella (art. 134.1 LGT). La tasación pericial contradictoria se pide después, contra la liquidación.");
+  } else if (tipo === "liquidacion" || tipo === "comprobacionValores") {
+    recurso();
+    if (tipo === "comprobacionValores" && !local) add("tpc", "Tasación pericial contradictoria (o reservarse el derecho en el recurso)", plazoMes(fNot, cal), "art. 135.1 LGT; arts. 161-162 RD 1065/2007", "Dentro del plazo del primer recurso o reclamación contra la liquidación; suspende la ejecución de la liquidación y el plazo para recurrirla. No cabe contra el valor de referencia del Catastro aplicado como base (se discute recurriendo la liquidación)");
+    add("pago", "Pagar la liquidación en periodo voluntario", pagoLiquidacion(fNot, cal), "art. 62.2 LGT", "Del 1 al 15: hasta el día 20 del mes siguiente; del 16 al último día: hasta el 5 del segundo mes siguiente. Recurrir no suspende el pago salvo que se pida la suspensión con garantía (art. 224 LGT)");
+  } else if (tipo === "sancion") {
+    recurso("Recurso de reposición o reclamación contra la sanción");
+    add("pago", "Pagar la sanción con la reducción del 25 %", pagoLiquidacion(fNot, cal), "arts. 62.2 y 188.3 LGT", "La reducción por pronto pago exige ingresar en este plazo y no recurrir la liquidación ni la sanción");
+    avisos.push("El recurso contra la sanción la suspende sin garantía hasta que sea firme en vía administrativa (art. 212.3 LGT).");
+  } else if (tipo === "providenciaApremio") {
+    add("pago", "Pagar con el recargo de apremio reducido (10 %)", pagoApremio(fNot, cal), "arts. 28.3 y 62.5 LGT", "Del 1 al 15: hasta el día 20 de ese mes; del 16 al último: hasta el 5 del mes siguiente. Después, recargo del 20 % e intereses de demora y embargo (art. 167.1 LGT)");
+    recurso(local ? "Recurso de reposición contra la providencia de apremio" : "Recurso o reclamación contra la providencia de apremio");
+    avisos.push("Contra la providencia solo caben los motivos del art. 167.3 LGT (pago, prescripción, aplazamiento solicitado en voluntaria, falta de notificación de la liquidación, anulación o error en la identificación).");
+  } else return null;
+  return { tipo, nombre: procNombre(tipo), fechaNotificacion: fNot, plazos: pl, avisos, calendario: infoCalendario(cal, fNot.slice(0, 4)).texto };
+}
+// Prescripción (arts. 66-68 LGT): cuatro años. Derecho a liquidar: desde el día siguiente al fin del plazo de presentación o, si se presentó después,
+// desde la presentación (art. 68.1.c); cada actuación notificada al obligado la interrumpe y el cómputo vuelve a empezar (art. 68.6).
+// Derecho a la devolución de ingresos indebidos y a pedir la rectificación: desde el día siguiente al ingreso o al fin del plazo si se ingresó
+// dentro de él (art. 67.1, párrafo tercero). La prescripción no se traslada al siguiente hábil (plazo sustantivo, no de procedimiento).
+// o: { finPlazo, presentacion, pago, interrupciones: [fechas de notificación] }
+export function prescripcionTributo(o = {}) {
+  const fecha = (f) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null);
+  const fin = fecha(o.finPlazo); if (!fin) return null;
+  const pres = fecha(o.presentacion), pago = fecha(o.pago);
+  const ints = (o.interrupciones || []).map(fecha).filter((f) => f && f > fin).sort();
+  let base = fin, motivo = "fin del plazo de presentación";
+  if (pres && pres > fin) { base = pres; motivo = "presentación fuera de plazo"; }
+  const ult = ints.filter((f) => f >= base).pop();
+  if (ult) { base = ult; motivo = "última actuación notificada"; }
+  const baseDev = pago && pago > fin ? pago : fin;
+  return { liquidar: { desde: base, hasta: sumarMeses(base, 48), motivo, norma: "arts. 66.a, 67.1 y 68 LGT" },
+    devolucion: { desde: baseDev, hasta: sumarMeses(baseDev, 48), motivo: pago && pago > fin ? "ingreso después del fin del plazo" : "fin del plazo de presentación", norma: "arts. 66.c, 67.1 y 120.3 LGT; art. 126 RD 1065/2007" } };
+}
+
+// ─────────────────────────── Aplazamiento y fraccionamiento del ISD (G08) ───────────────────────────
+// Régimen general: art. 65 LGT y arts. 44-54 RD 939/2005 (RGR). Especial del ISD: art. 38 Ley 29/1987 y arts. 79-86 RD 1629/1991.
+// STS 1297/2025, de 15 de octubre (rec. 5673/2023): en autoliquidación la solicitud cabe durante todo el plazo de presentación (seis meses),
+// no solo en los cinco primeros (prevalece el art. 38.1 LISD sobre el art. 90.2 RISD).
+// Intereses (art. 53 RGR): de demora, desde el día siguiente al fin del periodo voluntario hasta el vencimiento de cada plazo; cada fracción, por
+// separado. Interés legal del dinero si la deuda está garantizada en su totalidad con aval de entidad de crédito o SGR o seguro de caución (art. 26.6 LGT).
+// Garantía: no se exige si el conjunto de deudas pendientes del solicitante no supera 50.000 € (art. 82.2.a LGT; Orden HFP/311/2023 para la AEAT y
+// Orden HFP/583/2023 para los tributos cedidos que recaudan las comunidades autónomas). Si se exige, cubre la deuda, los intereses y un 25 % más (art. 48.3 RGR).
+export const INTERES_LEGAL = 0.0325; // 2026: LPGE 2023 prorrogada (VERIFICADO con dos fuentes, 10-10-2026)
+export const APLAZ_LIMITE_GARANTIA = 50000;
+export const APLAZ_GARANTIA = {
+  estado: V, norma: "art. 82.2.a LGT; Orden HFP/583/2023 (tributos cedidos) y Orden HFP/311/2023 (AEAT)",
+  nota: "Límite estatal aplicable a los tributos cedidos que recauda la comunidad. Una comunidad puede haber fijado otro por norma propia: no se ha cotejado ninguna (PENDIENTE)",
+  forales: "En Navarra y los territorios vascos rige su norma general tributaria y su reglamento de recaudación: límite no cotejado (PENDIENTE)",
+};
+// Supuestos especiales del ISD (opciones con su norma y su estado)
+export const APLAZ_REGIMENES = [
+  { id: "general", nombre: "Régimen general (falta de liquidez transitoria)", norma: "art. 65 LGT; arts. 44-54 RD 939/2005", estado: V, nota: "La Administración decide los plazos según la situación del deudor; la práctica habitual sin garantía es de hasta doce plazos mensuales para personas físicas" },
+  { id: "isd38", nombre: "ISD: hasta un año, si en el caudal relicto no hay dinero ni bienes de fácil realización suficientes", norma: "art. 38.1 Ley 29/1987; arts. 79-86 RD 1629/1991", estado: V, maxMeses: 12, nota: "Se pide antes de que termine el plazo de pago (en autoliquidación, los seis meses: STS 1297/2025). Devenga intereses de demora. Algunos tribunales lo limitan al sistema de declaración: con autoliquidación, se tramita también por el régimen general" },
+  { id: "isd38frac", nombre: "ISD: fraccionamiento hasta cinco años con garantía", norma: "art. 38 Ley 29/1987; RD 1629/1991 (texto no cotejado)", estado: P, maxMeses: 60, nota: "Con garantía que cubra la deuda, los intereses y un 25 % más. Requisitos y plazos pendientes de cotejo literal con el BOE y la norma autonómica" },
+  { id: "isdVivienda", nombre: "ISD: vivienda habitual del causante o empresa familiar (aplazamiento especial)", norma: "art. 38.2 Ley 29/1987 (texto no cotejado)", estado: P, maxMeses: 60, nota: "Aplazamiento especial de cinco años para la cuota que corresponde a la vivienda habitual o a la empresa: requisitos e intereses pendientes de cotejo literal (PENDIENTE)" },
+];
+// Simulador. o: { importe, finVoluntario (último día del periodo voluntario), regimen, modo: "aplazamiento" | "fraccionamiento",
+//   plazos, periodicidad (meses entre plazos), primerVencimiento, garantia: "dispensa" | "aval" | "otra", tipoDemora, tipoLegal, otrasDeudas }
+export function simularAplazamiento(o = {}) {
+  const importe = Math.max(0, r2(Number(o.importe) || 0)), fin = o.finVoluntario;
+  if (!importe || !fin || !/^\d{4}-\d{2}-\d{2}$/.test(fin)) return null;
+  const reg = APLAZ_REGIMENES.find((r) => r.id === o.regimen) || APLAZ_REGIMENES[0];
+  const frac = o.modo === "fraccionamiento", n = frac ? Math.max(2, Math.min(60, Math.round(Number(o.plazos) || 12))) : 1;
+  const per = Math.max(1, Math.min(12, Math.round(Number(o.periodicidad) || 1)));
+  const primero = o.primerVencimiento && o.primerVencimiento > fin ? o.primerVencimiento : sumarMeses(fin, frac ? per : Math.min(12, per)).slice(0, 8) + "20";
+  const deudaTotal = r2(importe + Math.max(0, Number(o.otrasDeudas) || 0));
+  const dispensa = deudaTotal <= APLAZ_LIMITE_GARANTIA;
+  const garantia = dispensa ? "dispensa" : o.garantia === "aval" ? "aval" : "otra";
+  const tipo = garantia === "aval" ? Number(o.tipoLegal) || INTERES_LEGAL : Number(o.tipoDemora) || INTERES_DEMORA;
+  const dias = (a, b) => Math.max(0, Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5));
+  const cuota = r2(importe / n), filas = [];
+  for (let i = 0; i < n; i++) {
+    const vto = i === 0 ? primero : sumarMeses(primero, per * i);
+    const principal = i === n - 1 ? r2(importe - cuota * (n - 1)) : cuota;
+    const d = dias(fin, vto), interes = r2(principal * tipo * d / 365);
+    filas.push({ n: i + 1, vencimiento: vto, principal, dias: d, interes, total: r2(principal + interes) });
+  }
+  const intereses = r2(filas.reduce((s, f) => s + f.interes, 0)), ultimo = filas[filas.length - 1].vencimiento;
+  const avisos = [];
+  if (reg.maxMeses && ultimo > sumarMeses(fin, reg.maxMeses)) avisos.push(`El último vencimiento (${ultimo}) supera el máximo de este régimen (${reg.maxMeses} meses desde el fin del periodo voluntario)`);
+  if (!dispensa) avisos.push(`La deuda (${deudaTotal.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €, con las demás pendientes) supera ${APLAZ_LIMITE_GARANTIA.toLocaleString("es-ES")} €: hay que ofrecer garantía (aval, hipoteca, prenda u otra) o pedir su dispensa justificada (art. 82.2.b LGT)`);
+  if (reg.estado !== V) avisos.push(`${reg.nombre}: ${reg.nota}`);
+  return { importe, finVoluntario: fin, regimen: reg, modo: frac ? "fraccionamiento" : "aplazamiento", periodicidad: per, filas, intereses, total: r2(importe + intereses), tipo, garantia, dispensa, deudaTotal,
+    importeGarantia: dispensa ? 0 : r2((importe + intereses) * 1.25), norma: `${reg.norma}; art. 53 RD 939/2005 (intereses)`, estado: reg.estado === V && APLAZ_GARANTIA.estado === V ? V : P, avisos };
+}
+// ─────────────────────────── G07 · Defensa tributaria: plazos de cada escrito y simulador de tasación pericial contradictoria ───────────────────────────
+// Los plazos son los de «Después de presentar» (G06): plazosProcedimiento para las notificaciones y prescripcionTributo para la rectificación de
+// una autoliquidación, con el mismo calendario de inhábiles (G09). Aquí solo se reparten por escrito: el recurso de reposición y la reclamación
+// económico-administrativa (alternativos, art. 222.2 LGT) se muestran por separado; en la plusvalía, la reposición previa obligatoria del art. 14.2 TRLRHL.
+// o: { tributo: "ISD" | "IIVTNU", tipo (PROC_TIPOS o «autoliquidacion»), fechaNotificacion, diasAlegaciones (10 a 15; 10 si no consta),
+//      finPlazoPresentacion, fechaPresentacion, fechaIngreso, cal (calendarioDe), foral }. Devuelve { items, avisos, estado }.
 export function plazosDefensa(o = {}) {
   const f = o.fechaNotificacion, okF = /^\d{4}-\d{2}-\d{2}$/.test(f || ""), local = o.tributo === "IIVTNU", items = [], avisos = [];
   const add = (it) => items.push({ trasladado: false, ...it });
-  const tras = (x) => (x.trasladado ? `Vence en día inhábil (${x.limiteNatural}): pasa al siguiente hábil (art. 30.5 Ley 39/2015).` : "");
   if (o.tipo === "autoliquidacion") {
-    const fin = o.finPlazoPresentacion, ing = o.fechaIngreso;
-    const base = fin && ing && ing > fin ? ing : fin || ing || "";
-    add({ id: "rectificacion", nombre: "Pedir la rectificación de la autoliquidación y la devolución", limite: base ? sumarMeses(base, 48) : null, norma: "art. 120.3 LGT; arts. 126 a 129 RGAT (RD 1065/2007); arts. 66.c y 67.1 LGT",
-      nota: base ? `Cuatro años desde el día siguiente al ${ing && fin && ing > fin ? "del ingreso, hecho fuera de plazo" : "fin del plazo de presentación"} (${base}), mientras no se haya practicado liquidación definitiva. Se resuelve en seis meses; sin respuesta, se entiende desestimada.` : "Indica el fin del plazo de presentación o la fecha del ingreso para calcular el límite de cuatro años." });
-    if (!local) add({ id: "valorReferencia", nombre: "Impugnar el valor de referencia del inmueble (por la rectificación)", limite: base ? sumarMeses(base, 48) : null, norma: "art. 9.3 Ley 29/1987; art. 120.3 LGT; disposición final tercera TRLCI", nota: "Mismo plazo que la rectificación: con ella se pide el informe del Catastro sobre el valor de referencia." });
-  } else if (okF && o.tipo === "propuestaLiquidacion") {
-    const dias = Math.min(15, Math.max(10, Math.round(Number(o.diasAlegaciones) || 10)));
-    add({ id: "alegaciones", nombre: `Alegaciones a la propuesta (${dias} días hábiles)`, limite: sumarHabiles(f, dias), norma: "art. 99.8 LGT; art. 30.2 Ley 39/2015", nota: `Plazo que fija la propuesta (entre 10 y 15 días hábiles). Se cuentan desde el día siguiente a la notificación sin sábados, domingos ni festivos nacionales${local ? "; en la plusvalía, descuenta también los festivos del municipio" : ""}.` });
+    const P = prescripcionTributo({ finPlazo: o.finPlazoPresentacion, presentacion: o.fechaPresentacion, pago: o.fechaIngreso });
+    const d = P ? P.devolucion : null;
+    const nota = d ? `Cuatro años desde el día siguiente al ${d.motivo} (${d.desde}), mientras no se haya practicado liquidación definitiva. Se resuelve en seis meses; sin respuesta, se entiende desestimada. La prescripción no se traslada al día hábil siguiente.` : "Indica el fin del plazo de presentación para calcular el límite de cuatro años.";
+    add({ id: "rectificacion", nombre: "Pedir la rectificación de la autoliquidación y la devolución", limite: d ? d.hasta : null, norma: "art. 120.3 LGT; arts. 126 a 129 RD 1065/2007; arts. 66.c y 67.1 LGT", nota });
+    if (!local) add({ id: "valorReferencia", nombre: "Impugnar el valor de referencia del inmueble (por la rectificación)", limite: d ? d.hasta : null, norma: "art. 9.3 Ley 29/1987; art. 120.3 LGT; disposición final tercera TRLCI", nota: "Mismo plazo que la rectificación: con ella se pide el informe del Catastro sobre el valor de referencia." });
   } else if (okF) {
-    const mes = dfPlazoMes(f, 1);
-    if (local) add({ id: "reposicionLocal", nombre: "Recurso de reposición ante el ayuntamiento (obligatorio antes del contencioso)", ...mes, norma: "art. 14.2.c TRLRHL; art. 30.4 Ley 39/2015", nota: ["Un mes desde el día siguiente a la notificación expresa. En los municipios de gran población cabe después la reclamación económico-administrativa municipal (art. 137 LBRL).", tras(mes)].filter(Boolean).join(" ") });
-    else {
-      add({ id: "reposicion", nombre: "Recurso de reposición (potestativo)", ...mes, norma: "art. 223.1 LGT; art. 30.4 Ley 39/2015", nota: ["Un mes desde el día siguiente a la notificación. Si se interpone, no cabe la reclamación económico-administrativa hasta que se resuelva o se entienda desestimado (art. 222.2 LGT).", tras(mes)].filter(Boolean).join(" ") });
-      add({ id: "reclamacionEA", nombre: "Reclamación económico-administrativa", ...mes, norma: "art. 235.1 LGT; art. 30.4 Ley 39/2015", nota: ["Un mes desde el día siguiente a la notificación; si antes se recurrió en reposición, un mes desde la notificación de su resolución.", tras(mes)].filter(Boolean).join(" ") });
-      if (o.tipo !== "sancion") add({ id: "tpc", nombre: "Solicitud de tasación pericial contradictoria", ...mes, norma: "arts. 57.2 y 135.1 LGT", nota: "Dentro del plazo del primer recurso o reclamación contra la liquidación. La solicitud suspende la ejecución de la liquidación y el plazo para recurrirla. No cabe contra el valor de referencia del Catastro." });
+    const dias = Math.min(15, Math.max(10, Math.round(Number(o.diasAlegaciones) || 10)));
+    const P = plazosProcedimiento(o.tipo, f, { cal: o.cal || null, tributo: local ? "IIVTNU" : "ISD", dias });
+    for (const q of (P && P.plazos) || []) {
+      const base = { limite: q.limite, limiteNatural: q.limiteNatural, trasladado: q.trasladado, aviso: q.aviso || "" };
+      if (q.id === "recurso" && local) add({ id: "reposicionLocal", nombre: "Recurso de reposición ante el ayuntamiento (obligatorio antes del contencioso)", ...base, norma: "art. 14.2.c TRLRHL; art. 30.4 Ley 39/2015", nota: q.nota });
+      else if (q.id === "recurso") {
+        add({ id: "reposicion", nombre: "Recurso de reposición (potestativo)", ...base, norma: "art. 223.1 LGT; art. 30.4 Ley 39/2015", nota: "Un mes desde el día siguiente a la notificación. Si se interpone, no cabe la reclamación económico-administrativa hasta que se resuelva o se entienda desestimado (art. 222.2 LGT)." });
+        add({ id: "reclamacionEA", nombre: "Reclamación económico-administrativa", ...base, norma: "art. 235.1 LGT; art. 30.4 Ley 39/2015", nota: "Un mes desde el día siguiente a la notificación; si antes se recurrió en reposición, un mes desde la notificación de su resolución." });
+      } else if (q.id === "alegaciones") add({ id: "alegaciones", nombre: `Alegaciones a la propuesta (${dias} días hábiles)`, ...base, norma: "art. 99.8 LGT; art. 30.2 Ley 39/2015", nota: q.nota });
+      else if (q.id === "tpc") add({ id: "tpc", nombre: "Solicitud de tasación pericial contradictoria", ...base, norma: "arts. 57.2 y 135.1 LGT", nota: "Dentro del plazo del primer recurso o reclamación contra la liquidación. La solicitud suspende la ejecución de la liquidación y el plazo para recurrirla. No cabe contra el valor de referencia del Catastro." });
+      else if (q.id === "pago") add({ id: "pago", nombre: q.nombre, ...base, norma: q.norma, nota: q.nota, informativo: true });
     }
-    { const pv = pagoVoluntarioLiquidacion(f); add({ id: "pago", nombre: "Pago en periodo voluntario", ...pv, nota: ["Notificada entre el 1 y el 15: hasta el día 20 del mes siguiente; entre el 16 y el último día: hasta el 5 del segundo mes siguiente. Recurrir no suspende el pago salvo que se pida la suspensión con garantía.", tras(pv)].filter(Boolean).join(" "), informativo: true }); }
-    add({ id: "contencioso", nombre: "Después: recurso contencioso-administrativo", limite: null, norma: "art. 46.1 Ley 29/1998 (LJCA)", nota: "Dos meses desde el día siguiente a la notificación de la resolución expresa del recurso o de la reclamación; agosto es inhábil (art. 128.2 LJCA).", informativo: true });
+    if (P && ["liquidacion", "comprobacionValores", "sancion"].includes(o.tipo)) add({ id: "contencioso", nombre: "Después: recurso contencioso-administrativo", limite: null, norma: "art. 46.1 Ley 29/1998 (LJCA)", nota: "Dos meses desde el día siguiente a la notificación de la resolución expresa del recurso o de la reclamación; agosto es inhábil (art. 128.2 LJCA).", informativo: true });
+    if (P) avisos.push(...P.avisos, P.calendario);
   }
   if (!okF && o.tipo !== "autoliquidacion") avisos.push("Falta la fecha de notificación: sin ella no se pueden calcular los plazos.");
   if (o.foral) avisos.push("Territorio foral: la Ley General Tributaria no rige; los recursos y sus plazos son los de la Norma Foral General Tributaria del territorio. Verifícalos antes de presentar (PENDIENTE).");
-  avisos.push("Solo se descuentan los festivos nacionales: revisa los autonómicos y los locales.");
-  return { items, avisos, estado: o.foral ? P : V };
+  return { items, avisos: avisos.filter(Boolean), estado: o.foral ? P : V };
 }
 // Simulador de la tasación pericial contradictoria (orientativo): lo que se discute frente al coste del perito propio.
 // o: { valorDeclarado, valorComprobado, cuotaAdicional (si se conoce; si no, diferencia × tipoMedio), tipoMedio, honorariosPerito, diasIntereses,
