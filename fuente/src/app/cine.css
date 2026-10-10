@@ -111,8 +111,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .kpi.warn .k::before,.kpi.bad .k::before,.kpi.ok .k::before,
 .due.warn::before,.due.bad::before,.tc-d.warn::before,.tc-d.bad::before,.tm-eh.warn::before,.tm-eh.bad::before,
 td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.rd-sg.warn::before,
-.stepper button.on.blk span small::before,.stepper button.on.venc span small::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
-.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before{background:var(--danger)}
+.stepper button.on.blk span small::before,.stepper button.on.venc span small::before,.tc-venc::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
+.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before,.tc-venc::before{background:var(--danger)}
 .kpi.ok .k::before{background:var(--success)}
 .sc-ns.warn .sc-ns-n .k::before,.sc-ns.bad .sc-ns-n .k::before,.sc-ns.ok .sc-ns-n .k::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning)}
 .sc-ns.bad .sc-ns-n .k::before{background:var(--danger)}.sc-ns.ok .sc-ns-n .k::before{background:var(--success)}
@@ -120,6 +120,7 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .dg-hero::before{content:none}
 .dg-hero-t h2{color:var(--ink-1)}
 .due.warn,.due.bad{color:var(--ink-2)}
+.tc-venc{color:var(--ink-1)}
 .exp-next .due.warn,.exp-next .due.bad{color:var(--ink-1)}
 .stepper button.on.blk span small,.stepper button.on.venc span small{color:var(--ink-2)}
 .kpi.bad::after{opacity:.9}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610081626">
+<meta name="hereda-version" content="202610101057">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F4F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4113,8 +4113,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .kpi.warn .k::before,.kpi.bad .k::before,.kpi.ok .k::before,
 .due.warn::before,.due.bad::before,.tc-d.warn::before,.tc-d.bad::before,.tm-eh.warn::before,.tm-eh.bad::before,
 td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.rd-sg.warn::before,
-.stepper button.on.blk span small::before,.stepper button.on.venc span small::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
-.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before{background:var(--danger)}
+.stepper button.on.blk span small::before,.stepper button.on.venc span small::before,.tc-venc::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
+.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before,.tc-venc::before{background:var(--danger)}
 .kpi.ok .k::before{background:var(--success)}
 .sc-ns.warn .sc-ns-n .k::before,.sc-ns.bad .sc-ns-n .k::before,.sc-ns.ok .sc-ns-n .k::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning)}
 .sc-ns.bad .sc-ns-n .k::before{background:var(--danger)}.sc-ns.ok .sc-ns-n .k::before{background:var(--success)}
@@ -4122,6 +4122,7 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .dg-hero::before{content:none}
 .dg-hero-t h2{color:var(--ink-1)}
 .due.warn,.due.bad{color:var(--ink-2)}
+.tc-venc{color:var(--ink-1)}
 .exp-next .due.warn,.exp-next .due.bad{color:var(--ink-1)}
 .stepper button.on.blk span small,.stepper button.on.venc span small{color:var(--ink-2)}
 .kpi.bad::after{opacity:.9}
@@ -4264,11 +4265,11 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610081626"], ["app", "nucleo/app.js?v=202610081626"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610101057"], ["app", "nucleo/app.js?v=202610101057"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610081626").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610101057").catch(() => {}));
 </script>
 </body>
 </html>
