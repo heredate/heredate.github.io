@@ -111,8 +111,8 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .kpi.warn .k::before,.kpi.bad .k::before,.kpi.ok .k::before,
 .due.warn::before,.due.bad::before,.tc-d.warn::before,.tc-d.bad::before,.tm-eh.warn::before,.tm-eh.bad::before,
 td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.rd-sg.warn::before,
-.stepper button.on.blk span small::before,.stepper button.on.venc span small::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
-.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before{background:var(--danger)}
+.stepper button.on.blk span small::before,.stepper button.on.venc span small::before,.tc-venc::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
+.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before,.tc-venc::before{background:var(--danger)}
 .kpi.ok .k::before{background:var(--success)}
 .sc-ns.warn .sc-ns-n .k::before,.sc-ns.bad .sc-ns-n .k::before,.sc-ns.ok .sc-ns-n .k::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning)}
 .sc-ns.bad .sc-ns-n .k::before{background:var(--danger)}.sc-ns.ok .sc-ns-n .k::before{background:var(--success)}
@@ -120,6 +120,7 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .dg-hero::before{content:none}
 .dg-hero-t h2{color:var(--ink-1)}
 .due.warn,.due.bad{color:var(--ink-2)}
+.tc-venc{color:var(--ink-1)}
 .exp-next .due.warn,.exp-next .due.bad{color:var(--ink-1)}
 .stepper button.on.blk span small,.stepper button.on.venc span small{color:var(--ink-2)}
 .kpi.bad::after{opacity:.9}
@@ -128,6 +129,9 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .chip.ok,.chip.warn,.chip.bad,.chip.info,.st-b.ok,.st-b.warn,.st-b.bad,.tag.V,.tag.P,.tag.bajo,.tag.medio,.tag.warn,.tag.alto,.tag.litigioso,.tag.gold,
 .status.ok,.status.warn,.status.bad,.mtag.ok,.mtag.rev,.lg-pill.ok,.lg-pill.bad,.tc-chip.warn,.tc-chip.ok,.tc-pill.est-enviada,.tc-pill.est-reclamada,.tc-pill.est-escalada,.tc-pill.est-recibida,
 .vf-gs em.vf-eb,.vf-gs em.vf-ea,.vf-gs em.vf-eo,.chip-r.warn{color:var(--ink-1)}
+/* Modelos 650 y 660 (modelos.js): cifras y píldoras en tinta neutra; solo la negativa en rojo (cine.js) */
+.m6-chk-h em,.m6-badge{color:var(--ink-1)}
+.vf-tot b,.vf-l.t2 b.num,.vf-jump button .num,.m6 b.num,.m6-blq-h .num{color:var(--ink-1)}
 
 /* Cifras negativas: el único color permitido (las marca la pequeña rutina «hereda-cine-js» o la propia app) */
 .money.neg,.sr.resta .sr-v{color:var(--hc-neg)}
@@ -200,7 +204,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(44,90,146,.2),transparent 64%),var(--bg)}
 :root[data-theme="light"] .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(255,255,255,.8),transparent 64%),var(--bg)}
 .rn-prog i{background:var(--petrol);box-shadow:none}
-.rn-kick{color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+.rn-kick{color:var(--ink-3);letter-spacing:.12em;font-variant-caps:all-small-caps;font-weight:600}
 .rn-card,.rn-tile,.rn-pay,.rn-formula,.rn-steps li,.rn-scroll,.rn-link{box-shadow:var(--sh-1)}
 .rn-card-v,.rn-tile-v,.rn-formula>div b,.rn-pay-f span{font-family:var(--font-display);font-weight:600;letter-spacing:-.012em;font-feature-settings:"tnum" 1,"lnum" 1}
 .rn-card-v small,.rn-pay-f small{font-family:var(--font-sans)}

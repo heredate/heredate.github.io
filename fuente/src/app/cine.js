@@ -6,7 +6,7 @@
   var RE = /^[\u2212\u2013-]\s?(?:[€$]\s?)?\d[\d.,\u00a0\u202f ]*(?:\s?(?:€|%|‰|k€|M€))?$/;
   var DIG = /\d/;
   var pend = [], full = true, tick = false;
-  function own(el) { var t = "", c = el.firstChild; for (; c; c = c.nextSibling) { if (c.nodeType === 3) t += c.nodeValue; else if (c.nodeType === 1 && c.classList && c.classList.contains("cur")) t += c.textContent; else return null; } return t.replace(/\s+/g, " ").trim(); }
+  function own(el) { var t = "", c = el.firstChild; for (; c; c = c.nextSibling) { if (c.nodeType === 3) t += c.nodeValue; else if (c.nodeType === 1 && !c.firstElementChild) t += c.textContent; else if (c.nodeType === 1) return null; } return t.replace(/\s+/g, " ").trim(); }
   function mark(el) {
     if (!el || el.nodeType !== 1 || el.closest("script,style,textarea,input,select,option,svg,[contenteditable]")) return;
     var t = own(el), neg = !!(t && t.length < 32 && RE.test(t));
@@ -14,7 +14,7 @@
   }
   function scanText(root) {
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), n, seen = new Set();
-    while ((n = w.nextNode())) { var p = n.parentElement; if (p && !seen.has(p) && DIG.test(n.nodeValue)) { seen.add(p); mark(p); } }
+    while ((n = w.nextNode())) { var p = n.parentElement; if (p && DIG.test(n.nodeValue)) { if (!seen.has(p)) { seen.add(p); mark(p); } var g = p.parentElement; if (g && !seen.has(g)) { seen.add(g); mark(g); } } }
   }
   function run() {
     tick = false;
@@ -26,7 +26,7 @@
   new MutationObserver(function (ms) {
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i];
-      if (m.type === "characterData") pend.push(m.target);
+      if (m.type === "characterData") { pend.push(m.target); if (m.target.parentElement) pend.push(m.target.parentElement); }
       else { if (m.target.nodeType === 1 && m.target.classList.contains("hc-neg")) pend.push(m.target); for (var j = 0; j < m.addedNodes.length; j++) pend.push(m.addedNodes[j]); }
     }
     if (pend.length > 4000) { full = true; pend = []; }

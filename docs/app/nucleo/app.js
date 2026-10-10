@@ -9446,8 +9446,9 @@ function lecDocxTexto(xml){
 return lecXmlTexto(String(xml).replace(/<w:tc\b[\s\S]*?<\/w:tc>/g,(c)=>c.replace(/<\/w:p>/g," ")+" ").replace(/<w:tab\/>/g,"\t").replace(/<w:br\b[^>]*\/>|<w:cr\/>/g,"\n").replace(/<\/w:p>/g,"\n").replace(/<\/w:tr>/g,"\n").replace(/<[^>]+>/g,""))
 .replace(/[ \t]+\n/g,"\n").replace(/\t+/g," ").replace(/[ ]{2,}/g," ").replace(/\n{3,}/g,"\n\n").trim();
 }
-function lecDecodificar(bytes){try{return new TextDecoder("utf-8",{fatal:true}).decode(bytes).replace(/^﻿/,"");}catch(e){return new TextDecoder("windows-1252").decode(bytes);}}
-function lecDecodificarCon(bytes,cs){const c=String(cs||"").trim().toLowerCase().replace(/^["']|["']$/g,"");if(c&&!/^(utf-?8|us-ascii)$/.test(c)){try{return new TextDecoder(c).decode(bytes);}catch(e){}}return lecDecodificar(bytes);}
+const lecCp1252=(bytes)=>{let s="";for(let i=0;i<bytes.length;i++)s+=LEC_CP1252[bytes[i]];return s;};
+function lecDecodificar(bytes){try{return new TextDecoder("utf-8",{fatal:true}).decode(bytes).replace(/^﻿/,"");}catch(e){return lecCp1252(bytes);}}
+function lecDecodificarCon(bytes,cs){const c=String(cs||"").trim().toLowerCase().replace(/^["']|["']$/g,"");if(/^(windows-1252|x?-?cp-?1252|iso-?8859-1|iso_8859-1|latin-?1|l1)$/.test(c))return lecCp1252(bytes);if(c&&!/^(utf-?8|us-ascii)$/.test(c)){try{return new TextDecoder(c).decode(bytes);}catch(e){}}return lecDecodificar(bytes);}
 async function lecTextoDocx(bytes){
 const xml=await lecZipEntrada(bytes,"word/document.xml");
 if(xml==null)throw new Error("el archivo no contiene texto de Word");
@@ -9494,7 +9495,7 @@ return lecXmlTexto(String(xml).replace(/<office:annotation\b[\s\S]*?<\/office:an
 .replace(/<\/table:table-row>/g,"\n").replace(/<text:tab\/>/g," ").replace(/<text:s\b[^>]*\/>/g," ").replace(/<text:line-break\/>/g,"\n").replace(/<\/text:[ph]>/g,"\n").replace(/<table:table\b[^>]*table:name="([^"]*)"[^>]*>/g,hojas?"\nHoja: $1\n":"\n").replace(/<[^>]+>/g,""))
 .replace(/[ \t]+\n/g,"\n").replace(/[ \t]{2,}/g," ").replace(/\n{3,}/g,"\n\n").trim();
 }
-const LEC_CP1252=(()=>{try{return new TextDecoder("windows-1252").decode(new Uint8Array(Array.from({length:256},(_,i)=>i)));}catch(e){return Array.from({length:256},(_,i)=>String.fromCharCode(i)).join("");}})();
+const LEC_CP1252=Array.from({length:256},(_,i)=>(i>=0x80&&i<0xa0?"€\x81‚ƒ„…†‡ˆ‰Š‹Œ\x8DŽ\x8F\x90‘’“”•–—˜™š›œ\x9DžŸ"[i-0x80]:String.fromCharCode(i))).join("");
 const LEC_RTF_FUERA=new Set(["fonttbl","colortbl","stylesheet","info","pict","object","header","footer","headerl","headerr","headerf","footerl","footerr","footerf","themedata","colorschememapping","latentstyles","datastore","xmlnstbl","listtable","listoverridetable","rsidtbl","generator","fldinst","bkmkstart","bkmkend","pgdsctbl","revtbl","filetbl","mmathPr"]);
 function lecRtfTexto(s){
 s=String(s);let out="",saltar=false,uc=1,omitir=0;const pila=[];
