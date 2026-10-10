@@ -5,7 +5,7 @@
 // Ajustes guardados en despachoCfg().widget = { tel, email, web, privacidad, color, ccaa, localidad, url, iniciales }.
 // Si tel, email, web o localidad están vacíos se usan los del contacto del despacho (despachoContacto()); la comunidad, la de la localidad.
 // La configuración no depende del modo demostración: demoSalir() conserva lo que se cambie aquí (dmDespachoAlSalir).
-const WG_COLORES = [["#1F6AE0", "Azul"], ["#1E3A5F", "Marino"], ["#16875A", "Verde"], ["#0F6E74", "Petróleo"], ["#8E2C48", "Granate"], ["#3A3A40", "Grafito"]];
+const WG_COLORES = [["#0F2B4C", "Azul notarial"], ["#2C5A92", "Azul"], ["#1F6E6B", "Petróleo"], ["#2F5D46", "Verde"], ["#7A2E3B", "Granate"], ["#2A3340", "Grafito"]];
 const WG_ARCHIVO = "calculadora-herencias.html";
 const WG = { vista: "movil", t: 0, munis: null };
 const WG_I = {
@@ -90,7 +90,7 @@ function wgSheet() {
       <div class="wg-form">
         <div class="sectitle" style="margin-top:4px">Tu despacho</div>
         <div class="group">
-          ${wgCampo("wg-nombre", "nombre", "Nombre del despacho", D.nombre, 'placeholder="Ej.: Pérez Abogados" autocomplete="organization"')}
+          ${wgCampo("wg-nombre", "nombre", "Nombre del despacho", D.nombre, 'placeholder="Ej.: Zambrano Abogados" autocomplete="organization"')}
           ${wgCampo("wg-tel", "tel", "WhatsApp del despacho", w.tel, `type="tel" inputmode="tel" ${dePh(D.tel, "Ej.: 600 123 456")}`, "Las familias te escriben a este número con el resumen del cálculo.")}
           ${wgCampo("wg-email", "email", "Correo para recibir las consultas", w.email, `type="email" ${dePh(D.email, "consultas@tudespacho.es")}`)}
           ${wgCampo("wg-web", "web", "Web del despacho", w.web, `type="url" ${dePh(D.web, "https://www.tudespacho.es")}`)}

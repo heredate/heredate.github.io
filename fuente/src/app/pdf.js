@@ -19,7 +19,9 @@ const PDF_AW = {};
 const PDF_CP = { 8364: 128, 8218: 130, 402: 131, 8222: 132, 8230: 133, 8224: 134, 8225: 135, 710: 136, 8240: 137, 352: 138, 8249: 139, 338: 140, 381: 142, 8216: 145, 8217: 146, 8220: 147, 8221: 148, 8226: 149, 8211: 150, 8212: 151, 732: 152, 8482: 153, 353: 154, 8250: 155, 339: 156, 382: 158, 376: 159 };
 const PDF_SUST = { "−": "–", "‐": "-", "‑": "-", "‒": "–", "―": "—", "′": "'", "″": "\"", "‚": ",", "→": "->", "←": "<-", "⇒": "=>", "↔": "<->", "≥": ">=", "≤": "<=", "≠": "!=", "≈": "~", "✓": "v", "✔": "v", "✗": "x", "✘": "x", "⚠": "!", "★": "*", "☐": "[ ]", "☑": "[x]", "▪": "•", "◦": "•", "●": "•", "∙": "·", "⟦": "[", "⟧": "]", "〈": "<", "〉": ">", "\u202F": "\u00A0", "\u2007": "\u00A0", "\u2009": " ", "\u2002": " ", "\u2003": " ", "\u200B": "", "\u200D": "", "\uFEFF": "", "\t": "    ", "Ł": "L", "ł": "l", "Đ": "D", "đ": "d", "ı": "i", "ﬁ": "fi", "ﬂ": "fl", "ˮ": "\"", "ʼ": "’" };
 const PDF_A4 = [595.28, 841.89];
-const PDF_C = { tinta: [0.1, 0.1, 0.11], marca: [0.1, 0.19, 0.33], gris: [0.4, 0.41, 0.44], linea: [0.72, 0.74, 0.78], ambar: [0.56, 0.35, 0], notaT: [0.23, 0.18, 0.08], notaF: [0.992, 0.964, 0.89], notaB: [0.82, 0.58, 0.14], tabla: [0.925, 0.937, 0.957], agua: [0.915, 0.92, 0.93] };
+// Paleta «notarial» (v10): tinta azul-negra #121C2A, azul notarial #0F2B4C para membrete y cabeceras, petróleo #1F6E6B solo en el filete fino
+// del membrete, gris pizarra #5C6470, líneas #CFCAC0, huecos por rellenar en ámbar tostado #875A1A y nota de revisión en marfil cálido
+const PDF_C = { tinta: [0.071, 0.11, 0.165], marca: [0.059, 0.169, 0.298], acento: [0.122, 0.431, 0.42], gris: [0.361, 0.392, 0.439], linea: [0.81, 0.792, 0.753], ambar: [0.529, 0.353, 0.102], notaT: [0.24, 0.18, 0.09], notaF: [0.973, 0.953, 0.906], notaB: [0.69, 0.53, 0.24], tabla: [0.918, 0.929, 0.945], agua: [0.918, 0.922, 0.93] };
 const PDF_S = 11, PDF_LH = 15.4;
 const PDF_PROD = "{{MARCA}}".indexOf("{{") ? "{{MARCA}}" : "Hereda+";
 const PDF_ORD = /^((?:(?:Primer|Segund|Tercer|Cuart|Quint|Sext|Séptim|Octav|Noven|Décim)[oa]|(?:PRIMER|SEGUND|TERCER|CUART|QUINT|SEXT|SÉPTIM|OCTAV|NOVEN|DÉCIM)[OA]|[IVX]{1,5})\.)(?= |$)/;
@@ -398,7 +400,7 @@ function pdfDocumento(o) {
   let yR = PH - 56;
   [["REFERENCIA", o.ref], ["FECHA", fecha]].filter((r) => r[1]).forEach(([k, v]) => { m.push(pdfT(X1, yR - 6, k, "HB", 6.3, C.gris, 1, "r")); m.push(pdfT(X1, yR - 18, v, "H", 9, C.tinta, 0, "r")); yR -= 28; });
   const yr = Math.min(yL, yR + 6) - 8;
-  m.push(pdfRaya(X0, yr, X1, yr, C.marca, 1.1), pdfRaya(X0, yr - 2.4, X1, yr - 2.4, C.marca, 0.35));
+  m.push(pdfRaya(X0, yr, X1, yr, C.marca, 1.1), pdfRaya(X0, yr - 2.4, X1, yr - 2.4, C.acento, 0.45));
   const pages = pdfPagina(B.map((b) => pdfMaqueta(b, X0, W)), yr - 28, PH - 74, 74);
   const der = pdfRecorta([titulo, o.ref ? "Ref. " + o.ref : ""].filter(Boolean).join("  ·  "), "H", 7.5, W * 0.48);
   const pie = pdfRecorta([firma, d.localidad].filter(Boolean).join(" · "), "H", 7.5, W - pdfMide(pdfCod("Página 999 de 999"), "H", 7.5) - 16);

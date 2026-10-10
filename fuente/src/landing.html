@@ -7,8 +7,8 @@
 <meta name="description" content="{{MARCA}}, software de sucesiones para despachos de abogados: lee los documentos en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Sin IA. Los datos se quedan en el despacho.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#18191C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preload" as="image" href="video/hereda-demo-poster-1600.webp" media="(min-width: 700px)">
@@ -22,14 +22,14 @@
 /* Hereda+ · web de producto. Mismos tokens y misma letra que la app (src/app/shell.html): papel, tinta, azul notarial, Inter y Source Serif 4
    (autoalojadas en /fonts; build.py pone la precarga y las @font-face en el marcador de fuentes del head). Las pilas del sistema quedan de respaldo. */
 :root{
-  --bg:#F5F5F2; --bg-2:#EEEEEA; --surface:#FFFFFF; --surface-2:#FAFAF8;
-  --border:#E3E2DD; --border-2:#CFCEC8;
-  --ink-1:#18191C; --ink-2:#4B4D53; --ink-3:#5F6167;
-  --brand:#1F3A5F; --brand-hover:#162B47; --brand-tint:rgba(31,58,95,.075); --on-brand:#FFFFFF;
-  --success:#2D6A4F; --warning:#8A5A12; --danger:#AF3A2E;
-  --btn:#18191C; --on-btn:#FFFFFF;
-  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(24,25,28,.035);
-  --sh-frame:0 0 0 1px rgba(24,25,28,.07),0 2px 4px rgba(24,25,28,.04),0 40px 90px -30px rgba(24,25,28,.32);
+  --bg:#F4F2EC; --bg-2:#EBE9E2; --surface:#FFFEFB; --surface-2:#FAF9F5;
+  --border:#E0DCD2; --border-2:#CBC5B8;
+  --ink-1:#121C2A; --ink-2:#434C59; --ink-3:#5C6470;
+  --brand:#0F2B4C; --brand-hover:#0A1F38; --brand-tint:rgba(15,43,76,.07); --on-brand:#FFFFFF;
+  --success:#1F6E6B; --warning:#875A1A; --danger:#9E3B2B; --petrol:#1F6E6B; --petrol-tint:#E5EFEC;
+  --btn:#0F2B4C; --on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
+  --sh-frame:0 0 0 1px rgba(18,28,42,.07),0 2px 4px rgba(18,28,42,.04),0 40px 90px -30px rgba(18,28,42,.32);
   --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
   --ease:cubic-bezier(.32,.72,0,1);
@@ -38,26 +38,26 @@
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#18191C; --bg-2:#141518; --surface:#202125; --surface-2:#25262B;
-    --border:rgba(255,255,255,.085); --border-2:rgba(255,255,255,.15);
-    --ink-1:#EDEDEF; --ink-2:#B5B6BB; --ink-3:#9C9DA3;
-    --brand:#8FB3E6; --brand-hover:#A9C5EE; --brand-tint:rgba(143,179,230,.14); --on-brand:#101114;
-    --success:#6DC39C; --warning:#E2AE63; --danger:#EF8A7D;
-    --btn:#EDEDEF; --on-btn:#18191C;
-    --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(0,0,0,.18);
-    --sh-frame:0 0 0 1px rgba(255,255,255,.09),0 40px 90px -30px rgba(0,0,0,.7);
+    --bg:#0F1621; --bg-2:#0B111A; --surface:#151E2A; --surface-2:#1A2431;
+    --border:rgba(168,190,222,.11); --border-2:rgba(168,190,222,.2);
+    --ink-1:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF;
+    --brand:#9DBCE6; --brand-hover:#B7CEEE; --brand-tint:rgba(157,188,230,.13); --on-brand:#0B1A2E;
+    --success:#63B8AF; --warning:#E0AE68; --danger:#EE8E80; --petrol:#63B8AF; --petrol-tint:rgba(99,184,175,.13);
+    --btn:#2C5A92; --on-btn:#FFFFFF;
+    --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(2,6,14,.18);
+    --sh-frame:0 0 0 1px rgba(168,190,222,.12),0 40px 90px -30px rgba(2,6,14,.7);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#18191C; --bg-2:#141518; --surface:#202125; --surface-2:#25262B;
-  --border:rgba(255,255,255,.085); --border-2:rgba(255,255,255,.15);
-  --ink-1:#EDEDEF; --ink-2:#B5B6BB; --ink-3:#9C9DA3;
-  --brand:#8FB3E6; --brand-hover:#A9C5EE; --brand-tint:rgba(143,179,230,.14); --on-brand:#101114;
-  --success:#6DC39C; --warning:#E2AE63; --danger:#EF8A7D;
-  --btn:#EDEDEF; --on-btn:#18191C;
-  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(0,0,0,.18);
-  --sh-frame:0 0 0 1px rgba(255,255,255,.09),0 40px 90px -30px rgba(0,0,0,.7);
+  --bg:#0F1621; --bg-2:#0B111A; --surface:#151E2A; --surface-2:#1A2431;
+  --border:rgba(168,190,222,.11); --border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF;
+  --brand:#9DBCE6; --brand-hover:#B7CEEE; --brand-tint:rgba(157,188,230,.13); --on-brand:#0B1A2E;
+  --success:#63B8AF; --warning:#E0AE68; --danger:#EE8E80; --petrol:#63B8AF; --petrol-tint:rgba(99,184,175,.13);
+  --btn:#2C5A92; --on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(2,6,14,.18);
+  --sh-frame:0 0 0 1px rgba(168,190,222,.12),0 40px 90px -30px rgba(2,6,14,.7);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -78,7 +78,7 @@ img{display:block;max-width:100%;height:auto}
 .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
 .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;text-decoration:none;letter-spacing:-.01em}
-.logo{width:26px;height:26px;border-radius:7px;background:var(--btn);color:var(--on-btn);display:grid;place-items:center;font:750 11px/1 var(--font-sans);letter-spacing:-.04em}
+.logo{width:26px;height:26px;display:block;flex:none}
 .links{display:flex;gap:28px;font-size:14px}
 .links a{color:var(--ink-2);text-decoration:none}
 .links a:hover{color:var(--ink-1)}
@@ -119,9 +119,9 @@ h1{font-size:clamp(44px,8vw,92px);line-height:1;margin:0 auto;max-width:11em}
 .vid video{opacity:0;transition:opacity .6s var(--ease)}
 .vid.on video{opacity:1}
 .vctl{position:absolute;right:14px;bottom:14px;z-index:2;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px 0 13px;border:0;border-radius:999px;cursor:pointer;
-  background:rgba(24,25,28,.82);color:#fff;font:600 14px/1 var(--font-sans);white-space:nowrap;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background-color .2s}
-.vctl:hover{background:rgba(24,25,28,.94)}
-.vctl:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px rgba(24,25,28,.82)}
+  background:rgba(18,28,42,.82);color:#fff;font:600 14px/1 var(--font-sans);white-space:nowrap;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:background-color .2s}
+.vctl:hover{background:rgba(18,28,42,.94)}
+.vctl:focus-visible{outline:2px solid #fff;outline-offset:2px;box-shadow:0 0 0 4px rgba(18,28,42,.82)}
 .vctl svg{flex:none}
 .vctl.grande{right:50%;bottom:50%;transform:translate(50%,50%);min-height:56px;padding:0 24px 0 20px;font-size:16px}
 @media (max-width:520px){.vctl{right:10px;bottom:10px;min-height:36px;font-size:13px}}
@@ -171,7 +171,7 @@ h1{font-size:clamp(44px,8vw,92px);line-height:1;margin:0 auto;max-width:11em}
 
 /* Secciones */
 section{padding:clamp(80px,11vw,140px) 0;scroll-margin-top:40px}
-.kicker{font-size:14px;font-weight:650;color:var(--brand);margin:0 0 14px;letter-spacing:0}
+.kicker{font-size:14px;font-weight:650;color:var(--petrol);margin:0 0 14px;letter-spacing:0}
 h2{font-size:clamp(34px,5vw,60px);line-height:1.05;margin:0;max-width:15em}
 .lead{font-size:clamp(18px,1.8vw,21px);line-height:1.5;color:var(--ink-2);max-width:36em;margin:22px 0 0;text-wrap:pretty}
 .center{text-align:center}.center h2,.center .lead{margin-left:auto;margin-right:auto}
@@ -180,12 +180,12 @@ h2{font-size:clamp(34px,5vw,60px);line-height:1.05;margin:0;max-width:15em}
 .pasos{counter-reset:p;margin-top:clamp(48px,6vw,80px);display:grid;gap:clamp(56px,7vw,96px)}
 .paso{display:grid;grid-template-columns:1fr;gap:28px;align-items:center}
 @media (min-width:980px){.paso{grid-template-columns:minmax(0,.78fr) minmax(0,1.5fr);gap:56px}.paso.rev .txt{order:2}.paso.rev{grid-template-columns:minmax(0,1.5fr) minmax(0,.78fr)}}
-.paso .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--brand-tint);color:var(--brand);font:700 14px/1 var(--font-sans);margin-bottom:18px}
+.paso .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--petrol-tint);color:var(--petrol);font:700 14px/1 var(--font-sans);margin-bottom:18px}
 .paso h3{font:600 clamp(26px,2.8vw,34px)/1.12 var(--font-display);letter-spacing:-.018em;margin:0 0 14px;text-wrap:balance}
 .paso p{color:var(--ink-2);margin:0 0 14px;text-wrap:pretty}
 .paso ul{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px;font-size:15.5px;color:var(--ink-2)}
 .paso li{display:flex;gap:10px}
-.paso li::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--brand);margin-top:10px}
+.paso li::before{content:"";flex:none;width:5px;height:5px;border-radius:50%;background:var(--petrol);margin-top:10px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media (max-width:640px){.duo{grid-template-columns:1fr}.duo .frame{max-height:420px}}
 .duo .frame{max-height:560px;position:relative}
@@ -278,7 +278,7 @@ footer p{margin:0;max-width:42em}
 <body>
 <a class="skip" href="#contenido">Saltar al contenido</a>
 <header class="nav"><div class="wrap">
-  <a class="brand" href="#"><span class="logo" aria-hidden="true">H+</span>{{MARCA}}<span class="sr-only">, inicio</span></a>
+  <a class="brand" href="#"><img class="logo" src="icons/hereda-marca.svg" alt="" width="26" height="26">{{MARCA}}<span class="sr-only">, inicio</span></a>
   <nav class="links" aria-label="Secciones"><a href="#como">Cómo funciona</a><a href="#comparativa">Comparativa</a><a href="#seguridad">Seguridad</a><a href="#precios">Precios</a><a href="#preguntas">Preguntas</a></nav>
   <a class="btn pri sm" href="/app/">Probar 30 días</a>
 </div></header>
@@ -298,14 +298,14 @@ footer p{margin:0;max-width:42em}
       <div class="vid" id="demo">
         <picture>
           <source media="(max-width: 699px)" srcset="video/hereda-demo-poster-960.webp" width="960" height="540">
-          <img src="video/hereda-demo-poster-1600.webp" srcset="video/hereda-demo-poster-1600.webp 1600w, video/hereda-demo-poster-960.webp 960w" sizes="(min-width:1240px) 1192px, 100vw" width="1600" height="900" fetchpriority="high" alt="Expediente de Antonio Jiménez Soler creado a partir de 26 documentos: caudal de 206.742 euros, impuestos de 3.071 euros, cinco herederos, y la lista «Qué hacer en este expediente» con una acción crítica y un plazo próximo.">
+          <img src="video/hereda-demo-poster-1600.webp" srcset="video/hereda-demo-poster-1600.webp 1600w, video/hereda-demo-poster-960.webp 960w" sizes="(min-width:1240px) 1192px, 100vw" width="1600" height="900" fetchpriority="high" alt="Expediente de Eduardo Tébar Rosado creado a partir de 26 documentos: caudal de 206.742 euros, impuestos de 3.071 euros, cinco herederos, y la lista «Qué hacer en este expediente» con dos plazos próximos y dos bloqueos.">
         </picture>
         <video muted playsinline preload="none" width="1920" height="1080" aria-hidden="true" tabindex="-1" data-mp4="video/hereda-demo.mp4" data-webm="video/hereda-demo.webm"></video>
         <button class="vctl" type="button" hidden aria-pressed="false" aria-describedby="demo-desc"></button>
       </div>
-      <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos»; el programa los lee en el ordenador y propone cada dato con su documento de origen; al cargarlos, el expediente queda calculado con Sucesiones y plusvalía; después se ven Mi día, las cifras del modelo 650 de cada heredero y el informe de cálculo en PDF.</p>
+      <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos» y el programa los lee en el ordenador. En la revisión, cada dato muestra el documento del que sale (el DNI de un hijo, leído de la foto de su DNI), lo dudoso llega sin marcar y se desmarca un dato antes de cargarlo. El expediente queda calculado; después se escribe a mano el valor de un inmueble que ningún documento traía, el cálculo se rehace y se vincula el legado de una plaza de garaje. Siguen Sucesiones y plusvalía paso a paso, el cuadro de partición con la vivienda adjudicada a la viuda (exceso, compensaciones y su coste), el árbol familiar con el derecho, lo que recibe y lo que paga cada heredero, Mi día, las cifras del modelo 650 de cada heredero y el informe de cálculo en PDF.</p>
     </div>
-    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre al informe en PDF, en un minuto y medio y sin sonido. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
+    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre a la partición, el árbol familiar y el informe en PDF, en dos minutos y sin sonido. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
   </div>
   <div class="wrap">
     <div class="tres rv">
@@ -384,7 +384,7 @@ footer p{margin:0;max-width:42em}
 
 <section id="cifras" class="alt" aria-labelledby="t-cifras"><div class="wrap">
   <p class="kicker">En cifras</p>
-  <h2 id="t-cifras">Lo que ya hace la versión 1.6.</h2>
+  <h2 id="t-cifras">Lo que ya hace la versión 1.7.</h2>
   <p class="lead">Cifras del propio programa, comprobables en el despacho de demostración. Las pruebas automáticas se ejecutan antes de cada versión: si una falla, la versión no se publica.</p>
   <div class="cifras prueba rv" role="list">
     <div role="listitem"><b class="num">28</b><span>tipos de documento que el programa lee y entiende</span></div>
@@ -557,7 +557,7 @@ footer p{margin:0;max-width:42em}
 </main>
 
 <footer><div class="wrap">
-  <p>© 2026 {{MARCA}} · Versión 1.6. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
+  <p>© 2026 {{MARCA}} · Versión 1.7. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
   <nav aria-label="Información legal"><a href="/contratar.html">Planes y contratación</a><a href="/condiciones.html">Condiciones</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
 </div></footer>
 
@@ -576,12 +576,12 @@ footer p{margin:0;max-width:42em}
   const caja = document.getElementById("demo"); if (!caja) return;
   const v = caja.querySelector("video"), b = caja.querySelector(".vctl");
   const ICO = { play: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.2v9.6L11.6 7z" fill="currentColor"/></svg>', pausa: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.5h2.4v9H3.5zM8.1 2.5h2.4v9H8.1z" fill="currentColor"/></svg>' };
-  const INICIO = 4.2; // tras la tarjeta de título del vídeo (el titular ya está en la página)
+  const INICIO = 3.9; // tras la tarjeta de título del vídeo (el titular ya está en la página)
   let cargado = false;
   const cargar = () => { if (cargado) return; cargado = true;
     const w = document.createElement("source"); w.src = v.dataset.webm; w.type = "video/webm"; const m = document.createElement("source"); m.src = v.dataset.mp4; m.type = "video/mp4";
     v.append(w, m); v.preload = "auto"; v.load(); };
-  const pinta = () => { const p = v.paused; b.innerHTML = (p ? ICO.play : ICO.pausa) + "<span>" + (p ? (cargado && v.currentTime > INICIO ? "Seguir el vídeo" : "Ver el vídeo · 1:34") : "Pausar el vídeo") + "</span>"; b.setAttribute("aria-pressed", String(!p)); b.classList.toggle("grande", p && !caja.classList.contains("on")); };
+  const pinta = () => { const p = v.paused; b.innerHTML = (p ? ICO.play : ICO.pausa) + "<span>" + (p ? (cargado && v.currentTime > INICIO ? "Seguir el vídeo" : "Ver el vídeo · 2:09") : "Pausar el vídeo") + "</span>"; b.setAttribute("aria-pressed", String(!p)); b.classList.toggle("grande", p && !caja.classList.contains("on")); };
   const reproducir = () => { cargar(); const go = () => { if (v.currentTime < INICIO) { try { v.currentTime = INICIO; } catch (e) {} } v.play().then(() => caja.classList.add("on")).catch(() => {}).finally(pinta); };
     if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true }); };
   v.addEventListener("ended", () => { v.currentTime = INICIO; v.play().catch(() => {}); });

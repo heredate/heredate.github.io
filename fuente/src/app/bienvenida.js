@@ -62,7 +62,7 @@ function bvPaso1() {
   const otro = D.colegio && !sel;
   return `<p class="bv-kick">Bienvenida · ${bvPrueba()}</p><h2 class="bv-h" id="bv-h">Tu despacho</h2><p class="bv-sub">Cuatro datos que aparecen en los escritos y en los informes. Se cambian cuando quieras en Ajustes.</p>
     <div class="bv-form">
-      <label class="bv-f bv-w2"><span>Nombre del despacho</span><input id="bv-nombre" value="${esc(D.nombre || "")}" placeholder="Ej.: Pérez Abogados" autocomplete="organization"></label>
+      <label class="bv-f bv-w2"><span>Nombre del despacho</span><input id="bv-nombre" value="${esc(D.nombre || "")}" placeholder="Ej.: Zambrano Abogados" autocomplete="organization"></label>
       <label class="bv-f"><span>Colegio</span><select id="bv-colegio" aria-describedby="bv-col-den"><option value="">Elige tu colegio</option>${otro ? `<option value="${esc(D.colegio)}" selected>${esc(D.colegio)}</option>` : ""}${BV_COLEGIOS.map((c) => `<option value="${esc(c)}" ${c === sel ? "selected" : ""}>${esc(c)}</option>`).join("")}</select><small id="bv-col-den">${D.colegio ? "Figurará como: " + esc(D.colegio) : "Figura en el pie de los escritos y del informe."}</small></label>
       <label class="bv-f"><span>Localidad para los escritos</span><input id="bv-localidad" value="${esc(D.localidad || "")}" placeholder="Ej.: Málaga" autocomplete="address-level2"></label>
       <label class="bv-f"><span>Tu nombre</span><input id="bv-yo" value="${esc(nom)}" placeholder="Nombre y apellidos" autocomplete="name"></label>
@@ -95,7 +95,7 @@ function bvPaso4() {
   const que = { real: "Se abre el asistente del primer expediente. Si quieres, en su primera pantalla puedes pedir que una guía te acompañe.", documentos: "Se abrirá la ventana para arrastrar los documentos de la herencia; con ellos se crea el expediente.", demo: "Se cargan 14 expedientes ficticios. Para quitarlos: «Salir» en la franja superior." }[BV.camino] || "Mi día te espera vacío: crea tu primer expediente cuando quieras.";
   const fila = (k, v) => `<div class="bv-sum-r"><span>${k}</span><b>${v}</b></div>`;
   return `<div class="bv-done" aria-hidden="true">${BV_I.ok}</div><h2 class="bv-h bv-c" id="bv-h">Todo listo${nom ? ", " + esc(nom) : ""}</h2><p class="bv-sub bv-c">${esc(que)}</p>
-    <div class="bv-sum">${fila("Despacho", esc(D.nombre || (BV.camino === "demo" ? "Márquez Collado Abogados (ficticio)" : "Sin nombre todavía")))}${fila("Colegio", esc(bvColegioCorto(D.colegio) || D.colegio || "—"))}${fila("Tarifa objetivo", num(D.tarifaHora) ? grp(num(D.tarifaHora), 0) + " €/hora" : "90 €/hora (por defecto)")}${fila("Prueba", esc(bvPrueba()))}</div>
+    <div class="bv-sum">${fila("Despacho", esc(D.nombre || (BV.camino === "demo" ? "Macías Naranjo Abogados (ficticio)" : "Sin nombre todavía")))}${fila("Colegio", esc(bvColegioCorto(D.colegio) || D.colegio || "—"))}${fila("Tarifa objetivo", num(D.tarifaHora) ? grp(num(D.tarifaHora), 0) + " €/hora" : "90 €/hora (por defecto)")}${fila("Prueba", esc(bvPrueba()))}</div>
     <div class="bv-final"><button type="button" class="bv-btn bv-pri bv-big" data-bv="fin">${acc}</button>${BV.camino ? `<button type="button" class="bv-link" data-bv="finDia">O ir a Mi día</button>` : ""}</div>
     <p class="bv-note">Los datos se guardan solo en este equipo. {{MARCA}} prepara; el criterio es del abogado.</p>`;
 }

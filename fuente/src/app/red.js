@@ -291,7 +291,7 @@ const RED_CAMPOS = { nombre: "Nombre", nif: "NIF", pct: "Porcentaje", relacion: 
 const RED_LISTAS = { personas: "Herederos y personas", bienes: "Bienes", tramites: "Trámites", movimientos: "Fondos", abogados: "Equipo", __docs: "Documentos", deudas: "Deudas", donaciones: "Donaciones", tareas: "Tareas" };
 const redCampo = (k) => RED_CAMPOS[k] || String(k).replace(/^./, (c) => c.toUpperCase()).replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().replace(/^./, (c) => c.toUpperCase());
 function redNombreDe(o) { return o && typeof o === "object" ? o.nombre || o.descripcion || o.concepto || o.titulo || (o.relacion && typeof RELACIONES === "object" && RELACIONES[o.relacion] ? RELACIONES[o.relacion].label : "") || "" : ""; }
-// «Herederos y personas · Ana Ruiz · NIF»
+// «Herederos y personas · Virginia Chaparro · NIF»
 function redEtiqueta(item, c) {
   const p = c.pasos || []; if (!p.length) return "El expediente";
   const partes = []; let o = p[0] === "__docs" ? item.docs : item.x;
@@ -372,7 +372,7 @@ function redAsistente(paso, err) {
   if (A.paso === 2) {
     const sug = A.equipo || (redYoNombre() && redYoNombre() !== "Titular del despacho" ? "Ordenador de " + redYoNombre() : "");
     sgModal("Despacho en red", `${h(2, "Nombre de este equipo")}<p class="sg-lead">Carpeta «${redH(A.dir.name)}»${A.desp ? `: ya tiene el despacho en red <b>«${redH(A.desp.nombre || "sin nombre")}»</b>` : ": aún no tiene ningún despacho en red"}. El nombre del equipo sirve para saber quién hizo cada cambio y quién tiene abierto un expediente.</p>
-      <div class="sg-form col red-f"><label for="red-equipo">Nombre de este equipo</label><input id="red-equipo" maxlength="40" autocomplete="off" placeholder="Ej.: Recepción, Portátil de Marta" value="${redH(sug)}"></div>
+      <div class="sg-form col red-f"><label for="red-equipo">Nombre de este equipo</label><input id="red-equipo" maxlength="40" autocomplete="off" placeholder="Ej.: Recepción, Portátil de Lourdes" value="${redH(sug)}"></div>
       <div class="sg-mfoot"><button class="btn" data-red="paso3">Seguir</button><button class="btn gray" data-red="atras" data-v="1">Atrás</button></div>${e}`, true);
     return;
   }

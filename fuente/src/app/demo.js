@@ -1,5 +1,5 @@
 // ───────────────────── {{MARCA}} · modo demostración (prefijo dm / DM_) ─────────────────────
-// Un despacho en marcha con 14 expedientes FICTICIOS (nombres inventados, NIF 000000NN con letra de control válida,
+// Un despacho en marcha con 14 expedientes FICTICIOS (nombres inventados, NIF 00000NNN con letra de control válida,
 // referencias catastrales con «DEMO»), repartidos por Andalucía (Málaga, Marbella, Sevilla, Granada), Madrid, Cataluña,
 // Comunitat Valenciana, Castilla-La Mancha, Galicia y Navarra (foral), en todas las fases del encargo.
 // Todas las fechas se calculan desde hoy() y se regeneran al abrir la app otro día (dmAlDia), así la cartera siempre parece actual.
@@ -11,7 +11,7 @@
 // Mayúsculas+D abre o cierra el guion del presentador (solo con la demostración cargada).
 // Marca de cada expediente: x.demo = true. Estado global: DB.demo = { fecha, v, prev: { despacho } }.
 
-const DM_V = 1;
+const DM_V = 2; // 2: reparto nuevo de nombres ficticios (r7); al abrir una demostración cargada con la 1 se renuevan también despacho, titular y equipo
 const DM = { panel: null, paso: 0 };
 const DM_RES = { a1: "a1", a2: "dm-a2", a3: "dm-a3" };
 
@@ -27,21 +27,22 @@ function dmFechaPara(meses, enDias) {
 function dmT(f, hh, mm) { const d = new Date(`${f}T${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:00`); return isNaN(d) ? new Date().toISOString() : d.toISOString(); }
 function dmRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const DM_LET = "TRWAGMYFPDXBNJZSQVHLCKE";
-const dmNif = (n) => String(n).padStart(8, "0") + DM_LET[n % 23]; // 000000NN + letra correcta: válido y claramente ficticio
+const dmNif = (n) => String(n).padStart(8, "0") + DM_LET[n % 23]; // 00000NNN + letra correcta: válido y claramente ficticio
 const dmRC = (n) => `00${String(n).padStart(5, "0")}DEMO000${String(n % 10000).padStart(4, "0")}DM`.slice(0, 20);
 
 // ── Equipo del despacho de demostración ──
-const DM_EQUIPO = [{ id: "dm-a2", nombre: "Andrés Collado Ruiz", rol: "Abogado asociado" }, { id: "dm-a3", nombre: "Marta Lozano Prieto", rol: "Abogada" }];
-const DM_TITULAR = { nombre: "Elena Márquez Vidal", rol: "Socia" };
+const DM_EQUIPO = [{ id: "dm-a2", nombre: "Gonzalo Naranjo Gavilán", rol: "Abogado asociado" }, { id: "dm-a3", nombre: "Lourdes Perea Lucena", rol: "Abogada" }];
+const DM_TITULAR = { nombre: "Margarita Macías Torralba", rol: "Socia" };
+const DM_NOMBRE = "Macías Naranjo Abogados";
 
 // ── Los 14 expedientes (todo inventado) ──
 // p: [id, nombre, relacion, edad, extra] · b: [id, tipo, descripcion, valor, extra] · sol: solicitudes a terceros
 function dmCasos() {
   const viv = (muni, vc, vs, fa, va) => ({ municipio: muni, valorCatastralTotal: vc, valorCatastralSuelo: vs, fechaAdq: fa, valorAdq: va });
   return [
-    { n: 1, ref: 31, causante: "José Antonio Fernández Gil", cliente: "Carmen Ruiz Navarro", ccaa: "AND", civil: "gananciales", test: "no", fecha: dmF(-76), fase: "documentacion", resp: "a1", alta: 64, ult: 0, horas: 10,
+    { n: 1, ref: 31, causante: "Pedro José Quero Toledano", cliente: "Estrella Oliveros Salinas", ccaa: "AND", civil: "gananciales", test: "no", fecha: dmF(-76), fase: "documentacion", resp: "a1", alta: 64, ult: 0, horas: 10,
       hon: { modo: "fijo", fijo: 2400 }, situ: { pensionista: true },
-      p: [["p1", "Carmen Ruiz Navarro", "conyuge", 71], ["p2", "Pablo Fernández Ruiz", "hijo", 45], ["p3", "Laura Fernández Ruiz", "hijo", 41]],
+      p: [["p1", "Estrella Oliveros Salinas", "conyuge", 71], ["p2", "Rufino Quero Oliveros", "hijo", 45], ["p3", "Nieves Quero Oliveros", "hijo", 41]],
       b: [["b1", "vivienda", "Piso en Teatinos, Málaga", 285000, { valorReferencia: 271000, titularidad: "ganancial", ...viv("MALAGA", 132000, 58000, "1998-03-12", 121000) }],
         ["b2", "inmueble", "Plaza de garaje en Teatinos, Málaga", 21000, { valorReferencia: 19500, titularidad: "ganancial", ...viv("MALAGA", 9800, 4100, "1998-03-12", 9000) }],
         ["b3", "cuenta", "Cuenta corriente en Unicaja", 48200, { titularidad: "ganancial" }], ["b4", "cuenta", "Depósito a plazo en CaixaBank", 30000, { titularidad: "ganancial" }],
@@ -50,10 +51,10 @@ function dmCasos() {
       sol: [{ tipo: "banco", nombre: "Unicaja", bienes: ["b3"], env: 46, recs: [21], clave: "banco:ent:unicaja" }, { tipo: "banco", nombre: "CaixaBank", bienes: ["b4"], env: 12, clave: "banco:ent:caixabank" },
         { tipo: "registro", nombre: "Registro de la Propiedad de Málaga", que: "Nota simple de la finca: Piso en Teatinos, Málaga", bienes: ["b1"], docs: ["esc_b1"], env: 30, rec: 22, clave: "reg:b1" }],
       recs: [[16, "WhatsApp", 4]], curso: [["bancos_cert", 18]],
-      notas: [[60, "Reunión con la viuda y los dos hijos: no hay testamento; se pide el certificado de últimas voluntades"], [41, "Llamada con Pablo: localizará la escritura del garaje"], [9, "La viuda aporta el libro de familia y el último recibo del IBI"]] },
-    { n: 2, ref: 33, causante: "Manuel Ortega Sáez", cliente: "Lucía Ortega Campos", ccaa: "AND", civil: "gananciales", test: "usufructo", fecha: dmFechaPara(6, 4), fase: "liquidacion", resp: "a1", alta: 160, ult: 1, horas: 26,
+      notas: [[60, "Reunión con la viuda y los dos hijos: no hay testamento; se pide el certificado de últimas voluntades"], [41, "Llamada con Rufino: localizará la escritura del garaje"], [9, "La viuda aporta el libro de familia y el último recibo del IBI"]] },
+    { n: 2, ref: 33, causante: "Damián Leiva Pelayo", cliente: "Begoña Leiva Salgado", ccaa: "AND", civil: "gananciales", test: "usufructo", fecha: dmFechaPara(6, 4), fase: "liquidacion", resp: "a1", alta: 160, ult: 1, horas: 26,
       hon: { modo: "fijo", fijo: 1800 }, situ: { decesos: true, pensionista: true },
-      p: [["p1", "Dolores Campos Vera", "conyuge", 74, { seguro: 30000 }], ["p2", "Lucía Ortega Campos", "hijo", 46], ["p3", "Alberto Ortega Campos", "hijo", 43], ["p4", "Irene Ortega Campos", "hijo", 38]],
+      p: [["p1", "Soledad Salgado Belmonte", "conyuge", 74, { seguro: 30000 }], ["p2", "Begoña Leiva Salgado", "hijo", 46], ["p3", "Jaime Leiva Salgado", "hijo", 43], ["p4", "Remedios Leiva Salgado", "hijo", 38]],
       b: [["b1", "vivienda", "Vivienda en Nueva Andalucía, Marbella", 480000, { valorReferencia: 452000, titularidad: "ganancial", ...viv("MARBELLA", 190000, 95000, "1999-05-20", 130000) }],
         ["b2", "inmueble", "Local comercial en San Pedro de Alcántara", 160000, { valorReferencia: 148000, titularidad: "privativo", ...viv("MARBELLA", 70000, 30000, "2008-02-11", 120000) }],
         ["b3", "cuenta", "Cuentas en Banco Sabadell", 120000, { titularidad: "ganancial" }], ["b4", "valores", "Fondo de inversión en Bankinter", 60000, { titularidad: "privativo" }]],
@@ -61,108 +62,108 @@ function dmCasos() {
       tr: { prorroga: "na", isd: "curso", plusvalia: "curso", plusvalia_real: "na", aplazamiento: "na", escritura: "curso" },
       sol: [{ tipo: "banco", nombre: "Banco Sabadell", bienes: ["b3"], env: 120, rec: 88, clave: "banco:ent:banco sabadell" }, { tipo: "banco", nombre: "Bankinter", bienes: ["b4"], env: 118, rec: 95, clave: "banco:ent:bankinter" }],
       curso: [["isd", 6], ["plusvalia", 6]],
-      notas: [[150, "Primera reunión con la familia: testamento del uno para el otro; la viuda quiere seguir en la vivienda"], [70, "Estudiada la conmutación del usufructo: la familia prefiere mantenerlo"], [12, "Enviado a la familia el borrador de liquidación del impuesto"], [3, "Lucía confirma la firma de las autoliquidaciones el jueves"]] },
-    { n: 3, ref: 27, causante: "Rosario Domínguez Peña", cliente: "Antonio Vera Domínguez", ccaa: "AND", civil: "viudo", test: "porcentajes", fecha: dmF(-146), fase: "firma", resp: "dm-a2", alta: 133, ult: 0, horas: 21,
-      hon: { modo: "pct", pct: 1.2, min: 1500 }, listo: true, nifC: 3, domC: "Calle Pureza 00, 41010 Sevilla",
-      p: [["p1", "Antonio Vera Domínguez", "hijo", 52, { pct: 40, nif: dmNif(11), domicilio: "Calle Betis 00, 41010 Sevilla", estadoCivil: "casado_gananciales" }],
-        ["p2", "Rocío Vera Domínguez", "hijo", 49, { pct: 60, discapacidad: 65, nif: dmNif(12), domicilio: "Calle Pureza 00, 41010 Sevilla", estadoCivil: "soltero" }]],
+      notas: [[150, "Primera reunión con la familia: testamento del uno para el otro; la viuda quiere seguir en la vivienda"], [70, "Estudiada la conmutación del usufructo: la familia prefiere mantenerlo"], [12, "Enviado a la familia el borrador de liquidación del impuesto"], [3, "Begoña confirma la firma de las autoliquidaciones el jueves"]] },
+    { n: 3, ref: 27, causante: "Natalia Rengel Losada", cliente: "Matías Abellán Rengel", ccaa: "AND", civil: "viudo", test: "porcentajes", fecha: dmF(-146), fase: "firma", resp: "dm-a2", alta: 133, ult: 0, horas: 21,
+      hon: { modo: "pct", pct: 1.2, min: 1500 }, listo: true, nifC: 855, domC: "Calle Pureza 00, 41010 Sevilla",
+      p: [["p1", "Matías Abellán Rengel", "hijo", 52, { pct: 40, nif: dmNif(522), domicilio: "Calle Betis 00, 41010 Sevilla", estadoCivil: "casado_gananciales" }],
+        ["p2", "Herminia Abellán Rengel", "hijo", 49, { pct: 60, discapacidad: 65, nif: dmNif(955), domicilio: "Calle Pureza 00, 41010 Sevilla", estadoCivil: "soltero" }]],
       b: [["b1", "vivienda", "Piso en Triana, Sevilla", 236000, { valorReferencia: 224000, titularidad: "privativo", refCatastral: dmRC(301), cargas: "Libre de cargas según nota simple", ...viv("SEVILLA", 98000, 41000, "1987-10-05", 52000) }],
         ["b2", "inmueble", "Plaza de garaje en Triana, Sevilla", 18000, { valorReferencia: 16500, titularidad: "privativo", refCatastral: dmRC(302), cargas: "Libre de cargas según nota simple", ...viv("SEVILLA", 7200, 3100, "1987-10-05", 4500) }],
         ["b3", "cuenta", "Cuenta corriente en BBVA", 64300, { titularidad: "privativo" }], ["b4", "valores", "Fondos de inversión en Banco Santander", 41000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 3900]], docs: 1, tr: { prorroga: "na" },
       sol: [{ tipo: "banco", nombre: "BBVA", bienes: ["b3"], env: 120, rec: 96, clave: "banco:ent:bbva" }, { tipo: "banco", nombre: "Banco Santander", bienes: ["b4"], env: 120, rec: 84, clave: "banco:ent:banco santander" }],
-      firma: { notaria: "Notaría de D.ª Inés Gallardo Ruiz (ficticia), Sevilla", fecha: 6, tNotario: "D. Ricardo Soto Lara (ficticio)", tFecha: "2019-05-14", tProtocolo: "1.284", dec: { "apoyos-p2": { t: 3 } } },
+      firma: { notaria: "Notaría de D.ª Paloma Fajardo Olid (ficticia), Sevilla", fecha: 6, tNotario: "D. Salvador Corbalán Barahona (ficticio)", tFecha: "2019-05-14", tProtocolo: "1.284", dec: { "apoyos-p2": { t: 3 } } },
       curso: [["escritura", 5]], pdf: [["notaria", 1]],
-      notas: [[128, "Encargo firmado por los dos hermanos"], [70, "Rocío tiene reconocida una discapacidad del 65 %: se aplica la reducción y la mejora del testamento"], [20, "Cotejada la partición con los dos herederos: conformes"], [2, "Cita en la notaría confirmada"]] },
-    { n: 4, ref: 24, causante: "Ramón Castillo Ibáñez", cliente: "Marina Castillo Ortiz", ccaa: "AND", civil: "soltero", test: "no", fecha: dmF(-121), fase: "documentacion", resp: "dm-a3", alta: 104, ult: 41, horas: 9,
+      notas: [[128, "Encargo firmado por los dos hermanos"], [70, "Herminia tiene reconocida una discapacidad del 65 %: se aplica la reducción y la mejora del testamento"], [20, "Cotejada la partición con los dos herederos: conformes"], [2, "Cita en la notaría confirmada"]] },
+    { n: 4, ref: 24, causante: "Ernesto Lanzas Mendieta", cliente: "Amalia Lanzas Recio", ccaa: "AND", civil: "soltero", test: "no", fecha: dmF(-121), fase: "documentacion", resp: "dm-a3", alta: 104, ult: 41, horas: 9,
       hon: { modo: "fijo", fijo: 2100 },
-      p: [["p1", "Marina Castillo Ortiz", "sobrino", 44, { estirpe: "Pilar Castillo Ibáñez" }], ["p2", "Raúl Castillo Ortiz", "sobrino", 40, { estirpe: "Pilar Castillo Ibáñez" }], ["p3", "Sergio Castillo Molina", "sobrino", 37, { estirpe: "Luis Castillo Ibáñez" }]],
+      p: [["p1", "Amalia Lanzas Recio", "sobrino", 44, { estirpe: "Maximino Lanzas Mendieta" }], ["p2", "Aurelio Lanzas Recio", "sobrino", 40, { estirpe: "Maximino Lanzas Mendieta" }], ["p3", "Casimiro Lanzas Collantes", "sobrino", 37, { estirpe: "Cristóbal Lanzas Mendieta" }]],
       b: [["b1", "vivienda", "Casa en el Albaicín, Granada", 265000, { valorReferencia: 248000, titularidad: "privativo", ...viv("GRANADA", 96000, 52000, "1979-06-18", 30000) }],
         ["b2", "cuenta", "Cuenta en Caja Rural de Granada", 38700, { titularidad: "privativo" }]],
       gastos: [["Funeral", 3600]],
       sol: [{ tipo: "banco", nombre: "Caja Rural", bienes: ["b2"], env: 56, clave: "banco:ent:caja rural" }],
-      notas: [[98, "Los tres sobrinos están de acuerdo en vender la casa del Albaicín"], [41, "Pendiente de que Sergio envíe su DNI y el libro de familia de su padre"]] },
-    { n: 5, ref: 29, causante: "Fernando Aguirre Salas", cliente: "Beatriz Lorente Gil", ccaa: "MAD", civil: "pareja", test: "porcentajes", fecha: dmFechaPara(5, 13), fase: "liquidacion", resp: "dm-a2", alta: 122, ult: 2, horas: 17,
+      notas: [[98, "Los tres sobrinos están de acuerdo en vender la casa del Albaicín"], [41, "Pendiente de que Casimiro envíe su DNI y el libro de familia de su padre"]] },
+    { n: 5, ref: 29, causante: "Rodrigo Buendía Villaverde", cliente: "Verónica Lamata Benjumea", ccaa: "MAD", civil: "pareja", test: "porcentajes", fecha: dmFechaPara(5, 13), fase: "liquidacion", resp: "dm-a2", alta: 122, ult: 2, horas: 17,
       hon: { modo: "fijo", fijo: 2600 },
-      p: [["p1", "Beatriz Lorente Gil", "pareja_hecho", 58, { pct: 30, inscrita: true }], ["p2", "Diego Aguirre Martín", "hijo", 34, { pct: 70 }]],
+      p: [["p1", "Verónica Lamata Benjumea", "pareja_hecho", 58, { pct: 30, inscrita: true }], ["p2", "Rogelio Buendía Cabañas", "hijo", 34, { pct: 70 }]],
       b: [["b1", "vivienda", "Piso en Chamberí, Madrid", 540000, { valorReferencia: 498000, titularidad: "privativo", ...viv("MADRID", 205000, 121000, "2003-09-30", 310000) }],
         ["b2", "cuenta", "Cuenta en ING", 52400, { titularidad: "privativo" }], ["b3", "valores", "Cartera de fondos en MyInvestor", 88000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 5100]],
       sol: [{ tipo: "banco", nombre: "ING", bienes: ["b2"], env: 95, rec: 61, clave: "banco:ent:ing" }, { tipo: "banco", nombre: "MyInvestor", bienes: ["b3"], env: 95, recs: [52], clave: "banco:ent:myinvestor" }],
       curso: [["particion", 9]],
-      notas: [[118, "Pareja de hecho inscrita en el Registro de Uniones de Hecho de la Comunidad de Madrid: equiparada en el impuesto"], [30, "Diego pregunta si conviene vender el piso antes de la escritura"], [4, "Preparada la simulación con y sin bonificación del 99 %"]] },
-    { n: 6, ref: 38, causante: "Isabel Prieto Garrido", cliente: "Sonia Herrera Prieto", ccaa: "MAD", civil: "viudo", test: "no", fecha: dmF(-31), fase: "encargo", resp: "dm-a2", alta: 4, ult: 0, horas: 2,
+      notas: [[118, "Pareja de hecho inscrita en el Registro de Uniones de Hecho de la Comunidad de Madrid: equiparada en el impuesto"], [30, "Rogelio pregunta si conviene vender el piso antes de la escritura"], [4, "Preparada la simulación con y sin bonificación del 99 %"]] },
+    { n: 6, ref: 38, causante: "Virginia Villena Fonseca", cliente: "Catalina Escobedo Villena", ccaa: "MAD", civil: "viudo", test: "no", fecha: dmF(-31), fase: "encargo", resp: "dm-a2", alta: 4, ult: 0, horas: 2,
       hon: { modo: "fijo", fijo: 2200 }, famEnv: 4,
-      p: [["p1", "Sonia Herrera Prieto", "hijo", 50], ["p2", "Álvaro Herrera Sanz", "nieto", 22, { estirpe: "Jorge Herrera Prieto" }], ["p3", "Clara Herrera Sanz", "nieto", 19, { estirpe: "Jorge Herrera Prieto" }]],
+      p: [["p1", "Catalina Escobedo Villena", "hijo", 50], ["p2", "Rubén Escobedo Heredia", "nieto", 22, { estirpe: "Patricio Escobedo Villena" }], ["p3", "Noa Escobedo Heredia", "nieto", 19, { estirpe: "Patricio Escobedo Villena" }]],
       b: [["b1", "vivienda", "Chalet en Pozuelo de Alarcón", 690000, { valorReferencia: 640000, titularidad: "privativo", ...viv("POZUELO_DE_ALARCON", 260000, 150000, "1992-04-03", 180000) }],
         ["b2", "cuenta", "Cuentas en Banco Santander", 74000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 5600]],
-      notas: [[4, "Primera reunión: el hijo Jorge falleció en 2019; heredan sus dos hijos por representación"]] },
-    { n: 7, ref: 19, causante: "Jordi Puig Ferrer", cliente: "Montserrat Soler Vidal", ccaa: "CAT", civil: "separacion", test: "porcentajes", fecha: dmF(-246), fase: "inscripcion", resp: "a1", alta: 232, ult: 5, horas: 28,
+      notas: [[4, "Primera reunión: el hijo Patricio falleció en 2019; heredan sus dos hijos por representación"]] },
+    { n: 7, ref: 19, causante: "Albert Cardús Gelabert", cliente: "Carme Sunyer Vinyals", ccaa: "CAT", civil: "separacion", test: "porcentajes", fecha: dmF(-246), fase: "inscripcion", resp: "a1", alta: 232, ult: 5, horas: 28,
       hon: { modo: "pct", pct: 1, min: 1800 },
-      p: [["p1", "Montserrat Soler Vidal", "conyuge", 66, { pct: 40 }], ["p2", "Núria Puig Soler", "hijo", 38, { pct: 30 }], ["p3", "Marc Puig Soler", "hijo", 35, { pct: 30 }]],
+      p: [["p1", "Carme Sunyer Vinyals", "conyuge", 66, { pct: 40 }], ["p2", "Mercè Cardús Sunyer", "hijo", 38, { pct: 30 }], ["p3", "Jaume Cardús Sunyer", "hijo", 35, { pct: 30 }]],
       b: [["b1", "vivienda", "Pis a l'Eixample, Barcelona", 610000, { valorReferencia: 575000, titularidad: "privativo", ...viv("BARCELONA", 230000, 128000, "2001-11-15", 290000) }],
         ["b2", "cuenta", "Compte a CaixaBank", 96000, { titularidad: "privativo" }], ["b3", "valores", "Fons d'inversió a Banco Sabadell", 72000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 6200]], docs: 1, tr: { registro: "curso", catastro: "curso" },
       sol: [{ tipo: "registro", nombre: "Registro de la Propiedad de Barcelona", que: "Inscripción de la escritura de aceptación y adjudicación", bienes: ["b1"], env: 9, plazo: 15, clave: "reg:insc:b1" }],
       curso: [["registro", 9]],
       notas: [[226, "Encargo: la viuda y los hijos quieren repartir según el testamento sin vender nada"], [40, "Firmada la escritura de aceptación y adjudicación"], [20, "Presentado el impuesto y la plusvalía"], [9, "Presentada la escritura en el Registro"]] },
-    { n: 8, ref: 35, causante: "Vicente Martí Roig", cliente: "Amparo Belda Ferrer", ccaa: "VAL", civil: "gananciales", test: "no", fecha: dmF(-82), fase: "documentacion", resp: "dm-a3", alta: 69, ult: 3, horas: 14,
+    { n: 8, ref: 35, causante: "Bernat Gisbert Vercher", cliente: "Lledó Bataller Tormo", ccaa: "VAL", civil: "gananciales", test: "no", fecha: dmF(-82), fase: "documentacion", resp: "dm-a3", alta: 69, ult: 3, horas: 14,
       hon: { modo: "fijo", fijo: 2300 },
-      p: [["p1", "Amparo Belda Ferrer", "conyuge", 48], ["p2", "Júlia Martí Belda", "hijo", 19], ["p3", "Pau Martí Belda", "hijo", 15]],
+      p: [["p1", "Lledó Bataller Tormo", "conyuge", 48], ["p2", "Aina Gisbert Bataller", "hijo", 19], ["p3", "Pol Gisbert Bataller", "hijo", 15]],
       b: [["b1", "vivienda", "Piso en Russafa, Valencia", 255000, { valorReferencia: 238000, titularidad: "ganancial", ...viv("VALENCIA", 104000, 47000, "2012-07-02", 196000) }],
         ["b2", "cuenta", "Cuenta en Banco Sabadell", 23800, { titularidad: "ganancial" }], ["b3", "vehiculo", "Turismo (2021)", 14500, { titularidad: "ganancial" }]],
       deudas: [["Hipoteca Banco Sabadell", 62000, true]], gastos: [["Funeral", 3800]],
       sol: [{ tipo: "banco", nombre: "Banco Sabadell", bienes: ["b2"], env: 33, recs: [10], deuda: true, clave: "banco:ent:banco sabadell" }],
       recs: [[24, "correo", 6], [3, "WhatsApp", 3]],
-      notas: [[66, "Pau es menor (15 años): su madre también hereda; hará falta defensor judicial para la partición"], [25, "Pedida cita en el Juzgado para el nombramiento de defensor judicial"]] },
-    { n: 9, ref: 30, causante: "Julián Moreno Díaz", cliente: "Elena Moreno Ruiz", ccaa: "CLM", civil: "viudo", test: "no", fecha: dmFechaPara(5, 2), fase: "liquidacion", resp: "dm-a2", alta: 128, ult: 1, horas: 18,
+      notas: [[66, "Pol es menor (15 años): su madre también hereda; hará falta defensor judicial para la partición"], [25, "Pedida cita en el Juzgado para el nombramiento de defensor judicial"]] },
+    { n: 9, ref: 30, causante: "Jacinto Bellido Malagón", cliente: "Olga Bellido Escamilla", ccaa: "CLM", civil: "viudo", test: "no", fecha: dmFechaPara(5, 2), fase: "liquidacion", resp: "dm-a2", alta: 128, ult: 1, horas: 18,
       hon: { modo: "fijo", fijo: 2000 },
-      p: [["p1", "Ángel Moreno Ruiz", "hijo", 55, { renuncia: true }], ["p2", "Elena Moreno Ruiz", "hijo", 52], ["p3", "Tomás Moreno Ruiz", "hijo", 47]],
+      p: [["p1", "Gabriel Bellido Escamilla", "hijo", 55, { renuncia: true }], ["p2", "Olga Bellido Escamilla", "hijo", 52], ["p3", "Eduardo Bellido Escamilla", "hijo", 47]],
       b: [["b1", "vivienda", "Casa en el casco histórico de Toledo", 198000, { valorReferencia: 184000, titularidad: "privativo", ...viv("TOLEDO", 71000, 33000, "1984-02-20", 36000) }],
         ["b2", "cuenta", "Cuenta en Globalcaja", 26300, { titularidad: "privativo" }]],
       deudas: [["Préstamo personal en Ibercaja", 18000]], gastos: [["Funeral", 3300]],
       sol: [{ tipo: "banco", nombre: "Caja Rural", bienes: ["b2"], env: 70, rec: 35, clave: "banco:ent:caja rural" }],
       tr: { prorroga: "pend", renuncia: "hecho" }, docsSi: ["renuncia"],
-      notas: [[120, "Ángel renuncia a la herencia por sus deudas: firmará la renuncia ante notario"], [44, "Escritura de renuncia de Ángel otorgada"], [5, "Valorar pedir la prórroga: falta el certificado de deuda de Ibercaja"]] },
-    { n: 10, ref: 22, causante: "Manuel Lorenzo Otero", cliente: "Carmen Iglesias Pazos", ccaa: "GAL", civil: "gananciales", test: "usufructo", fecha: dmF(-168), fase: "firma", resp: "a1", alta: 150, ult: 1, horas: 24,
-      hon: { modo: "fijo", fijo: 2500 }, nifC: 21, domC: "Rúa do Príncipe 00, 36202 Vigo",
-      p: [["p1", "Carmen Iglesias Pazos", "conyuge", 77, { nif: dmNif(22), domicilio: "Rúa do Príncipe 00, 36202 Vigo", estadoCivil: "viudo" }],
-        ["p2", "Xosé Lorenzo Iglesias", "hijo", 50, { nif: dmNif(23), domicilio: "Avenida de Castrelos 00, 36210 Vigo", estadoCivil: "casado_gananciales" }],
-        ["p3", "Uxía Lorenzo Iglesias", "hijo", 47, { domicilio: "Rúa Real 00, 15003 A Coruña", estadoCivil: "divorciado" }]],
+      notas: [[120, "Gabriel renuncia a la herencia por sus deudas: firmará la renuncia ante notario"], [44, "Escritura de renuncia de Gabriel otorgada"], [5, "Valorar pedir la prórroga: falta el certificado de deuda de Ibercaja"]] },
+    { n: 10, ref: 22, causante: "Brais Covelo Vilariño", cliente: "Noela Ogando Cancela", ccaa: "GAL", civil: "gananciales", test: "usufructo", fecha: dmF(-168), fase: "firma", resp: "a1", alta: 150, ult: 1, horas: 24,
+      hon: { modo: "fijo", fijo: 2500 }, nifC: 128, domC: "Rúa do Príncipe 00, 36202 Vigo",
+      p: [["p1", "Noela Ogando Cancela", "conyuge", 77, { nif: dmNif(566), domicilio: "Rúa do Príncipe 00, 36202 Vigo", estadoCivil: "viudo" }],
+        ["p2", "Xoán Covelo Ogando", "hijo", 50, { nif: dmNif(386), domicilio: "Avenida de Castrelos 00, 36210 Vigo", estadoCivil: "casado_gananciales" }],
+        ["p3", "Sabela Covelo Ogando", "hijo", 47, { domicilio: "Rúa Real 00, 15003 A Coruña", estadoCivil: "divorciado" }]],
       b: [["b1", "vivienda", "Piso en el centro de Vigo", 248000, { valorReferencia: 231000, titularidad: "ganancial", refCatastral: dmRC(1001), ...viv("VIGO", 101000, 39000, "1990-01-25", 60000) }],
         ["b2", "inmueble", "Casa familiar en Baiona", 175000, { valorReferencia: 162000, titularidad: "privativo", refCatastral: dmRC(1002), cargas: "Libre de cargas según nota simple", municipio: "OTRO", tipoManual: 25, bonifManual: 0, valorCatastralTotal: 64000, valorCatastralSuelo: 29000, fechaAdq: "1975-08-01", valorAdq: 12000 }],
         ["b3", "cuenta", "Cuentas en Abanca", 91000, { titularidad: "ganancial" }]],
       gastos: [["Funeral", 4100]], docs: 1, tr: { prorroga: "na" }, recs: [[6, "correo", 2]],
       sol: [{ tipo: "banco", nombre: "Abanca", bienes: ["b3"], env: 39, recs: [17], clave: "banco:ent:abanca" }],
-      firma: { notaria: "Notaría de D. Bieito Rial Sousa (ficticio), Vigo", fecha: 9 },
+      firma: { notaria: "Notaría de D. Antón Bouzas Loureiro (ficticio), Vigo", fecha: 9 },
       curso: [["escritura", 8]],
-      notas: [[145, "Encargo: testamento del uno para el otro, la viuda conserva el usufructo"], [60, "Uxía vive en A Coruña: firmará con poder o se desplazará"], [17, "Abanca sigue sin enviar el certificado de saldos: reclamado"]] },
-    { n: 11, ref: 26, causante: "Fermín Echeverría Goñi", cliente: "Ainhoa Echeverría Larraya", ccaa: "NAV", civil: "viudo", test: "porcentajes", fecha: dmF(-97), fase: "documentacion", resp: "dm-a3", alta: 84, ult: 4, horas: 13,
+      notas: [[145, "Encargo: testamento del uno para el otro, la viuda conserva el usufructo"], [60, "Sabela vive en A Coruña: firmará con poder o se desplazará"], [17, "Abanca sigue sin enviar el certificado de saldos: reclamado"]] },
+    { n: 11, ref: 26, causante: "Koldo Azpíroz Lacunza", cliente: "Edurne Azpíroz Erviti", ccaa: "NAV", civil: "viudo", test: "porcentajes", fecha: dmF(-97), fase: "documentacion", resp: "dm-a3", alta: 84, ult: 4, horas: 13,
       hon: { modo: "fijo", fijo: 2200 },
-      p: [["p1", "Ainhoa Echeverría Larraya", "hijo", 51, { pct: 50 }], ["p2", "Iñaki Echeverría Larraya", "hijo", 48, { pct: 50 }]],
+      p: [["p1", "Edurne Azpíroz Erviti", "hijo", 51, { pct: 50 }], ["p2", "Txomin Azpíroz Erviti", "hijo", 48, { pct: 50 }]],
       b: [["b1", "vivienda", "Piso en el Ensanche, Pamplona", 315000, { valorReferencia: 296000, titularidad: "privativo", ...viv("PAMPLONA", 128000, 54000, "1994-12-01", 98000) }],
         ["b2", "cuenta", "Cuenta en Caja Rural de Navarra", 57000, { titularidad: "privativo" }], ["b3", "cuenta", "Cuenta en Laboral Kutxa", 31000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 4000]],
       sol: [{ tipo: "banco", nombre: "Caja Rural", bienes: ["b2"], env: 28, clave: "banco:ent:caja rural" }, { tipo: "banco", nombre: "Laboral Kutxa", bienes: ["b3"], env: 28, rec: 6, clave: "banco:ent:laboral kutxa" }],
       notas: [[80, "Derecho foral navarro: legítima formal; el testamento reparte por mitad"], [6, "Laboral Kutxa envía el certificado de saldos"]] },
-    { n: 12, ref: 12, causante: "Concepción Vázquez Romero", cliente: "Francisco Molina Vázquez", ccaa: "AND", civil: "viudo", test: "porcentajes", fecha: dmF(-268), fase: "cerrado", resp: "a1", alta: 252, cierre: 18, ult: 18, horas: 22,
+    { n: 12, ref: 12, causante: "Leonor Armenteros Gamboa", cliente: "Bernardo Jaramillo Armenteros", ccaa: "AND", civil: "viudo", test: "porcentajes", fecha: dmF(-268), fase: "cerrado", resp: "a1", alta: 252, cierre: 18, ult: 18, horas: 22,
       hon: { modo: "fijo", fijo: 2400 }, docs: 1, devolver: true,
-      p: [["p1", "Francisco Molina Vázquez", "hijo", 54, { pct: 50 }], ["p2", "Teresa Molina Vázquez", "hijo", 51, { pct: 50 }]],
+      p: [["p1", "Bernardo Jaramillo Armenteros", "hijo", 54, { pct: 50 }], ["p2", "Consuelo Jaramillo Armenteros", "hijo", 51, { pct: 50 }]],
       b: [["b1", "vivienda", "Piso en El Limonar, Málaga", 330000, { valorReferencia: 312000, titularidad: "privativo", ...viv("MALAGA", 121000, 55000, "1985-04-22", 61000) }],
         ["b2", "cuenta", "Cuenta en Unicaja", 54000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 4200]],
       notas: [[240, "Encargo firmado por los dos hermanos"], [60, "Escritura firmada; impuesto y plusvalía presentados"], [18, "Entregada la documentación original y liquidada la provisión de fondos"]] },
-    { n: 13, ref: 8, causante: "Luis Ferrer Campos", cliente: "Pilar Gómez Arranz", ccaa: "MAD", civil: "gananciales", test: "no", fecha: dmF(-330), fase: "cerrado", resp: "dm-a2", alta: 318, cierre: 61, ult: 61, horas: 20, saldo: 140.35,
+    { n: 13, ref: 8, causante: "Fausto Borrego Muela", cliente: "Mercedes Toscano Melgar", ccaa: "MAD", civil: "gananciales", test: "no", fecha: dmF(-330), fase: "cerrado", resp: "dm-a2", alta: 318, cierre: 61, ult: 61, horas: 20, saldo: 140.35,
       hon: { modo: "fijo", fijo: 2200 }, docs: 1,
-      p: [["p1", "Pilar Gómez Arranz", "conyuge", 69], ["p2", "Óscar Ferrer Gómez", "hijo", 40]],
+      p: [["p1", "Mercedes Toscano Melgar", "conyuge", 69], ["p2", "Víctor Borrego Toscano", "hijo", 40]],
       b: [["b1", "vivienda", "Piso en Arganzuela, Madrid", 395000, { valorReferencia: 372000, titularidad: "ganancial", ...viv("MADRID", 158000, 86000, "1996-06-14", 135000) }],
         ["b2", "cuenta", "Cuenta en BBVA", 46000, { titularidad: "ganancial" }]],
       gastos: [["Funeral", 4800]],
       notas: [[300, "Encargo de la viuda"], [62, "Inscrita la vivienda a nombre de los herederos"]] },
-    { n: 14, ref: 25, causante: "Antonia Gómez Reina", cliente: "Rafael Gómez Reina", ccaa: "AND", civil: "soltero", test: "porcentajes", fecha: dmFechaPara(6, -3), fase: "liquidacion", resp: "dm-a3", alta: 172, ult: 0, horas: 19,
+    { n: 14, ref: 25, causante: "Asunción Matas Albarracín", cliente: "Agustín Matas Albarracín", ccaa: "AND", civil: "soltero", test: "porcentajes", fecha: dmFechaPara(6, -3), fase: "liquidacion", resp: "dm-a3", alta: 172, ult: 0, horas: 19,
       hon: { modo: "fijo", fijo: 2100 }, situ: { pensionista: true },
-      p: [["p1", "Rafael Gómez Reina", "hermano", 74, { pct: 50 }], ["p2", "Inmaculada Luque Gómez", "sobrino", 49, { pct: 50, estirpe: "Rosa Gómez Reina" }]],
+      p: [["p1", "Agustín Matas Albarracín", "hermano", 74, { pct: 50 }], ["p2", "Elvira Monzón Matas", "sobrino", 49, { pct: 50, estirpe: "Raquel Matas Albarracín" }]],
       b: [["b1", "vivienda", "Piso en Huelin, Málaga", 198000, { valorReferencia: 186000, titularidad: "privativo", ...viv("MALAGA", 78000, 33000, "1991-09-09", 54000) }],
         ["b2", "cuenta", "Cuenta y depósito en Cajamar", 67000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 3700]],
@@ -194,7 +195,7 @@ function dmConstruir(c, D) {
   };
   if (c.nifC) { x.nifCausante = dmNif(c.nifC); x.domicilioCausante = c.domC || ""; }
   const hon = c.hon || { modo: "fijo", fijo: 2000 };
-  x.despacho = { cliente: c.cliente, ref: `EXP-${hoy().slice(0, 4)}-${String(c.ref).padStart(3, "0")}`, alta, honModo: hon.modo, honFijo: hon.fijo || 1800, honPct: hon.pct || 1, honMin: hon.min || 1200, provision: 0, notaria: c.test === "no" ? 1900 : 1500, registro: 280, otros: 120, docs: {}, movs: [], checks: { ident: true, encargo: true, conflicto: true, datos: true }, nif: dmNif(100 + c.n) };
+  x.despacho = { cliente: c.cliente, ref: `EXP-${hoy().slice(0, 4)}-${String(c.ref).padStart(3, "0")}`, alta, honModo: hon.modo, honFijo: hon.fijo || 1800, honPct: hon.pct || 1, honMin: hon.min || 1200, provision: 0, notaria: c.test === "no" ? 1900 : 1500, registro: 280, otros: 120, docs: {}, movs: [], checks: { ident: true, encargo: true, conflicto: true, datos: true }, nif: dmNif(220 + c.n) };
   const ev = []; // [fechaISO, tipo, texto, autor]
   const at = (f, tipo, texto, autor) => { const [hh, mm] = hora(); ev.push([dmT(f, hh, mm), tipo, texto, autor || pick(equipo)]); };
   const entre = (a, b) => { const da = dmAtras(a), db = dmAtras(b); return dmF(-Math.round(db + rnd() * Math.max(0, da - db))); };
@@ -330,7 +331,16 @@ const dmActivo = () => !!(DB && Array.isArray(DB.expedientes) && DB.expedientes.
 function dmDespacho() {
   const D = despachoCfg();
   const tit = D.abogados[0];
-  if (!D.nombre) D.nombre = "Márquez Collado Abogados";
+  // Demostración cargada con otra versión (nombres ficticios anteriores): lo que puso la demostración y nadie ha cambiado se renueva;
+  // lo que el despacho tenía antes de cargarla o cambió después se respeta. La foto «puesto» se actualiza para que al salir se distinga igual.
+  const F = DB.demo && DB.demo.puesto, A0 = (DB.demo && DB.demo.prev && DB.demo.prev.despacho) || {};
+  if (F && DB.demo.v != null && DB.demo.v !== DM_V) {
+    const tit0 = (Array.isArray(A0.abogados) && A0.abogados[0]) || null, titF = (Array.isArray(F.abogados) && F.abogados[0]) || null;
+    if (!A0.nombre && F.nombre && D.nombre === F.nombre) { D.nombre = DM_NOMBRE; F.nombre = DM_NOMBRE; }
+    if ((!tit0 || !tit0.nombre || /^titular del despacho$/i.test(tit0.nombre)) && titF && titF.id === tit.id && tit.nombre === titF.nombre) { tit.nombre = DM_TITULAR.nombre; tit.rol = DM_TITULAR.rol; titF.nombre = tit.nombre; titF.rol = tit.rol; }
+    for (const a of DM_EQUIPO) { const q = D.abogados.find((x) => x.id === a.id); if (q) Object.assign(q, a); const qf = Array.isArray(F.abogados) ? F.abogados.find((x) => x.id === a.id) : null; if (qf) Object.assign(qf, a); }
+  }
+  if (!D.nombre) D.nombre = DM_NOMBRE;
   if (!D.colegio) D.colegio = "Ilustre Colegio de Abogados de Málaga";
   if (!D.localidad) D.localidad = "Málaga";
   if (!tit.nombre || /^titular del despacho$/i.test(tit.nombre)) { tit.nombre = DM_TITULAR.nombre; tit.rol = DM_TITULAR.rol; }
@@ -390,7 +400,7 @@ function dmDespachoAlSalir(prev, actual, puesto) {
   const igual = (a, b) => JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b);
   for (const k of Object.keys(A)) {
     if (k === "abogados" || k === "yo") continue;
-    const deLaDemo = { nombre: "Márquez Collado Abogados", colegio: "Ilustre Colegio de Abogados de Málaga", localidad: "Málaga", tarifaHora: 120 }[k];
+    const deLaDemo = { nombre: DM_NOMBRE, colegio: "Ilustre Colegio de Abogados de Málaga", localidad: "Málaga", tarifaHora: 120 }[k];
     if (F ? !igual(A[k], F[k]) : !(k in P) && !igual(A[k], deLaDemo)) P[k] = JSON.parse(JSON.stringify(A[k]));
   }
   // Equipo: sin los miembros ficticios; el titular recupera su nombre si la demo se lo había puesto y no se tocó

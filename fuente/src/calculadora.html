@@ -12,27 +12,27 @@
 :root{
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --serif:ui-serif,"New York","Iowan Old Style",Georgia,"Times New Roman",serif;
-  --ac:#1F6AE0; --on-ac:#FFFFFF; --ac-ink:var(--ac);
-  --bg:#F7F5F1; --panel:#FFFFFF; --field:#FBFAF8;
-  --ink:#1E1D1B; --ink-2:#56544F; --ink-3:#6E6B65; --ink-4:#BDBAB2;
-  --line:#DCD9D1; --line-2:#ECE9E3;
-  --keep:#16875A; --tax:#C47F1E; --warn:#B3261E;
+  --ac:#0F2B4C; --on-ac:#FFFFFF; --ac-ink:var(--ac);
+  --bg:#F4F2EC; --panel:#FFFEFB; --field:#FAF9F5;
+  --ink:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-4:#B1B5BC;
+  --line:#E0DCD2; --line-2:#EAE7DF;
+  --keep:#1F6E6B; --tax:#875A1A; --warn:#9E3B2B;
   --ac-t:color-mix(in srgb,var(--ac) 8%,var(--panel)); --ac-t2:color-mix(in srgb,var(--ac) 22%,var(--panel));
   --keep-t:color-mix(in srgb,var(--keep) 11%,var(--panel)); --tax-t:color-mix(in srgb,var(--tax) 14%,var(--panel)); --warn-t:color-mix(in srgb,var(--warn) 9%,var(--panel));
-  --shadow:0 0 0 1px rgba(40,34,20,.05),0 1px 2px rgba(40,34,20,.04),0 8px 22px -12px rgba(40,34,20,.14);
+  --shadow:0 0 0 1px rgba(18,28,42,.05),0 1px 2px rgba(18,28,42,.04),0 8px 22px -12px rgba(18,28,42,.14);
   --r:18px;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --bg:#17181A; --panel:#222326; --field:#1C1D20;
-    --ink:#F2F1ED; --ink-2:#BEBCB5; --ink-3:#9A978F; --ink-4:#55544F;
-    --line:#3A3B40; --line-2:#2E2F33;
-    --keep:#5CC99A; --tax:#F0A955; --warn:#F2776B;
+    --bg:#0F1621; --panel:#151E2A; --field:#121A25;
+    --ink:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF; --ink-4:#4C5767;
+    --line:#2A3647; --line-2:#1F2A38;
+    --keep:#63B8AF; --tax:#E0AE68; --warn:#EE8E80;
     --ac-ink:color-mix(in oklab,var(--ac) 58%,white);
     --ac-t:color-mix(in srgb,var(--ac) 18%,var(--panel)); --ac-t2:color-mix(in srgb,var(--ac) 34%,var(--panel));
     --keep-t:color-mix(in srgb,var(--keep) 15%,var(--panel)); --tax-t:color-mix(in srgb,var(--tax) 16%,var(--panel)); --warn-t:color-mix(in srgb,var(--warn) 14%,var(--panel));
-    --shadow:0 0 0 1px rgba(255,255,255,.06),0 10px 26px -14px rgba(0,0,0,.6);
+    --shadow:0 0 0 1px rgba(168,190,222,.07),0 10px 26px -14px rgba(2,6,14,.6);
     color-scheme:dark;
   }
 }
@@ -149,17 +149,17 @@ input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px
 input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(var(--ac),var(--ac)) 0/var(--p) 100% no-repeat,var(--line-2)}
 input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:var(--line-2)}
 input[type=range]::-moz-range-progress{height:6px;border-radius:6px;background:var(--ac)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;margin-top:-10px;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.22)}
-input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08),0 2px 6px rgba(0,0,0,.22)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;margin-top:-10px;box-shadow:0 0 0 1px rgba(18,28,42,.08),0 2px 6px rgba(18,28,42,.22)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(18,28,42,.08),0 2px 6px rgba(18,28,42,.22)}
 input[type=range]:focus-visible{outline:none}
 input[type=range]{touch-action:pan-y}
-input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--ac-t2),0 2px 6px rgba(0,0,0,.22)}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--ac-t2),0 2px 6px rgba(18,28,42,.22)}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:50px;cursor:pointer;font-size:16px}
 .toggle .t{line-height:1.35}.toggle small{display:block;color:var(--ink-3);font-size:13.5px}
 .switch{position:relative;width:51px;height:31px;flex:none}
 .switch input{opacity:0;width:0;height:0;position:absolute}
 .switch span{position:absolute;inset:0;background:var(--ink-4);border-radius:31px;transition:background-color .2s}
-.switch span::after{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s}
+.switch span::after{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(18,28,42,.2);transition:transform .2s}
 .switch input:checked+span{background:var(--ac)}
 .switch input:checked+span::after{transform:translateX(20px)}
 .switch input:focus-visible+span{outline:2px solid var(--ac-ink);outline-offset:3px}
@@ -247,7 +247,7 @@ details.more[open] summary svg{transform:rotate(90deg)}
 .btn:hover{filter:brightness(1.07)}
 .btn[disabled],.btn[aria-disabled=true]{opacity:.42;cursor:not-allowed;filter:none}
 .btn.sec{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
-.btn.wa{background:#1F8F55;color:#fff}
+.btn.wa{background:#1E7A47;color:#fff}
 .btn.ghost{background:transparent;color:var(--ac-ink);box-shadow:inset 0 0 0 1.5px var(--ac-t2)}
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line-2)}
 .bar .in{max-width:640px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
@@ -359,7 +359,7 @@ const D = {
   nombre: (P && P.nombre || "").trim(), colegio: (P && P.colegio || "").trim(), localidad: (P && P.localidad || "").trim(),
   tel: (P && P.tel || "").trim(), email: (P && P.email || "").trim() || (GENERICA ? CONTACTO_GENERICO : ""),
   web: (P && P.web || "").trim(), privacidad: (P && P.privacidad || "").trim() || (GENERICA ? "/privacidad.html" : ""),
-  color: /^#[0-9a-f]{6}$/i.test(P && P.color || "") ? P.color : "#1F6AE0",
+  color: /^#[0-9a-f]{6}$/i.test(P && P.color || "") ? P.color : "#0F2B4C",
 };
 const HEREDA_URL = PRESET && typeof PRESET.hereda === "string" && /^https?:\/\//.test(PRESET.hereda) ? PRESET.hereda : GENERICA ? "/" : "";
 const NOMBRE = D.nombre || (GENERICA ? "{{MARCA}}" : "el despacho");
@@ -372,9 +372,9 @@ if (EMB) document.documentElement.classList.add("emb");
   const h = D.color.slice(1), r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
   const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  const de = document.documentElement.style; de.setProperty("--ac", D.color); de.setProperty("--on-ac", (1.05) / (L + 0.05) >= 4.5 ? "#FFFFFF" : "#1E1D1B");
+  const de = document.documentElement.style; de.setProperty("--ac", D.color); de.setProperty("--on-ac", (1.05) / (L + 0.05) >= 4.5 ? "#FFFFFF" : "#121C2A");
   if ((1.05) / (L + 0.05) < 3) de.setProperty("--ac-ink", "color-mix(in oklab," + D.color + " 45%,black)");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="${D.color}"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="${INI.length > 2 ? 20 : 25}" font-weight="700" text-anchor="middle" fill="${(1.05) / (L + 0.05) >= 4.5 ? "#fff" : "#1E1D1B"}">${INI.replace(/[<&>"]/g, "")}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="${D.color}"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="${INI.length > 2 ? 20 : 25}" font-weight="700" text-anchor="middle" fill="${(1.05) / (L + 0.05) >= 4.5 ? "#fff" : "#121C2A"}">${INI.replace(/[<&>"]/g, "")}</text></svg>`;
   const f = document.getElementById("fav"); if (f) f.href = "data:image/svg+xml," + encodeURIComponent(svg);
   if (D.nombre) document.title = "Calculadora de herencias · " + D.nombre;
 })();

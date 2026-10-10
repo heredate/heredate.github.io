@@ -48,6 +48,12 @@ CSV: ABCD1234EFGH5678`;
   t("def nif", campo(d, "nifCausante")?.valor === NIF_C, campo(d, "nifCausante"));
   t("def lugar", campo(d, "lugarFallecimiento")?.valor === "Málaga", campo(d, "lugarFallecimiento"));
 }
+// 1.7 · apellidos con diéresis (Argüelles, Agüero): el lector los acepta en mayúsculas y en minúsculas, también en el texto corrido
+{
+  const d = L.lecAnalizar(DEF.replace("JIMÉNEZ", "ARGÜELLES").replace("SOLER", "PEÑA"), "certificado defuncion.pdf");
+  const d2 = L.lecAnalizar("REGISTRO CIVIL DE TORREMOLINOS. CERTIFICACIÓN LITERAL DE DEFUNCIÓN. Don Pedro Gómez Vera, Encargado del Registro Civil, CERTIFICA: que DOÑA MARÍA DOLORES AGÜERO CANO, viuda, natural de Sevilla, falleció en Málaga el día tres de febrero de dos mil veintiséis.", "literal.pdf");
+  t("def con diéresis", campo(d, "nombre")?.valor === "Antonio Argüelles Peña" && campo(d2, "nombre")?.valor === "María Dolores Agüero Cano", [campo(d, "nombre"), campo(d2, "nombre")]);
+}
 // Certificado literal clásico (texto corrido, fecha en letras)
 const DEF2 = `REGISTRO CIVIL DE TORREMOLINOS. CERTIFICACIÓN LITERAL DE DEFUNCIÓN. Don Pedro Gómez Vera, Encargado del Registro Civil, CERTIFICA: que la inscripción de defunción de DOÑA MARÍA DOLORES RUIZ CANO, viuda, natural de Sevilla, falleció el día tres de febrero de dos mil veintiséis a las veintidós horas en Torremolinos.`;
 {

@@ -1,6 +1,6 @@
 // ───────────────────── {{MARCA}} · visualizaciones ─────────────────────
 // Monograma «H+» (icons/hereda-marca.svg): el travesaño de la H atraviesa el asta y se convierte en el brazo del «+». Decorativo: el nombre va al lado en texto.
-const LOGO_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z"/></svg>`;
+const LOGO_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg>`;
 const fmtK = (v) => (v < 0 ? "−" : "") + grp(Math.abs(v), 0) + " €";
 const corta = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; };
 const pctTxt = (f) => grp(f * 100, f * 100 % 1 && f < 0.1 ? 1 : 0) + " %";
@@ -13,8 +13,12 @@ function derechoTxt(R, id) {
 }
 function arbol(x, R, opt = {}) {
   const P = x.personas || [];
-  const W = 190, H = 70, GX = 18, GY = 44, S = W + GX;
   const hs = R ? Object.fromEntries(R.isd.herederos.map((h) => [h.id, h])) : {};
+  // r6 · el árbol enseña el reparto: derecho de cada uno (usufructo, nuda propiedad, pleno dominio), lo que recibe y paga,
+  // y su lote si la partición le adjudica bienes o el testamento le deja un legado. Con R (cálculo hecho) las tarjetas tienen 4 o 5 líneas.
+  const lote = (p) => (x.bienes || []).filter((b) => b && (b.legatarioId === p.id || (!b.legatarioId && b.adjudicadoA === p.id)));
+  const hayLote = !!R && P.some((p) => !p.renuncia && (lote(p).length || p.notaLegado));
+  const W = 206, H = R ? (hayLote ? 104 : 88) : 70, GX = 18, GY = 44, S = W + GX;
   const norm = (s) => String(s || "").trim().toLowerCase();
   const by = (...r) => P.filter((p) => r.includes(p.relacion));
   const conyuge = by("conyuge", "pareja_hecho", "pareja_no_inscrita")[0];
@@ -72,7 +76,10 @@ function arbol(x, R, opt = {}) {
   const cauX = conyuge ? mid - S / 2 : mid, conX = mid + S / 2;
   nodes.push({ cau: true, x: cauX, y: Y(0) });
   if (conyuge) { nodes.push({ p: conyuge, x: conX, y: Y(0) }); links.push([cauX + W / 2, Y(0) + H / 2, conX - W / 2, Y(0) + H / 2, "sp" + (conyuge.relacion === "pareja_no_inscrita" ? " dash" : "")]); }
-  for (const v of hx) links.push([mid, Y(0) + (conyuge ? H / 2 : H), v, Y(1)]);
+  // r6: con cónyuge, una línea baja desde la unión del matrimonio y de ahí salen los hijos (antes las curvas salían del hueco entre las dos tarjetas)
+  const yHijos = conyuge && hx.length ? Y(0) + H + 8 : Y(0) + H;
+  if (conyuge && hx.length) links.push([mid, Y(0) + H / 2, mid, yHijos, "v"]);
+  for (const v of hx) links.push([mid, yHijos, v, Y(1)]);
   // Padres y abuelos sobre el causante
   const pX = padres.length === 2 ? [cauX - S / 2, cauX + S / 2] : [cauX];
   padres.forEach((p, i) => { nodes.push({ p, x: pX[i], y: Y(-1) }); });
@@ -103,22 +110,33 @@ function arbol(x, R, opt = {}) {
   const sx = (v) => v - minX;
   const path = ([x1, y1, x2, y2, k]) => {
     if (k && k.startsWith("sp")) return `<path class="tlink sp" ${k.includes("dash") ? 'stroke-dasharray="4 4"' : ""} d="M${sx(x1)} ${y1}H${sx(x2)}"/>`;
+    if (k === "v") return `<path class="tlink" d="M${sx(x1)} ${y1}V${y2}"/>`;
     if (k === "bro") { const yb = y1 - 14; return `<path class="tlink" d="M${sx(x1)} ${y1}V${yb}H${sx(x2)}V${y2}"/>`; }
     const ym = (y1 + y2) / 2; return `<path class="tlink" d="M${sx(x1)} ${y1}C${sx(x1)} ${ym} ${sx(x2)} ${ym} ${sx(x2)} ${y2}"/>`;
   };
   const tot = R ? R.isd.herederos.reduce((s, h) => s + h.valorAdquirido, 0) || 1 : 1;
   const card = (n) => {
     const x0 = sx(n.x) - W / 2, y0 = n.y;
-    if (n.cau) return `<g class="tnode cau" data-sec="herencia"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0 + 14}" y="${y0 + 22}">${esc(corta(x.nombre || "Causante", 24))}</text><text class="r" x="${x0 + 14}" y="${y0 + 39}">† ${x.fecha ? fechaCorta(x.fecha) : "fecha pendiente"}</text><text class="s tax" x="${x0 + 14}" y="${y0 + 56}">${R ? "Caudal " + fmtK(R.isd.masa.bruto) : "Causante"}</text></g>`;
+    if (n.cau) return `<g class="tnode cau" data-sec="herencia"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0 + 14}" y="${y0 + 22}">${esc(corta(x.nombre || "Causante", 24))}</text><text class="r" x="${x0 + 14}" y="${y0 + 39}">† ${x.fecha ? fechaCorta(x.fecha) : "fecha pendiente"}</text><text class="s tax" x="${x0 + 14}" y="${y0 + 56}">${R ? "Caudal " + fmtK(R.isd.masa.bruto) : "Causante"}</text>${R ? `<text class="r" x="${x0 + 14}" y="${y0 + 73}">Neto a repartir ${esc(fmtK(R.isd.masa.netoReparto ?? R.isd.masa.neto))}</text>` : ""}</g>`;
     if (n.ghost) return `<g class="tnode off"><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0 + 14}" y="${y0 + 22}">${esc(corta(n.ghost, 21))}</text><text class="r" x="${x0 + 14}" y="${y0 + 39}">${esc(n.rel)}</text><text class="r" x="${x0 + 14}" y="${y0 + 56}">${n.sinDato ? "Indica «Desciende de»" : "Representado por su estirpe"}</text></g>`; // r5 H12: sin «Desciende de» no se afirma un premuerto
     const p = n.p, h = hs[p.id], ren = p.renuncia;
     const cls = ren ? "ren" : h ? "" : "off";
-    const l3 = ren ? "Renuncia" : h ? `${pctTxt(h.valorAdquirido / tot)}${derechoTxt(R, p.id).includes("usufr") ? " · usufructo" : ""}` : "No hereda";
-    const l3b = h && !ren ? fmtK(h.aIngresar) : "";
-    return `<g class="tnode ${cls}" data-editp="${p.id}"><title>${esc(p.nombre || "")} · ${esc(RELACIONES[p.relacion]?.label || "")}${h ? " · recibe " + eur0(h.valorAdquirido) + " · paga " + eur(h.aIngresar) : ""}</title><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0 + 14}" y="${y0 + 22}">${esc(corta(p.nombre || "Sin nombre", 24))}</text><text class="r" x="${x0 + 14}" y="${y0 + 39}">${esc(RELACIONES[p.relacion]?.label || "")}${p.edad !== "" && p.edad != null ? " · " + p.edad + " años" : ""}</text><text class="s" x="${x0 + 14}" y="${y0 + 56}">${esc(l3)}</text>${l3b ? `<text class="s tax" x="${x0 + W - 12}" y="${y0 + 56}" text-anchor="end">${esc(l3b)}</text>` : ""}</g>`;
+    const ders = (R && R.isd.derechos[p.id]) || [], L = ren ? [] : lote(p);
+    const derC = ders.length && typeof derTxt === "function" ? ders.map(derTxt).join(" + ") : "";
+    const legNota = !ren && !L.some((b) => b.legatarioId === p.id) && p.notaLegado ? String(p.notaLegado) : "";
+    const l3 = ren ? "Renuncia" : !R ? (h ? pctTxt(h.valorAdquirido / tot) : "No hereda") : derC ? corta(derC, 30) : L.some((b) => b.legatarioId === p.id) || legNota ? "Legatario" : h ? pctTxt(h.valorAdquirido / tot) : "No hereda";
+    const l3b = !R && h && !ren ? fmtK(h.aIngresar) : "";
+    const l4 = R && h && !ren ? `Recibe ${fmtK(h.valorAdquirido)}` : "", l4b = R && h && !ren ? `Paga ${fmtK(h.aIngresar)}` : "";
+    // Nombre corto del bien: la descripción hasta «en …» o la primera coma («Vivienda tipo A en planta tercera…» → «Vivienda tipo A»)
+    const nb = (b) => String(b.descripcion || TIPO_BIEN[b.tipo]?.[0] || "Bien").split(/,|\s+(?:en|sito|sita|situad[oa])\s+/)[0].trim();
+    const cp = (t, n) => (t.length > n ? t.slice(0, n).replace(/\s+\S*$/, "") + "…" : t); // corta por palabra
+    const pre = L.length ? (L.every((b) => b.legatarioId === p.id) ? "Legado: " : "Se adjudica: ") : "Legado: ", mas = L.length > 1 ? ` y ${L.length - 1} más` : "";
+    const l5 = !R || ren ? "" : L.length ? pre + cp(nb(L[0]), 33 - pre.length - mas.length) + mas : legNota ? pre + cp(legNota.split(/,|\s+(?:en|sito|sita)\s+/)[0], 33 - pre.length) : "";
+    const yL = (i) => y0 + 22 + (i - 1) * 17;
+    return `<g class="tnode ${cls}" data-editp="${p.id}"><title>${esc(p.nombre || "")} · ${esc(RELACIONES[p.relacion]?.label || "")}${h ? " · recibe " + eur0(h.valorAdquirido) + " · paga " + eur(h.aIngresar) : ""}</title><rect class="b" x="${x0}" y="${y0}" width="${W}" height="${H}" rx="12"/><text class="n" x="${x0 + 14}" y="${y0 + 22}">${esc(corta(p.nombre || "Sin nombre", 24))}</text><text class="r" x="${x0 + 14}" y="${y0 + 39}">${esc(RELACIONES[p.relacion]?.label || "")}${p.edad !== "" && p.edad != null ? " · " + p.edad + " años" : ""}</text><text class="s" x="${x0 + 14}" y="${yL(3)}">${esc(l3)}</text>${l3b ? `<text class="s tax" x="${x0 + W - 12}" y="${yL(3)}" text-anchor="end">${esc(l3b)}</text>` : ""}${l4 ? `<text class="r" x="${x0 + 14}" y="${yL(4)}">${esc(l4)}</text><text class="s tax" x="${x0 + W - 12}" y="${yL(4)}" text-anchor="end">${esc(l4b)}</text>` : ""}${l5 ? `<text class="r lote" x="${x0 + 14}" y="${yL(5)}">${esc(l5)}</text>` : ""}</g>`;
   };
   const svg = `<svg class="viz" viewBox="0 0 ${width} ${height}" style="min-width:${Math.round(Math.min(width, 1100) * 0.8)}px;max-width:${Math.round(width * (opt.zoom || 1.3))}px;margin:0 auto" role="img" aria-label="Árbol familiar">${links.map(path).join("")}${nodes.map(card).join("")}</svg>`;
-  return `<div class="tree-wrap">${svg}</div>${opt.leyenda === false ? "" : `<div class="legend-inline"><span><i style="background:var(--gold-tint);box-shadow:inset 0 0 0 1px var(--gold)"></i>Causante</span><span><i style="background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--hair)"></i>Heredero · % de lo que se reparte · impuesto</span><span><i style="box-shadow:inset 0 0 0 1px var(--label-4)"></i>No hereda o premuerto</span><span><i style="box-shadow:inset 0 0 0 1px var(--red)"></i>Renuncia</span></div>`}`;
+  return `<div class="tree-wrap">${svg}</div>${opt.leyenda === false ? "" : `<div class="legend-inline"><span><i style="background:var(--gold-tint);box-shadow:inset 0 0 0 1px var(--gold)"></i>Causante</span><span><i style="background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--hair)"></i>Heredero · su parte, lo que recibe y lo que paga de Sucesiones</span><span><i style="box-shadow:inset 0 0 0 1px var(--label-4)"></i>No hereda o premuerto</span><span><i style="box-shadow:inset 0 0 0 1px var(--red)"></i>Renuncia</span></div>`}`;
 }
 
 // ── Cronograma de trámites ─────────────────────────────────────

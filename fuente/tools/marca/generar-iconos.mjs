@@ -6,10 +6,12 @@ const PW = process.env.PLAYWRIGHT || "/opt/node-tools/node_modules/playwright/in
 const { chromium } = await import(PW);
 const raiz = new URL("../../", import.meta.url).pathname;
 const svg = readFileSync(raiz + "icons/hereda-marca.svg", "utf8");
-const sq = svg.match(/<path d="([^"]+)" fill="url\(#g\)"\/>/)[1], marca = svg.match(/<path d="([^"]+)" fill="#FFFFFF"\/>/)[1];
-const grad = `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#284A75"/><stop offset="1" stop-color="#1A3352"/></linearGradient></defs>`;
-const conForma = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${grad}<path d="${sq}" fill="url(#g)"/><path d="${marca}" fill="#fff"/></svg>`;
-const aSangre = (escala) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${grad}<rect width="100" height="100" fill="url(#g)"/><g transform="translate(50 50) scale(${escala}) translate(-50 -50)"><path d="${marca}" fill="#fff"/></g></svg>`;
+// 1.7 (azul notarial): el degradado y los colores se toman del propio SVG; la marca son las piezas blancas (la H) y la de acento (el «+», en petróleo)
+const sq = svg.match(/<path d="([^"]+)" fill="url\(#g\)"\/>/)[1];
+const marca = [...svg.matchAll(/<path d="([^"]+)" fill="(#[0-9A-Fa-f]{3,8})"\/>/g)].map((m) => `<path d="${m[1]}" fill="${m[2]}"/>`).join("");
+const grad = svg.match(/<defs>[\s\S]*?<\/defs>/)[0];
+const conForma = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${grad}<path d="${sq}" fill="url(#g)"/>${marca}</svg>`;
+const aSangre = (escala) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${grad}<rect width="100" height="100" fill="url(#g)"/><g transform="translate(50 50) scale(${escala}) translate(-50 -50)">${marca}</g></svg>`;
 const b = await chromium.launch();
 const hacer = async (archivo, lado, contenido) => {
   const p = await b.newPage({ viewport: { width: lado, height: lado } });

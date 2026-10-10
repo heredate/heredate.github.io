@@ -35,7 +35,7 @@ function lecDatosFiscales(t) {
   const a31 = ej ? `31/12/${ej}` : "31 de diciembre";
   const nif = (/\bN\.?I\.?F\.?\s*[:：]?\s*(\d{8}\s?-?\s?[A-Z]|[XYZ]\d{7}[A-Z])/i.exec(T1) || [])[1];
   if (nif && lecNifOk(nif.replace(/[\s-]/g, ""))) out.campos.push({ k: "nifCausante", etiqueta: "DNI del causante (datos fiscales)", valor: nif.replace(/[\s-]/g, "").toUpperCase(), conf: 1 });
-  const ap = /apellidos\s+y\s+nombre\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' \-]{6,60}?)(?=\s+(?:NIF|N\.I\.F|Domicilio|Ejercicio|Fecha|\d)|\s*\n|$)/i.exec(T);
+  const ap = /apellidos\s+y\s+nombre\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' \-]{6,60}?)(?=\s+(?:NIF|N\.I\.F|Domicilio|Ejercicio|Fecha|\d)|\s*\n|$)/i.exec(T);
   if (ap) { const n = /,/.test(ap[1]) ? lecNombre(ap[1].split(",").reverse().join(" ")) : lecApellidosNombre(ap[1]); if (n) out.campos.push({ k: "nombre", etiqueta: "Titular de los datos fiscales", valor: n, conf: 1 }); }
   const S = ltSecciones(T, [["cuentas", /CUENTAS? (?:BANCARIAS|CORRIENTES)|SALDOS? (?:DE|EN) CUENTAS|DEPOSITOS? EN CUENTA|CUENTAS A LA VISTA/], ["fondos", /FONDOS? DE INVERSION|INSTITUCIONES DE INVERSION COLECTIVA|\bIIC\b|PARTICIPACIONES EN FONDOS/], ["valores", /VALORES (?:COTIZADOS|NEGOCIADOS)|ACCIONES (?:COTIZADAS|Y PARTICIPACIONES)|RENTA VARIABLE|TITULARIDAD DE VALORES/], ["inmuebles", /\bINMUEBLES\b|BIENES INMUEBLES|INFORMACION CATASTRAL/], ["otros", /RENDIMIENTOS DEL TRABAJO|PENSIONES|PLANES DE PENSIONES|APORTACIONES|PRESTAMOS|GANANCIAS|IMPUTACION|RETENCIONES|SUBVENCIONES|DONATIVOS|OTROS DATOS/]]);
   const nota = `importe a ${a31} según los datos fiscales; pide el certificado a la fecha del fallecimiento`;
@@ -71,7 +71,7 @@ function lecDatosFiscales(t) {
     const zr = l.slice(l.indexOf(ref.slice(0, 7)) + 20) + " " + cont;
     const sit = (l.slice(0, l.indexOf(ref.slice(0, 7))) + " " + cont.replace(/\b(?:habitual|arrendamiento|arrendad[oa]|a\s+disposici[óo]n(?:\s+del\s+titular)?|r[úu]stico|del\s+titular)\b/gi, " ")).replace(/\s+/g, " ").trim(); const pct = /(\d{1,3}(?:,\d{1,2})?)\s*%/.exec(zr); const imps = ltImportes(zr).filter((v) => v > 100);
     const uso = /(vivienda\s+habitual|arrendad[oa]|arrendamiento|alquilad[oa]|a\s+disposici[óo]n(?:\s+del\s+titular)?|vac[íi]a|afecto\s+a\s+actividad|r[úu]stico|garaje|aparcamiento)/i.exec(zr);
-    const muni = /\b\d{5}\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ' \-]{2,40}?)\s*\(([A-ZÁÉÍÓÚÑa-záéíóúñ ]{3,30})\)/.exec(sit) || /\b\d{5}\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ' \-]{2,40})$/.exec(sit);
+    const muni = /\b\d{5}\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü' \-]{2,40}?)\s*\(([A-ZÁÉÍÓÚÑÜa-záéíóúñü ]{3,30})\)/.exec(sit) || /\b\d{5}\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' \-]{2,40})$/.exec(sit);
     const rust = /^\d{5}[A-Z]\d{3}\d{5}\d{4}[A-Z]{2}$/.test(ref);
     const viv = uso && /habitual/i.test(uso[1]); const arr = uso && /arrend|alquil/i.test(uso[1]);
     out.bienes.push({ tipo: viv ? "vivienda" : "inmueble", descripcion: sit ? lecDireccion(sit.replace(/\s*\d{5}\s.*$/, ""), 80) : rust ? "Finca rústica" : "Inmueble", refCatastral: ref, valorCatastralTotal: imps.length ? imps[imps.length - 1] : null, muniNombre: muni ? lecTitulo(muni[1]) : "", muniProv: muni && muni[2] ? lecTitulo(muni[2]) : "", ...(rust ? { rustico: true, usoResidencial: false } : {}), ...(arr ? { arrendadoOCedido: true } : {}), nota: `titularidad fiscal ${pct ? pct[1] + " %" : "no indicada"}${uso ? " · uso: " + uso[1].toLowerCase() : ""} (datos fiscales ${ej})`, conf: 1 });
@@ -117,7 +117,7 @@ function lecFactura(t) {
   const importe = tots.length ? Math.max(...tots) : (ltImportes(T1).length ? Math.max(...ltImportes(T1)) : null);
   const num = (/factura\s*(?:n[úu]mero|n[.º°]|num\.?)?\s*[:：]?\s*([A-Z0-9][A-Z0-9\-\/]{2,20})/i.exec(T1) || [])[1] || "";
   const fecha = lecFechaCerca(T1, /fecha\s*(?:de\s+)?(?:la\s+)?(?:factura|emisi[óo]n|expedici[óo]n)?\s*[:：]/i, 30) || (lecFechas(T1)[0] || {}).f || "";
-  const emi = /([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ0-9&.,' \-]{2,60}?)\s*,?\s*(S\.?\s?L\.?(?:U\.?)?|S\.?\s?A\.?(?:U\.?)?|S\.?\s?COOP\.?(?:\s+AND\.?)?|SOCIEDAD COOPERATIVA)(?=[\s,.·]|$)/.exec(T1);
+  const emi = /([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü0-9&.,' \-]{2,60}?)\s*,?\s*(S\.?\s?L\.?(?:U\.?)?|S\.?\s?A\.?(?:U\.?)?|S\.?\s?COOP\.?(?:\s+AND\.?)?|SOCIEDAD COOPERATIVA)(?=[\s,.·]|$)/.exec(T1);
   const emisor = emi && !/^(?:FACTURA|FECHA|CLIENTE)\b/i.test(emi[1]) ? ltEmpresa(emi[1], emi[2]) : "";
   const cli = new RegExp(`(?:${lecCI("cliente")}|${lecCI("pagador")}|${lecCI("facturar")}\\s+${lecCI("a")}|${lecCI("solicitante")}|${lecCI("contratante")})\\s*[:：]?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`).exec(T1);
   const pagador = cli ? lecNombre(cli[1]) : "";
@@ -139,14 +139,14 @@ function lecFactura(t) {
 // ── Préstamos y deudas: certificado del banco (capital pendiente a la fecha del fallecimiento) o escritura (principal inicial) ──
 function lecPrestamo(t) {
   const out = { campos: [], deudas: [], avisos: [] }; const T1 = t.replace(/\s+/g, " "); const N = lecN(T1);
-  const banco = ltBanco(T1) || lecFrase((/(?:entidad|acreedor[a]?|prestamista)\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñÁÉÍÓÚÑ&.,' \-]{3,50}?)(?=\s*(?:,|\.|\s+(?:con|CIF|NIF|S\.A)|$))/i.exec(T1) || [])[1] || "", 40);
+  const banco = ltBanco(T1) || lecFrase((/(?:entidad|acreedor[a]?|prestamista)\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ&.,' \-]{3,50}?)(?=\s*(?:,|\.|\s+(?:con|CIF|NIF|S\.A)|$))/i.exec(T1) || [])[1] || "", 40);
   const esEscritura = /ESCRITURA|ANTE MI|NOTARI[OA] DEL ILUSTRE|COMPARECEN|OTORGAN/.test(N) && !/CERTIFICA(?:DO|MOS|CION)?\s+(?:DE\s+)?(?:DEUDA|SALDO|CAPITAL)|SALDO DEUDOR A FECHA|CAPITAL PENDIENTE A/.test(N);
   const hip = /HIPOTEC/.test(N);
   const pend = ltDinero(T1, /(?:capital|importe|saldo|deuda)\s+(?:total\s+)?(?:pendiente|vivo|deudor)(?:\s+de\s+(?:amortizar|pago|devoluci[óo]n))?(?:\s+a\s+(?:la\s+)?fecha[^:\d]{0,40}?(?:\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{4})?)?\s*[:：]?/i, 70);
-  const princ = ltDinero(T1, /(?:principal|capital\s+(?:prestado|del\s+pr[ée]stamo|inicial)|importe\s+(?:del\s+pr[ée]stamo|prestado|concedido)|por\s+(?:un\s+)?importe\s+de|la\s+cantidad\s+de|pr[ée]stamo\s+de)\s*[:：]?\s*(?:[A-ZÁÉÍÓÚÑ ]{4,80}?\s*\(?)?/i, 140);
+  const princ = ltDinero(T1, /(?:principal|capital\s+(?:prestado|del\s+pr[ée]stamo|inicial)|importe\s+(?:del\s+pr[ée]stamo|prestado|concedido)|por\s+(?:un\s+)?importe\s+de|la\s+cantidad\s+de|pr[ée]stamo\s+de)\s*[:：]?\s*(?:[A-ZÁÉÍÓÚÑÜ ]{4,80}?\s*\(?)?/i, 140);
   const fecha = lecFechaCerca(T1, /(?:a\s+(?:la\s+)?fecha\s+(?:de(?:l)?\s+)?(?:fallecimiento|defunci[óo]n)?\s*\(?|saldo\s+a\s+|pendiente\s+a\s+(?:fecha\s+)?)/i, 40);
   const nPres = /n[úu]mero\s+(?:de\s+)?(?:pr[ée]stamo|contrato|operaci[óo]n)\s*[:：]?\s*([0-9][0-9\-\/. ]{4,24}[0-9])|pr[ée]stamo\s+n[.º°]\s*([0-9][0-9\-\/. ]{3,24}[0-9])/i.exec(T1);
-  const pres = [...T1.matchAll(new RegExp(`(?:${lecCI("prestatari")}[oa]s?|${lecCI("titular")}(?:${lecCI("es")})?|${lecCI("deudor")}(?:${lecCI("es")})?|${lecCI("acreditad")}[oa]s?)\\s*[:：]?\\s*((?:${LEC_TRAT}?\\s*(?:[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ'\\-]+\\s*){2,5}(?:,|\\s+[yY]\\s+|\\s*;\\s*)?){1,3})`, "g"))].flatMap((m) => lecListaNombres(m[1])).filter((n, i, A) => A.indexOf(n) === i);
+  const pres = [...T1.matchAll(new RegExp(`(?:${lecCI("prestatari")}[oa]s?|${lecCI("titular")}(?:${lecCI("es")})?|${lecCI("deudor")}(?:${lecCI("es")})?|${lecCI("acreditad")}[oa]s?)\\s*[:：]?\\s*((?:${LEC_TRAT}?\\s*(?:[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü'\\-]+\\s*){2,5}(?:,|\\s+[yY]\\s+|\\s*;\\s*)?){1,3})`, "g"))].flatMap((m) => lecListaNombres(m[1])).filter((n, i, A) => A.indexOf(n) === i);
   const varios = pres.length >= 2 || /prestatarios\s+solidarios|ambos\s+c[óo]nyuges|y\s+su\s+(?:esposa|esposo|c[óo]nyuge)/i.test(T1);
   const seguro = /seguro\s+de\s+(?:vida\s+)?(?:amortizaci[óo]n|vida\s+vinculado)|seguro\s+de\s+vida\s+(?:vinculado|asociado)\s+al\s+pr[ée]stamo|cancelaci[óo]n\s+por\s+(?:el\s+)?seguro/i.test(T1);
   const tipo = hip ? "Préstamo hipotecario" : /cr[ée]dito/i.test(T1) && !/pr[ée]stamo/i.test(T1) ? "Crédito" : "Préstamo";
@@ -167,11 +167,11 @@ function lecArrendamiento(t) {
   const arrendador = arrr ? lecNombre(arrr[1]) : "", arrendatario = arrt ? lecNombre(arrt[1]) : "";
   const dir = /(?:vivienda|piso|local|inmueble|finca|apartamento|plaza\s+de\s+garaje|casa)\s+(?:sit[oa]|situad[oa]|ubicad[oa])?\s*(?:en\s+)?(?:la\s+|el\s+)?((?:calle|c\/|avenida|avda\.?|plaza|paseo|camino|ronda|carretera|urbanizaci[óo]n|CL|AV|PZ)\s[^;:()]{4,110}?)(?=\s*(?:[;:(]|,\s*(?:con|cuya|inscrit|que|referencia)|\.\s|\s+(?:con\s+referencia|inscrit|de\s+\d+\s*m|que\s+)))/i.exec(T1);
   const ref = lecRefCat(T1);
-  const renta = ltDinero(T1, /renta\s+(?:mensual|anual|pactada|convenida|inicial)?(?:\s+(?:es|ser[áa]|queda\s+fijada)\s+(?:de|en))?\s*(?:de\s+)?[:：]?\s*(?:[A-ZÁÉÍÓÚÑa-záéíóúñ ]{4,60}?\s*\()?/i, 120);
+  const renta = ltDinero(T1, /renta\s+(?:mensual|anual|pactada|convenida|inicial)?(?:\s+(?:es|ser[áa]|queda\s+fijada)\s+(?:de|en))?\s*(?:de\s+)?[:：]?\s*(?:[A-ZÁÉÍÓÚÑÜa-záéíóúñü ]{4,60}?\s*\()?/i, 120);
   const anual = /renta\s+anual/i.test(T1) && !/renta\s+mensual/i.test(T1);
-  const fianza = ltDinero(T1, /fianza\s*(?:legal)?(?:\s+de|\s+por\s+importe\s+de|\s+equivalente[^,]{0,40},?)?\s*[:：]?\s*(?:[A-ZÁÉÍÓÚÑa-záéíóúñ ]{4,60}?\s*\()?/i, 120);
+  const fianza = ltDinero(T1, /fianza\s*(?:legal)?(?:\s+de|\s+por\s+importe\s+de|\s+equivalente[^,]{0,40},?)?\s*[:：]?\s*(?:[A-ZÁÉÍÓÚÑÜa-záéíóúñü ]{4,60}?\s*\()?/i, 120);
   const fecha = (lecFechas(T1.slice(0, 600))[0] || {}).f || "";
-  const dur = /duraci[óo]n\s+(?:de|del\s+contrato\s+(?:es|ser[áa])\s+de)\s+([a-záéíóúñ]+|\d+)\s+(a[ñn]os?|meses)/i.exec(T1);
+  const dur = /duraci[óo]n\s+(?:de|del\s+contrato\s+(?:es|ser[áa])\s+de)\s+([a-záéíóúñü]+|\d+)\s+(a[ñn]os?|meses)/i.exec(T1);
   const v = { refCatastral: ref, direccion: dir ? lecDireccion(dir[1], 90) : "", renta: renta ? (anual ? Math.round(renta / 12 * 100) / 100 : renta) : null, arrendatario, arrendador, fianza, fecha };
   out.campos.push({ k: "arrendamiento", etiqueta: "Contrato de arrendamiento", valor: v, mostrar: [v.direccion || (ref ? "ref. catastral " + ref : "inmueble sin identificar"), arrendatario ? "arrendado a " + arrendatario : "", fecha ? "desde " + fechaLarga(fecha) : "", v.renta ? "renta " + eur0(v.renta) + " al mes" : "renta no leída", fianza ? "fianza " + eur0(fianza) : "", dur ? "duración " + dur[1] + " " + dur[2] : ""].filter(Boolean).join(" · "), conf: v.direccion || ref ? 1 : 0 });
   out.avisos.push(`Inmueble arrendado${arrendatario ? " a " + arrendatario : ""}: no es la vivienda habitual del causante ni da derecho a esa reducción. Los herederos ocupan su lugar como arrendadores (el contrato no se extingue por la muerte del arrendador) y las rentas desde el fallecimiento son suyas; las cobradas antes van al IRPF del causante.${fianza ? ` La fianza (${eur0(fianza)}) se devuelve al inquilino al terminar el contrato: no aumenta ni reduce la herencia.` : ""}`);
@@ -182,7 +182,7 @@ function lecArrendamiento(t) {
 // ── Certificado de titularidad o posición de valores (depositaria): acciones, ETF, renta fija con ISIN ──
 function lecValores(t) {
   const out = { campos: [], bienes: [], avisos: [] }; const T = t.replace(/[ \t]+/g, " "); const T1 = T.replace(/\s+/g, " ");
-  const ent = ltBanco(T1) || lecFrase((/^\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ0-9&.,' \-]{3,50}?(?:S\.?A\.?U?|S\.?V\.?|AGENCIA DE VALORES|SOCIEDAD DE VALORES))/m.exec(T) || [])[1] || "", 40);
+  const ent = ltBanco(T1) || lecFrase((/^\s*([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü0-9&.,' \-]{3,50}?(?:S\.?A\.?U?|S\.?V\.?|AGENCIA DE VALORES|SOCIEDAD DE VALORES))/m.exec(T) || [])[1] || "", 40);
   const fecha = lecFechaCerca(T1, /(?:a\s+fecha\s+(?:de(?:l)?\s+)?(?:fallecimiento|defunci[óo]n)?\s*\(?|posici[óo]n\s+a\s+|cotizaci[óo]n\s+(?:a|del?)\s+(?:fecha\s+)?|valoraci[óo]n\s+a\s+)/i, 40);
   for (const l of T.split("\n")) {
     const isin = LT_ISIN.exec(l); if (!isin) continue;
@@ -199,12 +199,12 @@ function lecValores(t) {
 // ── Plan de pensiones (certificado de derechos consolidados): no es caudal relicto; lo cobran los beneficiarios y tributa en su IRPF ──
 function lecPlanPensiones(t) {
   const out = { campos: [], avisos: [] }; const T1 = t.replace(/\s+/g, " ");
-  const plan = /(?:plan\s+de\s+pensiones|plan\s+de\s+previsi[óo]n\s+asegurado|\bPPA\b|\bEPSV\b)\s*[:：]?\s*([A-ZÁÉÍÓÚÑ0-9][A-Za-záéíóúñÁÉÍÓÚÑ0-9&.,' \-]{3,60}?)(?=\s*(?:\(|,|\.\s|\s+(?:N[úu]mero|N[.º°]|Part[íi]cipe|Entidad|Fondo|Gestora|C[óo]digo|DGS|Inscrit|Promotor|$)))/i.exec(T1);
-  const ent = ltBanco(T1) || lecFrase((/(?:entidad\s+gestora|gestora)\s*[:：]?\s*([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñÁÉÍÓÚÑ&.,' \-]{3,60}?)(?=\s*(?:,|\(|\s+(?:N\.?I\.?F|CIF|Entidad|Depositar|$)))/i.exec(T1) || [])[1] || "", 40);
+  const plan = /(?:plan\s+de\s+pensiones|plan\s+de\s+previsi[óo]n\s+asegurado|\bPPA\b|\bEPSV\b)\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜ0-9][A-Za-záéíóúñüÁÉÍÓÚÑÜ0-9&.,' \-]{3,60}?)(?=\s*(?:\(|,|\.\s|\s+(?:N[úu]mero|N[.º°]|Part[íi]cipe|Entidad|Fondo|Gestora|C[óo]digo|DGS|Inscrit|Promotor|$)))/i.exec(T1);
+  const ent = ltBanco(T1) || lecFrase((/(?:entidad\s+gestora|gestora)\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ&.,' \-]{3,60}?)(?=\s*(?:,|\(|\s+(?:N\.?I\.?F|CIF|Entidad|Depositar|$)))/i.exec(T1) || [])[1] || "", 40);
   const imp = ltDinero(T1, /derechos\s+(?:consolidados|econ[óo]micos)(?:\s+a\s+(?:la\s+)?fecha[^:\d]{0,40}?(?:\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{4}\)?)?)?\s*[:：]?/i, 80) || ltDinero(T1, /(?:importe|valor|saldo)\s+(?:total\s+)?(?:de\s+los\s+derechos|del\s+plan)?\s*[:：]/i, 60);
   const fecha = lecFechaCerca(T1, /derechos\s+(?:consolidados|econ[óo]micos)\s+a\s+(?:la\s+)?fecha|a\s+fecha\s+(?:de(?:l)?\s+)?(?:fallecimiento|defunci[óo]n)/i, 50);
   const ben = /beneficiari[oa]s?\s*(?:designad[oa]s?|en\s+caso\s+de\s+fallecimiento)?\s*[:：]?\s*([^.]{4,200}?)(?:\.(?:\s|$)|$)/i.exec(T1);
-  const benTxt = ben ? ben[1].replace(/\b(?:DON|DOÑA|D\.ª|Dª)\s+/g, "").replace(/\b([A-ZÁÉÍÓÚÑ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ]{2,})+)\b/g, (m) => lecTitulo(m)).slice(0, 140) : "";
+  const benTxt = ben ? ben[1].replace(/\b(?:DON|DOÑA|D\.ª|Dª)\s+/g, "").replace(/\b([A-ZÁÉÍÓÚÑÜ]{2,}(?:\s+[A-ZÁÉÍÓÚÑÜ]{2,})+)\b/g, (m) => lecTitulo(m)).slice(0, 140) : "";
   const valor = { plan: plan ? ltEmpresa(plan[1]) : "Plan de pensiones", entidad: ent, importe: imp, fecha: fecha || "", beneficiarios: benTxt };
   out.campos.push({ k: "planPensiones", etiqueta: "Plan de pensiones (no es herencia)", valor, mostrar: [valor.plan, ent ? "en " + ent : "", imp ? "derechos consolidados " + eur0(imp) + (fecha ? " a " + fechaLarga(fecha) : "") : "importe no leído", benTxt ? "beneficiarios: " + benTxt : ""].filter(Boolean).join(" · "), conf: imp ? 2 : 1 });
   out.avisos.push(`Plan de pensiones${imp ? " de " + eur0(imp) : ""}: no forma parte de la herencia ni se reparte con ella. Lo cobran los beneficiarios designados (si no hay, los herederos legales, por derecho propio) y tributa en su IRPF como rendimiento del trabajo cuando lo rescatan (art. 17.2.a.3.º LIRPF), no en el Impuesto de Sucesiones. Se anota como información y no se suma al inventario.`);
@@ -214,13 +214,13 @@ function lecPlanPensiones(t) {
 // ── Participaciones sociales (libro registro de socios, certificación del Registro Mercantil, escritura): sociedad, NIF, porcentaje ──
 function lecSociedad(t) {
   const out = { campos: [], bienes: [], avisos: [] }; const T = t.replace(/[ \t]+/g, " "); const T1 = T.replace(/\s+/g, " ");
-  const soc = /([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9&.' \-]{2,60}?)\s*,?\s*(SOCIEDAD\s+LIMITADA(?:\s+UNIPERSONAL)?|SOCIEDAD\s+AN[ÓO]NIMA|S\.\s?L\.(?:U\.)?|S\.\s?A\.(?:U\.)?|SL\b|SLU\b|SA\b)/.exec(T1);
+  const soc = /([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ0-9&.' \-]{2,60}?)\s*,?\s*(SOCIEDAD\s+LIMITADA(?:\s+UNIPERSONAL)?|SOCIEDAD\s+AN[ÓO]NIMA|S\.\s?L\.(?:U\.)?|S\.\s?A\.(?:U\.)?|SL\b|SLU\b|SA\b)/.exec(T1);
   const nombreSoc = soc ? ltEmpresa(soc[1], soc[2].replace(/SOCIEDAD\s+LIMITADA\s+UNIPERSONAL/i, "S.L.U.").replace(/SOCIEDAD\s+LIMITADA/i, "S.L.").replace(/SOCIEDAD\s+AN[ÓO]NIMA/i, "S.A.")) : "";
   const cif = ltCifs(T1)[0] || "";
   const cap = ltDinero(T1, /capital\s+social\s*(?:de|es\s+de|asciende\s+a|[:：])?\s*/i, 60);
   const nTot = /dividido\s+en\s+(\d{1,3}(?:\.\d{3})*|\d+)\s+(?:participaciones|acciones)/i.exec(T1);
   const tipoTit = /\bacciones\b/i.test(T1) && !/participaciones/i.test(T1) ? "acciones" : "participaciones";
-  // Socios: «DOÑA ELENA MARTÍN ROJAS, NIF …: 1.500 participaciones (…) 50,00 %»
+  // Socios: «DOÑA ADELA MORILLAS YÁÑEZ, NIF …: 1.500 participaciones (…) 50,00 %»
   const socios = [];
   for (const m of T1.matchAll(new RegExp(`${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}\\s*,?\\s*(?:con\\s+)?(?:N\\.?I\\.?F\\.?|D\\.?N\\.?I\\.?)?\\s*[:：]?\\s*(\\d{8}\\s?-?\\s?[A-Z]|[XYZ]\\d{7}[A-Z])?\\s*[:：,]?\\s*(?:titular\\s+de\\s+)?(\\d{1,3}(?:\\.\\d{3})*|\\d+)\\s+(?:participaciones|acciones)([^%]{0,80}?)(\\d{1,3}(?:,\\d{1,2})?)\\s*%`, "g"))) {
     const n = lecNombre(m[1]); if (!n || socios.some((q) => q.nombre === n)) continue;

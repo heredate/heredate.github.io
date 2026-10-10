@@ -8,15 +8,19 @@
    Tema grafito en :root; tema claro (el habitual en despacho) en :root[data-theme="light"].
    Puntos de corte (no admiten variables en @media): 390 móvil · 760 tableta · 1024 escritorio con barra lateral · 1280 · 1440. */
 :root{
-  /* Color semántico · grafito */
-  --bg:#18191C; --surface:#202125; --surface-2:#25262B; --sunken:#141518; --elevated:#2A2B30;
-  --border:rgba(255,255,255,.085); --border-2:rgba(255,255,255,.15); --border-soft:rgba(255,255,255,.05);
-  --ink-1:#EDEDEF; --ink-2:#B5B6BB; --ink-3:#9D9EA4; --ink-4:#56575D; --ink-ph:#76777D;
-  --brand:#8FB3E6; --brand-hover:#A9C5EE; --brand-tint:rgba(143,179,230,.14); --on-brand:#101114;
-  --success:#6DC39C; --warning:#E2AE63; --danger:#EF8A7D; --info:#8FB3E6;
-  --success-bg:rgba(109,195,156,.13); --warning-bg:rgba(226,174,99,.14); --danger-bg:rgba(239,138,125,.14); --info-bg:rgba(143,179,230,.13);
-  --hover:rgba(255,255,255,.04); --press:rgba(255,255,255,.07);
-  --scrim:rgba(0,0,0,.5);
+  /* Color semántico · grafito «azul noche»: superficies de azul muy profundo (no gris), tinta fría, azul notarial y petróleo aclarados */
+  --bg:#0F1621; --surface:#151E2A; --surface-2:#1A2431; --sunken:#0B111A; --elevated:#1C2735;
+  --border:rgba(168,190,222,.11); --border-2:rgba(168,190,222,.2); --border-soft:rgba(168,190,222,.065);
+  --ink-1:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF; --ink-4:#4C5767; --ink-ph:#727C8B;
+  --brand:#9DBCE6; --brand-hover:#B7CEEE; --brand-tint:rgba(157,188,230,.13); --on-brand:#0B1A2E;
+  /* En grafito el botón principal es azul notarial pleno con texto blanco (el azul claro queda para enlaces y foco) */
+  --btn:#2C5A92; --btn-hover:#34669F; --on-btn:#FFFFFF;
+  --petrol:#63B8AF; --petrol-hover:#7CC8C0; --petrol-tint:rgba(99,184,175,.13); --on-petrol:#06201E;
+  --success:#63B8AF; --warning:#E0AE68; --danger:#EE8E80; --info:#9DBCE6;
+  --success-bg:rgba(99,184,175,.13); --warning-bg:rgba(224,174,104,.14); --danger-bg:rgba(238,142,128,.14); --info-bg:rgba(157,188,230,.12);
+  --hover:rgba(168,190,222,.05); --press:rgba(168,190,222,.085);
+  --scrim:rgba(3,7,14,.6);
+  --shadow-rgb:2,6,14;
   /* Tipografía */
   /* Inter (interfaz) y Source Serif 4 (títulos), autoalojadas y con licencia OFL: igual en Windows, Mac y móvil. Respaldo con métricas ajustadas. */
   --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -30,18 +34,25 @@
   --r-xs:4px; --r-chip:6px; --r-ctl:8px; --r-panel:10px; --r-sheet:14px; --r-pill:999px;
   /* Sombras: la línea de 1 px hace de borde; la elevación solo en lo que flota */
   --sh-line:0 0 0 1px var(--border);
-  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(0,0,0,.18);
-  --sh-2:0 0 0 1px var(--border-2),0 6px 20px -6px rgba(0,0,0,.5);
-  --sh-3:0 0 0 1px var(--border-2),0 28px 70px -12px rgba(0,0,0,.6);
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(2,6,14,.3);
+  --sh-2:0 0 0 1px var(--border-2),0 6px 20px -6px rgba(2,6,14,.6);
+  --sh-3:0 0 0 1px var(--border-2),0 28px 70px -12px rgba(2,6,14,.7);
   /* Movimiento */
   --ease:cubic-bezier(.32,.72,0,1); --ease-out:cubic-bezier(.2,.8,.2,1); --dur-1:120ms; --dur-2:200ms; --dur-3:320ms;
   /* Estructura */
   --tab:52px; --side:252px; --top:52px; --page-max:1240px;
-  /* Gráficos (tonos apagados, distinguibles en ambos temas) */
-  --c1:#8FB3E6; --c2:#6FB9BF; --c3:#A29FE8; --c4:#DDA66A; --c5:#9AA3B5; --c6:#D78FA9; --c7:#B49BEA;
-  --paper:#FFFFFF; --paper-ink:#1B1B1D;
-  /* Marca: el monograma «H+» siempre en azul notarial (también en grafito, un punto más claro para que no se hunda) */
-  --logo-bg:#2C4C77; --logo-ink:#FFFFFF;
+  /* Gráficos: una familia derivada de la marca (azules, petróleos, pizarra) y un terracota y un bronce para contrastar */
+  --c1:#9DBCE6; --c2:#63B8AF; --c3:#9AABC4; --c4:#D9A07A; --c5:#A4AEBB; --c6:#CDB27A; --c7:#A9AEDB;
+  --paper:#FFFEFB; --paper-ink:#121C2A;
+  /* Marca: el monograma «H+» siempre en azul notarial (en grafito, un punto más claro para que no se hunda en el azul noche) */
+  --logo-bg:#1F4573; --logo-ink:#FFFFFF; --logo-acc:#6CC2B8;
+  /* Barra lateral: en grafito, el azul noche más profundo; mismo lenguaje que en claro (tinta clara, activo translúcido, filete petróleo) */
+  --side-bg:#0A1019; --side-ink:#E8ECF2; --side-ink-2:#B3BCC9; --side-ink-3:#97A1AF; --side-ink-4:#4C5767;
+  --side-line:rgba(168,190,222,.11); --side-hover:rgba(168,190,222,.06); --side-active:rgba(168,190,222,.1); --side-field:rgba(168,190,222,.07);
+  --side-accent:#6CC2B8; --side-focus:#9DBCE6; --side-btn:#2C5A92; --side-on-btn:#FFFFFF; --side-btn-hover:#34669F;
+  --side-logo-bg:#1F4573; --side-logo-ink:#FFFFFF; --side-logo-acc:#6CC2B8;
+  /* Títulos de página y cifras grandes: en claro, azul notarial; en grafito, la tinta */
+  --ink-title:#E8ECF2;
   color-scheme:dark;
 
   /* ── Alias históricos (no definir colores nuevos aquí) ── */
@@ -51,7 +62,7 @@
   --accent:var(--brand); --accent-hover:var(--brand-hover); --accent-tint:var(--brand-tint); --on-accent:var(--on-brand);
   --gold:var(--success); --gold-tint:var(--success-bg);
   --green:var(--success); --orange:var(--warning); --red:var(--danger); --green-t:var(--success-bg); --orange-t:var(--warning-bg); --red-t:var(--danger-bg);
-  --ink:var(--ink-1); --on-ink:var(--bg); --btn:var(--ink-1); --on-btn:var(--bg);
+  --ink:var(--ink-1); --on-ink:var(--bg); 
   --shadow-sm:var(--sh-1); --shadow-md:var(--sh-2); --shadow-lg:var(--sh-3);
   --text:var(--font-sans); --serif:var(--font-sans); --display:var(--font-display);
   --r:var(--r-panel); --r-sm:var(--r-ctl);
@@ -60,21 +71,33 @@
   --t-display:var(--fs-display); --t-h1:var(--fs-h1); --t-h2:var(--fs-h2); --t-h3:var(--fs-h3); --t-body:var(--fs-body); --t-small:var(--fs-small); --t-caption:var(--fs-caption); --t-label:var(--fs-label);
 }
 :root[data-theme="light"]{
-  /* Color semántico · claro: papel neutro, tinta casi negra, un acento (azul notarial) y estados con significado */
-  --bg:#F5F5F2; --surface:#FFFFFF; --surface-2:#FAFAF8; --sunken:#EEEEEA; --elevated:#FFFFFF;
-  --border:#E3E2DD; --border-2:#CFCEC8; --border-soft:#EDECE8;
-  --ink-1:#18191C; --ink-2:#4B4D53; --ink-3:#65676D; --ink-4:#B4B5B8; --ink-ph:#8B8D92;
-  --brand:#1F3A5F; --brand-hover:#162B47; --brand-tint:rgba(31,58,95,.075); --on-brand:#FFFFFF;
-  --success:#2D6A4F; --warning:#8A5A12; --danger:#AF3A2E; --info:#2B5283;
-  --success-bg:#EAF2ED; --warning-bg:#F7EFE1; --danger-bg:#F9EAE7; --info-bg:#EBF0F6;
-  --hover:rgba(24,25,28,.035); --press:rgba(24,25,28,.06);
-  --scrim:rgba(24,25,28,.32);
-  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(24,25,28,.035);
-  --sh-2:0 0 0 1px var(--border),0 8px 24px -8px rgba(24,25,28,.16);
-  --sh-3:0 0 0 1px rgba(24,25,28,.06),0 28px 72px -16px rgba(24,25,28,.28);
-  --c1:#1F3A5F; --c2:#386570; --c3:#56597F; --c4:#9A7A45; --c5:#637087; --c6:#9A5F72; --c7:#6F6694;
-  --on-ink:#FFFFFF; --on-btn:#FFFFFF;
-  --logo-bg:#1F3A5F;
+  /* Color semántico · claro «notarial»: papel marfil frío, tinta azul-negra, azul notarial para marca y acción,
+     petróleo como único acento (selección, avance, dato leído de un documento) y estados con significado */
+  --bg:#F4F2EC; --surface:#FFFEFB; --surface-2:#FAF9F5; --sunken:#EBE9E2; --elevated:#FFFEFB;
+  --border:#E0DCD2; --border-2:#CBC5B8; --border-soft:#EAE7DF;
+  --ink-1:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-4:#B1B5BC; --ink-ph:#848A93;
+  --brand:#0F2B4C; --brand-hover:#0A1F38; --brand-tint:rgba(15,43,76,.07); --on-brand:#FFFFFF;
+  --btn:var(--brand); --btn-hover:var(--brand-hover); --on-btn:#FFFFFF;
+  --petrol:#1F6E6B; --petrol-hover:#185A57; --petrol-tint:#E5EFEC; --on-petrol:#FFFFFF;
+  --success:#1F6E6B; --warning:#875A1A; --danger:#9E3B2B; --info:#2B4D74;
+  --success-bg:#E5EFEC; --warning-bg:#F5EDDD; --danger-bg:#F6E8E3; --info-bg:#E8ECF1;
+  --hover:rgba(18,28,42,.035); --press:rgba(18,28,42,.06);
+  --scrim:rgba(14,24,38,.34);
+  --shadow-rgb:18,28,42;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.04);
+  --sh-2:0 0 0 1px var(--border),0 8px 24px -8px rgba(18,28,42,.16);
+  --sh-3:0 0 0 1px rgba(18,28,42,.07),0 28px 72px -16px rgba(18,28,42,.28);
+  --c1:#0F2B4C; --c2:#1F6E6B; --c3:#46607F; --c4:#9A5B34; --c5:#5E6773; --c6:#7D6436; --c7:#56587E;
+  --paper:#FFFFFF; --paper-ink:#121C2A;
+  --on-ink:#FFFFFF;
+  --logo-bg:#0F2B4C;
+  /* Barra lateral en azul notarial: la identidad de la marca. Tinta marfil y azul claro (AA sobre el azul y sobre el activo),
+     activo con un velo blanco del 10 % y filete petróleo claro, «Nuevo expediente» en marfil con texto azul, monograma invertido */
+  --side-bg:#0F2B4C; --side-ink:#F4F2EC; --side-ink-2:#C3CEDC; --side-ink-3:#A3B4CA; --side-ink-4:#6F86A6;
+  --side-line:rgba(255,255,255,.12); --side-hover:rgba(255,255,255,.06); --side-active:rgba(255,255,255,.1); --side-field:rgba(255,255,255,.08);
+  --side-accent:#6CC2B8; --side-focus:#9DBCE6; --side-btn:#F4F2EC; --side-on-btn:#0F2B4C; --side-btn-hover:#FFFFFF;
+  --side-logo-bg:#F4F2EC; --side-logo-ink:#0F2B4C; --side-logo-acc:#1F6E6B;
+  --ink-title:#0F2B4C;
   --tint-a:10%; --field-a:5%;
   color-scheme:light;
 }
@@ -103,7 +126,7 @@ svg{flex:none}
   .side{display:flex;flex-direction:column;position:sticky;top:0;height:100vh;background:var(--sidebar);-webkit-backdrop-filter:saturate(160%) blur(30px);backdrop-filter:saturate(160%) blur(30px);border-right:.5px solid var(--hair);padding:18px 12px 12px;z-index:5}
 }
 .side .brandrow{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
-.logo{width:30px;height:30px;border-radius:8px;background:var(--logo-bg);display:grid;place-items:center;color:#fff;font:800 13px/1 var(--text);letter-spacing:-.04em;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.18)}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--logo-bg);display:grid;place-items:center;color:var(--logo-ink);font:800 13px/1 var(--text);letter-spacing:-.04em;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.18)}
 .logo svg{width:19px;height:19px}
 .brandname{font:700 17px/1 var(--serif);letter-spacing:-.01em}
 .side .search{margin:0 4px 12px}
@@ -207,12 +230,12 @@ button.row:active{background:var(--fill)}
 .field .seg button{flex:1 1 auto;min-width:0;padding:6px 8px;border-radius:8px;white-space:normal;line-height:1.25}
 @media (min-width:760px){.field .seg button{flex:1 1 0}}.seg button{flex:1;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:500;color:var(--label-2);white-space:nowrap;transition:background .25s var(--ease),color .25s}
 .seg button:hover{color:var(--label)}
-.seg button[aria-pressed="true"]{background:var(--panel-3);color:var(--label);box-shadow:0 1px 3px rgba(0,0,0,.25),inset 0 0 0 .5px var(--hair)}
+.seg button[aria-pressed="true"]{background:var(--panel-3);color:var(--label);box-shadow:0 1px 3px rgba(var(--shadow-rgb),.25),inset 0 0 0 .5px var(--hair)}
 :root[data-theme="light"] .seg button[aria-pressed="true"]{background:var(--panel)}
 .switch{position:relative;width:48px;height:29px;flex:none}
 .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
 .switch span{position:absolute;inset:0;background:var(--fill);border-radius:999px;transition:background .25s}
-.switch span::after{content:"";position:absolute;width:25px;height:25px;top:2px;left:2px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .3s var(--ease)}
+.switch span::after{content:"";position:absolute;width:25px;height:25px;top:2px;left:2px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(var(--shadow-rgb),.3);transition:transform .3s var(--ease)}
 .switch input:checked + span{background:var(--accent)}
 .switch input:checked + span::after{transform:translateX(19px)}
 @media (min-width:1024px){.switch{width:40px;height:24px}.switch span::after{width:20px;height:20px}.switch input:checked + span::after{transform:translateX(16px)}}
@@ -363,6 +386,7 @@ button.kpi:hover{background:var(--panel-2)}
 .grid-t.ptable td.n small{margin-left:auto;text-align:right}
 .ptable td.n b{font-size:14.5px;font-weight:600}
 .ptable th .hdot{margin-right:6px}
+.ptable th.n{white-space:normal} /* r6: con seis o más personas los nombres pasan a dos líneas y el cuadro cabe sin desplazamiento lateral */
 .ptable .nil{color:var(--label-4)}
 .ptable tr.neg td{color:var(--label-2)}
 .ptable tfoot td{padding:12px;border-top:.5px solid var(--hair)}
@@ -733,14 +757,14 @@ button.kpi:hover{background:var(--panel-2)}
 @media (min-width:1100px){.docgrid{grid-template-columns:repeat(3,1fr)}}
 .doccard{display:flex;flex-direction:column;gap:14px;align-items:flex-start;text-align:left;background:var(--panel);border-radius:var(--r);padding:18px;box-shadow:var(--shadow-sm);transition:background .15s;min-height:150px}
 .doccard:hover{background:var(--panel-2)}
-.doccard .paper{width:40px;height:52px;border-radius:3px;background:var(--paper);box-shadow:0 1px 3px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.1);position:relative;overflow:hidden}
-.doccard .paper i{position:absolute;left:8px;right:8px;height:2px;border-radius:1px;background:#D6CFC3}
-.doccard .paper i:first-child{background:#BFA674;right:16px}
+.doccard .paper{width:40px;height:52px;border-radius:3px;background:var(--paper);box-shadow:0 1px 3px rgba(var(--shadow-rgb),.22),0 0 0 .5px rgba(var(--shadow-rgb),.1);position:relative;overflow:hidden}
+.doccard .paper i{position:absolute;left:8px;right:8px;height:2px;border-radius:1px;background:#D8DCE2}
+.doccard .paper i:first-child{background:#0F2B4C;right:16px}
 @media (max-width:639px){.doccard{flex-direction:row;align-items:center;min-height:0;padding:14px 16px}.doccard .paper{width:32px;height:42px}}
 .doccard b{font-weight:600;font-size:15px;letter-spacing:-.01em}
 .doccard small{display:block;color:var(--label-2);font-size:12.5px;margin-top:3px;line-height:1.4}
-.paperview{background:var(--paper);color:var(--paper-ink);border-radius:4px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:52px 56px;font:15.5px/1.65 var(--serif);letter-spacing:0;white-space:pre-wrap;max-width:720px;margin:0 auto}
-.paperview mark{background:#F1DFAE;color:#5A4000;padding:1px 4px;border-radius:3px;font:500 12.5px/1.5 var(--text)}
+.paperview{background:var(--paper);color:var(--paper-ink);border-radius:4px;box-shadow:0 20px 60px rgba(var(--shadow-rgb),.4);padding:52px 56px;font:15.5px/1.65 var(--serif);letter-spacing:0;white-space:pre-wrap;max-width:720px;margin:0 auto}
+.paperview mark{background:#F3E8CF;color:#5E4210;padding:1px 4px;border-radius:3px;font:500 12.5px/1.5 var(--text)}
 @media (max-width:600px){.paperview{padding:26px 20px;font-size:15px}}
 .paperview .pv-tw{overflow-x:auto;margin:4px 0 12px;white-space:normal}.paperview .pv-t{width:100%;border-collapse:collapse;font:13px/1.4 var(--text);font-variant-numeric:tabular-nums}.paperview .pv-t th,.paperview .pv-t td{border:1px solid color-mix(in srgb,var(--paper-ink) 20%,transparent);padding:5px 8px;text-align:left;vertical-align:top}.paperview .pv-t th{background:color-mix(in srgb,var(--paper-ink) 6%,transparent);font-weight:600}.paperview .pv-t td.n{text-align:right;white-space:nowrap}
 .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;border-radius:var(--r);padding:26px 20px;border:1px dashed var(--label-4);background:var(--fill-2);position:relative;color:var(--label-2);font-size:14px;transition:border-color .2s,background .2s}
@@ -869,7 +893,7 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 .grid-t tbody tr:hover{background:var(--fill-2)}
 .grid-t tbody tr:last-child td{border-bottom:0}
 .fase{display:inline-block;font-size:12px;font-weight:500;line-height:1.4;padding:2px 8px;border-radius:5px;background:var(--fill);color:var(--label-2);white-space:nowrap}
-.fase.f0{background:var(--fill);color:var(--label-2)}.fase.f1{background:var(--accent-tint);color:var(--accent)}.fase.f2{background:rgba(142,140,240,.15);color:var(--c3)}.fase.f3{background:var(--orange-t);color:var(--orange)}.fase.f4{background:rgba(79,182,194,.15);color:var(--c2)}.fase.f5{background:var(--green-t);color:var(--green)}
+.fase.f0{background:var(--fill);color:var(--label-2)}.fase.f1{background:var(--accent-tint);color:var(--accent)}.fase.f2{background:color-mix(in srgb,var(--c3) 14%,transparent);color:var(--c3)}.fase.f3{background:var(--orange-t);color:var(--orange)}.fase.f4{background:var(--petrol-tint);color:var(--petrol)}.fase.f5{background:var(--green-t);color:var(--green)}
 .mbar{display:inline-block;width:40px;height:5px;border-radius:3px;background:var(--fill);overflow:hidden;margin-right:8px;vertical-align:middle}
 .mbar i{display:block;height:100%;background:var(--accent)}
 .board{display:grid;grid-template-columns:repeat(6,minmax(166px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
@@ -903,7 +927,7 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 .phases7{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:14px}
 .phases7 div{display:flex;flex-direction:column;gap:3px}
 .phases7 .pn{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--fill);font:700 11px var(--text);color:var(--label-2);margin-bottom:6px}
-.phases7 .pn.on{background:var(--accent);color:#fff}
+.phases7 .pn.on{background:var(--accent);color:var(--on-accent)}
 .phases7 b{font-size:14px;font-weight:600}.phases7 small{font-size:12px;color:var(--label-3)}
 .paperview{font-family:Georgia,"Times New Roman",serif}
 
@@ -928,7 +952,7 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 @media print{html.pdoc body{background:#fff}html.pdoc #app>.shell,html.pdoc .scrim,html.pdoc .sheet header,html.pdoc .sheet .grab{display:none!important}html.pdoc .sheet{position:static!important;transform:none!important;box-shadow:none!important;max-height:none!important;width:auto!important;background:#fff!important;animation:none!important}html.pdoc .sheet .body{overflow:visible!important;padding:0!important}html.pdoc .sheet .body>:not(.paperview){display:none!important}html.pdoc .paperview{box-shadow:none;max-width:none;padding:0;border-radius:0}}
 
 /* ───────── Hojas ───────── */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:60;animation:fade .25s ease}
+.scrim{position:fixed;inset:0;background:var(--scrim);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);z-index:60;animation:fade .25s ease}
 .sheet{position:fixed;left:0;right:0;bottom:0;max-height:94vh;background:var(--canvas-2);border-radius:16px 16px 0 0;z-index:61;display:flex;flex-direction:column;animation:sheetup .45s var(--ease);box-shadow:var(--shadow-lg)}
 .sheet .grab{width:36px;height:5px;border-radius:3px;background:var(--label-4);margin:6px auto 0;flex:none}
 .sheet header{display:grid;grid-template-columns:90px 1fr 90px;align-items:center;padding:6px 8px 6px;flex:none}
@@ -1035,9 +1059,9 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 :root[data-theme="light"] .flujo .lk:hover{opacity:.45}
 :root[data-theme="light"] .flujo .l-her{fill:var(--c1);opacity:.14}
 :root[data-theme="light"] .flujo .l-fam{opacity:.3}
-:root[data-theme="light"] .map path.cc{fill:#E9E9E3;stroke:var(--panel)}
-:root[data-theme="light"] .map path.cc.v{fill:color-mix(in srgb,var(--c1) 26%,#E9E9E3)}
-:root[data-theme="light"] .map path.cc.on{fill:color-mix(in srgb,var(--gold) 48%,#E9E9E3)}
+:root[data-theme="light"] .map path.cc{fill:#E4E1D8;stroke:var(--panel)}
+:root[data-theme="light"] .map path.cc.v{fill:color-mix(in srgb,var(--c1) 26%,#E4E1D8)}
+:root[data-theme="light"] .map path.cc.on{fill:color-mix(in srgb,var(--gold) 48%,#E4E1D8)}
 :root[data-theme="light"] .tnode rect.b{fill:var(--panel);stroke:var(--hair)}
 :root[data-theme="light"] .tnode:hover rect.b{fill:var(--panel-2)}
 :root[data-theme="light"] .tnode.cau rect.b{fill:color-mix(in srgb,var(--gold) 8%,var(--panel))}
@@ -1053,9 +1077,9 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 .pl-s li b{white-space:nowrap}
 /*__PRO_CSS__*/
 </style>
-<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H83.5v7H28.5ZM68.5 38.5h7v23h-7Z"/></svg></span>{{MARCA}}</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
+<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg></span>{{MARCA}}</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
-(function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F6F6F3" : "#1E1F22"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
+(function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
 <script>
 /*__MOTOR__*/

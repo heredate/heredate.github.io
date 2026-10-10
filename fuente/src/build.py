@@ -147,7 +147,7 @@ head = f"""<!doctype html>
 <meta name="robots" content="noindex, nofollow">
 <meta name="hereda-version" content="{version}">
 <meta name="description" content="{MARCA}: software de sucesiones para despachos de abogados.">
-<meta name="theme-color" content="#F6F6F3">
+<meta name="theme-color" content="#F4F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -221,7 +221,7 @@ if landing.exists():
     (root / "index.html").write_text(L.replace("<!--FONTS-->", FUENTES_WEB))
     (pub / "index.html").write_text(L.replace("<!--FONTS-->", FUENTES_WEB))
     (root / "dist/web-claude.html").write_text(L.replace("<!--FONTS-->", FUENTES_CLAUDE).replace('href="/app/"', 'href="' + APP_CLAUDE + '" target="_blank" rel="noopener"'))
-man = {"name": MARCA, "short_name": MARCA, "description": LEMA, "lang": "es-ES", "start_url": "/app/", "scope": "/", "display": "standalone", "orientation": "portrait-primary", "background_color": "#F6F6F3", "theme_color": "#F6F6F3",
+man = {"name": MARCA, "short_name": MARCA, "description": LEMA, "lang": "es-ES", "start_url": "/app/", "scope": "/", "display": "standalone", "orientation": "portrait-primary", "background_color": "#F4F2EC", "theme_color": "#F4F2EC",
        "icons": [{"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}, {"src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}
 (root / "manifest.webmanifest").write_text(json.dumps(man, ensure_ascii=False, indent=1))
 shutil.copy(root / "manifest.webmanifest", pub / "manifest.webmanifest"); shutil.copy(root / "app/index.html", pub / "app/index.html"); shutil.copytree(root / "app/partes", pub / "app/partes"); shutil.copytree(root / "app/nucleo", pub / "app/nucleo")

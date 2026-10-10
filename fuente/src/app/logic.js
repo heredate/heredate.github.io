@@ -111,32 +111,32 @@ const guardar = () => { if (typeof sgGuardar === "function") return sgGuardar();
 // ───────────────────── Ejemplos ─────────────────────
 function ejemplo(tipo) {
   const base = { id: uid(), creado: hoy(), ajuar: "sts", enPlazo: true, aplicarEmpresa: false, tareas: {}, ejemplo: true, deudas: [], gastos: [] };
-  if (tipo === "mad") return { ...base, nombre: "Antonio Ruiz Gómez", fecha: "2026-07-02", ccaa: "MAD", civil: "gananciales", testamento: "no",
-    personas: [ { id: "p1", nombre: "Carmen López", relacion: "conyuge", edad: 72 }, { id: "p2", nombre: "Luis Ruiz", relacion: "hijo", edad: 44, patrimonioPreexistente: 90000 }, { id: "p3", nombre: "Ana Ruiz", relacion: "hijo", edad: 40, patrimonioPreexistente: 60000 } ],
+  if (tipo === "mad") return { ...base, nombre: "Hilario Chaparro Madueño", fecha: "2026-07-02", ccaa: "MAD", civil: "gananciales", testamento: "no",
+    personas: [ { id: "p1", nombre: "Elvira Adame", relacion: "conyuge", edad: 72 }, { id: "p2", nombre: "Domingo Chaparro", relacion: "hijo", edad: 44, patrimonioPreexistente: 90000 }, { id: "p3", nombre: "Virginia Chaparro", relacion: "hijo", edad: 40, patrimonioPreexistente: 60000 } ],
     bienes: [ { id: "b1", tipo: "vivienda", descripcion: "Piso en Chamberí", valor: 520000, valorReferencia: 480000, titularidad: "ganancial", municipio: "MADRID", valorCatastralTotal: 210000, valorCatastralSuelo: 118000, fechaAdq: "1996-04-10", valorAdq: 150000 },
       { id: "b2", tipo: "cuenta", descripcion: "Cuentas en dos bancos", valor: 86000, titularidad: "ganancial" }, { id: "b3", tipo: "valores", descripcion: "Fondo de inversión", valor: 45000, titularidad: "privativo" } ],
     gastos: [{ concepto: "Funeral", importe: 4800 }] };
-  if (tipo === "cat") return { ...base, nombre: "Montserrat Puig", fecha: "2026-05-20", ccaa: "CAT", civil: "viudo", testamento: "porcentajes",
-    personas: [ { id: "p1", nombre: "Jordi Vidal", relacion: "hijo", edad: 51, pct: 50 }, { id: "p2", nombre: "Marta Vidal", relacion: "hijo", edad: 47, pct: 50 }, { id: "p3", nombre: "Pau Serra", relacion: "sobrino", edad: 29, pct: 0 } ],
+  if (tipo === "cat") return { ...base, nombre: "Gemma Masferrer", fecha: "2026-05-20", ccaa: "CAT", civil: "viudo", testamento: "porcentajes",
+    personas: [ { id: "p1", nombre: "Albert Escarré", relacion: "hijo", edad: 51, pct: 50 }, { id: "p2", nombre: "Neus Escarré", relacion: "hijo", edad: 47, pct: 50 }, { id: "p3", nombre: "Arnau Pujadas", relacion: "sobrino", edad: 29, pct: 0 } ],
     bienes: [ { id: "b1", tipo: "vivienda", descripcion: "Pis a Gràcia", valor: 410000, valorReferencia: 395000, titularidad: "privativo", municipio: "OTRO", tipoManual: 30, bonifManual: 0, valorCatastralTotal: 160000, valorCatastralSuelo: 70000, fechaAdq: "1988-09-01", valorAdq: 60000 },
       { id: "b2", tipo: "cuenta", descripcion: "Compte d'estalvi", valor: 140000, titularidad: "privativo" }, { id: "b3", tipo: "otro", descripcion: "Colección de pintura", valor: 30000, titularidad: "privativo", legatarioId: "p3" } ],
     gastos: [{ concepto: "Funeral", importe: 5200 }] };
-  if (tipo === "est") return { ...base, nombre: "Encarnación Ruiz Pérez", fecha: "2026-07-15", ccaa: "AND", civil: "viudo", testamento: "porcentajes",
-    despacho: { cliente: "Isabel Moreno Ruiz", ref: "EXP-2026-021", honModo: "pct", honPct: 1, honMin: 1200, provision: 800, notaria: 1400, registro: 320, otros: 150, docs: { defuncion: true, ultimas: true, testamento: true } },
-    personas: [ { id: "p1", nombre: "Isabel Moreno Ruiz", relacion: "hijo", edad: 52, pct: 70, convivio2anios: true, empadronado: true }, { id: "p2", nombre: "Javier Ruiz Castro", relacion: "sobrino", edad: 41, pct: 30, estirpe: "Manuel Ruiz Pérez" } ],
+  if (tipo === "est") return { ...base, nombre: "Olga Puertas Nogales", fecha: "2026-07-15", ccaa: "AND", civil: "viudo", testamento: "porcentajes",
+    despacho: { cliente: "Remedios Haro Puertas", ref: "EXP-2026-021", honModo: "pct", honPct: 1, honMin: 1200, provision: 800, notaria: 1400, registro: 320, otros: 150, docs: { defuncion: true, ultimas: true, testamento: true } },
+    personas: [ { id: "p1", nombre: "Remedios Haro Puertas", relacion: "hijo", edad: 52, pct: 70, convivio2anios: true, empadronado: true }, { id: "p2", nombre: "Damián Puertas Lasheras", relacion: "sobrino", edad: 41, pct: 30, estirpe: "Aurelio Puertas Nogales" } ],
     bienes: [ { id: "b1", tipo: "vivienda", descripcion: "Piso en Pedregalejo, Málaga", valor: 340000, valorReferencia: 318000, titularidad: "privativo", municipio: "MALAGA", valorCatastralTotal: 118000, valorCatastralSuelo: 51000, fechaAdq: "1994-03-10", valorAdq: 95000 },
       { id: "b2", tipo: "inmueble", descripcion: "Apartamento en Torremolinos", valor: 190000, valorReferencia: 206000, titularidad: "privativo", municipio: "TORREMOLINOS", valorCatastralTotal: 72000, valorCatastralSuelo: 31000, fechaAdq: "2005-07-01", valorAdq: 150000 },
       { id: "b3", tipo: "cuenta", descripcion: "Cuentas y depósito a plazo", valor: 112000, titularidad: "privativo" }, { id: "b4", tipo: "valores", descripcion: "Cartera de fondos", valor: 64000, titularidad: "privativo" }, { id: "b5", tipo: "vehiculo", descripcion: "Turismo", valor: 9000, titularidad: "privativo" } ],
     gastos: [{ concepto: "Funeral", importe: 5200 }] };
-  if (tipo === "mar") return { ...base, nombre: "Francisco Jiménez Ortega", fecha: "2026-08-04", ccaa: "AND", civil: "gananciales", testamento: "usufructo",
-    despacho: { cliente: "Lucía Jiménez Navas", ref: "EXP-2026-014", honModo: "fijo", honFijo: 1800, honPct: 1, honMin: 900, provision: 600, notaria: 1600, registro: 250, otros: 120, docs: { defuncion: true, ultimas: true, testamento: true } },
-    personas: [ { id: "p1", nombre: "Dolores Navas", relacion: "conyuge", edad: 74, seguro: 30000 }, { id: "p2", nombre: "Lucía Jiménez", relacion: "hijo", edad: 46 }, { id: "p3", nombre: "Antonio Jiménez", relacion: "hijo", edad: 43 }, { id: "p4", nombre: "Carmen Jiménez", relacion: "hijo", edad: 38 } ],
+  if (tipo === "mar") return { ...base, nombre: "Eduardo Escalona Cosano", fecha: "2026-08-04", ccaa: "AND", civil: "gananciales", testamento: "usufructo",
+    despacho: { cliente: "Begoña Escalona Osuna", ref: "EXP-2026-014", honModo: "fijo", honFijo: 1800, honPct: 1, honMin: 900, provision: 600, notaria: 1600, registro: 250, otros: 120, docs: { defuncion: true, ultimas: true, testamento: true } },
+    personas: [ { id: "p1", nombre: "Patricia Osuna", relacion: "conyuge", edad: 74, seguro: 30000 }, { id: "p2", nombre: "Begoña Escalona", relacion: "hijo", edad: 46 }, { id: "p3", nombre: "Amador Escalona", relacion: "hijo", edad: 43 }, { id: "p4", nombre: "Nieves Escalona", relacion: "hijo", edad: 38 } ],
     bienes: [ { id: "b1", tipo: "vivienda", descripcion: "Vivienda en Nueva Andalucía, Marbella", valor: 480000, valorReferencia: 452000, titularidad: "ganancial", municipio: "MARBELLA", valorCatastralTotal: 190000, valorCatastralSuelo: 95000, fechaAdq: "1999-05-20", valorAdq: 130000 },
       { id: "b2", tipo: "inmueble", descripcion: "Local comercial en San Pedro de Alcántara", valor: 160000, valorReferencia: 148000, titularidad: "privativo", municipio: "MARBELLA", valorCatastralTotal: 70000, valorCatastralSuelo: 30000, fechaAdq: "2008-02-11", valorAdq: 120000 },
       { id: "b3", tipo: "cuenta", descripcion: "Cuentas corrientes y depósito", valor: 120000, titularidad: "ganancial" }, { id: "b4", tipo: "valores", descripcion: "Fondo de inversión", valor: 60000, titularidad: "privativo" } ],
     gastos: [{ concepto: "Funeral", importe: 4500 }] };
-  return { ...base, nombre: "Rafael Torres Molina", fecha: "2026-06-03", ccaa: "AND", civil: "soltero", testamento: "no",
-    personas: [ { id: "p1", nombre: "Pedro Torres", relacion: "hermano", edad: 68, convivio2anios: true }, { id: "p2", nombre: "Rosa Torres", relacion: "hermano", edad: 64 } ],
+  return { ...base, nombre: "Federico Porras Olivares", fecha: "2026-06-03", ccaa: "AND", civil: "soltero", testamento: "no",
+    personas: [ { id: "p1", nombre: "Ernesto Porras", relacion: "hermano", edad: 68, convivio2anios: true }, { id: "p2", nombre: "Alicia Porras", relacion: "hermano", edad: 64 } ],
     bienes: [ { id: "b1", tipo: "vivienda", descripcion: "Piso en El Palo, Málaga", valor: 210000, valorReferencia: 198000, titularidad: "privativo", municipio: "MALAGA", valorCatastralTotal: 95000, valorCatastralSuelo: 38000, fechaAdq: "2004-06-01", valorAdq: 90000 },
       { id: "b2", tipo: "cuenta", descripcion: "Cuenta corriente", valor: 36000, titularidad: "privativo" }, { id: "b3", tipo: "vehiculo", descripcion: "Turismo", valor: 6000, titularidad: "privativo" } ],
     gastos: [{ concepto: "Funeral", importe: 4200 }] };
