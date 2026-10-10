@@ -2474,21 +2474,244 @@ export function calcularPlusvalia({ inmueble, titulares, fecha, caudalTotal }) {
   return { municipio: !conOrd && hac ? hac.nombre : ord.nombre, regimen: F ? F.id : "comun", foral: F ? { id: F.id, nombre: F.nombre, norma: F.norma, tipoMax: F.tipoMax, normaTipo: F.normaTipo, normaCoef: F.normaCoef, estadoCoef: F.estadoCoef, exencion: F.exencion ? F.exencion.norma : null, normaBonif: F.normaBonif, bonifMax: F.bonifMax, url: F.url } : null, tipo, estadoTipo, fuenteTipo, fuenteCoef, hacienda: hac ? { ine: hac.ine, nombre: hac.nombre, red: hac.red, fuente: HACIENDA_IIVTNU_FUENTE } : null, coeficiente: coef, notaCoef, normaCoef: legal.norma, estadoCoef: legal.estado, baseObjetiva: baseObj, baseReal, metodo, base, cuota, noSujeto, porTitular, alertas, total: r2(porTitular.reduce((s, x) => s + x.aIngresar, 0)) };
 }
 
-// ─────────── Modelo 650 autonómico: estado del cotejo de casillas (fiscal r4, 08-10-2026) ───────────
-// Las casillas del 650 estatal (AEAT, Orden HAP/2488/2014) están verificadas en src/app/firma.js (VF_CAS). Para los formularios autonómicos solo se
-// numeran las casillas que se hayan leído en el formulario o en sus instrucciones oficiales vigentes. A 08-10-2026 ninguno se ha podido leer:
-// la herramienta de consulta no accede a juntadeandalucia.es, comunidad.madrid, gva.es, atc.gencat.cat ni atriga.gal salvo por enlaces que aparezcan
-// en resultados de búsqueda, y los resultados no traen el formulario. Se deja constancia de lo consultado para no repetir la búsqueda.
+// ─────────── Modelos 650 y 660 por territorio: formulario, casillas y relación de bienes (G02, 10-10-2026) ───────────
+// Capa de SALIDA: lee el resultado de calcularISD y lo ordena como el formulario de cada territorio. No cambia ninguna cifra del cálculo.
+// estado: "VERIFICADO" (todas las casillas numeradas se han leído en las instrucciones oficiales), "PARCIAL" (solo algunas) o
+// "NO LOCALIZADO" (no se ha podido leer el formulario vigente: la interfaz lo muestra como «orden orientativo», sin números de casilla).
+// Una casilla solo lleva número si consta en la fuente citada; nunca se deduce por analogía con otro territorio.
+// Límite de la verificación (10-10-2026): desde el entorno de trabajo no se pueden abrir las sedes autonómicas, el BOE ni los boletines
+// (la descarga directa y la lectura de páginas fallan); solo se dispone de extractos de un buscador. Por eso solo se numera lo que esos
+// extractos citan literalmente de las instrucciones oficiales (AEAT y Castilla y León) y lo leído el 08-10-2026 (AEAT, fiscal r4).
+// Formato de importación: ningún territorio publica un esquema que pueda generarse (Madrid importa su propio XML, Valencia usa servicios
+// web para colaboradores): no se genera fichero; se da la hoja casilla a casilla, «copiar todo en orden» y el PDF.
+const FUENTE_BUSCADOR = "extracto del buscador, 10-10-2026";
 export const MODELO650_AUT = {
-  AND: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni las instrucciones del 650 de la Agencia Tributaria de Andalucía (se genera en su programa de ayuda)",
-    consultado: ["https://www.juntadeandalucia.es/sites/default/files/2025-07/MT_12.01.16_ISD.pdf (memoria de la estadística del ISD: cita los modelos 650, 651 y 660, sin casillas)"] },
-  MAD: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni el programa de ayuda del 650 de la Comunidad de Madrid", consultado: [] },
-  GAL: { estado: "NO LOCALIZADO", motivo: "solo se ha localizado un 650 gallego en PDF con cuantías de reducción anteriores a 2011; no vale para numerar las casillas del formulario actual",
-    consultado: ["https://www.conselleriadefacenda.gal/documents/10433/43456/f650.pdf/b20f5497-3c38-4d1f-a2de-eba18a915aad (formulario antiguo: grupo II 15.956,87 €, discapacidad 108.200 €)"] },
-  VAL: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario del 650 de la Generalitat Valenciana", consultado: [] },
-  CAT: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario del 650 de la Agència Tributària de Catalunya", consultado: [] },
+  // Modelo 650 estatal: no residentes (disposición adicional 2.ª Ley 29/1987), Ceuta y Melilla.
+  AEAT: { estado: V, nombre: "Modelo 650 de la Agencia Tributaria", organo: "Agencia Estatal de Administración Tributaria",
+    programa: "Formulario del modelo 650 en la Sede electrónica de la AEAT (procedimiento G702)", url: "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/G702.shtml",
+    presentacion: "Presentación electrónica con certificado o por apoderado; ingreso por NRC o domiciliación.",
+    aprobacion: "Orden HAP/2488/2014, de 29 de diciembre (modelos 650, 651 y 655)",
+    fuente: "Instrucciones del modelo 650 (AEAT): sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/Instrucciones_mod650_es_es.pdf · leídas el 08-10-2026; relaciones citadas el 10-10-2026: 22 = 19 + 20 + 21, 36 = suma de 23 a 35, 37 = 22 − 36, 40 = 38 × 39 (las casillas 38 a 40 no se rellenan cuando se aplica el tipo medio efectivo), 63 = 49 − 61 + 62",
+    casillas: { porcion: 19, legados: 20, seguros: 21, bi: 22, parentesco: 23, discapacidad: 24, redSeguros: 25, empresa: 26, vivienda: 27, totalRed: 36, bl: 37, ci: 38, coef: 39, ct: 40, bonifCM: 50, aIngresar: 63 },
+    ajuarEnPorcion: true, relacion: "La relación de bienes, cargas, deudas y gastos se rellena en los apartados del propio formulario del 650; aquí sigue el orden del 660.",
+    importa: { formato: "", nota: "La Sede no importa ficheros de terceros para el 650: se rellena el formulario." } },
+  AND: { estado: "NO LOCALIZADO", nombre: "Modelos 650 y 660 de la Agencia Tributaria de Andalucía", organo: "Agencia Tributaria de Andalucía",
+    motivo: "no se ha podido leer el formulario ni las instrucciones del 650 de la Agencia Tributaria de Andalucía (se genera en su programa de ayuda)",
+    programa: "Programa de ayuda de los modelos 650 y 660 (Junta de Andalucía)", url: "https://www.juntadeandalucia.es/haciendayadministracionpublica/apl/pacweb/modelos/modelo650660/inicio650660.xhtml",
+    presentacion: "Un 650 por heredero y el 660 con la relación de bienes, aunque salga 0 €. Presentación telemática por colaborador social (convenios de los colegios profesionales, art. 92 LGT) con el modelo de representación firmado (art. 46 LGT), o en las oficinas.",
+    aprobacion: "Orden de aprobación del formulario vigente no localizada (10-10-2026); el programa de ayuda genera los modelos",
+    cero: true, relacion: "Modelo 660: relación de bienes y derechos, cargas, deudas y gastos, común a todos los herederos.",
+    importa: { formato: "", nota: "El programa de ayuda no publica un formato de importación." },
+    consultado: ["https://www.juntadeandalucia.es/sites/default/files/2025-07/MT_12.01.16_ISD.pdf (memoria de la estadística del ISD: cita los modelos 650, 651 y 660, sin casillas)",
+      "Resolución conjunta DGTDP-ATRIAN sobre ingreso y presentación de los modelos 600, 620, 650 y 651 (juntadeandalucia.es, 2020): sin casillas"] },
+  MAD: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de la Comunidad de Madrid", organo: "Comunidad de Madrid · Dirección General de Tributos",
+    motivo: "no se ha podido leer el formulario ni el programa de ayuda del 650 de la Comunidad de Madrid",
+    programa: "Oficina Virtual de la Consejería de Economía, Hacienda y Empleo (generación del 650 y del fichero para la presentación)", url: "https://www.comunidad.madrid/sites/default/files/gestion_de_herencias.pdf",
+    presentacion: "Presentación y pago telemáticos obligatorios de los modelos 650 y 651 (Orden de 5 de abril de 2019, BOCM 22-04-2019). La Oficina Virtual genera un fichero con todas las autoliquidaciones de la herencia y su anexo A65, que se importa y se presenta en el Portal del Contribuyente con certificado.",
+    aprobacion: "Orden de 5 de abril de 2019, de la Consejería de Economía, Empleo y Hacienda (BOCM 22-04-2019): presentación telemática obligatoria",
+    importa: { formato: "XML de la Oficina Virtual", nota: "La Oficina Virtual genera e importa su propio XML, pero el esquema del 650 no está publicado (solo el del 600, octubre de 2025): no se genera el fichero." },
+    relacion: "Relación de bienes en las pantallas de la Oficina Virtual (anexo de bienes del fichero A65).",
+    consultado: ["https://www.comunidad.madrid/sites/default/files/gestion_de_herencias.pdf (guía de la Oficina Virtual: generar, importar y presentar el .xml; sin casillas)",
+      "https://www.bocm.es/boletin/CM_Orden_BOCM/2019/04/22/BOCM-20190422-20.PDF (Orden de 5 de abril de 2019)"] },
+  CAT: { estado: "NO LOCALIZADO", nombre: "Models 650 i 660 de l'Agència Tributària de Catalunya", organo: "Agència Tributària de Catalunya",
+    motivo: "no se ha podido leer el formulario del 650 vigente (Ordre ECF/122/2025); la guía del ISD de la ATC (ejemplo de 2018) usa casillas 5, 301, 11, 503 y 18 de una versión anterior",
+    programa: "Formularios electrónicos y programa de ayuda del ISD de la ATC", url: "https://atc.gencat.cat/web/.content/documents/05_doc_models/arxius/660_instruccions_es.pdf",
+    presentacion: "Un 650 por cada interesado en la sucesión y el 660 de la herencia (instrucciones de los modelos 660 y 650 de la ATC).",
+    aprobacion: "Ordre ECF/122/2025, de 17 de juliol (DOGC 21-07-2025): modelos 650, 651, 652, 653 y 660; deroga la Ordre ECF/13/2025",
+    relacion: "Modelo 660: declaración de la sucesión con la relación de bienes.",
+    importa: { formato: "", nota: "La ATC sustituye los programas de ayuda por formularios electrónicos; no publica un formato de importación." },
+    consultado: ["https://atc.gencat.cat/web/.content/documents/02_doc_tributs/02_isd/guia_isd_es.pdf (guía práctica: casillas de una versión anterior del modelo)", "Ordre ECF/122/2025 (DOGC 21-07-2025), " + FUENTE_BUSCADOR] },
+  VAL: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de la Agència Tributària Valenciana", organo: "Agència Tributària Valenciana",
+    motivo: "no se ha podido leer el formulario del 650 de la Generalitat Valenciana",
+    programa: "Programa de ayuda SAR@ del modelo 650 y tramitación electrónica de la ATV", url: "https://atv.gva.es/",
+    presentacion: "Presentación telemática obligatoria para determinados obligados (Orden 10/2025, de 18 de diciembre), salvo aplazamiento, fraccionamiento o compensación.",
+    aprobacion: "Orden de 21 de noviembre de 2003 (presentación telemática, DOGV 17-12-2003); resolución de 2008 (acción SAR@-2 del 650); Orden 10/2025, de 18 de diciembre",
+    importa: { formato: "Servicios web SAR@-5-650", nota: "Transmisión de datos por servicios web para colaboradores; no hay un fichero con especificación pública para un despacho: no se genera." },
+    relacion: "Relación de bienes en el propio programa de ayuda.",
+    consultado: ["Orden 10/2025 y resoluciones SAR@ de la ATV, " + FUENTE_BUSCADOR] },
+  GAL: { estado: "NO LOCALIZADO", nombre: "Modelos 650 y 660 de la Axencia Tributaria de Galicia", organo: "Axencia Tributaria de Galicia (ATRIGA)",
+    motivo: "las instrucciones vigentes usan recuadros propios ([06] masa hereditaria, [10] y [11] masa neta; en la nuda propiedad [13] base liquidable teórica, [14] cuota y [15] tipo medio), pero no se ha podido leer el bloque de reducciones, cuota y bonificaciones",
+    programa: "Programas de ayuda de la ATRIGA (art. 8 de la Orden de 21 de enero de 2021)", url: "https://www.atriga.gal/documents/20632401/21069649/II-650-instrucciones-es-01012026.pdf/a9bafbb6-4533-4b0c-b4e9-8955a092c15f",
+    presentacion: "Un 650 por heredero; el 660 como declaración-documento sucesorio.",
+    aprobacion: "Orden de 21 de enero de 2021 (modelos 650, 651 y 660); Resolución de 29 de octubre de 2024 (anexo III del 650: prórroga e intereses de demora)",
+    relacion: "Modelo 660: declaración-documento sucesorio con la relación de bienes.",
+    importa: { formato: "", nota: "No se ha localizado un formato de importación público." },
+    consultado: ["https://www.conselleriadefacenda.gal/documents/10433/43456/f650.pdf/b20f5497-3c38-4d1f-a2de-eba18a915aad (formulario antiguo: grupo II 15.956,87 €, discapacidad 108.200 €)",
+      "https://www.atriga.gal/documents/20632401/21069649/II-650-instrucciones-es-01012026.pdf (instrucciones 01-01-2026), " + FUENTE_BUSCADOR] },
+  CYL: { estado: "PARCIAL", nombre: "Modelo 650 de la Junta de Castilla y León", organo: "Junta de Castilla y León · Consejería de Economía y Hacienda",
+    programa: "Modelo 650 de la Junta (cumplimentación en la web y hoja de parámetros)", url: "https://tributos.jcyl.es/web/es/modelos-formularios/modelos-autoliquidacion-validos-para.html",
+    presentacion: "Un 650 por heredero; el 660 en los demás casos (declaración).",
+    aprobacion: "Orden HAC/1735/2005, de 22 de diciembre (BOCyL 30-12-2005); Orden HAC/263/2015, de 30 de marzo (modificada por la Orden EYH/101/2022)",
+    fuente: "Instrucciones del modelo 650 (servicios4.jcyl.es/sirijcyl/usuario/DescargaPDF?modelo=650&pageOperation=DESCARGARINSTRUCCIONES) y preguntas frecuentes de tributos.jcyl.es, " + FUENTE_BUSCADOR + ": 41 reducción por parentesco; 48 reducción variable hasta 400.000 €; 49 suma de 41 a 48; 50 base liquidable; 51 cuota íntegra; 52 coeficiente; 53 = 51 × 52; 61 exceso de cuota del art. 22.2",
+    casillas: { parentesco: 41, variable: 48, totalRed: 49, bl: 50, ci: 51, coef: 52, ct: 53 },
+    notas: ["Casilla 61 (exceso de cuota del art. 22.2 Ley 29/1987): el cálculo ya la incluye en la cuota tributaria."],
+    relacion: "Modelo 660: relación de bienes.", importa: { formato: "", nota: "No se ha localizado un formato de importación público." } },
+  CLM: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Castilla-La Mancha", organo: "Junta de Comunidades de Castilla-La Mancha",
+    motivo: "las instrucciones (anexo de 2016) numeran desde la 101 (valor de la porción) y la 106 (base imponible = 101 a 104 − 105); no se ha podido leer el resto",
+    programa: "Modelo 650 en línea del Portal Tributario", url: "https://portaltributario.jccm.es/650-instrucciones-para-su-cumplimentacion",
+    presentacion: "Presentación obligatoria por registro electrónico de los modelos 650, 651 y 655 (Orden 43/2026, de 27 de marzo).",
+    aprobacion: "Orden 43/2026, de 27 de marzo (presentación electrónica obligatoria); instrucciones del anexo de 2016",
+    relacion: "Relación de bienes del documento sucesorio.", importa: { formato: "", nota: "No se ha localizado un formato de importación público." },
+    consultado: ["https://portaltributario.jccm.es/sites/portaltributario.castillalamancha.es/files/instrucciones/i-650_1_0.pdf, " + FUENTE_BUSCADOR] },
+  ARA: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Aragón", organo: "Gobierno de Aragón · Dirección General de Tributos", motivo: "no se ha podido leer el anexo de la Orden HAP/153/2016",
+    aprobacion: "Orden HAP/153/2016 (modelo 650 de Aragón)", consultado: ["legado.elnotario.es/images/pdf/LAUT-N66-06-ARA-Orden-HAP-153-2016.pdf, " + FUENTE_BUSCADOR] },
+  AST: { estado: "NO LOCALIZADO", nombre: "Modelo 650 del Principado de Asturias", organo: "Ente Público de Servicios Tributarios del Principado de Asturias", motivo: "no se ha podido leer el formulario vigente",
+    aprobacion: "Resolución de 4 de abril de 2011 (modelos tributarios, sede.tributasenasturias.es)", consultado: ["sede.tributasenasturias.es/imgvcm/stpa/PDF/Ficheros/Normativa/Resolucion040411modelos.pdf, " + FUENTE_BUSCADOR] },
+  BAL: { estado: "NO LOCALIZADO", nombre: "Modelos 650 y 660 de las Illes Balears", organo: "Agència Tributària de les Illes Balears", motivo: "no se ha podido leer el bloque de liquidación de las instrucciones de 2016",
+    programa: "Programa de ayuda del ISD de la ATIB", url: "https://www.atib.es/DescargaDocs/MODELO650CASTELLANOInstrucciones2016.pdf",
+    presentacion: "Un 650 por sujeto pasivo, con el 660 de relación de bienes del caudal relicto.", aprobacion: "Instrucciones del modelo 650 de la ATIB (2016)", relacion: "Modelo 660: relación de bienes del caudal relicto." },
+  CAN: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Canarias", organo: "Agencia Tributaria Canaria", motivo: "no se ha podido leer el formulario vigente",
+    aprobacion: "Orden de aprobación no localizada; consta una resolución de 2008 que adapta los modelos a los programas de ayuda (" + FUENTE_BUSCADOR + ")" },
+  CANT: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Cantabria", organo: "Agencia Cántabra de Administración Tributaria", motivo: "no se ha podido leer el formulario vigente",
+    aprobacion: "Orden HAC/46/2014 (versiones web de los modelos 650, 651, 652, 660 y 661)" },
+  EXT: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Extremadura", organo: "Junta de Extremadura · Dirección General de Tributos", motivo: "no se ha podido leer el formulario vigente", aprobacion: "Orden de aprobación no localizada (10-10-2026)" },
+  MUR: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de la Región de Murcia", organo: "Agencia Tributaria de la Región de Murcia", motivo: "no se ha podido leer el formulario vigente",
+    programa: "Programa de ayuda de la Agencia Tributaria de la Región de Murcia", url: "https://etributos.carm.es/etributos/public/preimpresos/doc/INS650-2017.pdf", aprobacion: "Instrucciones del modelo 650 (2017); orden de aprobación no localizada" },
+  RIO: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de La Rioja", organo: "Gobierno de La Rioja · Dirección General de Tributos", motivo: "no se ha podido leer el formulario vigente", aprobacion: "Orden de aprobación no localizada (10-10-2026)" },
+  NAV: { estado: "NO LOCALIZADO", nombre: "Modelos 650 y 660 de Navarra", organo: "Hacienda Foral de Navarra", motivo: "no se ha podido leer el anexo de la Orden Foral 345/2012",
+    aprobacion: "Orden Foral 345/2012, de 27 de agosto (modelos 650, 651, 652 y 660); prórroga con el modelo 653 (Orden Foral 130/2025)", relacion: "Modelo 660: declaración con la relación de bienes." },
+  ALA: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Álava", organo: "Diputación Foral de Álava · Hacienda", motivo: "no se ha podido leer el anexo de la Orden Foral 547/2009",
+    aprobacion: "Orden Foral 547/2009 (modelos 650 a 655), modificada por la Orden Foral 126/2014" },
+  BIZ: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Bizkaia", organo: "Diputación Foral de Bizkaia · Hacienda", motivo: "no se ha podido leer el anexo I de la Orden Foral 1973/2018",
+    presentacion: "Presentación electrónica del 650 respaldado por documento notarial, con o sin cuota, desde el 01-07-2025 (Orden Foral 225/2025, de 4 de junio).",
+    aprobacion: "Orden Foral 1973/2018, de 28 de noviembre (BOB 10-12-2018): modelos 650 y 650-V; modificada por la Orden Foral 225/2025, de 4 de junio" },
+  GIP: { estado: "NO LOCALIZADO", nombre: "Modelo 650 de Gipuzkoa", organo: "Diputación Foral de Gipuzkoa · Hacienda", motivo: "no se ha localizado la orden foral que aprueba el modelo", aprobacion: "Orden foral de aprobación no localizada (10-10-2026)" },
 };
 export const modelo650Aut = (ccaa) => MODELO650_AUT[ccaa] || { estado: "NO LOCALIZADO", motivo: "el formulario autonómico no se ha cotejado", consultado: [] };
+// Formulario que se presenta: el de la AEAT para no residentes (EST), Ceuta y Melilla; en el resto, el del territorio
+export const TERR_AEAT_650 = ["EST", "CEU", "MEL"];
+export function formulario650(ccaa) {
+  const id = TERR_AEAT_650.includes(ccaa) ? "AEAT" : ccaa, f = modelo650Aut(id);
+  return { id, ...f, casillas: { ...(f.casillas || {}) }, orientativo: f.estado === "NO LOCALIZADO", notas: [...(f.notas || [])], consultado: [...(f.consultado || [])] };
+}
+const eurM = (v) => (Number(v) || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+const CLAVE_RED = (p) => /parentesco/i.test(p) ? "parentesco" : /discapacidad/i.test(p) ? "discapacidad" : /seguros/i.test(p) ? "redSeguros" : /empresa/i.test(p) ? "empresa" : /vivienda/i.test(p) ? "vivienda" : /variable/i.test(p) ? "variable" : "otraRed";
+// Autoliquidación de un heredero, casilla a casilla, en el orden del formulario de su territorio.
+// caso: el mismo que recibió calcularISD (para la fecha de presentación y el recargo); o.territorio: el del expediente cuando difiere del
+// de la normativa aplicada (no residente: el cálculo usa la comunidad de los bienes y el formulario es el de la AEAT).
+// Cada fila: { sec: base|red|liq|pago, k, lab, v, n (casilla o null), tot (1 subtotal, 2 resultado), coef, norma, estado, nota }.
+export function modelo650(caso, R, hid, o = {}) {
+  const hh = ((R && R.herederos) || []).find((q) => q.id === hid); if (!hh) return null;
+  const terr = o.territorio || caso.ccaa, F = formulario650(terr), C = F.casillas, T = hh.traza || [];
+  const paso = (re) => T.find((t) => re.test(t.paso));
+  const nuda = T.some((t) => /^Base liquidable teórica/.test(t.paso));
+  const filas = [], fila = (sec, k, lab, v, x = {}) => { filas.push({ sec, k, lab, v: x.coef ? Math.round((Number(v) || 0) * 1e4) / 1e4 : r2(Number(v) || 0), n: x.sinCasilla || C[k] == null ? null : C[k], tot: 0, norma: "", estado: "", nota: "", ...x }); };
+  // Base imponible
+  const por = paso(/^Porción hereditaria/), aj = paso(/^Ajuar doméstico/), leg = paso(/^Legados recibidos/), seg = paso(/^Seguros de vida/), bi = paso(/^Base imponible/);
+  const vPor = por ? por.valor : 0, vAj = aj ? aj.valor : 0;
+  if (F.ajuarEnPorcion) fila("base", "porcion", "Valor de la porción del caudal hereditario (incluye el ajuar)", vPor + vAj, { norma: vAj ? `Porción ${eurM(vPor)} + ajuar imputado ${eurM(vAj)} (art. 15 Ley 29/1987)` : "", estado: aj && vAj ? aj.estado : "" });
+  else { fila("base", "porcion", "Porción hereditaria", vPor); fila("base", "ajuar", "Ajuar doméstico imputado", vAj, { norma: aj ? aj.norma : "", estado: aj && vAj ? aj.estado : "" }); }
+  if (leg) fila("base", "legados", "Legados", leg.valor);
+  if (seg) fila("base", "seguros", "Seguros de vida", seg.valor, { norma: seg.norma });
+  fila("base", "bi", "Base imponible", bi ? bi.valor : hh.baseImponible, { tot: 1 });
+  // Reducciones: la cifra es la que se aplica (lo que queda de base), como pide el formulario
+  const reds = T.filter((t) => /^Reducción/.test(t.paso));
+  for (const t of reds) {
+    const k = CLAVE_RED(t.paso), ap = Math.abs(t.aplicado != null ? t.aplicado : t.valor), lg = Math.abs(t.valor);
+    fila("red", k, t.paso, ap, { norma: t.norma || "", estado: t.estado || "", nota: ap < lg - 0.005 ? `Se aplican ${eurM(ap)} de un máximo legal de ${eurM(lg)}: la reducción no puede superar la base que queda` : "" });
+  }
+  if (!reds.length) fila("red", "sinRed", "Sin reducciones", 0);
+  fila("red", "totalRed", "Total reducciones", filas.filter((f) => f.sec === "red").reduce((s, f) => s + f.v, 0), { tot: 1 });
+  // Liquidación (con nuda propiedad, la AEAT no rellena 38 a 40: se liquida con el tipo medio efectivo)
+  const bl = paso(/^Base liquidable$/) || paso(/^Base liquidable(?! teórica)/), ci = paso(/^Cuota íntegra/), co = paso(/^Coeficiente multiplicador/);
+  fila("liq", "bl", "Base liquidable", bl ? bl.valor : hh.baseLiquidable, { tot: 1 });
+  const blT = paso(/^Base liquidable teórica/), ctT = paso(/^Cuota tributaria teórica/);
+  if (blT) fila("liq", "blTeorica", "Base liquidable teórica (nuda propiedad por su valor íntegro)", blT.valor, { norma: blT.norma, estado: blT.estado, nota: blT.nota || "" });
+  if (ctT) fila("liq", "ctTeorica", ctT.paso, ctT.valor, { norma: ctT.norma, estado: ctT.estado, tipoMedio: ctT.tipoMedio });
+  fila("liq", "ci", "Cuota íntegra", ci ? ci.valor : hh.cuotaIntegra, { norma: ci ? ci.norma : "", estado: ci ? ci.estado : "", sinCasilla: nuda });
+  const m = co ? /×\s*([\d.,]+)/.exec(co.paso) : null, k = m ? Number(m[1].replace(",", ".")) : 1, salto = !!(co && /salto de tramo/.test(co.paso));
+  fila("liq", "coef", "Coeficiente multiplicador", k, { coef: 1, norma: co ? co.norma : "", estado: co ? co.estado : "", sinCasilla: nuda, nota: salto ? "Con la regla del salto de tramo (art. 22.2 Ley 29/1987): la cuota tributaria no es la cuota íntegra por el coeficiente" : nuda ? "El coeficiente del grupo ya está dentro del tipo medio efectivo" : "" });
+  fila("liq", "ct", "Cuota tributaria", co ? co.valor : hh.cuotaTributaria, { tot: 1, sinCasilla: nuda });
+  const cm = ["CEU", "MEL"].includes(terr);
+  for (const t of T.filter((q) => /^Bonificación/.test(q.paso))) fila("liq", "bonif", t.paso, Math.abs(t.valor), { norma: t.norma || "", estado: t.estado || "", n: cm && C.bonifCM ? C.bonifCM : null });
+  const otros = T.filter((q) => !/^(Porción|Ajuar|Legados recibidos|Seguros de vida|Base imponible|Reducción|Base liquidable|Cuota íntegra|Cuota tributaria teórica|Coeficiente|Bonificación|A pagar)/.test(q.paso));
+  for (const t of otros) fila("liq", "otro", t.paso, t.valor, { norma: t.norma || "", estado: t.estado || "" });
+  fila("liq", "deduc", "Deducciones (doble imposición internacional y otras)", 0, { nota: "El cálculo no aplica deducciones (art. 23 Ley 29/1987): si proceden, se rellenan en el programa y bajan la cuota a ingresar" });
+  const ap = paso(/^A pagar/), aI = ap ? ap.valor : hh.aIngresar;
+  // Recargo por presentación fuera de plazo: el mismo cálculo que el del expediente, sobre la cuota de cada autoliquidación
+  const rc = R.recargo && R.recargo.importe > 0 && caso.fechaReferencia ? recargoPresentacion(caso.ccaa, aI, R.recargo.limite, caso.fechaReferencia) : null;
+  const conRec = !!(rc && rc.importe > 0);
+  fila("liq", "aIngresar", conRec ? "Cuota a ingresar antes del recargo" : "A ingresar", aI, { tot: conRec ? 1 : 2, sinCasilla: conRec, nota: conRec && C.aIngresar ? `Con recargo, la casilla ${C.aIngresar} la calcula el programa (${C.aIngresar} = 49 − 61 + 62)` : F.cero && !aI ? "Se presenta aunque salga 0 €" : "" });
+  if (conRec) {
+    fila("pago", "recargo", `Recargo por presentación fuera de plazo (${Math.round(rc.pct * 100)} %)`, rc.recargo, { norma: rc.norma, estado: rc.estado, nota: rc.reducido < rc.importe ? `Con la reducción del 25 % por ingresar al presentar (art. 27.5 LGT), recargo e intereses quedan en ${eurM(rc.reducido)}` : "" });
+    if (rc.intereses) fila("pago", "intereses", `Intereses de demora (${rc.diasIntereses} días)`, rc.intereses, { norma: rc.norma });
+    fila("pago", "total", "Total a ingresar con recargo", aI + rc.importe, { tot: 2 });
+  }
+  // Cuadre de casillas: cada relación del formulario se comprueba con las cifras de la propia hoja
+  const v = (kk) => { const s = filas.filter((f) => f.k === kk).reduce((t, f) => t + f.v, 0); return kk === "coef" ? s : r2(s); };
+  const regla = (txt, a, b) => ({ regla: txt, a: r2(a), b: r2(b), ok: Math.abs(a - b) <= 0.02 });
+  const cuadre = [regla("Base imponible = porción + ajuar + legados + seguros", v("bi"), v("porcion") + v("ajuar") + v("legados") + v("seguros")),
+    regla("Base liquidable = base imponible − total de reducciones", v("bl"), v("bi") - v("totalRed")),
+    salto ? null : regla("Cuota tributaria = cuota íntegra × coeficiente", v("ct"), r2(v("ci") * v("coef"))),
+    regla("A ingresar = cuota tributaria − bonificaciones − deducciones", v("aIngresar"), v("ct") - v("bonif") - v("deduc")),
+    regla("A ingresar = resultado del cálculo del expediente", v("aIngresar"), hh.aIngresar),
+    conRec ? regla("Total = cuota a ingresar + recargo + intereses", v("total"), v("aIngresar") + v("recargo") + v("intereses")) : null].filter(Boolean);
+  return { form: F, heredero: { id: hh.id, nombre: hh.nombre, relacion: hh.relacion, grupo: hh.grupo }, filas, cuadre, ok: cuadre.every((c) => c.ok), nuda,
+    aIngresar: aI, total: conRec ? v("total") : aI, recargo: conRec ? rc : null, pendientes: filas.filter((f) => f.estado === P).length };
+}
+// Relación de bienes (modelo 660 o apartado de bienes del formulario): por bloques, con sus referencias y el valor que entra en la herencia.
+// Acepta en cada bien, además de lo que usa el cálculo, descripcion, refCatastral, municipio, iban, entidad, isin, matricula, nifSociedad...
+// Los totales salen de los mismos bienes y se cuadran con la masa del cálculo (bruto, deudas, gastos y neto).
+export const BLOQUES_660 = [["inmuebles", "Bienes inmuebles", (b) => b.tipo === "inmueble" || b.tipo === "vivienda"], ["cuentas", "Depósitos en cuentas bancarias", (b) => b.tipo === "cuenta"],
+  ["valores", "Valores, acciones y fondos de inversión", (b) => b.tipo === "valores"], ["empresa", "Empresas, negocios y participaciones", (b) => b.tipo === "empresa"],
+  ["vehiculos", "Vehículos", (b) => b.tipo === "vehiculo"], ["otros", "Otros bienes y derechos", () => true]];
+export const ibanOculto = (s) => { const v = String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return v.length < 12 ? v : `${v.slice(0, 4)} **** **** **** **** ${v.slice(-4)}`; };
+export function relacion660(caso, R) {
+  const usados = new Set(), porId = Object.fromEntries((caso.herederos || []).map((h) => [h.id, h]));
+  const refs = (b) => [b.refCatastral ? ["Referencia catastral", String(b.refCatastral).toUpperCase().replace(/\s/g, "")] : null, b.municipio && b.municipio !== "OTRO" ? ["Municipio", b.muniNombre || (ORDENANZAS[b.municipio] && ORDENANZAS[b.municipio].nombre) || b.municipio] : null,
+    b.valorReferencia ? ["Valor de referencia", eurM(b.valorReferencia)] : null, b.iban ? ["IBAN", ibanOculto(b.iban)] : null, b.entidad ? ["Entidad", b.entidad] : null,
+    b.isin ? ["ISIN", String(b.isin).toUpperCase()] : null, b.titulos ? ["Títulos", String(b.titulos)] : null, b.matricula ? ["Matrícula", String(b.matricula).toUpperCase()] : null,
+    b.nifSociedad ? ["NIF de la sociedad", b.nifSociedad] : null].filter(Boolean);
+  const bloques = BLOQUES_660.map(([id, titulo, es]) => {
+    const filas = (caso.bienes || []).filter((b) => !usados.has(b) && es(b)).map((b) => {
+      usados.add(b);
+      const total = Math.max(0, Number(valorBien(b)) || 0), cuota = cuotaCausante(b);
+      return { id: b.id, desc: b.descripcion || titulo, tipo: b.tipo, refs: refs(b), titularidad: b.titularidad || "privativo", cuota, valorTotal: r2(total), valor: r2(total * cuota),
+        vivienda: !!b.esViviendaHabitual, legatario: b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia ? porId[b.legatarioId].nombre : "" };
+    });
+    return { id, titulo, filas, total: r2(filas.reduce((s, f) => s + f.valor, 0)) };
+  }).filter((b) => b.filas.length);
+  const pos = (x) => Math.max(0, Number(x) || 0);
+  const deudas = (caso.deudas || []).filter((d) => pos(d.importe) > 0).map((d) => ({ desc: d.concepto || "Deuda", importe: r2(pos(d.importe)), deducible: r2(pos(d.importe) * (d.ganancial ? 0.5 : 1)), ganancial: !!d.ganancial }));
+  const gastos = (caso.gastos || []).filter((g) => pos(g.importe) > 0).map((g) => ({ desc: g.concepto || "Gasto", importe: r2(pos(g.importe)) }));
+  const seguros = (caso.seguros || []).filter((s) => pos(s.importe) > 0).map((s) => ({ beneficiario: porId[s.beneficiarioId] ? porId[s.beneficiarioId].nombre : "", importe: r2(pos(s.importe)) }));
+  const tot = { bienes: r2(bloques.reduce((s, b) => s + b.total, 0)), deudas: r2(deudas.reduce((s, d) => s + d.deducible, 0)), gastos: r2(gastos.reduce((s, g) => s + g.importe, 0)),
+    ajuar: R ? R.masa.ajuar : 0, seguros: r2(seguros.reduce((s, x) => s + x.importe, 0)) };
+  tot.neto = r2(Math.max(0, tot.bienes - tot.deudas - tot.gastos));
+  const M = R ? R.masa : null, regla = (txt, a, b) => ({ regla: txt, a: r2(a), b: r2(b), ok: Math.abs(a - b) <= 0.02 });
+  const cuadre = M ? [regla("Bienes y derechos = caudal del cálculo", tot.bienes, M.bruto), regla("Deudas deducibles = deudas del cálculo", tot.deudas, M.deudas),
+    regla("Gastos deducibles = gastos del cálculo", tot.gastos, M.gastos), regla("Caudal neto = neto del cálculo", tot.neto, M.neto)] : [];
+  return { bloques, deudas, gastos, seguros, ajuar: M ? { valor: M.ajuar, nota: M.notaAjuar, base: M.baseAjuar } : null, totales: tot, cuadre, ok: cuadre.every((c) => c.ok) };
+}
+// Documentos que se acompañan a la autoliquidación y a la relación de bienes, según los datos del expediente
+// o: { testamento: "si"|"no"|"nose", territorio }. Cada uno: { doc, motivo }.
+export function documentos650(caso, o = {}) {
+  const B = caso.bienes || [], H = (caso.herederos || []).filter((h) => !h.renuncia), terr = o.territorio || caso.ccaa, L = [];
+  const add = (doc, motivo) => L.push({ doc, motivo });
+  add("Copia del documento en que conste la adquisición (escritura de aceptación y adjudicación o documento privado con la relación de bienes)", "art. 66 RD 1629/1991");
+  add("Certificado literal de defunción", "acredita el devengo (art. 24 Ley 29/1987)");
+  add("Certificado del Registro General de Actos de Última Voluntad", "título sucesorio");
+  const test = o.testamento || (caso.reparto === "intestado" ? "no" : "si");
+  if (test === "no") add("Acta notarial de declaración de herederos abintestato", "título sucesorio sin testamento");
+  else if (test === "si") add("Copia autorizada del último testamento", "título sucesorio");
+  else add("Testamento o acta de declaración de herederos (aún no consta si hay testamento)", "título sucesorio");
+  add("Certificado del Registro de Contratos de Seguros de Cobertura de Fallecimiento", "seguros de vida (art. 9.1.c Ley 29/1987)");
+  add("DNI o NIE del causante y de cada heredero", "identificación de los sujetos pasivos");
+  if (B.some((b) => b.tipo === "inmueble" || b.tipo === "vivienda")) add("Certificación o consulta descriptiva y gráfica del Catastro y último recibo del IBI de cada inmueble", "valor de referencia y referencia catastral (art. 9 Ley 29/1987)");
+  if (B.some((b) => b.tipo === "cuenta")) add("Certificado de cada banco con el saldo de las cuentas a la fecha del fallecimiento", "depósitos en cuenta");
+  if (B.some((b) => b.tipo === "valores")) add("Certificado de posición de valores y fondos a la fecha del fallecimiento (valor de cotización o liquidativo)", "valores (arts. 15 y 16 Ley 19/1991)");
+  if (B.some((b) => b.tipo === "vehiculo")) add("Permiso de circulación o ficha técnica de cada vehículo", "valoración por las tablas de precios medios");
+  if (B.some((b) => b.tipo === "empresa")) add("Balance y documentación de la empresa o de las participaciones, y justificación de los requisitos de la reducción", "empresa familiar (art. 20.2.c Ley 29/1987)");
+  if ((caso.deudas || []).some((d) => Number(d.importe) > 0)) add("Certificado de cada deuda pendiente a la fecha del fallecimiento", "deudas deducibles (art. 13 Ley 29/1987)");
+  if ((caso.gastos || []).some((g) => Number(g.importe) > 0)) add("Facturas del entierro y funeral y, en su caso, de la última enfermedad", "gastos deducibles (art. 14 Ley 29/1987)");
+  if ((caso.seguros || []).some((s) => Number(s.importe) > 0)) add("Certificado de la aseguradora con el capital cobrado por cada beneficiario", "seguros de vida");
+  if (H.some((h) => Number(h.discapacidad) > 0)) add("Certificado del grado de discapacidad de quien aplique la reducción", "reducción por discapacidad");
+  if (B.some((b) => b.esViviendaHabitual)) add("Certificado de empadronamiento del causante (y del heredero conviviente, si se exige)", "reducción por vivienda habitual");
+  if (H.some((h) => Number(h.patrimonioPreexistente) > 0)) add("Justificación del patrimonio preexistente del heredero", "coeficiente multiplicador (art. 22 Ley 29/1987)");
+  if (terr === "AND") add("Modelo de representación firmado por cada heredero, si presenta un colaborador social", "art. 46 LGT y convenio de colaboración social");
+  if (TERR_AEAT_650.includes(terr) && terr === "EST") add("NIE de los herederos no residentes y documentación de la residencia del causante", "no residentes (disposición adicional 2.ª Ley 29/1987)");
+  return L;
+}
 
 // ─────────────────────────── Plazos ───────────────────────────
 export function sumarMeses(f, n) { const d = new Date(f + "T12:00:00"); const dia = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < dia) d.setDate(0); return d.toISOString().slice(0, 10); }

@@ -2,7 +2,7 @@
 // renuncia al usufructo universal, art. 22.3 y plazos unificados en la 14; robustez exhaustiva de plusvalía (todas las ordenanzas y los 8.132 municipios) en la 15 y del ISD (22 territorios) en la 16)
 import { tramitesDe, TR_TOTAL } from "./tramites.mjs";
 import { readFileSync } from "node:fs";
-import { repartoIntestado, repartoUsufructoUniversal, calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
+import { repartoIntestado, repartoUsufructoUniversal, calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, formulario650, modelo650, relacion660, documentos650, ibanOculto, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
 
 let ok = 0, ko = 0;
 const eq = (n, got, exp, tol = 0.02) => { const p = Math.abs(got - exp) <= tol; p ? ok++ : ko++; if (!p || process.env.V) console.log(`${p ? "✔" : "✘"} ${n}: ${got} (esperado ${exp})`); };
@@ -1620,6 +1620,128 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   const dgt = tramitesDe({ fecha: "2026-05-04", nHerederos: 2, inmuebles: 1, situ: {}, hayVehiculos: true }).find((t) => t.id === "dgt_custodia");
   eq("26 · DGT custodia: marcado como condicional", dgt && /Solo si alguien usa el vehículo/.test(dgt.condicional) ? 1 : 0, 1);
   eq("26 · otros trámites no son condicionales", tramitesDe({ fecha: "2026-05-04", nHerederos: 2, inmuebles: 1, situ: {} }).filter((t) => t.condicional).length, 0);
+}
+
+// ── 27 · G02 (10-10-2026): modelos 650 y 660 casilla a casilla por territorio. Capa de salida: cada casilla es una cifra del cálculo y
+// las relaciones del formulario cuadran (base imponible, base liquidable, cuota tributaria, a ingresar, recargo, relación de bienes).
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const fila = (m, k) => m.filas.find((f) => f.k === k);
+  const val = (m, k) => m.filas.filter((f) => f.k === k).reduce((s, f) => s + f.v, 0);
+  // Tres casos por territorio: hijo único con cuenta; viudo con usufructo, gananciales, deudas, gastos, seguro y legado; colaterales con discapacidad, fuera de plazo
+  const casos = (t) => [
+    { fechaFallecimiento: "2026-03-10", ccaa: t, reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 240000, iban: "ES9121000418450200051332", entidad: "CaixaBank" }], herederos: [{ id: "h", nombre: "Hija", relacion: "hijo", edad: 35 }] },
+    { fechaFallecimiento: "2026-02-01", ccaa: t, reparto: "usufructoUniversal", bienes: [{ id: "v", tipo: "inmueble", descripcion: "Vivienda", valor: 320000, esViviendaHabitual: true, titularidad: "ganancial", refCatastral: "9872023VH5797S0001WX" }, { id: "c", tipo: "cuenta", valor: 180000 }, { id: "l", tipo: "valores", valor: 40000, legatarioId: "n", isin: "ES0113900J37" }, { id: "k", tipo: "vehiculo", valor: 9000, matricula: "1234BCD" }],
+      deudas: [{ concepto: "Hipoteca", importe: 30000, ganancial: true }], gastos: [{ concepto: "Funeral", importe: 4200 }], seguros: [{ beneficiarioId: "w", importe: 25000 }],
+      herederos: [{ id: "w", nombre: "Viuda", relacion: "conyuge", edad: 72 }, { id: "a", nombre: "Hijo", relacion: "hijo", edad: 44 }, { id: "b", nombre: "Hija menor", relacion: "hijo", edad: 17 }, { id: "n", nombre: "Nieto legatario", relacion: "nieto", edad: 20, estirpe: "Hijo" }] },
+    { fechaFallecimiento: "2025-01-15", fechaReferencia: "2026-10-10", enPlazo: false, ccaa: t, reparto: "porcentajes", bienes: [{ id: "i", tipo: "inmueble", valor: 210000, refCatastral: "1234567VK4713S0001AB" }, { id: "e", tipo: "empresa", valor: 60000, nifSociedad: "B12345674" }, { id: "o", tipo: "otro", valor: 5000 }],
+      herederos: [{ id: "s", nombre: "Sobrina", relacion: "sobrino", edad: 50, pct: 60, discapacidad: 45 }, { id: "x", nombre: "Amigo", relacion: "extrano", edad: 61, pct: 40, patrimonioPreexistente: 500000 }] },
+  ];
+  let filasOk = 0, filasTot = 0, n660 = 0;
+  for (const [t, nombre] of TERRITORIOS) {
+    const F = formulario650(t);
+    si(`27 · ${t}: formulario con nombre, organismo y norma de aprobación o motivo`, !!(F.nombre && F.organo && (F.aprobacion || F.motivo)));
+    si(`27 · ${t}: estado de la numeración válido`, ["VERIFICADO", "PARCIAL", "NO LOCALIZADO"].includes(F.estado) && F.orientativo === (F.estado === "NO LOCALIZADO"));
+    casos(t).forEach((caso, ci) => {
+      const R = calcularISD(caso);
+      let suma = 0, sumRec = 0;
+      for (const hh of R.herederos) {
+        const m = modelo650(caso, R, hh.id);
+        filasTot++; if (m.ok) filasOk++; else console.log("✘ cuadre", t, ci, hh.nombre, JSON.stringify(m.cuadre.filter((c) => !c.ok)));
+        // Valores iguales al cálculo
+        const iguales = Math.abs(val(m, "bi") - hh.baseImponible) <= 0.01 && Math.abs(val(m, "bl") - hh.baseLiquidable) <= 0.01 && Math.abs(val(m, "ci") - hh.cuotaIntegra) <= 0.01 && Math.abs(val(m, "ct") - hh.cuotaTributaria) <= 0.01 && Math.abs(val(m, "aIngresar") - hh.aIngresar) <= 0.01;
+        if (!iguales) si(`27 · ${t} caso ${ci + 1} ${hh.nombre}: casillas iguales al cálculo`, false);
+        if (F.orientativo && m.filas.some((f) => f.n != null)) si(`27 · ${t}: orden orientativo sin números de casilla`, false);
+        suma += m.aIngresar; sumRec += m.recargo ? m.recargo.importe : 0;
+      }
+      eq(`27 · ${t} caso ${ci + 1}: la suma de las autoliquidaciones es el total del expediente`, suma, R.total);
+      if (R.recargo && R.recargo.importe > 0) eq(`27 · ${t} caso ${ci + 1}: el recargo por heredero suma el del expediente`, sumRec, R.recargo.importe, 0.01 * R.herederos.length + 0.005);
+      const r6 = relacion660(caso, R); if (r6.ok) n660++; else console.log("✘ 660", t, ci, JSON.stringify(r6.cuadre));
+    });
+  }
+  eq("27 · 650: todas las hojas (22 territorios × 3 casos × herederos) cuadran", filasOk, filasTot, 0);
+  eq("27 · 660: las 66 relaciones de bienes cuadran con la masa del cálculo", n660, TERRITORIOS.length * 3, 0);
+
+  // Formulario que se presenta
+  for (const t of ["EST", "CEU", "MEL"]) si(`27 · ${t}: se presenta el 650 de la AEAT`, formulario650(t).id === "AEAT" && formulario650(t).estado === "VERIFICADO");
+  si("27 · Andalucía: 650 y 660 de la ATA, orden orientativo, se presenta aunque salga 0 €", formulario650("AND").id === "AND" && formulario650("AND").orientativo && formulario650("AND").cero);
+  si("27 · Madrid: importa su XML pero el esquema no es público (no se genera)", /XML/.test(formulario650("MAD").importa.formato) && /no está publicado/.test(formulario650("MAD").importa.nota));
+  si("27 · Cataluña: Ordre ECF/122/2025", /ECF\/122\/2025/.test(formulario650("CAT").aprobacion));
+  si("27 · Bizkaia: Orden Foral 1973/2018", /1973\/2018/.test(formulario650("BIZ").aprobacion));
+  si("27 · Navarra: Orden Foral 345/2012", /345\/2012/.test(formulario650("NAV").aprobacion));
+  si("27 · un territorio inexistente no inventa casillas", Object.keys(formulario650("XXX").casillas).length === 0 && formulario650("XXX").orientativo);
+
+  // AEAT (no residente): casillas verificadas y sus relaciones (22 = 19 + 20 + 21; 37 = 22 − 36; 40 = 38 × 39)
+  const cEst = { fechaFallecimiento: "2026-04-20", ccaa: "EST", reparto: "porcentajes", bienes: [{ id: "v", tipo: "inmueble", valor: 300000, esViviendaHabitual: true }, { id: "c", tipo: "cuenta", valor: 200000 }, { id: "l", tipo: "cuenta", valor: 30000, legatarioId: "b" }], seguros: [{ beneficiarioId: "a", importe: 20000 }],
+    herederos: [{ id: "a", nombre: "A", relacion: "hijo", edad: 40, pct: 50 }, { id: "b", nombre: "B", relacion: "hermano", edad: 60, pct: 50 }] };
+  const Rest = calcularISD(cEst), mA = modelo650(cEst, Rest, "a"), mB = modelo650(cEst, Rest, "b");
+  const cas = (m, n) => m.filas.filter((f) => f.n === n).reduce((s, f) => s + f.v, 0);
+  si("27 · AEAT: casillas 19, 21, 22, 23, 25, 27, 36, 37, 38, 39, 40 y 63 presentes", [19, 21, 22, 23, 25, 27, 36, 37, 38, 39, 40, 63].every((n) => mA.filas.some((f) => f.n === n)));
+  eq("27 · AEAT: casilla 19 = porción + ajuar imputado", cas(mA, 19), Rest.herederos[0].traza.filter((t) => /^(Porción|Ajuar)/.test(t.paso)).reduce((s, t) => s + t.valor, 0));
+  eq("27 · AEAT: 22 = 19 + 20 + 21", cas(mB, 22), cas(mB, 19) + cas(mB, 20) + cas(mB, 21));
+  eq("27 · AEAT: 22 = 19 + 20 + 21 (con seguro)", cas(mA, 22), cas(mA, 19) + cas(mA, 20) + cas(mA, 21));
+  eq("27 · AEAT: 36 = suma de las reducciones (23 a 35)", cas(mA, 36), mA.filas.filter((f) => f.sec === "red" && f.k !== "totalRed").reduce((s, f) => s + f.v, 0));
+  eq("27 · AEAT: 37 = 22 − 36", cas(mA, 37), cas(mA, 22) - cas(mA, 36));
+  eq("27 · AEAT: 40 = 38 × 39 (hermano, coeficiente 1,5882)", cas(mB, 40), Math.round(cas(mB, 38) * cas(mB, 39) * 100) / 100);
+  eq("27 · AEAT: coeficiente del hermano en la casilla 39", cas(mB, 39), 1.5882, 0.00001);
+  eq("27 · AEAT: 63 = a ingresar del cálculo", cas(mB, 63), Rest.herederos[1].aIngresar);
+  si("27 · AEAT: el legado va a la casilla 20", fila(mB, "legados").n === 20 && fila(mB, "legados").v === 30000);
+  // Nuda propiedad: las casillas 38 a 40 no se rellenan (tipo medio efectivo)
+  const cNuda = { fechaFallecimiento: "2026-04-20", ccaa: "EST", reparto: "usufructoUniversal", bienes: [{ id: "c", tipo: "cuenta", valor: 600000 }], herederos: [{ id: "w", nombre: "W", relacion: "conyuge", edad: 70 }, { id: "a", nombre: "A", relacion: "hijo", edad: 40 }] };
+  const Rn = calcularISD(cNuda), mN = modelo650(cNuda, Rn, "a");
+  si("27 · AEAT con nuda propiedad: sin números en las casillas 38 a 40, con la base liquidable teórica", mN.nuda && ["ci", "coef", "ct"].every((k) => fila(mN, k).n == null) && !!fila(mN, "blTeorica"));
+  // Ceuta: la bonificación del 50 % va a la casilla 50
+  const cCeu = { fechaFallecimiento: "2026-04-20", ccaa: "CEU", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 200000 }], herederos: [{ id: "h", nombre: "H", relacion: "hermano", edad: 60 }] };
+  const Rc = calcularISD(cCeu), mC = modelo650(cCeu, Rc, "h");
+  si("27 · Ceuta: bonificación en la casilla 50", fila(mC, "bonif") && fila(mC, "bonif").n === 50 && fila(mC, "bonif").v > 0);
+  // Fuera de plazo: la casilla 63 la calcula el programa (no se numera la cuota antes del recargo)
+  const cRec = { ...cEst, fechaFallecimiento: "2025-01-15", fechaReferencia: "2026-10-10", enPlazo: false }, Rr = calcularISD(cRec), mR = modelo650(cRec, Rr, "b");
+  si("27 · AEAT fuera de plazo: recargo e intereses aparte y sin número en la cuota antes del recargo", mR.recargo && fila(mR, "recargo").v > 0 && fila(mR, "aIngresar").n == null && /49 − 61 \+ 62/.test(fila(mR, "aIngresar").nota));
+  eq("27 · AEAT fuera de plazo: total = cuota + recargo + intereses", fila(mR, "total").v, fila(mR, "aIngresar").v + fila(mR, "recargo").v + (fila(mR, "intereses") ? fila(mR, "intereses").v : 0));
+
+  // Castilla y León: casillas 41, 48, 49, 50, 51, 52 y 53 (instrucciones oficiales); las demás, sin número
+  const cCyl = { fechaFallecimiento: "2026-04-20", ccaa: "CYL", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 700000 }], herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 45 }] };
+  const Ry = calcularISD(cCyl), mY = modelo650(cCyl, Ry, "h");
+  si("27 · Castilla y León: numeración parcial", mY.form.estado === "PARCIAL");
+  si("27 · CyL: parentesco en la 41 y reducción variable hasta 400.000 € en la 48", fila(mY, "parentesco").n === 41 && fila(mY, "variable").n === 48);
+  eq("27 · CyL: 49 = suma de las reducciones = 400.000 €", cas(mY, 49), 400000);
+  eq("27 · CyL: 50 = base liquidable", cas(mY, 50), Ry.herederos[0].baseLiquidable);
+  eq("27 · CyL: 53 = 51 × 52", cas(mY, 53), Math.round(cas(mY, 51) * cas(mY, 52) * 100) / 100);
+  si("27 · CyL: base imponible sin número (no verificado)", fila(mY, "bi").n == null);
+
+  // Casos de la demostración (misma familia y bienes principales)
+  const demo = [
+    ["AND", "Málaga: viuda y dos hijos, sin testamento, gananciales", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 285000, valorReferencia: 271000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 64000, titularidad: "ganancial" }], gastos: [{ concepto: "Funeral", importe: 4300 }], herederos: [{ id: "p1", nombre: "Estrella", relacion: "conyuge", edad: 71 }, { id: "p2", nombre: "Rufino", relacion: "hijo", edad: 45 }, { id: "p3", nombre: "Nieves", relacion: "hijo", edad: 41 }] }],
+    ["MAD", "Chamberí: pareja inscrita 30 % e hijo 70 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 540000, valorReferencia: 498000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 85000 }], gastos: [{ concepto: "Funeral", importe: 5100 }], herederos: [{ id: "p1", nombre: "Verónica", relacion: "pareja_hecho", inscrita: true, edad: 58, pct: 30 }, { id: "p2", nombre: "Rogelio", relacion: "hijo", edad: 34, pct: 70 }] }],
+    ["CAT", "Eixample: cónyuge 40 % e hijos 30 % y 30 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 610000, valorReferencia: 575000, esViviendaHabitual: true }, { id: "b2", tipo: "valores", valor: 120000 }], gastos: [{ concepto: "Funeral", importe: 6200 }], herederos: [{ id: "p1", nombre: "Carme", relacion: "conyuge", edad: 66, pct: 40 }, { id: "p2", nombre: "Mercè", relacion: "hijo", edad: 38, pct: 30 }, { id: "p3", nombre: "Jaume", relacion: "hijo", edad: 35, pct: 30 }] }],
+    ["VAL", "Russafa: viuda e hijos de 19 y 15 años, hipoteca ganancial", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 255000, valorReferencia: 238000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 22000, titularidad: "ganancial" }], deudas: [{ concepto: "Hipoteca Banco Sabadell", importe: 62000, ganancial: true }], gastos: [{ concepto: "Funeral", importe: 3800 }], herederos: [{ id: "p1", nombre: "Lledó", relacion: "conyuge", edad: 48 }, { id: "p2", nombre: "Aina", relacion: "hijo", edad: 19 }, { id: "p3", nombre: "Pol", relacion: "hijo", edad: 15 }] }],
+    ["CLM", "Toledo: tres hijos, uno renuncia; préstamo personal", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 198000, valorReferencia: 184000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 41000 }], deudas: [{ concepto: "Préstamo personal en Ibercaja", importe: 18000 }], gastos: [{ concepto: "Funeral", importe: 3300 }], herederos: [{ id: "p1", nombre: "Gabriel", relacion: "hijo", edad: 55, renuncia: true }, { id: "p2", nombre: "Olga", relacion: "hijo", edad: 52 }, { id: "p3", nombre: "Eduardo", relacion: "hijo", edad: 47 }] }],
+    ["GAL", "Vigo: usufructo universal de la viuda", { reparto: "usufructoUniversal", bienes: [{ id: "b1", tipo: "inmueble", valor: 248000, valorReferencia: 231000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 58000, titularidad: "ganancial" }], gastos: [{ concepto: "Funeral", importe: 4100 }], herederos: [{ id: "p1", nombre: "Noela", relacion: "conyuge", edad: 77 }, { id: "p2", nombre: "Iago", relacion: "hijo", edad: 50 }, { id: "p3", nombre: "Uxía", relacion: "hijo", edad: 46 }] }],
+    ["NAV", "Pamplona: dos hijos al 50 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 315000, valorReferencia: 296000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 90000 }], gastos: [{ concepto: "Funeral", importe: 4000 }], herederos: [{ id: "p1", nombre: "Edurne", relacion: "hijo", edad: 51, pct: 50 }, { id: "p2", nombre: "Txomin", relacion: "hijo", edad: 48, pct: 50 }] }],
+  ];
+  for (const [t, d, c] of demo) {
+    const caso = { fechaFallecimiento: "2026-06-01", ccaa: t, ...c }, R = calcularISD(caso);
+    const M = R.herederos.map((hh) => modelo650(caso, R, hh.id)), r6 = relacion660(caso, R);
+    si(`27 · demostración ${t} (${d}): hojas del 650 cuadradas e iguales al cálculo`, M.every((m, i) => m.ok && Math.abs(m.aIngresar - R.herederos[i].aIngresar) < 0.005 && Math.abs(val(m, "bl") - R.herederos[i].baseLiquidable) < 0.005));
+    si(`27 · demostración ${t}: relación de bienes cuadrada (bienes ${r6.totales.bienes} = caudal ${R.masa.bruto})`, r6.ok);
+    eq(`27 · demostración ${t}: suma de los 650`, M.reduce((s, m) => s + m.aIngresar, 0), R.total);
+  }
+
+  // 660: referencias y totales
+  const c2 = casos("MAD")[1], R2 = calcularISD(c2), r2_ = relacion660(c2, R2);
+  si("27 · 660: bloques en orden (inmuebles, cuentas, valores, vehículos)", r2_.bloques.map((b) => b.id).join() === "inmuebles,cuentas,valores,vehiculos");
+  si("27 · 660: el inmueble ganancial entra por la mitad y lleva la referencia catastral", r2_.bloques[0].filas[0].valor === 160000 && r2_.bloques[0].filas[0].refs.some(([k, v]) => k === "Referencia catastral" && v === "9872023VH5797S0001WX"));
+  si("27 · 660: el valor legado indica el legatario y su ISIN", r2_.bloques[2].filas[0].legatario === "Nieto legatario" && r2_.bloques[2].filas[0].refs.some(([k, v]) => k === "ISIN" && v === "ES0113900J37"));
+  eq("27 · 660: la hipoteca ganancial resta por la mitad", r2_.totales.deudas, 15000);
+  eq("27 · 660: caudal neto = bienes − deudas − gastos", r2_.totales.neto, R2.masa.neto);
+  const r1 = relacion660(casos("AND")[0], calcularISD(casos("AND")[0]));
+  si("27 · 660: el IBAN se muestra oculto (país, control y últimas cuatro cifras)", r1.bloques[0].filas[0].refs.some(([k, v]) => k === "IBAN" && v === "ES91 **** **** **** **** 1332"));
+  si("27 · ibanOculto no deja ver las cifras intermedias", !/0418450200/.test(ibanOculto("ES91 2100 0418 4502 0005 1332")));
+  // Documentos que se acompañan
+  const D2 = documentos650(c2).map((d) => d.doc).join(" | ");
+  si("27 · documentos: deudas, gastos, seguros y vivienda generan su justificante", /certificado de cada deuda/i.test(D2) && /facturas del entierro/i.test(D2) && /aseguradora/i.test(D2) && /empadronamiento/i.test(D2));
+  si("27 · documentos: sin testamento pide el acta de declaración de herederos", /declaración de herederos/.test(documentos650(casos("MAD")[0]).map((d) => d.doc).join()));
+  si("27 · documentos: en Andalucía, modelo de representación del colaborador social", documentos650(casos("AND")[0]).some((d) => /colaborador social/.test(d.doc)));
 }
 
 console.log(`\n${ok} correctas · ${ko} fallidas`);

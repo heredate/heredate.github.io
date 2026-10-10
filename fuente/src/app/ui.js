@@ -359,10 +359,14 @@ function tHerencia(x, R) {
 function tImpuestos(x, R) {
   const E = estrategia(x), K = costeExpediente(x, R);
   const HH = R.isd.herederos; const hs = HH.find((h) => h.id === ui.hsel) || HH[0];
+  // G02: tres vistas de Impuestos: el cálculo paso a paso, el modelo 650 casilla a casilla por heredero y la relación de bienes del 660 (modelos.js)
+  const imv = ["650", "660"].includes(ui.imv) && typeof m6Vista650 === "function" ? ui.imv : "calc";
+  const imvSeg = typeof m6Vista650 === "function" ? `<div class="seg m6-seg" role="group" aria-label="Vista de Impuestos">${[["calc", "Paso a paso"], ["650", "Modelo 650"], ["660", "Modelo 660"]].map(([k, t]) => `<button data-m6="imv" data-v="${k}" aria-pressed="${imv === k}">${t}</button>`).join("")}</div>` : "";
   return `${typeof bloqueoRepartoHTML === "function" ? bloqueoRepartoHTML(x, R) : ""}<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${kpi("Sucesiones", eur0(R.isd.total), R.isd.recargo && R.isd.recargo.importe ? `${esc(R.isd.territorio)} · más recargo ${eur0(R.isd.recargo.importe)}` : esc(R.isd.territorio), "suc")}${kpi("Plusvalía", eur0(R.totalPlus), plural(R.plus.length, "inmueble"), "plu")}${K && K.exceso ? kpi("Exceso de adjudicación", eur0(K.exceso), "AJD/TPO · ver Partición", "", 'data-sec="particion"') : ""}${kpi("Total", eur0(K ? K.total : R.isd.total + R.totalPlus), "coste fiscal de la herencia")}${E ? kpi("Ahorro fiscal hoy", eur0(E.seguro), "ver estrategia", "gold", 'data-sec="estrategia"') : ""}</div>
     ${x.ccaa === "AND" ? `<div class="infobar" style="margin-top:14px"><span class="ico gold">${I.info}</span><span>Andalucía: un <b>modelo 650</b> por heredero y el <b>660</b> con la relación de bienes, en seis meses. Prórroga con el modelo 659 en los cinco primeros. Se presenta aunque salga 0 €. <a href="${SEDES.ata650}" target="_blank" rel="noopener">Programa de ayuda ${I.ext.replace("<svg", '<svg width="13" height="13"')}</a></span></div>` : ""}
     ${x.ccaa === "EST" ? `<div class="infobar" style="margin-top:12px"><span class="ico teal">${I.info}</span><span>${x.ccaaBienes ? `No residente: se aplica la normativa de <b>${esc(nombreTerr(x.ccaaBienes))}</b>, donde está la mayor parte de los bienes (disposición adicional 2.ª Ley 29/1987).` : "No residente: se aplica la ley estatal. Si la mayoría de los bienes está en una comunidad, puede aplicarse su normativa: indícalo en el asistente."}</span></div>` : ""}
     <div class="pdfbar"><span><b>Informe de cálculo</b><small>Masa, reparto, Sucesiones paso a paso, plusvalía, partición y totales, con el membrete del despacho.</small></span><button class="btn sm" data-act="informePdf">${I.dl}Descargar PDF</button></div>
+    ${imvSeg}${imv === "650" ? m6Vista650(x, R, hs && hs.id) : imv === "660" ? m6Vista660(x, R) : `
     <div class="sectitle flex"><b>Sucesiones, paso a paso</b><span>${esc(R.isd.territorio)}</span></div>
     ${HH.length > 1 ? `<div class="hpills" role="tablist" aria-label="Sucesiones por heredero">${HH.map((h) => `<button role="tab" data-hsel="${h.id}" aria-selected="${h.id === hs.id}"><span>${esc(h.nombre)}</span><b class="num">${eur0(h.aIngresar)}</b></button>`).join("")}</div>` : ""}
     ${hs ? `<div class="card" style="margin-top:10px">${panelHeredero(x, R, hs)}</div>` : ""}
@@ -381,7 +385,7 @@ function tImpuestos(x, R) {
       <div class="row toggle"><span class="t"><b>Reducción por empresa familiar</b></span><label class="switch"><input type="checkbox" data-opt="aplicarEmpresa" ${x.aplicarEmpresa ? "checked" : ""}><span></span></label></div>
     </div>
     ${R.isd.pendientes.length ? `<div class="sectitle">En verificación con el boletín oficial</div><div class="group"><ul class="notes">${R.isd.pendientes.map((p) => `<li><i class="dot warn"></i><span>${esc(p)}</span></li>`).join("")}</ul></div>` : ""}
-    <p class="foot-note">Estimación con la normativa vigente a la fecha del fallecimiento. La revisa un profesional antes de presentar.</p>`;
+    <p class="foot-note">Estimación con la normativa vigente a la fecha del fallecimiento. La revisa un profesional antes de presentar.</p>`}`;
 }
 
 function tEstrategia(x, R) {
