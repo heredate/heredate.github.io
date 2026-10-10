@@ -9,6 +9,7 @@ export const VERSION = "0.4.2"; // 0.4.2 · 04-10-2026: cambios de la mesa jurí
 const r2 = (x) => Math.round((x + Number.EPSILON) * 100) / 100;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const V = "VERIFICADO", P = "PENDIENTE";
+import { FESTIVOS_NACIONALES, FESTIVOS_NACIONALES_ESTADO, FESTIVOS_CCAA, FESTIVOS_LOCALES, FESTIVOS_FUENTES, PROV_CCAA, CAPITALES_INE } from "./festivos.mjs";
 
 // ─────────────────────────── Personas y parentesco ───────────────────────────
 export const RELACIONES = {
@@ -2493,22 +2494,76 @@ export const modelo650Aut = (ccaa) => MODELO650_AUT[ccaa] || { estado: "NO LOCAL
 // ─────────────────────────── Plazos ───────────────────────────
 export function sumarMeses(f, n) { const d = new Date(f + "T12:00:00"); const dia = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < dia) d.setDate(0); return d.toISOString().slice(0, 10); }
 export function sumarDias(f, n) { const d = new Date(f + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
-// Días inhábiles en todo el territorio nacional (art. 30.2 Ley 39/2015), además de sábados y domingos. Fuentes:
-// 2025: Resolución de 16-12-2024 de la SE de Función Pública (BOE-A-2024-26935) · 2026: Resolución de 18-11-2025 (BOE-A-2025-23702) — VERIFICADO.
-// 2027: calendario aún no publicado a 01-10-2026; se usan las fiestas nacionales de fecha fija que caen en día laborable y el Viernes Santo (26-03-2027) — PENDIENTE.
-// Los días inhábiles autonómicos y locales (p. ej. 07-12-2026 en Andalucía y Madrid) NO se incluyen: PENDIENTE.
-export const INHABILES_NACIONALES = {
-  2025: ["2025-01-01", "2025-01-06", "2025-04-18", "2025-05-01", "2025-08-15", "2025-12-08", "2025-12-25"],
-  2026: ["2026-01-01", "2026-01-06", "2026-04-03", "2026-05-01", "2026-10-12", "2026-12-08", "2026-12-25"],
-  2027: ["2027-01-01", "2027-01-06", "2027-03-26", "2027-10-12", "2027-11-01", "2027-12-06", "2027-12-08"],
-};
-const INHABILES_ESTADO = { 2025: V, 2026: V, 2027: P };
-const esInhabil = (f) => { const w = new Date(f + "T12:00:00").getDay(); return w === 0 || w === 6 || (INHABILES_NACIONALES[f.slice(0, 4)] || []).includes(f); };
+// ── Calendario de días inhábiles (G09, 10-10-2026) ──
+// Datos en festivos.mjs: nacionales, autonómicos (2025-2027) y locales de las capitales y de los municipios de la demostración, con fuente y estado.
+// cal: { ccaa, ine, nombre } o una lista (art. 30.6 Ley 39/2015: es inhábil si lo es en la residencia del interesado o en la sede del órgano).
+// Sin cal: solo sábados, domingos y festivos nacionales (comportamiento anterior). Los festivos autonómicos o locales PENDIENTES de cotejo no
+// trasladan el vencimiento (regla prudente: se presenta antes) y se avisan como «posible festivo».
+export const INHABILES_NACIONALES = FESTIVOS_NACIONALES;
+const INHABILES_ESTADO = FESTIVOS_NACIONALES_ESTADO;
+const calLista = (cal) => (Array.isArray(cal) ? cal : cal ? [cal] : []).filter((c) => c && (c.ccaa || c.ine));
+const ccaaFest = (c) => { const t = c.ccaa || (c.ine ? PROV_CCAA[String(c.ine).slice(0, 2)] : ""); return ["ALA", "BIZ", "GIP"].includes(t) ? "PV" : t; };
+const nombreFest = (t) => (t === "PV" ? "Euskadi" : (TERRITORIOS.find(([k]) => k === t) || [])[1] || t);
+const muniFest = (c, a) => (c.ine && (FESTIVOS_LOCALES[a] || {})[c.ine]) || null;
+const nombreMuni = (c) => { for (const a in FESTIVOS_LOCALES) { const L = FESTIVOS_LOCALES[a][c.ine]; if (L) return L.n; } return c.nombre || "el municipio " + c.ine; };
+// Calendario a partir de la comunidad y el municipio (código INE); la comunidad sale del INE si no se indica. EST (no residente): sin autonómicos.
+export function calendarioDe(ccaa, ine, nombre) { const c = { ccaa: ccaa && ccaa !== "EST" ? ccaa : ine ? PROV_CCAA[String(ine).slice(0, 2)] : "", ine: ine || "", nombre: nombre || "" }; return c.ccaa || c.ine ? c : null; }
+// ¿Es festivo f en ese calendario? null si no; si lo es { ambito, tipo: nacional | autonomico | local, estado, fuente }
+export function festivoEn(f, cal) {
+  const a = f.slice(0, 4);
+  if ((FESTIVOS_NACIONALES[a] || []).includes(f)) return { ambito: "toda España", tipo: "nacional", estado: INHABILES_ESTADO[a] || P, fuente: FESTIVOS_FUENTES[a] || "" };
+  let pend = null;
+  for (const c of calLista(cal)) {
+    const t = ccaaFest(c), R = (FESTIVOS_CCAA[a] || {})[t];
+    if (R && R.d.includes(f)) { const o = { ambito: nombreFest(t), tipo: "autonomico", estado: R.e, fuente: R.f }; if (R.e === V) return o; pend = pend || o; }
+    const L = muniFest(c, a);
+    if (L && L.d.includes(f)) { const o = { ambito: L.n, tipo: "local", estado: L.e, fuente: L.f }; if (L.e === V) return o; pend = pend || o; }
+  }
+  return pend;
+}
+const finDeSemana = (f) => { const w = new Date(f + "T12:00:00").getDay(); return w === 0 || w === 6; };
+// Inhábil: sábado o domingo (art. 30.2 Ley 39/2015), festivo nacional o festivo autonómico o local VERIFICADO del calendario
+export function esInhabil(f, cal) { if (finDeSemana(f)) return true; const x = festivoEn(f, cal); return !!x && (x.tipo === "nacional" || x.estado === V); }
 // Art. 30.5 Ley 39/2015: si el último día del plazo es inhábil, se prorroga al primer día hábil siguiente
-export function aHabil(f) { let d = f; while (esInhabil(d)) d = sumarDias(d, 1); return d; }
+export function aHabil(f, cal) { let d = f; while (esInhabil(d, cal)) d = sumarDias(d, 1); return d; }
+// Qué se ha contado y qué falta en el calendario de un año: { cuenta, pendientes, faltan, texto }
+export function infoCalendario(cal, anio) {
+  const a = String(anio), cuenta = ["nacionales"], pendientes = [], faltan = [];
+  if (!FESTIVOS_NACIONALES[a]) faltan.push(`el calendario de ${a}`);
+  for (const c of calLista(cal)) {
+    const t = ccaaFest(c);
+    if (t && t !== "EST") { const R = (FESTIVOS_CCAA[a] || {})[t], n = nombreFest(t); if (!R) faltan.push(`los festivos autonómicos de ${n}`); else (R.e === V ? cuenta : pendientes).push(n); }
+    if (c.ine) { const L = muniFest(c, a), n = nombreMuni(c); if (!L) faltan.push(`los festivos locales de ${n}`); else (L.e === V ? cuenta : pendientes).push(n); }
+  }
+  const lista = (L) => (L.length > 1 ? L.slice(0, -1).join(", ") + " y " + L[L.length - 1] : L[0] || "");
+  const cu = [...new Set(cuenta)], pe = [...new Set(pendientes)].filter((n) => !cu.includes(n)), fa = [...new Set(faltan)];
+  const texto = (cu.length > 1 ? `Contados los festivos ${lista(cu.map((n, i) => (i ? "de " + n : n)))}` : calLista(cal).length ? "Contados solo los festivos nacionales" : "Solo se descuentan los festivos nacionales: indica la comunidad y el municipio para contar los demás")
+    + (pe.length ? `; los de ${lista(pe)} están sin cotejar y no trasladan el plazo` : "") + (fa.length ? `. Faltan ${lista(fa)} de ${a}: revísalos` : "");
+  return { anio: Number(a), cuenta: cu, pendientes: pe, faltan: fa, texto, estado: fa.length || pe.length ? P : INHABILES_ESTADO[a] || P };
+}
+// Vencimiento de un plazo administrativo o tributario: fecha natural → primer día hábil, con el motivo, el posible festivo sin cotejar y la nota
+export function venceHabil(nat, cal) {
+  const motivos = []; let d = nat;
+  while (esInhabil(d, cal)) { const x = festivoEn(d, cal); motivos.push(x ? `festivo ${x.tipo === "nacional" ? "nacional" : x.tipo === "local" ? "local de " + x.ambito : "de " + x.ambito}` : ["domingo", "", "", "", "", "", "sábado"][new Date(d + "T12:00:00").getDay()]); d = sumarDias(d, 1); }
+  const fx = festivoEn(d, cal), posible = fx && fx.tipo !== "nacional" && fx.estado !== V ? { fecha: d, ambito: fx.ambito, tipo: fx.tipo, siSeConfirma: aHabil(sumarDias(d, 1), cal) } : null;
+  const info = infoCalendario(cal, d.slice(0, 4));
+  const nota = [d !== nat ? `Vence en día inhábil (${nat}, ${motivos[0]}): pasa al siguiente hábil (art. 30.5 Ley 39/2015)` : "",
+    posible ? `El ${posible.fecha} puede ser festivo ${posible.tipo === "local" ? "local en" : "en"} ${posible.ambito} (sin cotejar): si lo es, el plazo llega al ${posible.siSeConfirma}; por prudencia se cuenta el ${d}` : "", info.texto].filter(Boolean).join(". ");
+  return { limite: d, limiteNatural: nat, trasladado: d !== nat, motivo: motivos[0] || "", posible, calendario: info, estadoCalendario: info.estado, nota };
+}
 // Fin del plazo de presentación del ISD (6 meses; 12 con la prórroga concedida: art. 68 RD 1629/1991), ya trasladado al siguiente hábil.
 // Fuente única para calcularPlazos y para el catálogo de trámites (tramites.mjs), para que Diagnóstico, Trámites, Agenda y .ics coincidan.
-export function limiteISD(f, prorroga) { return aHabil(sumarMeses(f, prorroga ? 12 : 6)); }
+export function limiteISD(f, prorroga, cal) { return aHabil(sumarMeses(f, prorroga ? 12 : 6), cal); }
+// Plusvalía (art. 110.2 TRLRHL): seis meses desde el fallecimiento, prorrogables hasta un año a solicitud; cuenta el calendario del ayuntamiento de cada inmueble.
+// inmuebles: [{ ine, nombre }]. Devuelve el vencimiento más temprano (prudente) y el de cada municipio.
+export function plazoPlusvalia(f, inmuebles, meses = 6) {
+  const nat = sumarMeses(f, meses), L = (inmuebles || []).filter((b) => b && b.ine);
+  if (!L.length) return { ...venceHabil(nat, null), porMunicipio: [] };
+  const por = [...new Map(L.map((b) => [b.ine, b])).values()].map((b) => ({ ine: b.ine, nombre: nombreMuni(b), ...venceHabil(nat, calendarioDe(null, b.ine, b.nombre)) }));
+  const min = por.reduce((m, q) => (q.limite < m.limite ? q : m), por[0]);
+  const distintos = new Set(por.map((q) => q.limite)).size > 1;
+  return { ...min, porMunicipio: por, nota: [min.nota, distintos ? "Por municipio: " + por.map((q) => `${q.nombre} ${q.limite}`).join(", ") : ""].filter(Boolean).join(". ") };
+}
 
 // ── Control de calidad 07-10-2026 (C2/M13): ¿se presenta en plazo? y recargo del art. 27 LGT ──
 // Plazo de presentación: 6 meses desde el fallecimiento (art. 67.1.a RD 1629/1991), prorrogables otros 6 si la prórroga se pide
@@ -2517,8 +2572,8 @@ export function limiteISD(f, prorroga) { return aHabil(sumarMeses(f, prorroga ? 
 // Regla prudente: pasado el plazo de seis meses sin prórroga marcada, se calcula fuera de plazo (con aviso: si se concedió, márcala).
 export function plazoPresentacionISD(f, o = {}) {
   if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return null;
-  const hoy = o.hoy || f;
-  const limite6 = limiteISD(f, false), limite12 = limiteISD(f, true), limitePeticion = aHabil(sumarMeses(f, 5));
+  const hoy = o.hoy || f, cal = o.cal !== undefined ? o.cal : calendarioDe(o.ccaa, o.ine); // G09: calendario de la Hacienda autonómica (y del municipio, si consta)
+  const limite6 = limiteISD(f, false, cal), limite12 = limiteISD(f, true, cal), limitePeticion = aHabil(sumarMeses(f, 5), cal);
   const limite = o.prorroga ? limite12 : limite6;
   const fuera = hoy > limite;
   const F = PLAZO_ISD_FORAL[o.ccaa];
@@ -2593,23 +2648,27 @@ export function recargoPresentacion(ccaa, cuota, limite, fechaPresentacion, inte
   const rec = r2(c * pct), int = r2(c * (F.interes || interes) * dias / 365);
   return { ...vacio, pct, recargo: rec, intereses: int, importe: r2(rec + int), reducido: r2(rec + int), meses: m, diasIntereses: dias, etiqueta: `${Math.round(pct * 100)} % + intereses de demora de ${dias} ${dias === 1 ? "día" : "días"}` };
 }
-export function sumarHabiles(f, n) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d)) k++; } return d; }
+// n días hábiles contados desde el día siguiente (art. 30.2 Ley 39/2015): el último es el día n hábil
+export function sumarHabiles(f, n, cal) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d, cal)) k++; } return d; }
 
 // o.prorrogaISD: prórroga del ISD concedida → el plazo de presentación y la prescripción se cuentan con los 12 meses
 export function calcularPlazos(f, o = {}) {
   const anio = Number(f.slice(0, 4)) + 1;
   // Plazos administrativos: cómputo de fecha a fecha y traslado al siguiente día hábil (art. 30.5 Ley 39/2015). Auditoría 01-10-2026, I-2.
-  const habil = (nat) => { const h = aHabil(nat); return { limite: h, limiteNatural: nat, trasladado: h !== nat, estadoCalendario: INHABILES_ESTADO[h.slice(0, 4)] || P }; };
-  const nTras = (x, txt) => (x.trasladado ? `${txt ? txt + ". " : ""}Vence en día inhábil (${x.limiteNatural}): pasa al siguiente hábil (art. 30.5 Ley 39/2015). Solo se descuentan los festivos nacionales; revisa los autonómicos y locales` : txt);
+  // G09: calendario de la Hacienda autonómica (o.ccaa) y, si consta, del municipio de la oficina o del domicilio del interesado (o.ine, art. 30.6);
+  // la plusvalía, el de cada ayuntamiento (o.inmuebles: [{ ine, nombre }]). Sin datos: solo sábados, domingos y festivos nacionales.
+  const cal = o.cal !== undefined ? o.cal : calendarioDe(o.ccaa, o.ine);
+  const habil = (v) => ({ limite: v.limite, limiteNatural: v.limiteNatural, trasladado: v.trasladado, estadoCalendario: v.estadoCalendario, aviso: v.nota, posible: v.posible, ...(v.porMunicipio ? { porMunicipio: v.porMunicipio } : {}) });
+  const nTras = (x, txt) => [txt, x.aviso].filter(Boolean).join(". ");
   const FPZ = PLAZO_ISD_FORAL[o.ccaa]; // territorios forales: plazo no cotejado (fiscal r4)
-  const pro = habil(sumarMeses(f, 5)), isd = habil(sumarMeses(f, 6)), isd12 = habil(sumarMeses(f, 12)), plv = habil(sumarMeses(f, 6)), plv12 = habil(sumarMeses(f, 12));
+  const pro = habil(venceHabil(sumarMeses(f, 5), cal)), isd = habil(venceHabil(sumarMeses(f, 6), cal)), isd12 = habil(venceHabil(sumarMeses(f, 12), cal)), plv = habil(plazoPlusvalia(f, o.inmuebles, 6)), plv12 = habil(plazoPlusvalia(f, o.inmuebles, 12));
   // isd.limite === limiteISD(f, false) e isd12.limite === limiteISD(f, true): misma regla que el catálogo de trámites (tramites.mjs), comprobado en test.mjs
   const p = [
-    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, 3)), estado: P, aplica: o.autonomo },
+    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, 3), cal), estado: P, aplica: o.autonomo },
     { id: "ultimas_voluntades", fase: 1, nombre: "Pedir el certificado de últimas voluntades", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V, nota: "Se descuentan los festivos nacionales; los autonómicos y locales, no" },
     { id: "seguros_cert", fase: 1, nombre: "Pedir el certificado de seguros de fallecimiento", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V },
-    { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3)), recomendado: true, estado: P, aplica: o.hayConyuge },
-    { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", limite: aHabil(sumarDias(f, 90)), estado: P, aplica: o.hayVehiculos },
+    { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3), cal), recomendado: true, estado: P, aplica: o.hayConyuge },
+    { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", limite: aHabil(sumarDias(f, 90), cal), estado: P, aplica: o.hayVehiculos },
     { id: "prorroga_isd", fase: 3, nombre: "Último día para pedir la prórroga del impuesto", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...pro, nota: [FPZ && FPZ.nota, nTras(pro, "")].filter(Boolean).join(". ") || undefined, estado: FPZ ? P : V },
     { id: "isd", fase: 4, nombre: "Presentar y pagar el Impuesto sobre Sucesiones", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...(o.prorrogaISD ? isd12 : isd), nota: [FPZ && FPZ.nota, o.prorrogaISD ? nTras(isd12, "Prórroga concedida: doce meses (art. 68 RD 1629/1991)") : nTras(isd, "Con prórroga: " + isd12.limite)].filter(Boolean).join(". "), estado: FPZ ? P : V },
     { id: "plusvalia", fase: 4, nombre: "Declarar la plusvalía de cada inmueble urbano", organismo: "Ayuntamiento", ...plv, nota: nTras(plv, "Prorrogable hasta " + plv12.limite), estado: V, aplica: o.hayInmuebles },

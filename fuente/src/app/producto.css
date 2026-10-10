@@ -98,3 +98,5 @@ td.sc-bad,.kv .sc-bad{color:var(--red);font-weight:600}
 .red-opt{width:100%;cursor:pointer}.red-opt b{overflow-wrap:anywhere}.red-opt:hover{border-color:var(--accent)}
 .red-opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){.red-ch-o{grid-template-columns:1fr}}
+/* G09 · calendario de festivos contado en cada plazo (hoja del trámite) */
+.meta .cal-aviso{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:var(--label-2);font-weight:400}

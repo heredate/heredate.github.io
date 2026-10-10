@@ -85,7 +85,8 @@ _mu = json.loads((root / "src/municipios.json").read_text())
 MUNI_CLAVES_JS = "const MUNI_CLAVES = " + json.dumps(json.loads((root / "src/municipios-claves.json").read_text()), separators=(",", ":")) + ";"
 MUNI_JS = "const MUNI_ES = " + json.dumps({"provincias": _mu["provincias"], "m": _mu["m"], "n": len(_mu["m"])}, ensure_ascii=False, separators=(",", ":")) + ";\n" + MUNI_CLAVES_JS
 # Calculadora de herencias para la web de los despachos (src/calculadora.html): lleva dentro el motor; los municipios se añaden al publicarla o al descargarla desde la app
-CALCULADORA = titular(marca((root / "src/calculadora.html").read_text())).replace("/*__MOTOR__*/", modulo("motor.mjs"), 1)
+MOTOR_JS = modulo("festivos.mjs") + "\n" + modulo("motor.mjs")  # festivos.mjs (G09): calendario de inhábiles que usa el motor
+CALCULADORA = titular(marca((root / "src/calculadora.html").read_text())).replace("/*__MOTOR__*/", MOTOR_JS, 1)
 _mc = {}
 for _i, _n in _mu["m"]: _mc.setdefault(_i[:2], []).append(_n)
 CALC_MUNIS = json.dumps({k: [p["n"], p["ccaa"], "|".join(_mc.get(k, []))] for k, p in sorted(_mu["provincias"].items())}, ensure_ascii=False, separators=(",", ":"))
@@ -109,7 +110,7 @@ DATOS_LIGERO = ("const HEREDA_PARTES = " + json.dumps({"archivos": PARTES_URL, "
                 + "const MUNI_ES = " + json.dumps({"provincias": _mu["provincias"], "m": [], "n": len(_mu["m"])}, ensure_ascii=False, separators=(",", ":")) + ";\n" + MUNI_CLAVES_JS + "\nlet MAPA_ES = null, MAPA_AND = null;")
 FAMILIA_COMPLETO = "let FAMILIA_HTML = " + _jsv(FAMILIA) + ";\nlet CALCULADORA_HTML = " + _jsv(CALCULADORA) + ";\nlet CARPETA_HTML = " + _jsv(marca((root / "src/carpeta.html").read_text())) + ";"
 FAMILIA_LIGERO = "let FAMILIA_HTML = null, CALCULADORA_HTML = null, CARPETA_HTML = null;"
-shell = (shell.replace("/*__MOTOR__*/", modulo("motor.mjs"))
+shell = (shell.replace("/*__MOTOR__*/", MOTOR_JS)
               .replace("/*__TRAMITES__*/", modulo("tramites.mjs") + "\n/*__DATOS__*/")
               .replace("/*__LOGIC__*/", marca((root / "src/app/logic.js").read_text()))
               .replace("/*__FAMILIA__*/", "/*__DATOS_FAMILIA__*/")

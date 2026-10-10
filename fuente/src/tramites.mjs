@@ -3,7 +3,7 @@
 // tramitesDe(ctx) devuelve solo los que aplican al caso concreto, con sus fechas calculadas.
 // v2: +115 trámites (vía judicial, fiscalidad posterior, elementos internacionales, bienes especiales, agrario, derechos forales).
 
-import { sumarMeses, sumarDias, sumarHabiles, aHabil, limiteISD, PLAZO_ISD_FORAL } from "./motor.mjs";
+import { sumarMeses, sumarDias, sumarHabiles, aHabil, limiteISD, PLAZO_ISD_FORAL, venceHabil, plazoPlusvalia, calendarioDe } from "./motor.mjs";
 
 const TV = "VERIFICADO", TP = "PENDIENTE";
 
@@ -65,24 +65,31 @@ const anio = (c) => Number(c.fecha.slice(0, 4));
 
 // Fechas: las funciones del motor (motor.mjs). En la app, build.py quita import/export y motor y catálogo comparten el ámbito global.
 // trMeses/trDias: cómputo civil de fecha a fecha, sin traslado (art. 5 CC); también los usan visual.js, archivo.js, demo.js, estrategia.js y ui.js.
-// trAdm: plazos ante la Administración, trasladados al siguiente día hábil si vencen en sábado, domingo o festivo nacional (art. 30.5 Ley 39/2015),
-// con la misma regla que calcularPlazos, para que Diagnóstico, Trámites, Agenda y .ics den la misma fecha. Festivos autonómicos y locales: PENDIENTE.
+// trAdm: plazos ante la Administración, trasladados al siguiente día hábil si vencen en sábado, domingo o festivo (art. 30.5 Ley 39/2015),
+// con la misma regla que calcularPlazos, para que Diagnóstico, Trámites, Agenda y .ics den la misma fecha.
+// G09 (10-10-2026): calendario de la comunidad del expediente (ctx.ccaa) y del municipio indicado (ctx.ine: oficina o domicilio del interesado);
+// la plusvalía, el del ayuntamiento de cada inmueble (ctx.inmueblesMuni). tramitesDe fija TR_CAL antes de calcular cada caso.
+let TR_CAL = null, TR_INM = [];
 function trMeses(f, n) { return sumarMeses(f, n); }
 function trDias(f, n) { return sumarDias(f, n); }
-function trHabiles(f, n) { return sumarHabiles(f, n); } // descuenta sábados, domingos y festivos nacionales, como calcularPlazos
+function trHabiles(f, n) { return sumarHabiles(f, n, TR_CAL); } // descuenta sábados, domingos y festivos del calendario, como calcularPlazos
 function trAdm(natural, nota, extra) {
-  const limite = aHabil(natural);
-  const tras = limite !== natural ? `vence en día inhábil (${natural}): pasa al siguiente hábil (art. 30.5 Ley 39/2015); solo se descuentan los festivos nacionales, revisa los autonómicos y locales` : "";
-  return { limite, nota: [nota, tras].filter(Boolean).join("; "), ...extra };
+  const v = venceHabil(natural, TR_CAL);
+  return { limite: v.limite, nota: [nota, v.trasladado ? `vence en día inhábil (${natural}, ${v.motivo}): pasa al siguiente hábil (art. 30.5 Ley 39/2015)` : ""].filter(Boolean).join("; "), aviso: v.nota, posible: v.posible, ...extra };
 }
 // Impuesto sobre Sucesiones: 6 meses, o 12 con la prórroga concedida (art. 68 RD 1629/1991), ya en día hábil (limiteISD del motor)
 function trISD(c, nota) {
   const nat = sumarMeses(c.fecha, c.prorrogaISD ? 12 : 6);
   const F = PLAZO_ISD_FORAL[c.ccaa]; // territorios forales: plazo no cotejado (fiscal r4, 08-10-2026)
-  return trAdm(nat, [nota, F && F.nota, c.prorrogaISD ? "prórroga concedida: doce meses (art. 68 RD 1629/1991)" : "con prórroga: " + limiteISD(c.fecha, true)].filter(Boolean).join("; "));
+  return trAdm(nat, [nota, F && F.nota, c.prorrogaISD ? "prórroga concedida: doce meses (art. 68 RD 1629/1991)" : "con prórroga: " + limiteISD(c.fecha, true, TR_CAL)].filter(Boolean).join("; "));
+}
+// Plusvalía: calendario del ayuntamiento de cada inmueble; con varios municipios, el vencimiento más temprano (plazoPlusvalia del motor)
+function trPlusvalia(c, nota) {
+  const v = plazoPlusvalia(c.fecha, TR_INM, 6), v12 = plazoPlusvalia(c.fecha, TR_INM, 12);
+  return { limite: v.limite, nota: [nota, v.trasladado ? `vence en día inhábil (${v.limiteNatural}, ${v.motivo}): pasa al siguiente hábil (art. 30.5 Ley 39/2015)` : "", v.porMunicipio.length > 1 && new Set(v.porMunicipio.map((q) => q.limite)).size > 1 ? "por municipio: " + v.porMunicipio.map((q) => `${q.nombre} ${q.limite}`).join(", ") : ""].filter(Boolean).join("; "), aviso: v.nota, posible: v.posible, prorroga: v12.limite };
 }
 // Prescripción (arts. 66-67 LGT): cuatro años desde el fin del plazo de presentación, el prorrogado si se concedió; como calcularPlazos
-const trPrescripcion = (c) => sumarMeses(limiteISD(c.fecha, !!c.prorrogaISD), 48);
+const trPrescripcion = (c) => sumarMeses(limiteISD(c.fecha, !!c.prorrogaISD, TR_CAL), 48);
 
 const SEDES = {
   ultimas: "https://sede.mjusticia.gob.es/tramites/certificado-actos-ultima",
@@ -256,8 +263,8 @@ const CATALOGO = [
   { id: "instancia", fase: "formalizar", t: "Instancia de heredero único", d: "Si hay un solo heredero y no hay otros legitimarios, puede inscribir los inmuebles con una solicitud privada, sin escritura.", quien: "Heredero", org: "Registro de la Propiedad", docs: ["Testamento o declaración de herederos", "Justificante del impuesto"], accion: { tipo: "doc", id: "unico", texto: "Instancia" }, norma: "art. 14 Ley Hipotecaria; art. 79 Reglamento Hipotecario", e: TV, cuando: (c) => c.herederoUnico && c.inmuebles > 0 && !c.hayConyuge },
   { id: "prorroga", fase: "formalizar", t: "Pedir la prórroga del impuesto si hace falta", d: "Seis meses más para presentar, con intereses de demora. Se pide dentro de los cinco primeros meses.", quien: "Herederos", org: "Hacienda autonómica", plazo: (c) => trAdm(trMeses(c.fecha, 5)), docs: ["Certificado de defunción", "Relación aproximada de bienes"], accion: { tipo: "doc", id: "prorroga", texto: "Solicitud de prórroga" }, sedeFn: (c) => c.ccaa === "AND" ? SEDES.ata659 : null, norma: "art. 68 RD 1629/1991 (en Andalucía, modelo 659)", e: TV, cuando: () => true },
   { id: "isd", fase: "formalizar", t: "Presentar y pagar el Impuesto sobre Sucesiones", d: "Una autoliquidación por heredero y la relación de bienes. Hay que presentarla aunque salga a pagar 0 €. En Andalucía, modelos 650 y 660 ante la Agencia Tributaria de Andalucía.", quien: "Cada heredero (o su abogado)", org: "Hacienda autonómica", plazo: (c) => trISD(c), docs: ["Inventario valorado", "Testamento o declaración de herederos", "Certificados bancarios", "Valores de referencia"], accion: { tipo: "tab", tab: "impuestos", texto: "Ver el cálculo" }, sedeFn: (c) => c.ccaa === "AND" ? SEDES.ata650 : null, norma: "arts. 67-68 RD 1629/1991; art. 31 Ley 29/1987", e: TV, cuando: () => true },
-  { id: "plusvalia", fase: "formalizar", t: "Declarar la plusvalía y pedir la bonificación", d: "Por cada inmueble urbano, aunque no haya ganancia. Las bonificaciones por herencia a familiares no se aplican solas: hay que pedirlas en plazo. La prórroga se pide al ayuntamiento dentro de los seis meses y es independiente de la del Impuesto sobre Sucesiones.", quien: "Herederos", org: "Ayuntamiento", plazo: (c) => trAdm(trMeses(c.fecha, 6), "prorrogable hasta " + aHabil(trMeses(c.fecha, 12)) + "; la prórroga del Impuesto sobre Sucesiones no la amplía"), docs: ["Escritura o declaración de herederos", "Recibo del IBI", "Título de adquisición del fallecido"], accion: { tipo: "tab", tab: "impuestos", texto: "Ver el cálculo" }, norma: "art. 110 TRLRHL", e: TV, cuando: (c) => c.inmuebles > 0 },
-  { id: "plusvalia_real", fase: "formalizar", t: "Plusvalía: acreditar que no hubo ganancia o tributar por la real", d: "Si el inmueble vale menos que cuando lo adquirió el fallecido, no hay plusvalía municipal: se acredita con su título de adquisición y el valor declarado en el Impuesto sobre Sucesiones. Si hubo ganancia pero menor que la del cálculo objetivo, se puede pedir tributar por la real.", quien: "Herederos", org: "Ayuntamiento", plazo: (c) => trAdm(trMeses(c.fecha, 6), "con la declaración de la plusvalía"), docs: ["Título de adquisición del fallecido", "Autoliquidación del Impuesto sobre Sucesiones"], accion: { tipo: "tab", tab: "impuestos", texto: "Ver el cálculo" }, norma: "arts. 104.5 y 107.5 TRLRHL", e: TP, cuando: (c) => c.inmuebles > 0 },
+  { id: "plusvalia", fase: "formalizar", t: "Declarar la plusvalía y pedir la bonificación", d: "Por cada inmueble urbano, aunque no haya ganancia. Las bonificaciones por herencia a familiares no se aplican solas: hay que pedirlas en plazo. La prórroga se pide al ayuntamiento dentro de los seis meses y es independiente de la del Impuesto sobre Sucesiones.", quien: "Herederos", org: "Ayuntamiento", plazo: (c) => { const v = trPlusvalia(c); return { ...v, nota: [v.nota, "prorrogable hasta " + v.prorroga + "; la prórroga del Impuesto sobre Sucesiones no la amplía"].filter(Boolean).join("; ") }; }, docs: ["Escritura o declaración de herederos", "Recibo del IBI", "Título de adquisición del fallecido"], accion: { tipo: "tab", tab: "impuestos", texto: "Ver el cálculo" }, norma: "art. 110 TRLRHL", e: TV, cuando: (c) => c.inmuebles > 0 },
+  { id: "plusvalia_real", fase: "formalizar", t: "Plusvalía: acreditar que no hubo ganancia o tributar por la real", d: "Si el inmueble vale menos que cuando lo adquirió el fallecido, no hay plusvalía municipal: se acredita con su título de adquisición y el valor declarado en el Impuesto sobre Sucesiones. Si hubo ganancia pero menor que la del cálculo objetivo, se puede pedir tributar por la real.", quien: "Herederos", org: "Ayuntamiento", plazo: (c) => trPlusvalia(c, "con la declaración de la plusvalía"), docs: ["Título de adquisición del fallecido", "Autoliquidación del Impuesto sobre Sucesiones"], accion: { tipo: "tab", tab: "impuestos", texto: "Ver el cálculo" }, norma: "arts. 104.5 y 107.5 TRLRHL", e: TP, cuando: (c) => c.inmuebles > 0 },
   { id: "isd_no_residente", fase: "formalizar", t: "Impuesto sobre Sucesiones ante la AEAT (no residentes)", d: "Si el fallecido no residía en España, el impuesto se presenta ante la Agencia Tributaria con el modelo 650. Se puede aplicar la normativa de la comunidad donde esté la mayor parte de los bienes. Cada heredero no residente debe nombrar un representante con residencia en España.", quien: "Cada heredero", org: "Agencia Tributaria", plazo: (c) => trISD(c), docs: ["Certificado de defunción apostillado", "Título sucesorio", "NIE", "Valoración de los bienes en España"], accion: { tipo: "sede", url: SEDES.aeat650, texto: "Modelo 650 en la AEAT" }, norma: "disposición adicional 2.ª Ley 29/1987; art. 18.4 RD 1629/1991", e: TV, cuando: (c) => c.ccaa === "EST" },
   { id: "nie", fase: "formalizar", t: "NIE para los herederos extranjeros", d: "El heredero extranjero necesita NIE para firmar la escritura, pagar el impuesto e inscribir los bienes. Se pide en España ante la Policía o desde fuera en el consulado. Si no reside en España, debe nombrar además un representante para el Impuesto sobre Sucesiones.", quien: "Herederos extranjeros", org: "Policía Nacional / consulado", docs: ["Pasaporte", "Justificante del interés (herencia)", "Tasa modelo 790 código 012"], accion: { tipo: "sede", url: SEDES.nie, texto: "Asignación de NIE" }, norma: "art. 206 RD 557/2011 (Reglamento de Extranjería); RD 1065/2007, arts. 18 y 20; art. 18.4 RD 1629/1991", e: TP, cuando: (c) => c.situ.herederoExtranjero },
   { id: "apostilla", fase: "formalizar", t: "Documentos extranjeros: apostilla y traducción", d: "Certificados, testamentos y poderes extranjeros necesitan apostilla o legalización, según el país, y traducción jurada. Entre países de la UE, los certificados de defunción, nacimiento y matrimonio están exentos de apostilla y pueden acompañarse de formulario multilingüe.", quien: "Abogado", org: "Autoridad del país de origen / traductor jurado", docs: [], accion: { tipo: "sede", url: SEDES.apostilla, texto: "Apostillar documentos españoles" }, norma: "Convenio de La Haya de 5-10-1961; Reglamento (UE) 2016/1191; art. 36 Reglamento Hipotecario", e: TP, cuando: (c) => internacional(c) },
@@ -333,9 +340,10 @@ const CATALOGO = [
 
 export function tramitesDe(ctx) {
   const c = { situ: {}, ...ctx };
+  TR_CAL = c.cal !== undefined ? c.cal : calendarioDe(c.ccaa, c.ine); TR_INM = Array.isArray(c.inmueblesMuni) ? c.inmueblesMuni : [];
   return CATALOGO.filter((t) => { try { return !!t.cuando(c); } catch { return false; } }).map((t) => {
     const p = t.plazo ? t.plazo(c) : {};
-    return { id: t.id, fase: t.fase, titulo: t.t, que: t.d, quien: t.quien, organismo: t.org, docs: t.docs, accion: t.accion || null, sede: (t.sedeFn && t.sedeFn(c)) || t.sede || (t.accion && t.accion.tipo === "sede" ? t.accion.url : null), norma: t.norma, estado: t.e, limite: p.limite || null, desde: p.desde || null, recomendado: !!p.recomendado, informativo: !!p.info, condicional: t.condicional || "", nota: p.nota || "" };
+    return { id: t.id, fase: t.fase, titulo: t.t, que: t.d, quien: t.quien, organismo: t.org, docs: t.docs, accion: t.accion || null, sede: (t.sedeFn && t.sedeFn(c)) || t.sede || (t.accion && t.accion.tipo === "sede" ? t.accion.url : null), norma: t.norma, estado: t.e, limite: p.limite || null, desde: p.desde || null, recomendado: !!p.recomendado, informativo: !!p.info, condicional: t.condicional || "", nota: p.nota || "", aviso: p.limite ? p.aviso || "" : "", posible: p.posible || null };
   });
 }
 export const TR_TOTAL = CATALOGO.length;

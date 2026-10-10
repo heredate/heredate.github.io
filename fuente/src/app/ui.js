@@ -55,6 +55,7 @@ function ctxTramites(x, R) {
     hayLegados: bienes.some((b) => b.legatarioId),
     hayHijosJovenes: vivos.some((p) => ["hijo", "nieto"].includes(p.relacion) && p.edad !== "" && p.edad != null && num(p.edad) <= 25),
     prorrogaISD: x.tramites?.prorroga?.estado === "hecho",
+    ine: x.muniPlazos || "", inmueblesMuni: typeof inmueblesMuniExp === "function" ? inmueblesMuniExp(x) : [], // G09: calendario de festivos (oficina o interesado; ayuntamiento de cada inmueble)
     permanenciaVivienda: viv && reg && reg.vivienda ? reg.vivienda.permanencia || 0 : 0,
     situ: { ...(x.situ || {}) },
   };
@@ -701,13 +702,13 @@ function vSheet() {
     const f = TR_FASES.find((q) => q.id === t.fase); const v = vence(t);
     const plazo = t.limite ? `${t.recomendado ? "Recomendado antes del" : "Hasta el"} ${fechaLarga(t.limite)}${t.nota ? ` (${t.nota.replace(/\d{4}-\d{2}-\d{2}/g, fechaCorta)})` : ""}` : t.desde ? `A partir del ${fechaLarga(t.desde)}` : "Sin plazo legal";
     let acc = "";
-    if (t.accion) { const a = t.accion; acc = a.tipo === "doc" ? `<button class="btn" data-doc="${a.id}">${esc(a.texto)}</button>` : a.tipo === "tab" ? `<button class="btn" data-sec="${a.tab === "reparto" || a.tab === "patrimonio" ? "herencia" : a.tab}">${esc(a.texto)}</button>` : a.tipo === "sede" ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.texto)} ${I.ext}</a>` : a.tipo === "ia" && SAMPLE ? `<button class="btn" data-act="ia">${esc(a.texto)}</button>` : ""; }
+    if (t.accion) { const a = t.accion; acc = a.tipo === "doc" ? `<button class="btn" data-doc="${a.id}">${esc(a.texto)}</button>` : a.tipo === "tab" ? `<button class="btn" data-sec="${a.tab === "reparto" || a.tab === "patrimonio" ? "herencia" : a.tab}"${a.sub ? ` data-sub="${esc(a.sub)}"` : ""}>${esc(a.texto)}</button>` : a.tipo === "sede" ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.texto)} ${I.ext}</a>` : a.tipo === "ia" && SAMPLE ? `<button class="btn" data-act="ia">${esc(a.texto)}</button>` : ""; }
     const adj = archivoDe(x.id, t.id);
     if (!ARCH.listo) archivoCargar().then(render);
     return sheetHTML("Trámite", `<div class="detail-h"><div class="kicker">${esc(f.nombre)}</div><h3>${esc(t.titulo)}</h3></div>
       <div class="seg block" style="margin:0 0 18px">${[["pend", "Pendiente"], ["curso", "En curso"], ["hecho", "Hecho"], ["na", "No aplica"]].map(([k, l]) => `<button data-tset="${k}" aria-pressed="${t.st === k}">${l}</button>`).join("")}</div>
       <p class="lead">${esc(t.que)}</p>
-      <div class="meta"><div><span>Plazo</span><b class="${v.cls ? "due " + v.cls : ""}" style="font-size:14px">${esc(plazo)}</b></div><div><span>Quién</span><b>${esc(t.quien || "—")}</b></div><div><span>Dónde</span><b>${esc(t.organismo || "—")}</b></div><div><span>Base legal</span><b>${esc(t.norma || "—")}</b>${t.estado === "PENDIENTE" ? `<div style="margin-top:6px">${tagE(t.estado)}</div>` : ""}</div></div>
+      <div class="meta"><div><span>Plazo</span><b class="${v.cls ? "due " + v.cls : ""}" style="font-size:14px">${esc(plazo)}</b>${t.aviso ? `<small class="cal-aviso">${esc(t.aviso.replace(/\d{4}-\d{2}-\d{2}/g, fechaCorta))}</small>` : ""}</div><div><span>Quién</span><b>${esc(t.quien || "—")}</b></div><div><span>Dónde</span><b>${esc(t.organismo || "—")}</b></div><div><span>Base legal</span><b>${esc(t.norma || "—")}</b>${t.estado === "PENDIENTE" ? `<div style="margin-top:6px">${tagE(t.estado)}</div>` : ""}</div></div>
       ${acc ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 6px">${acc}</div>` : ""}
       ${enlacesHTML(t.id)}
       ${t.docs.length ? `<div class="sectitle">Qué hace falta</div><div class="group" style="--inset:54px">${t.docs.map((d, i) => { const on = !!t.docsOk[i]; return `<div class="row ${on ? "done" : ""}"><button class="st ${on ? "hecho" : ""}" data-tdoc="${i}" aria-label="Lo tengo">${on ? I.tick : ""}</button><span class="t"><b>${esc(d)}</b></span></div>`; }).join("")}</div>` : ""}

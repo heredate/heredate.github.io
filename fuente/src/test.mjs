@@ -3,6 +3,8 @@
 import { tramitesDe, TR_TOTAL } from "./tramites.mjs";
 import { readFileSync } from "node:fs";
 import { repartoIntestado, repartoUsufructoUniversal, calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
+import { esInhabil, festivoEn, venceHabil, infoCalendario, calendarioDe, plazoPlusvalia, sumarHabiles, sumarDias } from "./motor.mjs";
+import { FESTIVOS_NACIONALES, FESTIVOS_CCAA, FESTIVOS_LOCALES, PROV_CCAA, CAPITALES_INE } from "./festivos.mjs";
 
 let ok = 0, ko = 0;
 const eq = (n, got, exp, tol = 0.02) => { const p = Math.abs(got - exp) <= tol; p ? ok++ : ko++; if (!p || process.env.V) console.log(`${p ? "✔" : "✘"} ${n}: ${got} (esperado ${exp})`); };
@@ -1620,6 +1622,86 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   const dgt = tramitesDe({ fecha: "2026-05-04", nHerederos: 2, inmuebles: 1, situ: {}, hayVehiculos: true }).find((t) => t.id === "dgt_custodia");
   eq("26 · DGT custodia: marcado como condicional", dgt && /Solo si alguien usa el vehículo/.test(dgt.condicional) ? 1 : 0, 1);
   eq("26 · otros trámites no son condicionales", tramitesDe({ fecha: "2026-05-04", nHerederos: 2, inmuebles: 1, situ: {} }).filter((t) => t.condicional).length, 0);
+}
+
+// ── 27. G09 · Inhábiles autonómicos y locales (art. 30 Ley 39/2015; festivos.mjs) ─────────
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const AND = { ccaa: "AND" }, MAD = { ccaa: "MAD" };
+  // Integridad de los datos
+  const MU = JSON.parse(readFileSync(new URL("./municipios.json", import.meta.url), "utf8")), INES = new Map(MU.m);
+  const fechaOk = (d, a) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d.startsWith(String(a)) && new Date(d + "T12:00:00Z").toISOString().slice(0, 10) === d;
+  const malos = [];
+  for (const a of [2025, 2026, 2027]) {
+    for (const k of ["AND", "ARA", "AST", "BAL", "CAN", "CANT", "CYL", "CLM", "CAT", "VAL", "EXT", "GAL", "MAD", "MUR", "NAV", "PV", "RIO", "CEU", "MEL"]) {
+      const R = FESTIVOS_CCAA[a][k]; if (!R) { malos.push(`${a} ${k} sin datos`); continue; }
+      if (!["VERIFICADO", "PENDIENTE"].includes(R.e) || !R.f) malos.push(`${a} ${k} sin estado o fuente`);
+      for (const d of R.d) { if (!fechaOk(d, a)) malos.push(`${a} ${k} ${d} fecha mala`); if (FESTIVOS_NACIONALES[a].includes(d)) malos.push(`${a} ${k} ${d} repite un nacional`); }
+      if (new Set(R.d).size !== R.d.length || [...R.d].sort().join() !== R.d.join()) malos.push(`${a} ${k} desordenado o repetido`);
+    }
+    for (const d of FESTIVOS_NACIONALES[a]) if (!fechaOk(d, a)) malos.push(`${a} nacional ${d}`);
+    for (const [ine, L] of Object.entries(FESTIVOS_LOCALES[a] || {})) { if (!INES.has(ine)) malos.push(`${a} ${ine} no existe`); if (!L.f || !L.n) malos.push(`${a} ${ine} sin fuente`); for (const d of L.d) if (!fechaOk(d, a)) malos.push(`${a} ${ine} ${d}`); }
+  }
+  if (malos.length) console.log(malos.join("\n"));
+  eq("27 · datos de festivos 2025-2027 completos, con fuente, estado y fechas válidas", malos.length, 0, 0);
+  si("27 · 52 capitales de provincia con su código INE", CAPITALES_INE.length === 52 && CAPITALES_INE.every((i) => INES.has(i)));
+  si("27 · cada provincia lleva a un territorio del motor", Object.values(PROV_CCAA).every((t) => TERRITORIOS.some(([k]) => k === t)) && Object.keys(PROV_CCAA).length === 52);
+  // Festivo autonómico: 06-06-2026 + 6 meses = lunes 07-12-2026 (traslado autonómico de la Constitución en Andalucía; 08-12 nacional) → 09-12-2026
+  eq("27 · sin comunidad: 07-12-2026 es hábil (comportamiento anterior)", limiteISD("2026-06-06", false) === "2026-12-07" ? 1 : 0, 1);
+  eq("27 · Andalucía: 07-12 y 08-12 inhábiles → 09-12-2026", limiteISD("2026-06-06", false, AND) === "2026-12-09" ? 1 : 0, 1);
+  eq("27 · Cataluña: 07-12-2026 es hábil", limiteISD("2026-06-06", false, { ccaa: "CAT" }) === "2026-12-07" ? 1 : 0, 1);
+  si("27 · festivoEn: 07-12-2026 autonómico VERIFICADO en Andalucía", (() => { const x = festivoEn("2026-12-07", AND); return x && x.tipo === "autonomico" && x.estado === "VERIFICADO" && /Andalucía/.test(x.ambito); })());
+  si("27 · Euskadi para Bizkaia, Álava y Gipuzkoa: 06-04-2026 lunes de Pascua", ["BIZ", "ALA", "GIP"].every((t) => esInhabil("2026-04-06", { ccaa: t })) && !esInhabil("2026-04-06", MAD));
+  // Cadena de inhábiles: Viernes Santo + fin de semana + lunes de Pascua (Comunitat Valenciana)
+  eq("27 · VAL: 03-04-2026 → 07-04-2026 (Viernes Santo, sábado, domingo, lunes de Pascua)", aHabil("2026-04-03", { ccaa: "VAL" }) === "2026-04-07" ? 1 : 0, 1);
+  eq("27 · MAD: 02-04-2026 (Jueves Santo) → 06-04-2026", aHabil("2026-04-02", MAD) === "2026-04-06" ? 1 : 0, 1);
+  eq("27 · sin comunidad: 03-04-2026 → 06-04-2026", aHabil("2026-04-03") === "2026-04-06" ? 1 : 0, 1);
+  // Sábado: inhábil en todo caso (art. 30.2)
+  eq("27 · sábado 14-03-2026 → lunes 16-03-2026", aHabil("2026-03-14", { ccaa: "VAL" }) === "2026-03-16" ? 1 : 0, 1);
+  // Fin de mes y festivo autonómico: 31-08-2026 + 6 meses = 28-02-2027 (domingo) → 01-03-2027, que en Andalucía es el Día de Andalucía trasladado → 02-03-2027
+  eq("27 · fin de mes: 31-08-2026 → 28-02-2027 natural", venceHabil(sumarMeses("2026-08-31", 6), AND).limiteNatural === "2027-02-28" ? 1 : 0, 1);
+  eq("27 · fin de mes + festivo autonómico: Andalucía 02-03-2027", limiteISD("2026-08-31", false, AND) === "2027-03-02" ? 1 : 0, 1);
+  eq("27 · fin de mes sin comunidad: 01-03-2027", limiteISD("2026-08-31", false) === "2027-03-01" ? 1 : 0, 1);
+  // 29 de febrero (año bisiesto 2028): de fecha a fecha
+  eq("27 · 31-08-2027 + 6 meses = 29-02-2028", sumarMeses("2027-08-31", 6) === "2028-02-29" ? 1 : 0, 1);
+  eq("27 · 29-02-2028 + 12 meses = 28-02-2029 (último día del mes)", sumarMeses("2028-02-29", 12) === "2029-02-28" ? 1 : 0, 1);
+  eq("27 · 29-02-2028 + 1 mes = 29-03-2028", sumarMeses("2028-02-29", 1) === "2028-03-29" ? 1 : 0, 1);
+  si("27 · año sin calendario (2028): solo fines de semana y aviso de que falta", aHabil("2028-02-29", AND) === "2028-02-29" && infoCalendario(AND, 2028).faltan.length > 0 && /Faltan/.test(infoCalendario(AND, 2028).texto));
+  // Festivo local VERIFICADO: Madrid 09-11-2026 (Almudena). 09-05-2026 + 6 meses = 09-11-2026
+  eq("27 · Madrid sin municipio: 09-11-2026", limiteISD("2026-05-09", false, MAD) === "2026-11-09" ? 1 : 0, 1);
+  eq("27 · Madrid capital (festivo local): 10-11-2026", limiteISD("2026-05-09", false, calendarioDe("MAD", "28079")) === "2026-11-10" ? 1 : 0, 1);
+  si("27 · nota: «Contados los festivos nacionales, de Comunidad de Madrid y de Madrid»", /Contados los festivos nacionales, de Comunidad de Madrid y de Madrid/.test(venceHabil("2026-11-09", calendarioDe("MAD", "28079")).nota));
+  si("27 · nota del traslado por festivo local", /festivo local de Madrid/.test(venceHabil("2026-11-09", calendarioDe("MAD", "28079")).nota));
+  // Festivo local PENDIENTE (Marbella, 19-10-2026): no traslada, pero avisa
+  const mb = venceHabil("2026-10-19", calendarioDe(null, "29069"));
+  si("27 · local sin cotejar: el plazo no se traslada (regla prudente)", mb.limite === "2026-10-19" && !mb.trasladado);
+  si("27 · local sin cotejar: aviso con la fecha si se confirma", mb.posible && mb.posible.siSeConfirma === "2026-10-20" && /sin cotejar/.test(mb.nota));
+  si("27 · la comunidad sale del código INE (29 → Andalucía)", calendarioDe(null, "29069").ccaa === "AND" && esInhabil("2026-12-07", calendarioDe(null, "29069")));
+  si("27 · municipio sin datos en 2027: «Faltan los festivos locales de Marbella»", /Faltan los festivos locales de Marbella de 2027/.test(infoCalendario(calendarioDe(null, "29069"), 2027).texto));
+  si("27 · art. 30.6: festivo en la sede o en la residencia (lista de calendarios)", esInhabil("2026-04-06", [MAD, { ccaa: "CAT" }]) && !esInhabil("2026-04-06", [MAD, AND]));
+  // Días hábiles: requerimiento de 10 días notificado el viernes 27-11-2026
+  eq("27 · 10 hábiles desde 27-11-2026 sin comunidad: 14-12-2026", sumarHabiles("2026-11-27", 10) === "2026-12-14" ? 1 : 0, 1);
+  eq("27 · 10 hábiles desde 27-11-2026 en Andalucía: 15-12-2026", sumarHabiles("2026-11-27", 10, AND) === "2026-12-15" ? 1 : 0, 1);
+  // Plusvalía por municipio: el calendario del ayuntamiento de cada inmueble; con varios, el más temprano
+  const pmad = plazoPlusvalia("2026-05-09", [{ ine: "28079" }]), pmal = plazoPlusvalia("2026-05-09", [{ ine: "29067" }]), pdos = plazoPlusvalia("2026-05-09", [{ ine: "28079" }, { ine: "29067" }]);
+  si("27 · plusvalía en Madrid: 10-11-2026; en Málaga: 09-11-2026", pmad.limite === "2026-11-10" && pmal.limite === "2026-11-09");
+  si("27 · plusvalía con inmuebles en dos municipios: el más temprano y el detalle", pdos.limite === "2026-11-09" && pdos.porMunicipio.length === 2 && /Madrid 2026-11-10/.test(pdos.nota));
+  si("27 · plusvalía: la comunidad del inmueble, no la del expediente", plazoPlusvalia("2026-06-07", [{ ine: "29067" }]).limite === "2026-12-09" && plazoPlusvalia("2026-06-07", [{ ine: "08019" }]).limite === "2026-12-07");
+  // calcularPlazos y Trámites con comunidad y municipios: misma fecha (barrido)
+  const o = { ccaa: "AND", ine: "29067", inmuebles: [{ ine: "29069" }, { ine: "28079" }] };
+  const PZ = (f, pr) => Object.fromEntries(calcularPlazos(f, { hayInmuebles: true, prorrogaISD: pr, ...o }).map((x) => [x.id, x]));
+  const TRM = (f, pr) => Object.fromEntries(tramitesDe({ fecha: f, inmuebles: 2, nHerederos: 2, situ: {}, ccaa: "AND", ine: "29067", inmueblesMuni: o.inmuebles, prorrogaISD: pr }).map((x) => [x.id, x]));
+  const difs = [];
+  for (let f = "2025-01-01"; f <= "2027-06-30"; f = sumarDias(f, 1)) for (const pr of [false, true]) {
+    const a = PZ(f, pr), b = TRM(f, pr);
+    for (const [x, y] of [["isd", "isd"], ["prorroga_isd", "prorroga"], ["plusvalia", "plusvalia"], ["prescripcion", "prescripcion"]]) if (a[x].limite !== b[y].limite) difs.push(`${f} ${x} ${a[x].limite} ≠ ${b[y].limite}`);
+    if (a.isd.limite !== limiteISD(f, pr, calendarioDe("AND", "29067"))) difs.push(`${f} limiteISD`);
+    if (esInhabil(a.isd.limite, calendarioDe("AND", "29067"))) difs.push(`${f} vence en inhábil`);
+  }
+  if (difs.length) console.log(difs.slice(0, 10).join("\n"));
+  eq("27 · barrido 2025-2027 con Andalucía, Málaga y dos municipios de inmuebles: Diagnóstico y Trámites coinciden", difs.length, 0, 0);
+  si("27 · Trámites: el aviso dice qué calendarios se han contado", /Contados los festivos nacionales, de Andalucía y de Málaga/.test(TRM("2026-06-06").isd.aviso));
+  si("27 · plazoPresentacionISD con comunidad: Andalucía 09-12-2026", plazoPresentacionISD("2026-06-06", { hoy: "2026-07-01", ccaa: "AND" }).limite === "2026-12-09");
 }
 
 console.log(`\n${ok} correctas · ${ko} fallidas`);
