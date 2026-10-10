@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hereda+ · Una página</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="venta.css">
+<style>
+/* Hoja A4 imprimible. PDF: node venta/pdf.mjs (o Archivo › Imprimir › Guardar como PDF, márgenes «Ninguno»). Tokens y letra: venta.css */
+@page{size:A4;margin:0}
+*{box-sizing:border-box}
+html{background:#D9D8D3}
+body{margin:0;font:9pt/1.4 var(--font-sans);color:var(--ink-1);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.hoja{width:210mm;height:297mm;margin:12mm auto;background:var(--bg);padding:10mm 14mm 8mm;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.15)}
+@media print{html{background:none}.hoja{margin:0;box-shadow:none}}
+.top{display:flex;justify-content:space-between;align-items:center}
+.brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:11pt}
+.logo{width:20px;height:20px;border-radius:5px;background:var(--ink-1);color:#fff;display:grid;place-items:center;font:800 7.5pt/1 var(--font-sans);letter-spacing:-.04em}
+.top small{color:var(--ink-3);font-size:8.5pt}
+h1{font:600 30pt/1.02 var(--font-display);letter-spacing:-.022em;margin:4mm 0 2mm;max-width:13em}
+.sub{font-size:10.4pt;line-height:1.4;color:var(--ink-2);margin:0;max-width:40em}
+.flujo{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm;margin:5mm 0 0}
+.paso{background:var(--surface);border-radius:3mm;overflow:hidden;box-shadow:0 0 0 .3mm var(--border);display:flex;flex-direction:column}
+.paso .im{height:21mm;overflow:hidden;border-bottom:.3mm solid var(--border);background:#fff}
+.paso .im img{width:100%;display:block}
+.paso .tx{padding:3mm 3.4mm 3.4mm}
+.paso b{display:block;font-size:10pt;margin-bottom:1mm}
+.paso .n{color:var(--brand);font-weight:700;margin-right:1.4mm}
+.paso p{margin:0;color:var(--ink-2);font-size:8.1pt;line-height:1.36}
+.cols{display:grid;grid-template-columns:1.15fr 1fr;gap:7mm;margin-top:5mm}
+h2{font:600 14pt/1.1 var(--font-display);margin:0 0 2.6mm;letter-spacing:-.01em}
+ul{margin:0;padding:0;list-style:none;display:grid;gap:1.1mm}
+li{padding-left:4mm;position:relative;color:var(--ink-2)}
+li::before{content:"";position:absolute;left:0;top:1.9mm;width:1.4mm;height:1.4mm;border-radius:50%;background:var(--brand)}
+li b{color:var(--ink-1);font-weight:650}
+.confia{display:grid;gap:1.6mm}
+.confia>div{background:var(--surface);border-radius:2.6mm;padding:1.8mm 3mm;box-shadow:0 0 0 .3mm var(--border)}
+.confia b{display:block;font-size:9.6pt}
+.confia span{color:var(--ink-2);font-size:8.3pt;line-height:1.35;display:block}
+.cifras{display:grid;grid-template-columns:repeat(5,1fr);margin-top:7mm;border-top:.3mm solid var(--border);border-bottom:.3mm solid var(--border)}
+.cifras div{padding:3mm 2.6mm;border-left:.3mm solid var(--border)}
+.cifras div:first-child{border-left:0;padding-left:0}
+.cifras b{display:block;font:600 17pt/1 var(--font-display);margin-bottom:1mm}
+.cifras span{font-size:8pt;color:var(--ink-2);line-height:1.3;display:block}
+.precios{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin-top:4mm}
+.precios>div{background:var(--surface);border-radius:2.6mm;padding:2.4mm 3.2mm;box-shadow:0 0 0 .3mm var(--border)}
+.precios>.f{background:var(--brand);color:#fff;box-shadow:none}
+.precios .f span{color:rgba(255,255,255,.88)}
+.precios b{display:block;font-size:9.4pt}
+.precios .p{font:600 18pt/1.1 var(--font-display);margin:1mm 0}
+.precios .p small{font:500 8pt var(--font-sans)}
+.precios span{color:var(--ink-2);font-size:8pt;display:block}
+.pie{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;padding-top:3mm;border-top:.3mm solid var(--border)}
+.pie .cta b{font-size:11pt;display:block}
+.pie .cta span{color:var(--ink-2)}
+.pie .url{font:600 12pt var(--font-sans);color:var(--brand)}
+.legal{font-size:7.6pt;color:var(--ink-3);margin-top:2.5mm}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);margin-top:4.5mm;border-top:.3mm solid var(--border)}
+.tres div{padding:3mm 4mm 0;border-left:.3mm solid var(--border)}.tres div:first-child{border-left:0;padding-left:0}
+.tres b{display:block;font:600 11pt/1.15 var(--font-display);margin-bottom:.8mm}
+.tres span{color:var(--ink-2);font-size:8.2pt;line-height:1.38;display:block}
+.precios{grid-template-columns:repeat(3,1fr)}
+.fund{margin-top:3mm;border-radius:2.6mm;background:var(--brand);color:#fff;padding:3mm 4mm;display:flex;justify-content:space-between;align-items:center;gap:6mm}
+.fund b{font-size:10pt}.fund span{font-size:8.6pt;color:rgba(255,255,255,.88)}.fund .p{font:600 17pt/1 var(--font-display);white-space:nowrap}
+.nuevo{display:inline-block;font-size:7pt;font-weight:700;color:var(--brand);background:var(--brand-tint);border-radius:99px;padding:.3mm 1.6mm;margin-left:1mm;vertical-align:1px}
+</style>
+</head>
+<body>
+<main class="hoja">
+  <div class="top"><span class="brand"><span class="logo">H+</span>Hereda+</span><small>Software de sucesiones para despachos de abogados · versión 1.6</small></div>
+  <h1>La herencia, lista en una tarde.</h1>
+  <p class="sub">Arrastras los documentos del cliente. Hereda+ los lee en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Tú revisas, decides y firmas.</p>
+
+  <div class="tres">
+    <div><b>Lista en una tarde</b><span>De los papeles al expediente calculado.</span></div>
+    <div><b>Los documentos lo rellenan</b><span>Cada dato, con el documento del que sale.</span></div>
+    <div><b>Nada sale del despacho</b><span>Todo se guarda y se lee en tus equipos.</span></div>
+  </div>
+
+  <div class="flujo">
+    <div class="paso"><div class="im"><img src="../img/web/lector-docs-600.webp" alt="Documentos reconocidos por el lector"></div><div class="tx"><b><span class="n">1</span>Arrastra los documentos</b><p>28 tipos de documento, en PDF, Word, Excel, correo, escaneo o foto del móvil. Cada dato dice de dónde sale.</p></div></div>
+    <div class="paso"><div class="im"><img src="../img/web/exp-leido-800.webp" alt="Expediente calculado"></div><div class="tx"><b><span class="n">2</span>El expediente queda calculado</b><p>Caudal, Sucesiones de cada heredero y plusvalía de cada inmueble, con la norma de cada cifra.</p></div></div>
+    <div class="paso"><div class="im"><img src="../img/web/midia-800.webp" alt="Mi día"></div><div class="tx"><b><span class="n">3</span>Cada mañana, qué hacer hoy</b><p>Lo vencido, lo de esta semana y lo que espera a terceros. Informe en PDF y cifras del 650.</p></div></div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <h2>Todo el expediente, en un solo sitio</h2>
+      <ul>
+        <li><b>Sucesiones de 22 territorios</b>, con Navarra, Álava, Bizkaia y Gipuzkoa, y <b>plusvalía de los 8.132 municipios</b>, más de 300 con su ordenanza.</li>
+        <li><b>Escáner con la cámara</b>: endereza el papel, lo guarda en PDF y lo lee. También fotos del iPhone, correos con adjuntos y Excel. <span class="nuevo">Nuevo en 1.5</span></li>
+        <li><b>Partición y estrategia fiscal</b>: excesos, lotes y el ahorro de cada opción. <b>183 trámites</b> con plazo y organismo.</li>
+        <li><b>Escritos</b> en PDF y Word con el membrete: <b>borrador de escritura</b>, <b>cuaderno particional</b>, renuncia, 790, Catastro, <b>cifras del 650</b> y paquete para la notaría. <span class="nuevo">Nuevo en 1.6</span></li>
+        <li><b>Despacho en red</b>: varios ordenadores con los mismos expedientes por la carpeta compartida del despacho, sin servidor. <span class="nuevo">Nuevo en 1.6</span> <b>Panel del socio</b>, registro de cambios y búsqueda.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Por qué pueden confiar en él</h2>
+      <div class="confia">
+        <div><b>Los datos se quedan en el despacho</b><span>En tus equipos. No los recibimos ni somos encargados del tratamiento. Copias automáticas y cifrado.</span></div>
+        <div><b>Sin IA</b><span>Reglas escritas y más de 1.400 pruebas automáticas: el mismo caso, el mismo resultado.</span></div>
+        <div><b>El abogado decide</b><span>Lo leído entra solo si lo marcas y queda «por revisar». No presenta ni firma nada.</span></div>
+        <div><b>Cada cifra, con su fuente</b><span>La ley de la comunidad, la ordenanza, el artículo.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="precios">
+    <div><b>Individual</b><div class="p">59 € <small>al mes</small></div><span>1 usuario · soporte por correo en un día hábil</span></div>
+    <div><b>Despacho</b><div class="p">129 € <small>al mes</small></div><span>Hasta 5 usuarios · puesta en marcha de 30 min</span></div>
+    <div><b>Despacho+</b><div class="p">249 € <small>al mes</small></div><span>Hasta 15 usuarios · prioridad · 60 min</span></div>
+  </div>
+  <div class="fund"><div><b>Oferta para los 10 primeros despachos · Plan Fundador</b><br><span>El plan Despacho a precio fijo mientras sigas suscrito. Hasta el 31-12-2026 o hasta agotar plazas.</span></div><div class="p">49 € <small style="font:500 8pt var(--font-sans)">al mes</small></div></div>
+  <p class="legal">Precios sin IVA. Sin límite de expedientes. Pago por adelantado por transferencia, trimestral, semestral o anual (12 meses al precio de 10); al recibirla llega el código de licencia.</p>
+
+  <div class="pie">
+    <div class="cta"><b>Pruébalo 30 días con una herencia ya presentada.</b><span>Sin tarjeta y sin instalar nada. Si no contratas, tus expedientes quedan en solo lectura: nunca se bloquean.</span></div>
+    <div class="url">heredate.github.io</div>
+  </div>
+  <p class="legal">Las capturas son del despacho de demostración, con datos ficticios. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
+</main>
+</body>
+</html>

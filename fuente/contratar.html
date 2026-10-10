@@ -1,0 +1,345 @@
+<!doctype html>
+<!-- Borrador pendiente de revisión: texto preparado para su revisión por el titular antes de publicarse. No es la versión definitiva. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planes y contratación · Hereda+</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
+<meta name="description" content="Planes de Hereda+, qué incluye cada uno y cómo contratar en tres pasos.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F5F5F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18191C" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+/* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
+:root{--bg:#F5F5F2;--bg-2:#EEEEEA;--surface:#FFFFFF;--surface-2:#FAFAF8;--border:#E3E2DD;--border-2:#CFCEC8;
+  --ink-1:#18191C;--ink-2:#4B4D53;--ink-3:#5F6167;--brand:#1F3A5F;--brand-tint:rgba(31,58,95,.075);--on-brand:#FFFFFF;
+  --success:#2D6A4F;--warning:#8A5A12;--warning-bg:#F7EFE1;--danger:#AF3A2E;--btn:#18191C;--on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(24,25,28,.035);
+  --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#18191C;--bg-2:#141518;--surface:#202125;--surface-2:#25262B;--border:rgba(255,255,255,.085);--border-2:rgba(255,255,255,.15);
+  --ink-1:#EDEDEF;--ink-2:#B5B6BB;--ink-3:#9C9DA3;--brand:#8FB3E6;--brand-tint:rgba(143,179,230,.14);--on-brand:#101114;
+  --success:#6DC39C;--warning:#E2AE63;--warning-bg:rgba(226,174,99,.14);--danger:#EF8A7D;--btn:#EDEDEF;--on-btn:#18191C;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#18191C;--bg-2:#141518;--surface:#202125;--surface-2:#25262B;--border:rgba(255,255,255,.085);--border-2:rgba(255,255,255,.15);
+  --ink-1:#EDEDEF;--ink-2:#B5B6BB;--ink-3:#9C9DA3;--brand:#8FB3E6;--brand-tint:rgba(143,179,230,.14);--on-brand:#101114;
+  --success:#6DC39C;--warning:#E2AE63;--warning-bg:rgba(226,174,99,.14);--danger:#EF8A7D;--btn:#EDEDEF;--on-btn:#18191C;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink-1);font:16px/1.6 var(--font-sans);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:100;background:var(--btn);color:var(--on-btn);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+@media (max-width:520px){.wrap{padding:0 16px}}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;color:var(--ink-1)}
+.brand:hover{text-decoration:none}
+.logo{width:26px;height:26px;border-radius:7px;background:var(--btn);color:var(--on-btn);display:grid;place-items:center;font:750 11px/1 var(--font-sans);letter-spacing:-.04em}
+.links{display:flex;gap:26px;font-size:14px}
+.links a{color:var(--ink-2)}
+.links a:hover,.links a[aria-current]{color:var(--ink-1);text-decoration:none}
+.links a[aria-current]{font-weight:650}
+@media (max-width:860px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:999px;font:600 15px/1 var(--font-sans);border:0;cursor:pointer;transition:opacity .2s,background-color .2s}
+.btn:hover{text-decoration:none}
+.btn.pri{background:var(--btn);color:var(--on-btn)}
+.btn.pri:hover{opacity:.86}
+.btn.sec{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.btn.sec:hover{background:var(--surface)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:14px}
+.btn.big{min-height:48px;padding:0 24px;font-size:16px}
+.head{padding:clamp(48px,7vw,88px) 0 12px}
+.eyebrow{display:inline-block;font-size:14px;font-weight:650;color:var(--brand);margin-bottom:14px}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.04;margin:0;max-width:16em}
+.lead{font-size:clamp(17px,1.7vw,19px);color:var(--ink-2);max-width:42em;margin:18px 0 0}
+.meta{font-size:14px;color:var(--ink-3);margin-top:14px}
+section{padding:clamp(48px,6vw,72px) 0;border-top:1px solid var(--border);scroll-margin-top:60px}
+h2{font-size:clamp(26px,3.2vw,36px);line-height:1.12;margin:0 0 14px;max-width:22em}
+.grid3{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--surface);border-radius:18px;padding:26px;box-shadow:var(--sh-1)}
+.card h3,.card h4{margin:0 0 8px;font-size:16.5px;font-weight:650;font-family:var(--font-sans);letter-spacing:-.01em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+p a,li a,td a,dd a,.lead a,label a,details a{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.card p{margin:0;color:var(--ink-2);font-size:15px}
+.card .k{font-size:13px;font-weight:650;color:var(--brand);margin-bottom:12px}
+.plans{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:640px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:18px;padding:28px 26px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.plan .n{font-size:16px;font-weight:650}
+.plan .p{font:600 46px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan .p small{font:500 15px/1 var(--font-sans);color:var(--ink-2);letter-spacing:0}
+.plan .iva{font-size:14px;color:var(--ink-3)}
+.plan ul{list-style:none;padding:0;margin:8px 0 16px;display:flex;flex-direction:column;gap:9px;font-size:15px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--success);margin-right:8px;font-weight:700}
+.plan .btn{margin-top:auto}
+.fine{font-size:14px;color:var(--ink-3);margin-top:18px}
+footer{padding:36px 0 56px;color:var(--ink-3);font-size:13.5px;border-top:1px solid var(--border)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+footer a{color:var(--ink-2)}
+/* Documento legal */
+.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:80px}
+@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,740px);justify-content:start;gap:72px}}
+.toc{font-size:14px}
+.toc b{display:block;font-size:13px;font-weight:650;color:var(--ink-3);margin-bottom:10px}
+.toc ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.toc a,.toc li a{color:var(--ink-2);text-decoration:none}
+.toc li a:hover{color:var(--ink-1);text-decoration:underline}
+@media (min-width:1000px){.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+@media (max-width:999px){.toc{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1)}}
+.prose{min-width:0}
+.prose h2{font-size:clamp(22px,2.4vw,26px);margin:48px 0 12px;scroll-margin-top:80px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:17px;margin:26px 0 6px}
+.prose p,.prose li{color:var(--ink-1);overflow-wrap:anywhere}
+.prose p{margin:0 0 12px}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:0 0 6px}
+.prose .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:6px}
+.box{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1);margin:0 0 18px}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.box.note{background:var(--brand-tint);box-shadow:none}
+.ph{background:var(--warning-bg);color:var(--warning);border-radius:4px;padding:0 3px;font-weight:650}
+.tbl{width:100%;overflow-x:auto;margin:0 0 18px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--border)}
+thead th{font-size:13px;color:var(--ink-3);font-weight:650;background:var(--surface)}
+tbody th{font-weight:600}
+table.cmp{table-layout:fixed;min-width:620px}
+table.cmp td,table.cmp th{text-align:center}
+table.cmp thead th:first-child{width:30%}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left}
+table.cmp .hi{background:var(--brand-tint)}
+dl.id{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
+dl.id dt{color:var(--ink-3)}
+dl.id dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){dl.id{grid-template-columns:1fr;gap:2px}dl.id dd{margin-bottom:8px}}
+/* Pasos y formulario */
+.steps{counter-reset:s;display:grid;grid-template-columns:1fr;gap:14px;list-style:none;padding:0;margin:0}
+@media (min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.steps li{counter-increment:s}
+.steps li .k::before{content:"Paso " counter(s)}
+.form{display:grid;grid-template-columns:1fr;gap:16px;max-width:760px}
+@media (min-width:700px){.form{grid-template-columns:1fr 1fr}.form .full{grid-column:1/-1}}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.form label span.opt{font-weight:400;color:var(--ink-3)}
+.form input,.form select,.form textarea{font:15px/1.4 var(--font-sans);color:var(--ink-1);background:var(--surface);border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.form textarea{min-height:96px;resize:vertical}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.form .check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}
+.form .check input{width:18px;min-height:18px;height:18px;margin:3px 0 0;flex:none}
+.form .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-size:14px;color:var(--ink-2)}
+.msg.err{color:var(--danger)}
+.oferta{display:flex;gap:18px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:26px 28px;border-radius:18px;background:var(--brand);color:var(--on-brand)}
+.oferta h3{margin:4px 0 6px;font:600 24px/1.2 var(--font-display)}.oferta p{margin:0;opacity:.9;max-width:640px}.oferta .k{font-size:13px;font-weight:650;opacity:.85}
+.oferta .btn.pri{background:var(--on-brand);color:var(--brand)}
+.pagoinfo{font-size:14px;color:var(--ink-2);background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-1)}
+.sinmail{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--warning-bg);color:var(--warning);font-size:14.5px}
+details.faq{border-bottom:1px solid var(--border);padding:16px 0}
+details.faq summary{cursor:pointer;font-weight:600;font-size:16.5px}
+details.faq p{color:var(--ink-2);margin:10px 0 0}
+@media print{.nav,.toc,footer nav,.skip{display:none}.doc{display:block;padding:0}body{font-size:11pt;background:#fff;color:#000}section{border:0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="/"><span class="logo">H+</span>Hereda+</a>
+  <nav class="links" aria-label="Información legal"><a href="condiciones.html">Condiciones</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html" aria-current="page">Planes y contratación</a></nav>
+  <a class="btn pri sm" href="contratar.html">Contratar</a>
+</div></header>
+<main id="contenido">
+<div class="head"><div class="wrap">
+  <span class="eyebrow">Solo para despachos y profesionales de la abogacía</span>
+  <h1>Planes y contratación</h1>
+  <p class="lead">Todos los planes incluyen el software completo, las actualizaciones normativas y el soporte. Cambia el número de usuarios y el nivel de soporte. Precios sin IVA.</p>
+  <p class="meta">Prueba gratuita de 30 días, sin datos de pago. Al terminar, si no contrata, sus expedientes quedan en modo de solo lectura: nunca se bloquean.</p>
+</div></div>
+
+<section style="border-top:0;padding-top:32px" aria-labelledby="t-planes"><div class="wrap">
+  <h2 class="vh" id="t-planes">Planes</h2>
+  <div class="plans">
+    <div class="plan"><div class="n">Individual</div><div class="p">59 € <small>al mes</small></div><div class="iva">71,39 € con IVA</div><ul><li>1 usuario</li><li>Software completo</li><li>Soporte por correo en un día hábil</li></ul><a class="btn sec" href="#solicitud" data-plan="Individual">Solicitar</a></div>
+    <div class="plan hi"><div class="n">Despacho</div><div class="p">129 € <small>al mes</small></div><div class="iva">156,09 € con IVA</div><ul><li>Hasta 5 usuarios</li><li>Software completo</li><li>Sesión de puesta en marcha de 30 minutos</li></ul><a class="btn pri" href="#solicitud" data-plan="Despacho">Solicitar</a></div>
+    <div class="plan"><div class="n">Despacho+</div><div class="p">249 € <small>al mes</small></div><div class="iva">301,29 € con IVA</div><ul><li>Hasta 15 usuarios</li><li>Atención prioritaria</li><li>Sesión de puesta en marcha de 60 minutos</li></ul><a class="btn sec" href="#solicitud" data-plan="Despacho+">Solicitar</a></div>
+  </div>
+  <div class="oferta"><div><span class="k">Oferta de lanzamiento · Plan Fundador</span><h3>10 despachos, hasta el 31-12-2026, precio fijo</h3><p>Lo mismo que el plan Despacho (hasta 5 usuarios y sesión de puesta en marcha de 30 minutos) por <b>49 € al mes</b> (59,29 € con IVA), con el precio fijo mientras la licencia siga activa. Para los 10 primeros despachos que lo soliciten antes del 31 de diciembre de 2026.</p></div><a class="btn pri" href="#solicitud" data-plan="Fundador">Solicitar plaza</a></div>
+  <p class="fine">Se paga por adelantado por transferencia: trimestral, semestral o anual (el anual, al precio de 10 meses). Hereda+ calcula y prepara; el criterio y la firma son del abogado.</p>
+</div></section>
+
+<section id="comparativa"><div class="wrap">
+  <h2>Comparativa de planes</h2>
+  <div class="tbl" tabindex="0" role="region" aria-label="Comparativa de planes"><table class="cmp">
+    <thead><tr><th scope="col">Concepto</th><th scope="col">Individual</th><th scope="col" class="hi">Despacho</th><th scope="col">Despacho+</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">Precio mensual, sin IVA</th><td>59 €</td><td class="hi">129 €</td><td>249 €</td></tr>
+      <tr><th scope="row">Precio mensual, con IVA (21 %)</th><td>71,39 €</td><td class="hi">156,09 €</td><td>301,29 €</td></tr>
+      <tr><th scope="row">Pago trimestral, sin IVA (3 meses)</th><td>177 €</td><td class="hi">387 €</td><td>747 €</td></tr>
+      <tr><th scope="row">Pago semestral, sin IVA (6 meses)</th><td>354 €</td><td class="hi">774 €</td><td>1.494 €</td></tr>
+      <tr><th scope="row">Pago anual, sin IVA (12 meses al precio de 10)</th><td>590 €</td><td class="hi">1.290 €</td><td>2.490 €</td></tr>
+      <tr><th scope="row">Pago anual, con IVA</th><td>713,90 €</td><td class="hi">1.560,90 €</td><td>3.012,90 €</td></tr>
+      <tr><th scope="row">Usuarios autorizados</th><td>1</td><td class="hi">Hasta 5</td><td>Hasta 15</td></tr>
+      <tr><th scope="row">Software completo y actualizaciones</th><td>Sí</td><td class="hi">Sí</td><td>Sí</td></tr>
+      <tr><th scope="row">Primera respuesta de soporte</th><td>1 día hábil</td><td class="hi">1 día hábil</td><td>1 día hábil, con prioridad</td></tr>
+      <tr><th scope="row">Sesión de puesta en marcha por videollamada</th><td>No</td><td class="hi">30 minutos</td><td>60 minutos</td></tr>
+      <tr><th scope="row">Permanencia</th><td colspan="3">Ninguna más allá del periodo pagado: la baja tiene efecto al final del trimestre, semestre o año ya pagado. Anual: baja hasta 15 días antes de la renovación.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="fine">Plan Fundador (oferta de lanzamiento): como el plan Despacho, 49 € al mes sin IVA (147 € el trimestre, 294 € el semestre, 490 € el año). Los tiempos de soporte se cuentan en días hábiles, de lunes a viernes salvo festivos nacionales. Detalle en la cláusula 12 de las <a href="condiciones.html#c12">condiciones</a>.</p>
+</div></section>
+
+<section id="incluye"><div class="wrap">
+  <h2>Qué incluye y qué no</h2>
+  <div class="grid3">
+    <div class="card"><div class="k">Incluido en todos los planes</div><h3>El expediente sucesorio completo</h3><p>Lectura de 28 tipos de documento en el propio ordenador; Impuesto sobre Sucesiones de 22 territorios y plusvalía de los 8.132 municipios; partición y estrategia fiscal; 183 trámites con plazos y enlaces oficiales; Mi día y «qué hacer» en cada expediente; escritos en PDF y Word y paquete para la notaría; panel del socio, perfiles y registro de cambios; encargo, fondos y honorarios; cuestionario para familias y calculadora para su web; copias de seguridad. Sin límite de expedientes.</p></div>
+    <div class="card"><div class="k">Incluido en todos los planes</div><h3>Actualizaciones y soporte</h3><p>Cambios normativos y mejoras del software sin coste adicional. Soporte por correo electrónico. Funciona en el navegador del despacho (Chrome o Edge recomendados), también sin conexión, en Windows y Mac. La lectura de documentos necesita la versión web; el archivo local permite archivarlos, no leerlos.</p></div>
+    <div class="card"><div class="k">No incluido</div><h3>Lo que corresponde al abogado</h3><p>Asesoramiento jurídico o fiscal, revisión de casos concretos y presentación de declaraciones. No usa inteligencia artificial: la lectura de documentos y el cálculo se hacen con reglas y pruebas automáticas.</p></div>
+  </div>
+</div></section>
+
+<section id="pasos"><div class="wrap">
+  <h2>Cómo contratar, en tres pasos</h2>
+  <div class="sinmail" id="sinmail" hidden><b>Escríbanos a la dirección de contratación (pendiente de publicar).</b> Mientras tanto, prepare la solicitud y cópiela con el botón «Copiar la solicitud».</div>
+  <ol class="steps">
+    <li class="card"><div class="k"></div><h3>Solicitud</h3><p>Rellene el formulario de abajo. Se abre su programa de correo con la solicitud lista para enviar. No le pedimos datos bancarios.</p></li>
+    <li class="card"><div class="k"></div><h3>Confirmación y transferencia</h3><p>En un día hábil le enviamos por correo la confirmación del plan, el importe y los datos para la transferencia. En cuanto se recibe, le llega su código de licencia y la factura (normalmente el mismo día).</p></li>
+    <li class="card"><div class="k"></div><h3>Activación</h3><p>Cada usuario abre Hereda+ e introduce el código en <b>Despacho y ajustes › Licencia</b>. Los expedientes de la prueba siguen donde estaban, en su navegador.</p></li>
+  </ol>
+</div></section>
+
+<section id="solicitud"><div class="wrap">
+  <h2>Solicitud de contratación</h2>
+  <p class="lead" style="margin:0 0 28px">Los datos se usan solo para preparar su contratación y su factura. Más información en la <a href="privacidad.html">política de privacidad</a>.</p>
+  <form class="form" id="f" novalidate>
+    <label class="full">Despacho o razón social<input name="despacho" autocomplete="organization" required></label>
+    <label>NIF<input name="nif" required autocapitalize="characters"></label>
+    <label><span>Colegio y n.º de colegiado <span class="opt">(opcional)</span></span><input name="colegiado"></label>
+    <label class="full">Domicilio fiscal<input name="domicilio" autocomplete="street-address" required></label>
+    <label>Persona de contacto<input name="contacto" autocomplete="name" required></label>
+    <label><span>Cargo <span class="opt">(opcional)</span></span><input name="cargo" autocomplete="organization-title"></label>
+    <label>Correo electrónico<input name="email" type="email" autocomplete="email" required></label>
+    <label><span>Teléfono <span class="opt">(opcional)</span></span><input name="tel" type="tel" autocomplete="tel"></label>
+    <label>Plan<select name="plan" required><option value="">Elija un plan</option><option>Individual</option><option>Despacho</option><option>Despacho+</option><option value="Fundador">Fundador (oferta de lanzamiento)</option></select></label>
+    <label>Número de usuarios<input name="usuarios" type="number" min="1" max="15" value="1" required></label>
+    <label>Pago por adelantado<select name="periodo" required><option>Trimestral (3 meses)</option><option>Semestral (6 meses)</option><option>Anual (12 meses al precio de 10)</option></select></label>
+    <div class="full pagoinfo"><b>Forma de pago: transferencia bancaria.</b> Tras su solicitud le enviamos el importe y los datos de pago; al recibirla activamos su licencia (normalmente el mismo día).</div>
+    <label class="full"><span>Correo para recibir las facturas <span class="opt">(si es distinto)</span></span><input name="emailfact" type="email"></label>
+    <label class="full"><span>Comentarios <span class="opt">(opcional)</span></span><textarea name="coment"></textarea></label>
+    <label class="full check"><input type="checkbox" name="acepto" required><span>Declaro que contrato para mi actividad profesional y he leído las <a href="condiciones.html" target="_blank">condiciones generales de licencia y uso</a>. Acepto que la contratación quede sujeta a ellas.</span></label>
+    <div class="full actions">
+      <button class="btn pri big" type="submit">Preparar el correo de solicitud</button>
+      <button class="btn sec big" type="button" id="copiar">Copiar la solicitud</button>
+      <span class="msg" id="msg" role="status" aria-live="polite"></span>
+    </div>
+  </form>
+</div></section>
+
+<section id="preguntas"><div class="wrap">
+  <h2>Preguntas frecuentes</h2>
+  <div style="max-width:760px">
+    <details class="faq"><summary>¿Dónde se guardan los expedientes?</summary><p>Solo en el navegador de cada equipo del despacho. No los recibimos ni podemos verlos. Por eso conviene hacer copias de seguridad con la función de exportar.</p></details>
+    <details class="faq"><summary>¿Los documentos que lee el programa se envían a algún sitio?</summary><p>No. Se leen en el navegador de su equipo y se guardan en él. No los recibimos ni podemos verlos.</p></details>
+    <details class="faq"><summary>¿Qué pasa si no renuevo?</summary><p>Hereda+ pasa a modo de solo lectura: puede consultar, imprimir y exportar todo, pero no crear ni modificar expedientes. Sus datos nunca se bloquean.</p></details>
+    <details class="faq"><summary>¿Puedo cambiar de plan?</summary><p>Sí. Subir de plan tiene efecto inmediato y se factura la diferencia proporcional. Bajar tiene efecto en la siguiente renovación.</p></details>
+    <details class="faq"><summary>¿Hay permanencia?</summary><p>No más allá del periodo pagado: puede darse de baja cuando quiera y la baja tiene efecto al final del trimestre, semestre o año ya pagado. Lo pagado por adelantado no se reembolsa, salvo incumplimiento nuestro.</p></details>
+    <details class="faq"><summary>¿Cómo se paga y se factura?</summary><p>Por transferencia bancaria y por adelantado: trimestral, semestral o anual. Tras la solicitud le enviamos por correo el importe y los datos para la transferencia; al recibirla le llega el código de licencia y la factura en PDF. Los precios no incluyen IVA (21 %). No hay pago con tarjeta ni domiciliación.</p></details>
+    <details class="faq"><summary>¿Y si la transferencia de la renovación llega tarde?</summary><p>Cada código vale hasta el final del periodo pagado y 7 días más de cortesía. La app avisa antes del vencimiento. Si aun así vence, pasa a solo lectura hasta que llegue el código nuevo: no se pierde nada.</p></details>
+    <details class="faq"><summary>¿Varios usuarios comparten los mismos expedientes?</summary><p>Sí. Con «Despacho en red», los ordenadores del despacho comparten los expedientes a través de una carpeta que el despacho ya tiene (OneDrive, Dropbox, Google Drive o el servidor de la oficina), cifrada con contraseña si se quiere. Los datos no pasan por nuestros servidores. Hace falta Chrome o Edge en el ordenador; en el móvil, los expedientes se pasan exportándolos e importándolos. Cada persona tiene su perfil (socio, abogado o administrativo) y el socio ve el panel del despacho.</p></details>
+    <details class="faq"><summary>¿Hereda+ sustituye al criterio del abogado?</summary><p>No. Lee, calcula y prepara borradores; todo lo leído queda por revisar, y el abogado revisa, decide y firma.</p></details>
+  </div>
+</div></section>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 Hereda+ · <span class="ph">[RAZÓN SOCIAL]</span> · <span class="ph">[NIF]</span></span>
+  <nav aria-label="Enlaces legales"><a href="condiciones.html">Condiciones de licencia</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Contratar</a></nav>
+</div></footer>
+<script>
+// Compone la solicitud y abre el programa de correo del usuario. No se envía nada a ningún servidor.
+// DESTINO lo pone build.py desde src/empresa.json. Si está vacío, no se abre un correo sin destinatario: se avisa en la página.
+const DESTINO = "[EMAIL DE CONTACTO]";
+const f = document.getElementById("f");
+const msg = document.getElementById("msg");
+const destinoValido = /^[^\s@\[\]]+@[^\s@\[\]]+\.[^\s@\[\]]+$/.test(DESTINO);
+
+if (!destinoValido) document.getElementById("sinmail").hidden = false;
+document.querySelectorAll("[data-plan]").forEach((a) => a.addEventListener("click", () => {
+  f.plan.value = a.dataset.plan;
+  const max = { "Individual": 1, "Despacho": 5, "Despacho+": 15, "Fundador": 5 }[a.dataset.plan];
+  f.usuarios.max = max;
+  if (+f.usuarios.value > max) f.usuarios.value = max;
+}));
+f.plan.addEventListener("change", () => {
+  const max = { "Individual": 1, "Despacho": 5, "Despacho+": 15, "Fundador": 5 }[f.plan.value] || 15;
+  f.usuarios.max = max;
+});
+
+function texto() {
+  const v = (n) => (f[n].value || "").trim();
+  const l = [
+    "Solicitud de contratación de Hereda+",
+    "",
+    "Despacho o razón social: " + v("despacho"),
+    "NIF: " + v("nif"),
+    "Domicilio fiscal: " + v("domicilio"),
+    "Colegio y n.º de colegiado: " + (v("colegiado") || "—"),
+    "Persona de contacto: " + v("contacto") + (v("cargo") ? " (" + v("cargo") + ")" : ""),
+    "Correo electrónico: " + v("email"),
+    "Teléfono: " + (v("tel") || "—"),
+    "Correo para facturas: " + (v("emailfact") || v("email")),
+    "",
+    "Plan: " + v("plan"),
+    "Usuarios: " + v("usuarios"),
+    "Pago por adelantado: " + v("periodo"),
+    "Forma de pago: transferencia bancaria",
+    "",
+    "Comentarios: " + (v("coment") || "—"),
+    "",
+    "Declaro que contrato para mi actividad profesional y he leído las condiciones generales de licencia y uso de Hereda+ (versión publicada en la fecha de esta solicitud).",
+  ];
+  return l.join("\n");
+}
+
+function valida() {
+  msg.className = "msg";
+  const max = +f.usuarios.max || 15;
+  if (+f.usuarios.value > max) { f.usuarios.setCustomValidity("El plan elegido admite hasta " + max + (max === 1 ? " usuario." : " usuarios.")); } else { f.usuarios.setCustomValidity(""); }
+  if (!f.checkValidity()) { f.reportValidity(); msg.className = "msg err"; msg.textContent = "Revise los campos marcados."; return false; }
+  return true;
+}
+
+f.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!valida()) return;
+  const asunto = "Contratación Hereda+ · " + f.plan.value + " · " + f.despacho.value.trim();
+  if (!destinoValido) { msg.className = "msg err"; msg.textContent = "Escríbanos a la dirección de contratación (pendiente de publicar). Copie la solicitud con el botón «Copiar la solicitud»."; return; }
+  location.href = "mailto:" + DESTINO + "?subject=" + encodeURIComponent(asunto) + "&body=" + encodeURIComponent(texto());
+  msg.textContent = "Se ha abierto su programa de correo con la solicitud para " + DESTINO + ". Revísela y envíela. Le enviaremos por correo la confirmación, el importe y los datos para la transferencia; en cuanto se reciba, le llega su código de licencia.";
+});
+
+document.getElementById("copiar").addEventListener("click", async () => {
+  if (!valida()) return;
+  const t = texto();
+  try { await navigator.clipboard.writeText(t); msg.textContent = destinoValido ? "Solicitud copiada. Péguela en un correo a " + DESTINO + "." : "Solicitud copiada. Envíela a la dirección de contratación en cuanto esté publicada (pendiente)."; }
+  catch (err) {
+    const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); msg.textContent = destinoValido ? "Solicitud copiada. Péguela en un correo a " + DESTINO + "." : "Solicitud copiada. Envíela a la dirección de contratación en cuanto esté publicada (pendiente)."; } catch (e2) { msg.className = "msg err"; msg.textContent = "No se ha podido copiar. Use el botón de correo."; }
+    ta.remove();
+  }
+});
+</script>
+</body>
+</html>

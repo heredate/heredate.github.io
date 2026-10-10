@@ -1,0 +1,27 @@
+{
+  "_instrucciones": "Datos del titular de Hereda+ (único sitio). build.py los pone en el aviso legal, la privacidad, las condiciones, la página de contratación, la calculadora y la landing. Si falta alguno, la web se construye igual pero build.py avisa: FALTAN DATOS DEL TITULAR. El IBAN y el titular de la cuenta NO se publican nunca: solo los usan tools/emitir-factura.mjs y las plantillas de correo de tools/README.md.",
+  "titular": "",
+  "nif": "",
+  "domicilio": "",
+  "email": "",
+  "telefono": "",
+  "web": "https://heredate.github.io",
+  "web_github_base": "",
+  "registro": "",
+  "localidad": "",
+  "fecha_legal": "2026-10-04",
+  "hosting": "GitHub, Inc.",
+  "correo_proveedor": "",
+  "correo_ubicacion": "",
+  "facturacion": "Programa propio de facturación, en el equipo del titular",
+  "facturacion_ubicacion": "España",
+  "banco": "",
+  "asesoria": "",
+  "iban": "",
+  "titular_cuenta": "",
+  "soporte": {
+    "email": "",
+    "whatsapp": "",
+    "horario": "L-V, respuesta en un día hábil"
+  }
+}

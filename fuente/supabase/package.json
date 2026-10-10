@@ -1,0 +1,1 @@
+{ "name": "hereda-plus-backend", "private": true, "type": "module", "scripts": { "test": "node pruebas/rls.test.mjs" }, "devDependencies": { "@electric-sql/pglite": "^0.5.8" } }

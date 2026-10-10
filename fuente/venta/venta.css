@@ -1,0 +1,12 @@
+/* Hereda+ · material comercial impreso (one-pager, dossier, charla). Mismos tokens y tipografía que la app (src/app/shell.html):
+   Inter para el texto y Source Serif 4 para los títulos, autoalojadas en /fonts (licencia SIL OFL 1.1). Así el PDF lleva la letra
+   de la marca y no la del sistema que lo genere. Los PDF se generan con: node venta/pdf.mjs */
+@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:block;src:url(../fonts/inter-var-latin.woff2) format("woff2")}
+@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:block;src:url(../fonts/source-serif-4-var-latin.woff2) format("woff2")}
+:root{
+  --bg:#F5F5F2;--bg-2:#EEEEEA;--surface:#FFFFFF;--border:#E3E2DD;--border-2:#CFCEC8;
+  --ink-1:#18191C;--ink-2:#4B4D53;--ink-3:#5F6167;
+  --brand:#1F3A5F;--brand-tint:rgba(31,58,95,.075);--success:#2D6A4F;--warning:#8A5A12;--danger:#AF3A2E;
+  --font-sans:"Hereda Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-display:"Hereda Serif","Iowan Old Style","Palatino Linotype",Georgia,serif;
+}

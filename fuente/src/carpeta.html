@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F5F5F2">
+<title>Vuestra herencia · {{MARCA}}</title>
+<style>
+:root{
+  --text:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; /* archivo autónomo: la fuente del propio móvil */
+  --canvas:#F5F5F2; --panel:#FFFFFF; --panel-2:#FAFAF8;
+  --label:#18191C; --label-2:#4B4D53; --label-3:#65676D; --label-4:#B4B5B8;
+  --hair:rgba(24,25,28,.11); --hair-2:rgba(24,25,28,.065); --fill:rgba(24,25,28,.05);
+  --accent:#1F3A5F; --accent-t:rgba(31,58,95,.08);
+  --green:#16875A; --green-t:rgba(22,135,90,.1);
+  --amber:#C47F1E; --amber-t:rgba(196,127,30,.12);
+  --rose:#C8577E; --rose-t:rgba(200,87,126,.1);
+  --violet:#7A5BC7; --violet-t:rgba(122,91,199,.1);
+  --shadow:0 0 0 1px rgba(24,25,28,.05),0 1px 2px rgba(24,25,28,.04),0 6px 18px -8px rgba(24,25,28,.08);
+  --r:18px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --canvas:#18191C; --panel:#202125; --panel-2:#25262B;
+    --label:#F2F2F4; --label-2:#AEAEB4; --label-3:#8B8B92; --label-4:#4A4B51;
+    --hair:rgba(255,255,255,.1); --hair-2:rgba(255,255,255,.06); --fill:rgba(255,255,255,.08);
+    --accent:#8FB3E6; --accent-t:rgba(143,179,230,.15); --on-accent:#101114;
+    --green:#5CC99A; --green-t:rgba(92,201,154,.14);
+    --amber:#E9A15B; --amber-t:rgba(233,161,91,.15);
+    --rose:#D98AA6; --rose-t:rgba(217,138,166,.15);
+    --violet:#A88BEA; --violet-t:rgba(168,139,234,.16);
+    --shadow:0 0 0 .5px rgba(255,255,255,.08),0 1px 2px rgba(0,0,0,.3);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--canvas)}
+body{margin:0;background:var(--canvas);color:var(--label);font:16.5px/1.55 var(--text);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;min-height:100vh}
+button,input{font:inherit;color:inherit}
+svg{display:block;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px calc(40px + env(safe-area-inset-bottom))}
+@media (min-width:760px){.wrap{max-width:720px;padding:0 24px 56px}}
+
+/* Cabecera del despacho */
+.top{display:flex;align-items:center;gap:13px;padding:22px 0 8px}
+.mono{width:44px;height:44px;border-radius:50%;background:var(--accent);color:var(--on-accent,#fff);display:grid;place-items:center;font-weight:600;font-size:15px;letter-spacing:.04em;flex:none}
+.firm{display:flex;flex-direction:column;line-height:1.28;min-width:0}
+.firm b{font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.firm small{font-size:13.5px;color:var(--label-2)}
+.resp{margin:0 0 6px;padding:10px 0 0;font-size:14px;color:var(--label-2);border-top:1px solid var(--hair-2)}
+.resp b{color:var(--label);font-weight:600}
+
+/* Portada */
+.hero{padding:26px 0 8px}
+.kick{font-size:13.5px;font-weight:500;color:var(--label-3);margin:0 0 10px}
+h1{text-wrap:balance;font-family:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;font-size:32px;line-height:1.12;letter-spacing:-.012em;margin:0 0 10px;font-weight:600}
+@media (min-width:760px){h1{font-size:38px}}
+.sub{margin:0;color:var(--label-2);font-size:15px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.lead{color:var(--label-2);margin:16px 0 0;font-size:17px;line-height:1.55;max-width:56ch}
+
+/* Secciones */
+section{margin-top:34px}
+h2{font-size:21px;line-height:1.25;letter-spacing:-.018em;margin:0 0 4px;font-weight:650}
+.h2s{margin:0 0 14px;color:var(--label-2);font-size:15px;line-height:1.5}
+.card{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:12px}
+.num{font-variant-numeric:lining-nums tabular-nums}
+.note{font-size:14px;color:var(--label-2);line-height:1.5;margin:10px 2px 0}
+
+/* Herederos */
+.her{display:grid;gap:10px}
+.hc{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:start;margin-bottom:0}
+.hc .n{font-size:18px;font-weight:650;letter-spacing:-.014em}
+.hc .r{color:var(--label-2);font-size:14px}
+.hc .d{grid-column:1/-1;font-size:14.5px;color:var(--label-2);margin-top:6px;padding-top:10px;border-top:1px solid var(--hair-2)}
+.hc .v{text-align:right;font-size:20px;font-weight:650;letter-spacing:-.02em;white-space:nowrap}
+.hc .v small{display:block;font-size:12.5px;font-weight:500;color:var(--label-3);letter-spacing:0}
+.hc.ren .n{color:var(--label-2);text-decoration:line-through;text-decoration-color:var(--label-4)}
+.expl{display:grid;gap:8px;margin-top:12px}
+.expl p{margin:0;padding:12px 14px;border-radius:12px;background:var(--panel-2);font-size:14.5px;color:var(--label-2);line-height:1.5}
+.expl b{color:var(--label);font-weight:600}
+
+/* Qué hay */
+.bl{display:grid;gap:0}
+.bl div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--hair-2)}
+.bl div:last-child{border-bottom:0}
+.bl span{min-width:0}.bl span small{display:block;color:var(--label-3);font-size:13px;margin-top:1px}
+.bl b{font-weight:600;white-space:nowrap}
+.tot{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin-top:8px;padding-top:14px;border-top:1px solid var(--hair)}
+.tot span{color:var(--label-2)}.tot b{font-size:24px;letter-spacing:-.02em;color:var(--green);font-weight:650;white-space:nowrap}
+
+/* Impuestos */
+.imp{display:grid;gap:12px}
+.ir{display:grid;gap:8px}
+.ir .n{display:flex;justify-content:space-between;gap:12px;font-weight:600;font-size:16px}
+.ir .n small{color:var(--label-3);font-weight:500;font-size:13.5px}
+.bar{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--fill)}
+.bar i{display:block;height:100%}
+.bar .g{background:var(--green)}.bar .a{background:var(--amber)}.bar .p{background:var(--rose)}.bar .x{background:var(--violet)}
+.pill.x{background:var(--violet-t);color:var(--violet)}
+.ir .xm{margin:6px 0 0;font-size:13.5px;color:var(--label-2)}
+.hc .d.adj{color:var(--label);border-top:0;padding-top:0;margin-top:4px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--label-2)}
+.leg span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.leg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.leg b{color:var(--label);font-weight:600}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12.5px;font-weight:600}
+.pill.g{background:var(--green-t);color:var(--green)}.pill.a{background:var(--amber-t);color:var(--amber)}.pill.p{background:var(--rose-t);color:var(--rose)}
+
+/* Pasos */
+.steps{display:grid;gap:0;counter-reset:s}
+.st{display:grid;grid-template-columns:34px 1fr;gap:0 14px;padding:14px 0;border-bottom:1px solid var(--hair-2);counter-increment:s}
+.st:last-child{border-bottom:0}
+.st::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent-t);color:var(--accent);display:grid;place-items:center;font-weight:650;font-size:14px;margin-top:1px}
+.st b{display:block;font-weight:600;font-size:16px;line-height:1.35}
+.st small{display:block;color:var(--label-2);font-size:14px;margin-top:3px}
+.st .f{color:var(--label);font-weight:600}
+.st .f.soon{color:var(--amber)}
+
+/* Documentos */
+.docs{display:grid;gap:0}
+.dc{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--hair-2);cursor:pointer}
+.dc:last-child{border-bottom:0}
+.dc input{appearance:none;width:24px;height:24px;border-radius:8px;border:1.5px solid var(--label-4);background:var(--panel);flex:none;margin:1px 0 0;display:grid;place-items:center;cursor:pointer}
+.dc input:checked{background:var(--green);border-color:var(--green)}
+.dc input:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.2px 2.2px 0;transform:translateY(-1px) rotate(45deg)}
+.dc .t{min-width:0;flex:1}
+.dc .t b{display:block;font-weight:600;font-size:15.5px;line-height:1.35}
+.dc .t small{display:block;color:var(--label-3);font-size:13.5px;margin-top:2px}
+.dc.ok .t b{color:var(--label-3);text-decoration:line-through;text-decoration-color:var(--label-4)}
+.prog{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;color:var(--label-2);margin:0 0 10px}
+.pbar{flex:1;height:5px;border-radius:5px;background:var(--fill);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--green);width:0;transition:width .3s}
+
+/* Preguntas */
+details{border-bottom:1px solid var(--hair-2)}
+details:last-child{border-bottom:0}
+summary{list-style:none;cursor:pointer;padding:14px 0;font-weight:600;font-size:16px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";width:8px;height:8px;border-right:1.8px solid var(--label-3);border-bottom:1.8px solid var(--label-3);transform:rotate(45deg);margin:0 6px 4px 0;transition:transform .2s;flex:none}
+details[open] summary::after{transform:rotate(-135deg);margin:4px 6px 0 0}
+details p{margin:0 0 16px;color:var(--label-2);font-size:15.5px;line-height:1.55}
+
+/* Cierre */
+.foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--hair);color:var(--label-2);font-size:14.5px;line-height:1.55}
+.foot p{margin:0 0 8px}
+.foot .made{color:var(--label-3);font-size:13px}
+.contact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}
+.contact a{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+.link{background:none;border:0;padding:6px 0;color:var(--accent);font-weight:600;cursor:pointer;font-size:15px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body{background:#fff}.card{box-shadow:none;border:1px solid #ddd}.dc input{border-color:#999}}
+</style>
+</head>
+<body>
+<p id="sinjs" style="padding:24px;font:16px system-ui">Si ves esta página en blanco, ábrela en Safari o Chrome (botón Compartir › Abrir en Safari).</p>
+<main id="c" class="wrap" aria-live="polite"></main>
+<script>
+/*__CARPETA_DATA__*/
+(function () {
+  document.getElementById("sinjs")?.remove();
+  if (typeof D !== "object" || !D) { document.getElementById("c").textContent = "Este archivo no contiene datos."; return; }
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const grp = (n, d) => { const neg = n < 0; const [i, f] = Math.abs(Number(n) || 0).toFixed(d).split("."); return (neg ? "−" : "") + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (f ? "," + f : ""); };
+  const eur0 = (n) => grp(n, 0) + " €";
+  const fecha = (s) => { if (!s) return ""; const d = new Date(s + "T12:00:00"); return isNaN(d) ? esc(s) : d.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }); };
+  const hoy = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+  const dias = (s) => Math.round((new Date(s + "T12:00:00") - new Date(hoy + "T12:00:00")) / 864e5);
+  const ini = (n) => String(n || "").split(/\s+/).filter((w) => w.length > 2).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "H+";
+  const O = D.opciones || {}, cifras = !O.sinCifras, F = D.despacho || {}, C = D.causante || {}, H = D.herederos || [], P = D.pasos || [], DOCS = D.documentos || [];
+  const KEY = "hereda-carpeta-" + String(D.ref || C.nombre || "x").replace(/\s+/g, "_");
+  let S; try { S = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { S = null; }
+  if (!S || typeof S !== "object") S = { docs: {} };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const PERSISTE = (() => { try { localStorage.setItem("__h", "1"); localStorage.removeItem("__h"); return true; } catch (e) { return false; } })();
+  const VISTA_PREVIA = /iPhone|iPad/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgent);
+  document.title = (C.nombre ? "La herencia de " + C.nombre : "Vuestra herencia") + (F.nombre ? " · " + F.nombre : "");
+
+  const DER = { pleno: "propiedad", usufructo: "usufructo", nuda: "nuda propiedad" };
+  const hayUsu = H.some((h) => (h.derechos || []).some((d) => d.tipo === "usufructo")), hayNuda = H.some((h) => (h.derechos || []).some((d) => d.tipo === "nuda"));
+
+  const cab = `<header class="top"><span class="mono" aria-hidden="true">${esc(ini(F.nombre))}</span><span class="firm"><b>${esc(F.nombre || "Vuestro despacho")}</b><small>${esc([F.colegio, F.localidad].filter(Boolean).join(" · ") || (D.ref ? "Expediente " + D.ref : ""))}</small></span></header>
+    ${F.responsable ? `<p class="resp">Os acompaña <b>${esc(F.responsable)}</b>${F.rol ? ", " + esc(F.rol) : ""}${D.ref ? ` · expediente ${esc(D.ref)}` : ""}</p>` : ""}`;
+
+  const hero = `<div class="hero"><p class="kick">Vuestra herencia en una página</p><h1>${C.nombre ? "La herencia de " + esc(C.nombre) : "Vuestra herencia"}</h1>
+    <p class="sub">${C.fecha ? `<span>Falleció el ${fecha(C.fecha)}</span>` : ""}<span>Preparado el ${fecha(D.generado || hoy)}</span></p>
+    <p class="lead">Aquí está lo esencial para que no tengáis que recordarlo todo: quién hereda, qué impuestos se prevén, qué pasos vienen y qué documentos hacen falta. Guardad esta página en el móvil. Las cifras son una estimación con los datos de hoy; las revisamos juntos antes de cada paso.</p></div>`;
+
+  const derTxt = (d) => `${d.txt || DER[d.tipo] || ""}${d.tipo === "nuda" && d.usufructuario ? ` (usufructo de ${esc(d.usufructuario)})` : ""}`;
+  const herederos = H.length ? `<section aria-labelledby="h-q"><h2 id="h-q">Quién hereda${cifras && O.incluirReparto ? " y cuánto" : ""}</h2><p class="h2s">${esc(D.notaReparto || "Según el título sucesorio y la ley aplicable.")}</p>
+    <div class="her">${H.map((h) => `<div class="card hc ${h.renuncia ? "ren" : ""}"><span><span class="n">${esc(h.nombre)}</span><br><span class="r">${esc(h.relacion || "")}${h.renuncia ? " · renuncia a la herencia" : ""}</span></span>${!h.renuncia && cifras && O.incluirReparto && h.recibe != null ? `<span class="v num">${eur0(h.recibe)}<small>valor aproximado que recibe</small></span>` : ""}${!h.renuncia && O.incluirReparto && (h.derechos || []).length ? `<span class="d">${h.derechos.map(derTxt).join(" · ")}${h.legado ? ` · además, un legado${cifras && typeof h.legado === "number" ? " de " + eur0(h.legado) : ""}` : ""}</span>` : ""}${!h.renuncia && h.adjudicacion ? `<span class="d adj">${esc(h.adjudicacion)}.</span>` : ""}</div>`).join("")}</div>
+    ${hayUsu || hayNuda ? `<div class="expl">${hayUsu ? `<p><b>Usufructo.</b> Quien lo tiene puede usar los bienes y cobrar sus rentas mientras viva, aunque no puede venderlos por su cuenta.</p>` : ""}${hayNuda ? `<p><b>Nuda propiedad.</b> Se es dueño del bien, pero lo usa quien tiene el usufructo. Cuando el usufructo termina, se pasa a tener el bien por completo.</p>` : ""}</div>` : ""}</section>` : "";
+
+  const R = D.resumen, B = D.bienes || [];
+  const queHay = O.incluirReparto && B.length ? `<section aria-labelledby="h-b"><h2 id="h-b">Qué forma la herencia</h2><p class="h2s">${R && R.hayGananciales ? "De los bienes del matrimonio, la mitad es del cónyuge viudo y no forma parte de la herencia." : "Solo entra en la herencia la parte que era de la persona fallecida."}</p>
+    <div class="card"><div class="bl">${B.map((b) => `<div><span>${esc(b.nombre)}<small>${esc(b.tipo)}${b.nota ? " · " + esc(b.nota) : ""}</small></span>${cifras && b.v != null ? `<b class="num">${eur0(b.v)}</b>` : ""}</div>`).join("")}</div>
+    ${cifras && R ? `${R.deudas || R.gastos ? `<div class="bl" style="margin-top:6px;border-top:1px solid var(--hair)">${R.deudas ? `<div><span>Deudas que se restan</span><b class="num">−${eur0(R.deudas)}</b></div>` : ""}${R.gastos ? `<div><span>Funeral y última enfermedad</span><b class="num">−${eur0(R.gastos)}</b></div>` : ""}</div>` : ""}<div class="tot"><span>Herencia neta a repartir</span><b class="num">${eur0(R.neto)}</b></div>` : ""}</div></section>` : "";
+
+  const IM = D.impuestos;
+  const impuestos = O.incluirImpuestos && IM ? `<section aria-labelledby="h-i"><h2 id="h-i">Qué impuestos se prevén y quién los paga</h2><p class="h2s">Cada heredero paga el <b>Impuesto sobre Sucesiones</b> por lo que recibe${IM.territorio ? ` (${esc(IM.territorio)})` : ""}. La <b>plusvalía municipal</b> la pagan quienes reciben una vivienda o un local, al ayuntamiento. Los dos se presentan en seis meses desde el fallecimiento${IM.limite ? `, antes del <b>${fecha(IM.limite)}</b>` : ""}, y hay que presentarlos aunque salgan a pagar 0 €.</p>
+    <div class="card imp">${H.filter((h) => !h.renuncia).map((h) => { const r = Number(h.recibe) || 0, a = Number(h.isd) || 0, p = Number(h.plus) || 0, e = Number(h.exceso) || 0, g = Math.max(0, r - a - p - e); const w = (v) => (r > 0 ? Math.min(100, v / r * 100) : 0); const pA = h.pagaISD != null ? !!h.pagaISD : a > 0, pP = h.pagaPlus != null ? !!h.pagaPlus : p > 0, pE = h.pagaExceso != null ? !!h.pagaExceso : e > 0;
+      return `<div class="ir"><div class="n"><span>${esc(h.nombre)}</span>${cifras ? `<span class="num">paga ${eur0(a + p + e)}</span>` : `<small>${pA || pP || pE ? "paga impuestos" : "sin cuota a pagar"}</small>`}</div>${cifras && r > 0 ? `<div class="bar" aria-hidden="true"><i class="g" style="width:${w(g)}%"></i><i class="a" style="width:${w(a)}%"></i><i class="p" style="width:${w(p)}%"></i>${e ? `<i class="x" style="width:${w(e)}%"></i>` : ""}</div><div class="leg"><span><i style="background:var(--green)"></i>le queda <b class="num">${eur0(g)}</b></span><span><i style="background:var(--amber)"></i>Sucesiones <b class="num">${eur0(a)}</b></span>${p ? `<span><i style="background:var(--rose)"></i>plusvalía <b class="num">${eur0(p)}</b></span>` : ""}${e ? `<span><i style="background:var(--violet)"></i>exceso de adjudicación <b class="num">${eur0(e)}</b></span>` : ""}</div>` : `<div class="leg">${pA ? `<span class="pill a">Impuesto sobre Sucesiones</span>` : ""}${pP ? `<span class="pill p">Plusvalía municipal</span>` : ""}${pE ? `<span class="pill x">Exceso de adjudicación</span>` : ""}${!pA && !pP && !pE ? `<span class="pill g">Sin cuota a pagar</span>` : ""}</div>`}${pE && h.excesoMotivo ? `<p class="xm">Paga además un impuesto ${esc(h.excesoMotivo)}.</p>` : ""}</div>`; }).join("")}
+    ${cifras && (IM.totalISD != null || IM.totalPlus != null) ? `<div class="tot" style="margin-top:2px"><span>Total de impuestos estimado</span><b class="num" style="color:var(--label)">${eur0((IM.totalISD || 0) + (IM.totalPlus || 0) + (IM.totalExceso || 0))}</b></div>` : ""}</div>
+    ${IM.nota ? `<p class="note">${esc(IM.nota)}</p>` : ""}</section>` : "";
+
+  const pasos = P.length ? `<section aria-labelledby="h-p"><h2 id="h-p">Los próximos pasos</h2><p class="h2s">Nosotros nos ocupamos de la mayoría. Os avisaremos cuando haga falta vuestra firma o algún documento.</p>
+    <div class="card"><div class="steps">${P.map((p) => { const q = p.fecha ? dias(p.fecha) : null; return `<div class="st"><span><b>${esc(p.titulo)}</b><small>${p.fecha ? `<span class="f ${q != null && q >= 0 && q <= 30 ? "soon" : ""}">${p.recomendado ? "Recomendable antes del " : "Antes del "}${fecha(p.fecha)}</span>` : p.desde ? `Se puede hacer desde el ${fecha(p.desde)}` : "En cuanto sea posible"}${p.organismo ? " · " + esc(p.organismo) : ""}</small></span></div>`; }).join("")}</div></div></section>` : "";
+
+  const nDocs = () => DOCS.filter((d) => S.docs[d.id]).length;
+  const docsHTML = () => DOCS.map((d) => `<label class="dc ${S.docs[d.id] ? "ok" : ""}"><input type="checkbox" data-doc="${esc(d.id)}" ${S.docs[d.id] ? "checked" : ""}><span class="t"><b>${esc(d.titulo)}</b>${d.donde ? `<small>${esc(d.donde)}</small>` : ""}</span></label>`).join("");
+  const documentos = DOCS.length ? `<section aria-labelledby="h-d"><h2 id="h-d">Documentos que debéis reunir</h2><p class="h2s">Marcad lo que ya tenéis: ${PERSISTE && !VISTA_PREVIA ? "la lista se guarda en este móvil" : "<b>para que las marcas se guarden, abre esta página en Safari</b> (Compartir › Abrir en Safari)"}. Valen fotos legibles o escaneados. Si alguno os cuesta conseguirlo, decídnoslo y lo pedimos nosotros.</p>
+    <div class="card"><div class="prog"><span id="nd">${nDocs()} de ${DOCS.length}</span><span class="pbar"><i id="pb" style="width:${DOCS.length ? nDocs() / DOCS.length * 100 : 0}%"></i></span></div><div class="docs" id="docs">${docsHTML()}</div></div><p style="margin:10px 2px 0"><button type="button" class="link" id="copiar-lista">Copiar la lista de documentos</button></p>
+    ${D.enlaceFamilia ? `<p class="note">Si todavía no habéis rellenado el cuestionario de la familia, podéis hacerlo desde el móvil: <a href="${esc(D.enlaceFamilia)}" style="color:var(--accent);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere">${esc(D.enlaceFamilia.replace(/#.*/, ""))}</a></p>` : ""}</section>` : "";
+
+  const FAQ = [
+    ["¿Tenemos que pagar antes de recibir la herencia?", "El Impuesto sobre Sucesiones se paga antes de que los bancos entreguen el dinero o de que la casa se ponga a vuestro nombre. Si el dinero está en cuentas del fallecido, los bancos suelen permitir pagar el impuesto directamente desde esas cuentas. Si hace falta más tiempo, se puede pedir un aplazamiento; lo estudiamos con vosotros."],
+    ["¿Qué pasa si no llegamos a tiempo?", `El plazo es de seis meses desde el fallecimiento${IM && IM.limite ? ` (hasta el ${fecha(IM.limite)})` : ""}. Dentro de los cinco primeros meses se puede pedir una prórroga de otros seis. Si se presenta tarde, Hacienda añade un recargo y, en algunos casos, se pierde alguna rebaja del impuesto. Por eso llevamos el calendario nosotros.`],
+    ["¿Puedo renunciar a la herencia?", "Sí. La renuncia se hace ante notario y es definitiva: no se puede volver atrás. Conviene decidirlo antes de hacer nada con los bienes (cobrar cuentas, vender, pagar deudas propias), porque eso puede entenderse como aceptar. Si alguien se lo plantea, hablad con nosotros antes."],
+    ["¿Qué es la plusvalía municipal?", "Es un impuesto del ayuntamiento por el aumento de valor del suelo de las viviendas y locales desde que el fallecido los compró. Lo paga quien recibe el inmueble. Muchos ayuntamientos rebajan la cuota cuando se hereda de un familiar cercano o la vivienda habitual; esa rebaja hay que pedirla dentro de plazo."],
+    ["¿Qué es el usufructo?", "Es el derecho a usar un bien y a cobrar sus rentas mientras se vive, sin ser su dueño. Es lo habitual para el cónyuge viudo: puede seguir viviendo en la casa toda su vida. Los hijos son los dueños (nuda propiedad) y, cuando el usufructo termina, pasan a tener la casa por completo."],
+  ];
+  const faq = `<section aria-labelledby="h-f"><h2 id="h-f">Preguntas frecuentes</h2><p class="h2s">Respuestas cortas. Para vuestro caso concreto, preguntadnos.</p><div class="card" style="padding:4px 18px">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${a}</p></details>`).join("")}</div></section>`;
+
+  const contacto = [F.tel ? `<a href="tel:${esc(String(F.tel).replace(/\s+/g, ""))}">${esc(F.tel)}</a>` : "", F.email ? `<a href="mailto:${esc(F.email)}">${esc(F.email)}</a>` : "", F.direccion ? `<span>${esc(F.direccion)}</span>` : ""].filter(Boolean);
+  const foot = `<footer class="foot"><p><b style="color:var(--label)">${esc(F.nombre || "Vuestro despacho")}</b>${F.responsable ? ` · ${esc(F.responsable)}` : ""}${contacto.length ? `<span class="contact">${contacto.join("")}</span>` : ""}</p>
+    <p>Este documento es informativo; el abogado firma el consejo. Las cifras son estimaciones con los datos disponibles a fecha ${fecha(D.generado || hoy)} y pueden cambiar con los documentos definitivos.</p>
+    <p class="made">Preparado por ${esc(F.nombre || "vuestro despacho")} con ${esc(D.marca || "{{MARCA}}")}.</p></footer>`;
+
+  document.getElementById("c").innerHTML = cab + hero + herederos + queHay + impuestos + pasos + documentos + faq + foot;
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("#copiar-lista"); if (!b) return;
+    const txt = "Documentos para la herencia" + (C.nombre ? " de " + C.nombre : "") + ":\n" + DOCS.map((d) => `${S.docs[d.id] ? "[x]" : "[ ]"} ${d.titulo}`).join("\n");
+    const hecho = () => { b.textContent = "Lista copiada"; setTimeout(() => (b.textContent = "Copiar la lista de documentos"), 2200); };
+    const viejo = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); hecho(); } catch (er) {} ta.remove(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(hecho, viejo); else viejo();
+  });
+  document.addEventListener("change", (e) => {
+    const t = e.target; if (!t.dataset || !t.dataset.doc) return;
+    S.docs[t.dataset.doc] = t.checked; if (!t.checked) delete S.docs[t.dataset.doc]; save();
+    t.closest(".dc").classList.toggle("ok", t.checked);
+    const n = document.getElementById("nd"), pb = document.getElementById("pb");
+    if (n) n.textContent = `${nDocs()} de ${DOCS.length}`; if (pb) pb.style.width = (DOCS.length ? nDocs() / DOCS.length * 100 : 0) + "%";
+  });
+})();
+</script>
+</body>
+</html>

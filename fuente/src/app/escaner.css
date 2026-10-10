@@ -1,0 +1,124 @@
+/* ───────── Escáner de documentos con la cámara (escaner.js) ─────────
+   Capa a pantalla completa, oscura en cualquier tema (como la cámara del sistema), con controles grandes para el pulgar. */
+html.scn-on,html.scn-on body{overflow:hidden}
+.scn{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:#0b0b0c;color:#f5f5f7;font:15px/1.4 var(--text,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif);-webkit-user-select:none;user-select:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.scn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.scn button,.scn select,.scn label{font:inherit}
+.scn :focus-visible{outline:2px solid #6aa8ff;outline-offset:2px}
+.scn-cab{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:52px}
+.scn-cab h2{flex:1;min-width:0;margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scn-cuenta{min-width:44px;text-align:right;color:#b8b8be;font-size:13px;font-variant-numeric:tabular-nums}
+.scn-x{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.1);color:#fff;display:grid;place-items:center;cursor:pointer}
+.scn-x:hover{background:rgba(255,255,255,.18)}
+.scn-esc{position:relative;flex:1;min-height:0;display:grid;place-items:center;overflow:hidden;background:#000}
+.scn-esc video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.scn-marco{position:absolute;inset:0;width:100%!important;height:100%!important;pointer-events:none}
+.scn-marco polygon{fill:rgba(64,140,255,.16);stroke:#4d94ff;stroke-width:4;vector-effect:non-scaling-stroke;stroke-linejoin:round;transition:points .08s linear}
+.scn-marco.ok polygon{fill:rgba(52,199,89,.18);stroke:#34c759}
+.scn-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.scn-flash.on{animation:scn-flash .35s ease-out}
+@keyframes scn-flash{0%{opacity:.85}100%{opacity:0}}
+.scn-vivo{position:absolute;left:50%;top:64px;transform:translateX(-50%);margin:0;max-width:calc(100% - 32px);padding:7px 14px;border-radius:18px;background:rgba(0,0,0,.62);color:#fff;font-size:14px;text-align:center;pointer-events:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.scn-vivo:empty{display:none}
+.scn-sin{background:#111113}
+.scn-sin-in{max-width:440px;padding:24px;text-align:center;display:grid;gap:10px;justify-items:center}
+.scn-sin-in>svg{width:54px;height:54px;color:#8e8e93}
+.scn-sin-in p{margin:0}
+.scn-sub{color:#b8b8be;font-size:14px}
+.scn-facts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.scn-fbtn{position:relative;display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:0 18px;cursor:pointer}
+.scn-fbtn input,.scn-ic input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.scn-pie{background:#0b0b0c;padding:8px 12px 12px;display:grid;gap:8px}
+.scn-bandeja{display:flex;gap:8px;overflow-x:auto;min-height:0;padding:2px 2px 4px;scrollbar-width:thin}
+.scn-bandeja:empty{display:none}
+.scn-mini{position:relative;flex:none;width:52px;height:68px;border-radius:6px;border:1.5px solid rgba(255,255,255,.35);background:#222;padding:0;overflow:hidden;cursor:pointer;display:grid;place-items:center}
+.scn-mini img{width:100%;height:100%;object-fit:cover;display:block}
+.scn-mini b{position:absolute;right:3px;bottom:3px;min-width:16px;height:16px;border-radius:8px;background:rgba(0,0,0,.72);color:#fff;font-size:10.5px;line-height:16px;text-align:center}
+.scn-mini:hover{border-color:#fff}
+.scn-nuevo{border-style:dashed;background:none;color:#e5e5ea;display:flex;flex-direction:column;gap:2px;font-size:10.5px;line-height:1.15;text-align:center}
+.scn-nuevo svg{width:20px;height:20px}
+.scn-luz:empty{display:none}
+.scn-lint[aria-pressed="true"]{color:#ffd60a}
+.scn-ic span{white-space:nowrap}
+.scn-sep{flex:none;align-self:center;color:#8e8e93;font-size:11.5px;padding:0 4px;border-left:1px solid #3a3a3c;margin-left:4px;padding-left:10px}
+.scn-ctrl{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
+.scn-izq,.scn-der{display:flex;gap:4px;align-items:center}
+.scn-der{justify-content:flex-end}
+.scn-ic{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:56px;min-height:48px;padding:4px 6px;border:0;border-radius:10px;background:none;color:#e5e5ea;cursor:pointer;font-size:11.5px}
+.scn-ic:hover{background:rgba(255,255,255,.08)}
+.scn-ic[aria-pressed="true"]{color:#ffd60a}
+.scn-ic[disabled]{opacity:.35;cursor:default}
+.scn-ic.peligro{color:#ff6961}
+.scn-disp{--p:0;position:relative;width:74px;height:74px;border-radius:50%;border:0;padding:0;cursor:pointer;background:conic-gradient(#34c759 calc(var(--p)*360deg),rgba(255,255,255,.9) 0);display:grid;place-items:center}
+.scn-disp span{width:60px;height:60px;border-radius:50%;background:#fff;border:3px solid #0b0b0c;transition:transform .1s}
+.scn-disp:active span{transform:scale(.92)}
+.scn-fin{min-height:44px;padding:0 16px;display:inline-flex;align-items:center;gap:6px}
+.scn-n{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:rgba(255,255,255,.25);font-size:12.5px}
+.scn-ocupado{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,.6);font-weight:500}
+.scn-spin{width:20px;height:20px;border-radius:50%;border:2.5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:scn-g .8s linear infinite}
+@keyframes scn-g{to{transform:rotate(360deg)}}
+.scn-conf{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);width:min(420px,calc(100% - 24px));padding:16px;border-radius:14px;background:#1c1c1e;box-shadow:0 10px 40px rgba(0,0,0,.6);display:grid;gap:12px}
+.scn-conf p{margin:0}
+.scn-conf span{display:flex;gap:8px;justify-content:flex-end}
+/* Editor de la página */
+.scn-ed{flex:1;min-height:0;display:grid;place-items:center;padding:16px 28px;background:#111113}
+.scn-lienzo{position:relative;touch-action:none}
+.scn-lienzo img{width:100%;height:100%;display:block;object-fit:fill;border-radius:2px;-webkit-user-drag:none}
+.scn-poli{position:absolute;inset:0;width:100%!important;height:100%!important;pointer-events:none}
+.scn-poli polygon{fill:rgba(64,140,255,.14);stroke:#4d94ff;stroke-width:2.5;vector-effect:non-scaling-stroke}
+.scn-h{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;border:0;background:transparent;cursor:grab;padding:0;touch-action:none}
+.scn-h::after{content:"";position:absolute;inset:11px;border-radius:50%;background:#fff;border:3px solid #4d94ff;box-shadow:0 1px 6px rgba(0,0,0,.5)}
+.scn-h:focus-visible::after,.scn-h.on::after{background:#4d94ff;border-color:#fff}
+.scn-h.on{cursor:grabbing}
+.scn-lupa{display:none;position:absolute;width:90px;height:90px;margin:-130px 0 0 -45px;border-radius:50%;border:2px solid #fff;box-shadow:0 4px 18px rgba(0,0,0,.6);background-repeat:no-repeat;pointer-events:none}
+.scn-lupa::after{content:"";position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;border:2px solid #4d94ff}
+.scn-edbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 6px;padding:8px 12px 12px;background:#0b0b0c}
+.scn-seg{display:inline-flex;background:rgba(255,255,255,.08);border-radius:9px;padding:2px}
+.scn-seg button{border:0;background:none;color:#e5e5ea;padding:8px 12px;border-radius:7px;cursor:pointer;min-height:40px}
+.scn-seg button[aria-pressed="true"]{background:#3a3a3c;color:#fff}
+.scn-seg button[disabled]{opacity:.4}
+.scn-sel{display:inline-flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:#b8b8be}
+.scn-sel select{background:#1c1c1e;color:#fff;border:1px solid #3a3a3c;border-radius:8px;padding:6px 8px;min-height:36px}
+.scn-ed+.scn-edbar+.scn-vivo{top:auto;bottom:120px}
+/* Botón «Escanear con la cámara» en las zonas de subida */
+.scn-abrir svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.lec-scan{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0 0}
+.lec-scan .caption{margin:0}
+/* En el móvil, escanear es la forma natural de subir papel: botón a todo lo ancho y de 48 px, al alcance del pulgar */
+@media (max-width:560px){.lec-scan{flex-direction:column;align-items:stretch;gap:6px}.lec-scan .scn-abrir{min-height:48px;width:100%;display:inline-flex;align-items:center;justify-content:center;font-size:15px}.lec-scan .scn-abrir svg{width:18px;height:18px}}
+@media (max-width:560px){.scn-ic span{font-size:10.5px}.scn-ic{min-width:48px}.scn-disp{width:68px;height:68px}.scn-disp span{width:54px;height:54px}.scn-ed{padding:10px 18px}}
+.scn-reint{margin-top:2px;min-height:44px;padding:0 20px}
+/* Móvil en horizontal (poca altura): cabecera fina y los controles en una columna a la derecha, al alcance del pulgar, como en la cámara
+   del sistema; la imagen ocupa el resto */
+@media (orientation:landscape) and (max-height:540px){
+  .scn{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr)}
+  .scn-cab{grid-column:1/-1;min-height:40px;padding:2px 12px}
+  .scn-cab h2{font-size:15px}
+  .scn-esc,.scn-ed{grid-column:1;grid-row:2}
+  .scn-pie,.scn-edbar{grid-column:2;grid-row:2;min-height:0;overflow-y:auto}
+  .scn-pie{display:flex;flex-direction:row-reverse;gap:8px;padding:6px 10px 8px 6px}
+  .scn-bandeja{flex-direction:column;overflow-x:hidden;overflow-y:auto;padding:2px 4px}
+  .scn-sep{border-left:0;border-top:1px solid #3a3a3c;margin:4px 0 0;padding:6px 0 0}
+  .scn-ctrl{display:flex;flex-direction:column;justify-content:space-between;align-items:center;gap:6px}
+  .scn-izq,.scn-der{flex-direction:column;gap:2px}
+  .scn-der{justify-content:flex-start}
+  .scn-edbar{display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:2px 4px;width:208px;padding:6px 8px}
+  .scn-edbar .scn-seg,.scn-edbar .scn-sel,.scn-edbar .scn-fin{grid-column:1/-1}
+  .scn-edbar .scn-seg button{flex:1;min-height:44px}
+  .scn-sel{flex-direction:row;justify-content:center;gap:8px}
+  .scn-edbar .scn-ic{min-width:0;min-height:46px}
+  .scn-edbar .scn-fin{justify-content:center;margin-top:4px}
+  .scn-vivo{top:48px;left:calc((100% - 230px) / 2);max-width:calc(100% - 270px)}
+  .scn-ed+.scn-edbar+.scn-vivo{bottom:12px}
+  .scn-conf{bottom:16px}
+}
+@media (prefers-reduced-motion:reduce){.scn-flash.on,.scn-spin{animation:none}.scn-marco polygon{transition:none}}
+/* Contraseña de un PDF protegido (lector.js) */
+.lec-clave{position:fixed;inset:0;z-index:2147483100;display:grid;place-items:center;background:rgba(0,0,0,.45);padding:16px}
+.lec-clave form{width:min(420px,100%);background:var(--panel,#fff);color:var(--label,#111);border-radius:14px;padding:20px;display:grid;gap:8px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.lec-clave h2{margin:0;font-size:17px}
+.lec-clave p{margin:0;color:var(--label-2,#555);font-size:13.5px;word-break:break-word}
+.lec-clave .lec-clave-mal{color:var(--red,#c00);font-weight:600}
+.lec-clave label{font-size:13px;font-weight:600;margin-top:6px}
+.lec-clave input{font:inherit;padding:10px 12px;border-radius:9px;border:1px solid var(--hair,#ccc);background:var(--fill-2,#fff);color:inherit}
+.lec-clave span{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}

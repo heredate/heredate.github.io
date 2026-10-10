@@ -1,0 +1,13 @@
+node_modules/
+.DS_Store
+tools/clave-privada.pem
+tools/licencias-emitidas.csv
+tools/emisor.json
+tools/facturas.csv
+tools/facturas.csv.tmp
+tools/facturas/
+tools/ejemplos/salida/
+tools/qa/node_modules/
+tools/qa/salida/
+tools/video/salida/
+dist/

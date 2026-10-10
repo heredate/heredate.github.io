@@ -1,0 +1,2621 @@
+// Cauce · Motor sucesorio v0.3 · 28-09-2026 · Andalucía verificada (Ley 5/2021) y 27 ordenanzas de plusvalía andaluzas
+// Impuesto sobre Sucesiones de las 19 administraciones (Estado, 15 CCAA de régimen común, Ceuta y Melilla, Navarra y los tres territorios vascos),
+// gananciales, legados, renuncias, usufructos, donaciones acumuladas, legítimas, plusvalía municipal y plazos.
+// Cada paso deja una traza con la norma aplicada y su estado: VERIFICADO (fuente oficial o dos fuentes) o PENDIENTE (sin cotejo literal).
+// El motor ESTIMA. Nada de lo que calcula debe presentarse sin revisión de un abogado colegiado.
+
+export const VERSION = "0.4.2"; // 0.4.2 · 04-10-2026: cambios de la mesa jurídica CM-001 a CM-004 (Madrid coeficientes VERIFICADO, nuda propiedad con tipo medio efectivo, ajuar residencial e imputación, estado de los coeficientes de plusvalía)
+// 0.4.1 · 01-10-2026: correcciones de la auditoría independiente (C-1 a C-7, I-1 a I-8 salvo I-6 en la UI, N-1 a N-3 y N-5 a N-7)
+const r2 = (x) => Math.round((x + Number.EPSILON) * 100) / 100;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const V = "VERIFICADO", P = "PENDIENTE";
+
+// ─────────────────────────── Personas y parentesco ───────────────────────────
+export const RELACIONES = {
+  hijo: { linea: "desc", grado: 1, label: "Hijo/a" }, nieto: { linea: "desc", grado: 2, label: "Nieto/a" }, bisnieto: { linea: "desc", grado: 3, label: "Bisnieto/a" },
+  conyuge: { linea: "conyuge", label: "Cónyuge" }, pareja_hecho: { linea: "pareja", label: "Pareja de hecho" }, pareja_no_inscrita: { linea: "extrano", label: "Pareja de hecho no inscrita" },
+  padre: { linea: "asc", grado: 1, label: "Padre/madre" }, abuelo: { linea: "asc", grado: 2, label: "Abuelo/a" },
+  hermano: { linea: "col2", label: "Hermano/a" }, sobrino: { linea: "col3", label: "Sobrino/a" }, tio: { linea: "col3", label: "Tío/a" },
+  primo: { linea: "col4", label: "Primo/a" },
+  suegro: { linea: "afin", label: "Suegro/a" }, yerno: { linea: "afin", label: "Yerno/nuera" }, hijastro: { linea: "afin", label: "Hijastro/a" },
+  sobrino_afin: { linea: "afin", label: "Sobrino/a político/a" }, tio_afin: { linea: "afin", label: "Tío/a político/a" },
+  extrano: { linea: "extrano", label: "Sin parentesco" },
+};
+const linea = (h) => RELACIONES[h.relacion]?.linea;
+const AFINES_REL = ["suegro", "yerno", "hijastro", "sobrino_afin", "tio_afin"];
+const esDescAscCony = (h, pareja) => ["desc", "asc", "conyuge"].includes(linea(h)) || (pareja && linea(h) === "pareja");
+
+function grupoComun(h, parejaEquiparada) {
+  const l = linea(h);
+  if (l === "desc") return (h.edad ?? 99) < 21 ? "I" : "II";
+  if (l === "asc" || l === "conyuge") return "II";
+  if (l === "pareja") return parejaEquiparada ? "II" : "IV";
+  if (l === "col2" || l === "col3" || l === "afin") return "III";
+  return "IV";
+}
+
+// ─────────────────────────── Piezas comunes ───────────────────────────
+export function cuotaTarifa(base, tramos) {
+  let f = tramos[0];
+  for (const t of tramos) if (base >= t[0]) f = t;
+  return r2(f[1] + (base - f[0]) * f[2] / 100);
+}
+function escalaCoef(tramos, fila, pp, ci, norma, estado) {
+  let i = 0;
+  for (let j = 1; j < tramos.length; j++) if (pp > tramos[j]) i = j;
+  const k = fila[i];
+  let cuota = ci * k, salto = false;
+  if (i > 0) { const tope = ci * fila[i - 1] + (pp - tramos[i]); if (tope < cuota) { cuota = tope; salto = true; } }
+  return { k, cuota: r2(cuota), salto, norma, estado };
+}
+const tramosPorFecha = (lista, fecha) => { let v = 0; for (const [d, p] of lista || []) if (!d || fecha >= d) v = p; return v; };
+
+const TARIFA_EST = [[0, 0, 7.65], [7993.46, 611.50, 8.50], [15980.91, 1290.43, 9.35], [23968.36, 2037.26, 10.20], [31955.81, 2851.98, 11.05], [39943.26, 3734.59, 11.90], [47930.72, 4685.10, 12.75], [55918.17, 5703.50, 13.60], [63905.62, 6789.79, 14.45], [71893.07, 7943.98, 15.30], [79880.52, 9166.06, 16.15], [119757.67, 15606.22, 18.70], [159634.83, 23063.25, 21.25], [239389.13, 40011.04, 25.50], [398777.54, 80655.08, 29.75], [797555.08, 199291.40, 34.00]];
+const COEF_EST = { tramos: [0, 402678.11, 2007380.43, 4020770.98], I: [1, 1.05, 1.10, 1.20], II: [1, 1.05, 1.10, 1.20], III: [1.5882, 1.6676, 1.7471, 1.9059], IV: [2, 2.1, 2.2, 2.4] };
+// Madrid, art. 23 D. Leg. 1/2010. Auditoría 01-10-2026 (I-1): texto consolidado de la biblioteca de las Cortes de Castilla y León y fuente 2026 concordante;
+// cuotas acumuladas comprobadas (±0,01 €). La Ley 2/2025 no modifica el art. 23 (BOE, texto oficial).
+// CM-001 (mesa jurídica, 28-09-2026): misma tabla cotejada con el BOE https://www.boe.es/buscar/doc.php?id=BOCM-m-2010-90068 (consolidado sin cambios en los arts. 23 y 24).
+const TARIFA_MAD = [[0, 0, 7.65], [8313.20, 635.96, 8.50], [16001.35, 1289.45, 9.35], [24002.01, 2037.51, 10.20], [32002.70, 2853.58, 11.05], [40003.36, 3737.66, 11.90], [48004.04, 4689.74, 12.75], [56004.71, 5709.82, 13.60], [64005.39, 6797.92, 14.45], [72006.05, 7954.01, 15.30], [80006.73, 9178.12, 16.15], [119947.58, 15628.56, 18.70], [159888.45, 23097.51, 21.25], [239770.16, 40072.37, 25.50], [399408.59, 80780.17, 29.75], [798817.20, 199604.23, 34.00]];
+// Tabla redondeada que usaba Madrid hasta la auditoría; se conserva solo para Baleares (grupos III y IV), PENDIENTE de revisión aparte.
+const TARIFA_BAL_III_IV = [[0, 0, 7.65], [8000, 612, 8.5], [16000, 1292, 9.35], [24000, 2040, 10.2], [32000, 2856, 11.05], [40000, 3740, 11.9], [48000, 4692, 12.75], [56000, 5712, 13.6], [64000, 6800, 14.45], [72000, 7956, 15.3], [80000, 9180, 16.15], [120000, 15640, 18.7], [160000, 23120, 21.25], [240000, 40120, 25.5], [400000, 80920, 29.75], [800000, 199920, 34]];
+
+function redGrupoTabla(t, h, g) {
+  const p = t[g];
+  if (p == null) return null;
+  if (typeof p === "object") { const v = p.base + (p.porAnio || 0) * Math.max(0, 21 - (h.edad ?? 21)); return p.max ? Math.min(p.max, v) : v; }
+  return p;
+}
+
+// Régimen estatal: base de todas las comunidades (cada una sustituye lo que regula)
+const ESTADO = {
+  id: "EST", nombre: "Régimen estatal", norma: "Ley 29/1987 (arts. 20-22)", estadoGlobal: V, parejaEquiparada: false,
+  grupo(h) { return grupoComun(h, this.parejaEquiparada); },
+  redParentesco(h, g) { return { importe: redGrupoTabla({ I: { base: 15956.87, porAnio: 3990.72, max: 47858.59 }, II: 15956.87, III: 7993.46, IV: 0 }, h, g), norma: "art. 20.2.a Ley 29/1987", estado: V }; },
+  redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 150253.03 : d >= 33 ? 47858.59 : 0, norma: "art. 20.2.a Ley 29/1987", estado: V }; },
+  seguros: { limite: 9195.49, norma: "art. 20.2.b Ley 29/1987", estado: V },
+  vivienda: { pct: 0.95, limite: 122606.47, permanencia: 10, norma: "art. 20.2.c Ley 29/1987", estado: V },
+  // parentesco "estatal" (art. 20.2.c Ley 29/1987): cónyuge, descendientes o adoptados; a falta de descendientes, ascendientes, adoptantes y colaterales hasta el 3.er grado
+  empresa: { pct: 0.95, permanencia: 10, parentesco: "estatal", norma: "art. 20.2.c Ley 29/1987", estado: V },
+  tarifa() { return { tramos: TARIFA_EST, norma: "art. 21 Ley 29/1987", estado: V }; },
+  coef(h, g, pp, ci) { return escalaCoef(COEF_EST.tramos, COEF_EST[g], pp, ci, "art. 22 Ley 29/1987", V); },
+  bonif() { return []; },
+  ajusteReducciones() { return []; },
+};
+const regla = (o) => Object.assign(Object.create(ESTADO), o);
+
+// ─────────────────────────── Comunidades y territorios ───────────────────────────
+export const REGLAS = {
+  EST: regla({ id: "EST", nombre: "Estado (no residentes)" }),
+
+  CEU: regla({ id: "CEU", nombre: "Ceuta", norma: "Ley 29/1987, art. 23 bis",
+    bonif(h, g) { return [{ pct: g === "I" || g === "II" ? 0.99 : 0.50, norma: "art. 23 bis Ley 29/1987 (causante residente 5 años)", estado: V }]; } }),
+  MEL: regla({ id: "MEL", nombre: "Melilla", norma: "Ley 29/1987, art. 23 bis",
+    bonif(h, g) { return [{ pct: g === "I" || g === "II" ? 0.99 : 0.50, norma: "art. 23 bis Ley 29/1987 (causante residente 5 años)", estado: V }]; } }),
+
+  AND: regla({ id: "AND", nombre: "Andalucía", norma: "Ley 5/2021 de Tributos Cedidos", estadoGlobal: V, parejaEquiparada: true, vigenciaDesde: "2022-01-01",
+    redParentesco(h, g) { return { importe: { I: 1000000, II: 1000000, III: 10000, IV: 0 }[g], norma: "art. 28 Ley 5/2021", estado: V }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 500000 : d >= 33 ? 250000 : 0, norma: "art. 29 Ley 5/2021", estado: V }; },
+    vivienda: { pct: 0.99, limite: 122606.47, permanencia: 3, norma: "art. 27 Ley 5/2021 (99 %, 3 años) con el límite de 122.606,47 € por heredero del art. 20.2.c Ley 29/1987", estado: V },
+    // ATA (beneficios fiscales): grupos I, II y III sin más; personas sin parentesco solo con contrato laboral o de servicios de 5 años y 3 en funciones de dirección
+    empresa: { pct: 0.99, permanencia: 3, parentesco: "gruposI-III", extranoConRequisitos: true, norma: "arts. 30-31 Ley 5/2021", estado: V },
+    tarifa() { return { tramos: [[0, 0, 7], [8000, 560, 8], [15000, 1120, 10], [30000, 2620, 12], [50000, 5020, 14], [70000, 7820, 16], [100000, 12620, 18], [150000, 21620, 20], [200000, 31620, 22], [400000, 75620, 24], [800000, 171620, 26]], norma: "art. 37 Ley 5/2021", estado: V }; },
+    coef(h, g, pp, ci) { const k = { I: 1, II: 1, III: 1.5, IV: 1.9 }[g]; return { k, cuota: r2(ci * k), salto: false, norma: "art. 38 Ley 5/2021 (no depende del patrimonio preexistente)", estado: V }; },
+    bonif(h, g, c) { return g === "I" || g === "II" ? [{ pct: c.fecha >= "2019-04-11" ? 0.99 : 0, norma: "art. 39 Ley 5/2021 (sin requisito de presentación en plazo)", estado: V }] : []; } }),
+
+  MAD: regla({ id: "MAD", nombre: "Comunidad de Madrid", norma: "D. Leg. 1/2010 (Ley 2/2025, Ley 3/2026)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g) { return { importe: redGrupoTabla({ I: { base: 16000, porAnio: 4000, max: 48000 }, II: 16000, III: 8000, IV: 0 }, h, g), norma: "art. 21 D. Leg. 1/2010", estado: V }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 153000 : d >= 33 ? 55000 : 0, norma: "art. 21 D. Leg. 1/2010", estado: V }; },
+    seguros: { limite: 9200, norma: "art. 21 D. Leg. 1/2010", estado: V },
+    vivienda: { pct: 0.95, limite: 123000, permanencia: 5, norma: "art. 21 D. Leg. 1/2010", estado: V },
+    // 95 % hasta el 30-06-2026 y 99 % desde el 01-07-2026 (Ley 3/2026): página oficial de la Comunidad de Madrid e Iberley (art. 21). Participaciones antes del 01-07-2026: PENDIENTE
+    empresa: { pctFecha: [["2000-01-01", 0.95], ["2026-07-01", 0.99]], permanencia: 5, norma: "art. 21.3 D. Leg. 1/2010 (95 %; 99 % desde el 01-07-2026 por la Ley 3/2026; porcentaje de participaciones antes de esa fecha PENDIENTE)", estado: V },
+    tarifa() { return { tramos: TARIFA_MAD, norma: "art. 23 D. Leg. 1/2010 (texto consolidado del BOE, sin modificaciones del art. 23)", estado: V }; },
+    // CM-001 (mesa jurídica, 28-09-2026): tramos 0/403.000/2.008.000/4.021.000 y coeficientes estatales, cotejados con el BOE (BOCM-m-2010-90068; arts. 23-24 sin modificaciones)
+    coef(h, g, pp, ci) { return escalaCoef([0, 403000, 2008000, 4021000], COEF_EST[g], pp, ci, "art. 24 D. Leg. 1/2010", V); },
+    // Art. 25.1: grupos I y II, 99 % sin requisito de plazo. Grupo III, por fechas y parentesco (auditoría 01-10-2026, C-1 y C-2):
+    // Ley 6/2018 (desde 01-01-2019) 15 % hermanos y 10 % tíos y sobrinos, solo por consanguinidad; Ley 7/2022 (desde 28-10-2022) 25 % colaterales de 2.º y 3.er grado
+    // por consanguinidad; Ley 2/2025 (desde 01-07-2025) 50 % todo el grupo III, incluidos los afines. El grupo III solo pierde la bonificación en lo regularizado tras requerimiento.
+    bonif(h, g, c) {
+      let tabla;
+      if (g === "I" || g === "II") tabla = [["2007-01-01", 0.99]];
+      else if (g === "III") tabla = h.relacion === "hermano" ? [["2019-01-01", 0.15], ["2022-10-28", 0.25], ["2025-07-01", 0.50]]
+        : ["sobrino", "tio"].includes(h.relacion) ? [["2019-01-01", 0.10], ["2022-10-28", 0.25], ["2025-07-01", 0.50]]
+        : [["2025-07-01", 0.50]];
+      else tabla = [];
+      const p = tramosPorFecha(tabla, c.fecha);
+      if (!p) return g === "III" ? [{ pct: 0, norma: `art. 25.1 D. Leg. 1/2010: ${AFINES_REL.includes(h.relacion) ? "los afines no tienen bonificación antes del 01-07-2025 (Ley 2/2025)" : "sin bonificación para el grupo III antes del 01-01-2019 (Ley 6/2018)"}`, estado: V }] : [];
+      if (g === "III" && c.conRequerimiento === true) return [{ pct: 0, norma: "art. 25.1 D. Leg. 1/2010: la bonificación del grupo III no alcanza los bienes declarados después de un requerimiento de la Administración", estado: V }];
+      const ley = g !== "III" ? "" : c.fecha >= "2025-07-01" ? "Ley 2/2025" : c.fecha >= "2022-10-28" ? "Ley 7/2022" : "Ley 6/2018";
+      return [{ pct: p, norma: `art. 25.1 D. Leg. 1/2010${ley ? " (" + ley + ")" : ""}${g === "III" ? ": bienes declarados en plazo o fuera de plazo sin requerimiento previo" : ": sin requisito de plazo"}`, estado: V }];
+    } }),
+
+  CAT: regla({ id: "CAT", nombre: "Cataluña", norma: "D. Leg. 1/2024 (Libro VI Código tributario)", estadoGlobal: V, parejaEquiparada: true, vigenciaDesde: "2020-05-01",
+    redParentesco(h, g) {
+      const l = linea(h);
+      let v;
+      if (g === "I") v = Math.min(196000, 100000 + 12000 * Math.max(0, 21 - h.edad));
+      else if (g === "II") v = l === "conyuge" || l === "pareja" ? 100000 : l === "desc" ? (h.relacion === "hijo" ? 100000 : 50000) : 30000;
+      else v = g === "III" ? 8000 : 0;
+      return { importe: v, norma: "reducciones por parentesco (Ley 19/2010 refundida)", estado: V };
+    },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 650000 : d >= 33 ? 275000 : 0, norma: "Libro VI CTC", estado: V }; },
+    seguros: { limite: 25000, norma: "Libro VI CTC", estado: V },
+    vivienda: { pct: 0.95, limite: 500000, limiteMinimoPorHeredero: 180000, permanencia: 5, norma: "art. 631-17 CTC (reparto del límite PENDIENTE)", estado: P },
+    empresa: { pct: 0.95, permanencia: 5, norma: "Libro VI CTC", estado: V },
+    tarifa() { return { tramos: [[0, 0, 7], [50000, 3500, 11], [150000, 14500, 17], [400000, 57000, 24], [800000, 153000, 32]], norma: "tarifa (Ley 19/2010 refundida)", estado: V }; },
+    coef(h, g, pp, ci) { return escalaCoef([0, 500000, 2000000, 4000000], { I: [1, 1.1, 1.15, 1.2], II: [1, 1.1, 1.15, 1.2], III: [1.5882, 1.5882, 1.5882, 1.5882], IV: [2, 2, 2, 2] }[g], pp, ci, "coeficientes (Ley 19/2010 refundida)", V); },
+    bonif(h, g, c) {
+      if (g !== "I" && g !== "II") return [];
+      if (c.usaEmpresa) return [{ pct: 0, norma: "Incompatible con reducciones de empresa: comparar ambas vías", estado: V }];
+      const l = linea(h);
+      if (l === "conyuge" || l === "pareja") return [{ pct: 0.99, norma: "art. 58 bis Ley 19/2010 (cónyuge, 99 %)", estado: V }];
+      const cortes = [100000, 200000, 300000, 500000, 750000, 1000000, 1500000, 2000000, 2500000, 3000000, Infinity];
+      const pcts = g === "I" ? [99, 97, 95, 90, 80, 70, 60, 50, 40, 25, 20] : [60, 55, 50, 45, 40, 35, 30, 25, 20, 10, 0];
+      let rest = c.bi, prev = 0, acc = 0;
+      for (let i = 0; i < cortes.length && rest > 0; i++) { const tramo = Math.min(rest, cortes[i] - prev); acc += tramo * pcts[i]; rest -= tramo; prev = cortes[i]; }
+      const medio = c.bi > 0 ? Math.round(acc / c.bi * 100) / 100 : pcts[0];
+      return [{ pct: medio / 100, norma: `art. 58 bis Ley 19/2010: media ponderada ${medio.toLocaleString("es-ES")} % sobre la base imponible`, estado: V }];
+    } }),
+
+  VAL: regla({ id: "VAL", nombre: "Comunitat Valenciana", norma: "Ley 13/1997 (Ley 6/2023, Ley 5/2025)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g) {
+      if (g === "III") return { importe: 7993.46, norma: "Grupo III: aplicación supletoria de la reducción estatal", estado: P };
+      return { importe: redGrupoTabla({ I: { base: 100000, porAnio: 8000, max: 156000 }, II: 100000, IV: 0 }, h, g), norma: "art. 10 Ley 13/1997", estado: P };
+    },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 240000 : d >= 33 ? 120000 : 0, norma: "art. 10 Ley 13/1997", estado: P }; },
+    vivienda: { pct: 0.95, limite: 150000, permanencia: 5, norma: "art. 10 Ley 13/1997", estado: P },
+    empresa: { pct: 0.99, permanencia: 5, norma: "art. 10 Ley 13/1997", estado: P },
+    tarifa() { return { tramos: [[0, 0, 7.65], [7993.46, 611.50, 8.50], [15662.38, 1263.36, 9.35], [23493.56, 1995.58, 10.20], [31324.75, 2794.36, 11.05], [39155.94, 3659.70, 11.90], [46987.13, 4591.61, 12.75], [54818.31, 5590.09, 13.60], [62649.50, 6655.13, 14.45], [70480.69, 7786.74, 15.30], [78311.88, 8984.91, 16.15], [117407.71, 15298.89, 18.70], [156503.55, 22609.81, 21.25], [234695.23, 39225.54, 25.50], [390958.37, 79072.64, 29.75], [781916.75, 195382.76, 34.00]], norma: "art. 11 Ley 13/1997", estado: P }; },
+    coef(h, g, pp, ci) { return escalaCoef([0, 390657.87, 1965309.58, 3936629.28], COEF_EST[g], pp, ci, "art. 11 Ley 13/1997", P); },
+    bonif(h, g, c) {
+      if (g === "I" || g === "II") return c.fecha >= "2023-05-28" ? [{ pct: 0.99, norma: "art. 12 bis Ley 13/1997 (Ley 6/2023)", estado: V }] : [{ pct: 0, norma: "Régimen anterior al 28-05-2023 no modelado", estado: P }];
+      // Colaterales de 2.º y 3.er grado por consanguinidad: 25 % desde el 01-06-2026 y 50 % desde el 01-06-2027 (Ley 5/2025). Segunda fuente (fiscal r4,
+      // 08-10-2026): Ministerio de Hacienda, «Tributación autonómica 2026», cap. I, que recoge las mismas fechas y porcentajes → VERIFICADO.
+      if (g === "III" && ["hermano", "sobrino", "tio"].includes(h.relacion)) { const p = tramosPorFecha([["2026-06-01", 0.25], ["2027-06-01", 0.50]], c.fecha); return p ? [{ pct: p, norma: "art. 12 bis Ley 13/1997 (Ley 5/2025): 25 % desde el 01-06-2026 y 50 % desde el 01-06-2027", estado: V }] : []; }
+      return [];
+    } }),
+
+  GAL: regla({ id: "GAL", nombre: "Galicia", norma: "D. Leg. 1/2011 (Ley 5/2024, Ley 5/2025)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g, c) {
+      // Grupo I: 1.000.000 € + 100.000 € por año menos de 21, con un máximo de 1.500.000 € (fiscal r4, 08-10-2026: antes sin tope; Cuatrecasas,
+      // «Galicia – Novedades tributarias para 2026», e INEAF, coinciden en el máximo). Desde 01-01-2026 la reducción es única por causante y heredero (Ley 5/2025).
+      if (g === "I") return { importe: Math.min(1500000, 1000000 + 100000 * Math.max(0, 21 - h.edad)), norma: "art. 6.Dos D. Leg. 1/2011 (máximo 1.500.000 €)", estado: V };
+      if (g === "II") return { importe: 1000000, norma: "art. 6.Dos D. Leg. 1/2011", estado: V };
+      if (g === "III") return { importe: c.fecha >= "2025-01-01" ? 25000 : (h.relacion === "hermano" ? 16000 : 8000), norma: "art. 6.Dos D. Leg. 1/2011 (Ley 5/2024)", estado: V };
+      return { importe: 0, norma: "art. 6.Dos D. Leg. 1/2011", estado: V };
+    },
+    redDiscapacidad(h, g, c) { const d = h.discapacidad || 0; if (d >= 65) return { importe: (g === "I" || g === "II") && (h.patrimonioPreexistente || 0) <= 3000000 ? c.bi : 300000, norma: "art. 6 D. Leg. 1/2011 (discapacidad)", estado: V }; return { importe: d >= 33 ? 150000 : 0, norma: "art. 6 D. Leg. 1/2011 (discapacidad)", estado: V }; },
+    vivienda: { pctFn: (valor, h) => linea(h) === "conyuge" ? 1 : valor <= 150000 ? 0.99 : valor <= 300000 ? 0.97 : 0.95, limite: 600000, permanencia: 5, norma: "art. 7.3 D. Leg. 1/2011", estado: P },
+    empresa: { pct: 0.99, permanencia: 5, norma: "art. 7 D. Leg. 1/2011", estado: V },
+    tarifa(h, g) { return g === "I" || g === "II" ? { tramos: [[0, 0, 5], [50000, 2500, 7], [125000, 7750, 9], [300000, 23500, 11], [800000, 78500, 15], [1600000, 198500, 18]], norma: "art. 9 D. Leg. 1/2011 (grupos I y II)", estado: P } : { tramos: TARIFA_EST, norma: "art. 9 D. Leg. 1/2011 (grupos III y IV)", estado: P }; },
+    coef(h, g, pp, ci) { if (g === "I" || g === "II") return { k: 1, cuota: ci, salto: false, norma: "art. 10 D. Leg. 1/2011", estado: P }; return escalaCoef(COEF_EST.tramos, COEF_EST[g], pp, ci, "art. 10 D. Leg. 1/2011", P); },
+    bonif(h, g) { return g === "I" ? [{ pct: 0.99, norma: "art. 11 D. Leg. 1/2011 (deducción grupo I)", estado: P }] : []; } }),
+
+  CYL: regla({ id: "CYL", nombre: "Castilla y León", norma: "D. Leg. 1/2013 (Ley 3/2021, Ley 4/2024)", estadoGlobal: V, parejaEquiparada: true,
+    redParentesco(h, g) { if (g === "I" || g === "II") return { importe: 60000 + (g === "I" ? 6000 * Math.max(0, 21 - h.edad) : 0), norma: "art. 13 D. Leg. 1/2013", estado: V }; return ESTADO.redParentesco(h, g); },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 225000 : d >= 33 ? 125000 : 0, norma: "art. 12 D. Leg. 1/2013", estado: V }; },
+    empresa: { pct: 0.99, permanencia: 5, norma: "arts. 16-17 D. Leg. 1/2013", estado: V },
+    ajusteReducciones(h, g, c, suma) { if ((g === "I" || g === "II") && suma < 400000) return [{ paso: "Reducción variable hasta 400.000 € (grupos I y II)", importe: 400000 - suma, norma: "art. 13.1.c D. Leg. 1/2013", estado: V }]; return []; },
+    bonif(h, g, c) { return (g === "I" || g === "II") && c.fecha >= "2021-05-09" ? [{ pct: 0.99, norma: "art. 17 bis D. Leg. 1/2013", estado: V }] : []; } }),
+
+  CLM: regla({ id: "CLM", nombre: "Castilla-La Mancha", norma: "Ley 8/2013", estadoGlobal: V, parejaEquiparada: true,
+    bonif(h, g, c) {
+      const out = [];
+      if (g === "I" || g === "II") { const bl = c.bl; const pct = bl < 175000 ? 1 : bl < 225000 ? 0.95 : bl < 275000 ? 0.90 : bl < 300000 ? 0.85 : 0.80; out.push({ pct, norma: "art. 17 Ley 8/2013 (bonificación por tramos de base liquidable; fecha de inicio PENDIENTE)", estado: V }); }
+      if ((h.discapacidad || 0) >= 65) out.push({ pct: 0.95, norma: "art. 17 Ley 8/2013 (discapacidad ≥65 %)", estado: V });
+      return out;
+    } }),
+
+  ARA: regla({ id: "ARA", nombre: "Aragón", norma: "D. Leg. 1/2005 (Ley 10/2018, Ley 17/2023)", estadoGlobal: P, parejaEquiparada: true,
+    ajusteReducciones(h, g, c, suma) { if (esDescAscCony(h, true) && suma < 500000) return [{ paso: "Reducción autonómica del art. 131-5 (tope conjunto 500.000 €)", importe: Math.max(0, Math.min(c.bi - suma, 500000 - suma)), norma: "art. 131-5 D. Leg. 1/2005 (+150.000 € por hijo menor conviviente con el viudo: no modelado)", estado: V }]; return []; },
+    bonif(h, g, c) { return g === "I" && c.fecha >= "2024-01-01" ? [{ pct: 0.99, norma: "art. 131-12 D. Leg. 1/2005", estado: P }] : []; } }),
+
+  EXT: regla({ id: "EXT", nombre: "Extremadura", norma: "D. Leg. 1/2018 (Ley 1/2024, Ley 1/2025, Ley 2/2026)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g) { if (g === "I" || g === "II") return { importe: 500000, norma: "art. 17 D. Leg. 1/2018 (si sustituye o se suma a la estatal: PENDIENTE)", estado: V }; return ESTADO.redParentesco(h, g); },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 180000 : d >= 50 ? 120000 : d >= 33 ? 60000 : 0, norma: "D. Leg. 1/2018", estado: V }; },
+    empresa: { pct: 0.99, permanencia: 5, norma: "D. Leg. 1/2018", estado: V },
+    bonif(h, g, c) {
+      // Ley 2/2026 de presupuestos de Extremadura (efectos 05-08-2026, Cuatrecasas «Extremadura – Novedades tributarias para 2026»): los sobrinos del causante
+      // sin descendientes directos pasan a la lista de «especial vinculación» del art. 20 ter D. Leg. 1/2018 y pueden aplicar los beneficios de los grupos I y II.
+      // El texto del artículo (requisitos) no se ha podido leer → PENDIENTE: no se aplica de oficio (cuota máxima) y se avisa.
+      if (h.relacion === "sobrino" && c.fecha >= "2026-08-05") return [{ pct: 0, norma: "art. 20 ter D. Leg. 1/2018 (Ley 2/2026): un sobrino del causante sin descendientes directos puede tener los beneficios de los grupos I y II (99 %) si cumple los requisitos de especial vinculación. NO APLICADO: requisitos sin cotejar; compruébalo", estado: P }];
+      if (!(g === "I" || g === "II") || c.fecha < "2024-01-01") return []; return c.enPlazo === false ? [{ pct: 0, norma: "art. 20 D. Leg. 1/2018: exige presentación en plazo", estado: P }] : [{ pct: 0.99, norma: "art. 20 D. Leg. 1/2018", estado: P }]; } }),
+
+  MUR: regla({ id: "MUR", nombre: "Región de Murcia", norma: "D. Leg. 1/2010", estadoGlobal: V, parejaEquiparada: true,
+    empresa: { pct: 0.99, permanencia: 5, norma: "D. Leg. 1/2010 Murcia", estado: V },
+    tarifa() { return { tramos: [...TARIFA_EST.slice(0, 14), [398777.54, 80655.08, 31.75], [797555.08, 207266.95, 36.50]], norma: "art. 5 D. Leg. 1/2010 Murcia", estado: V }; },
+    bonif(h, g) { return g === "I" || g === "II" ? [{ pct: 0.99, norma: "art. 3.Cinco D. Leg. 1/2010 Murcia (fecha de inicio PENDIENTE)", estado: V }] : []; } }),
+
+  CAN: regla({ id: "CAN", nombre: "Canarias", norma: "D. Leg. 1/2009 (Decreto-ley 5/2023)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g, c) {
+      if (g === "I") { const lim = h.edad < 10 ? 138650 : h.edad < 15 ? 92150 : h.edad < 18 ? 57650 : 40400; return { importe: Math.min(c.bi, lim), norma: "D. Leg. 1/2009 Canarias", estado: P }; }
+      if (g === "II") { const l = linea(h); return { importe: l === "conyuge" || l === "pareja" ? 40400 : h.relacion === "hijo" ? 23125 : 18500, norma: "D. Leg. 1/2009 Canarias", estado: P }; }
+      return { importe: g === "III" ? 9300 : 0, norma: "D. Leg. 1/2009 Canarias", estado: P };
+    },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 400000 : d >= 33 ? 72000 : 0, norma: "D. Leg. 1/2009 Canarias", estado: P }; },
+    seguros: { limite: 23150, norma: "D. Leg. 1/2009 Canarias", estado: P },
+    vivienda: { pct: 0.99, limite: 200000, permanencia: 5, norma: "D. Leg. 1/2009 Canarias", estado: P },
+    empresa: { pct: 0.99, permanencia: 5, norma: "D. Leg. 1/2009 Canarias", estado: P },
+    bonif(h, g, c) { return (g === "I" || g === "II" || g === "III") && c.fecha >= "2023-09-06" ? [{ pct: 0.999, norma: "art. 24 ter D. Leg. 1/2009 (99,9 %)", estado: V }] : []; } }),
+
+  BAL: regla({ id: "BAL", nombre: "Illes Balears", norma: "D. Leg. 1/2014 (Ley 11/2023)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g) { return { importe: redGrupoTabla({ I: { base: 25000, porAnio: 6250, max: 50000 }, II: 25000, III: 8000, IV: 1000 }, h, g), norma: "D. Leg. 1/2014 Baleares", estado: P }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 300000 : d >= 33 ? 48000 : 0, norma: "D. Leg. 1/2014 Baleares", estado: P }; },
+    vivienda: { pct: 1, limite: 270151.20, permanencia: 5, norma: "D. Leg. 1/2014 Baleares (Ley 11/2023)", estado: P },
+    tarifa(h, g) { return g === "I" || g === "II" ? { tramos: [[0, 0, 1], [700000, 7000, 8], [1000000, 31000, 11], [2000000, 141000, 15], [3000000, 291000, 20]], norma: "art. 33 D. Leg. 1/2014 (grupos I y II)", estado: P } : { tramos: TARIFA_BAL_III_IV, norma: "art. 33 D. Leg. 1/2014 (grupos III y IV)", estado: P }; },
+    bonif(h, g, c) {
+      if ((g === "I" || g === "II") && c.fecha >= "2023-07-18") return [{ pct: 1, norma: "art. 36 D. Leg. 1/2014 (Ley 11/2023)", estado: V }];
+      // Grupo III (fiscal r4, 08-10-2026). Ley 11/2023 (desde 26-11-2023): 50 % a los colaterales de 2.º y 3.er grado por consanguinidad si no
+      // concurren descendientes del causante; 25 % al resto del grupo III. Ley 6/2025, de 23 de julio (presupuestos 2025): 60 % y 35 %.
+      // Fuentes: Ministerio de Hacienda, «Tributación autonómica 2026», cap. I (régimen vigente en 2026) y resumen de la Ley 6/2025 (primeralecturaediciones.com/?p=20246093).
+      // Efectos: 25-07-2025 según una fuente y 26-07-2025 según otra → se toma el 26-07-2025 (prudente: un día más con el porcentaje menor).
+      // Antes de esta revisión el motor daba el 50 % a cualquier miembro del grupo III sin descendientes (también a los afines): corregido.
+      if (g === "III" && c.fecha >= "2023-11-26") {
+        const ley6 = c.fecha >= "2025-07-26", colCons = ["hermano", "sobrino", "tio"].includes(h.relacion) && !c.hayDescendientes;
+        const pct = colCons ? (ley6 ? 0.60 : 0.50) : (ley6 ? 0.35 : 0.25);
+        return [{ pct, norma: `art. 36 bis D. Leg. 1/2014 (${ley6 ? "Ley 6/2025" : "Ley 11/2023"}): ${colCons ? "colateral de 2.º o 3.er grado por consanguinidad sin descendientes del causante" : "resto del grupo III (afines, o colaterales que concurren con descendientes)"}`, estado: V }];
+      }
+      return [];
+    } }),
+
+  AST: regla({ id: "AST", nombre: "Principado de Asturias", norma: "D. Leg. 2/2014 (Ley 7/2017)", estadoGlobal: P, parejaEquiparada: true,
+    redParentesco(h, g) { if (g === "I" || g === "II") return { importe: 300000, norma: "art. 17 D. Leg. 2/2014", estado: V }; return ESTADO.redParentesco(h, g); },
+    vivienda: { pctFn: (valor) => valor <= 90000 ? 0.99 : valor <= 120000 ? 0.98 : valor <= 180000 ? 0.97 : valor <= 240000 ? 0.96 : 0.95, limite: null, permanencia: 3, norma: "D. Leg. 2/2014 Asturias", estado: P },
+    tarifa(h, g) { return g === "I" || g === "II" ? { tramos: [[0, 0, 21.25], [56000, 11900, 25.5], [216000, 52700, 31.25], [616000, 177700, 36.5]], norma: "art. 21.2 D. Leg. 2/2014", estado: V } : { tramos: [[0, 0, 7.65], [8000, 612, 8.5], [16000, 1292, 9.35], [24000, 2040, 10.2], [32000, 2856, 11.05], [40000, 3740, 11.9], [48000, 4692, 12.75], [56000, 5712, 13.6], [64000, 6800, 14.45], [72000, 7956, 15.3], [80000, 9180, 16.15], [120000, 15640, 18.7], [160000, 23120, 21.25], [240000, 40120, 25.5], [400000, 80920, 31.25], [800000, 205920, 36.5]], norma: "art. 21.1 D. Leg. 2/2014", estado: V }; },
+    coef(h, g, pp, ci) { if (g === "I") return escalaCoef(COEF_EST.tramos, [1, 1.02, 1.03, 1.04], pp, ci, "art. 22 D. Leg. 2/2014", P); return ESTADO.coef(h, g, pp, ci); } }),
+
+  CANT: regla({ id: "CANT", nombre: "Cantabria", norma: "D. Leg. 62/2008", estadoGlobal: V, parejaEquiparada: false,
+    redParentesco(h, g) { if (g === "III") return { importe: h.relacion === "hermano" ? 25000 : 8000, norma: "art. 5 D. Leg. 62/2008", estado: V }; return { importe: redGrupoTabla({ I: { base: 50000, porAnio: 5000 }, II: 50000, IV: 0 }, h, g), norma: "art. 5 D. Leg. 62/2008", estado: V }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 200000 : d >= 33 ? 50000 : 0, norma: "art. 5 D. Leg. 62/2008", estado: V }; },
+    seguros: { limite: 50000, norma: "art. 5 D. Leg. 62/2008", estado: V },
+    vivienda: { pct: 0.95, limite: 125000, permanencia: 5, norma: "art. 5 D. Leg. 62/2008", estado: V },
+    empresa: { pct: 0.99, permanencia: 5, norma: "art. 5 D. Leg. 62/2008", estado: V },
+    coef(h, g, pp, ci) { return escalaCoef([0, 403000, 2007000, 4020000], COEF_EST[g], pp, ci, "art. 7.2 D. Leg. 62/2008", V); },
+    bonif(h, g, c) {
+      if (g === "I" || g === "II") return [{ pct: 1, norma: "art. 8.1 D. Leg. 62/2008 (fecha de inicio PENDIENTE)", estado: V }];
+      if (h.relacion === "hermano" && c.fecha >= "2024-01-01") return [{ pct: 0.5, norma: "art. 8 D. Leg. 62/2008 (hermanos, Ley 3/2023)", estado: V }];
+      return [];
+    } }),
+
+  RIO: regla({ id: "RIO", nombre: "La Rioja", norma: "Ley 10/2017 (Ley 2/2024)", estadoGlobal: P, parejaEquiparada: false,
+    empresa: { pct: 0.99, permanencia: 5, norma: "Ley 10/2017", estado: P },
+    bonif(h, g, c) {
+      if (!(g === "I" || g === "II")) return [];
+      if (c.fecha >= "2024-02-09") return [{ pct: 0.99, norma: "art. 37.2 Ley 10/2017 (Ley 2/2024)", estado: V }];
+      return [{ pct: c.bl <= 500000 ? 0.99 : 0.98, norma: "art. 37.2 Ley 10/2017, redacción anterior", estado: P }];
+    } }),
+
+  // ─── Territorios forales: tarifas y grupos propios ───
+  NAV: regla({ id: "NAV", nombre: "Navarra", norma: "D. F. Leg. 250/2002", estadoGlobal: P, parejaEquiparada: true,
+    grupo(h) { const l = linea(h); return l === "conyuge" || l === "pareja" ? "CONYUGE" : l === "desc" || l === "asc" ? "LINEA_RECTA" : l === "col2" ? "COL2" : l === "col3" ? "COL3" : l === "col4" ? "COL4" : l === "afin" ? "AFIN" : "EXTRANO"; },
+    redParentesco() { return { importe: 0, norma: "Navarra no tiene reducción por parentesco", estado: V }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 180000 : d >= 33 ? 60000 : 0, norma: "art. 32 bis D. F. Leg. 250/2002", estado: V }; },
+    seguros: { limite: 0, norma: "Navarra: reducción solo para seguros anteriores a 1992", estado: P },
+    vivienda: { pct: 0, limite: 0, permanencia: 0, norma: "Navarra: sin reducción general por vivienda", estado: V },
+    empresa: { pct: 1, permanencia: 5, norma: "art. 11.c D. F. Leg. 250/2002 (exención)", estado: V },
+    cuotaEspecial(bl, h, g) {
+      const B = [6010.12, 12020.24, 30050.61, 60101.21, 90151.82, 120202.42, 150253.03, 300506.05, 601012.10, 1803036.31, 3005060.52];
+      const TIPOS = { COL2: [8, 9, 10, 11, 13, 15, 17, 20, 23, 26, 30, 35], COL3: [9, 10, 11, 13, 15, 17, 20, 23, 26, 30, 34, 39], COL4: [11, 12, 13, 15, 17, 20, 23, 26, 31, 35, 39, 43], EXTRANO: [11, 12, 14, 16, 18, 21, 24, 29, 36, 40, 45, 48] };
+      if (g === "CONYUGE") return { ci: cuotaTarifa(bl, [[0, 0, 0], [250000, 0, 0.8]]), norma: "art. 34.a.1.º D. F. Leg. 250/2002", estado: V };
+      if (g === "LINEA_RECTA") return { ci: cuotaTarifa(bl, [[0, 0, 0], [250000, 0, 2], [500000, 5000, 4], [1000000, 25000, 8], [1800000, 89000, 12], [3000000, 233000, 16]]), norma: "art. 34.a.3.º D. F. Leg. 250/2002", estado: V };
+      const t = TIPOS[g] || TIPOS.EXTRANO;
+      let i = 0; while (i < B.length && bl > B[i]) i++;
+      let ci = bl * t[i] / 100;
+      if (i > 0) ci = Math.min(ci, B[i - 1] * t[i - 1] / 100 + (bl - B[i - 1])); // art. 34.3: regla antisalto
+      return { ci: r2(ci), norma: `art. 34 D. F. Leg. 250/2002 (tipo único ${t[i]} % sobre toda la base, con regla antisalto)${g === "AFIN" ? "; afines: tabla c) PENDIENTE, se usa la de extraños" : ""}`, estado: g === "AFIN" ? P : V };
+    },
+    coef(h, g, pp, ci) { return { k: 1, cuota: ci, salto: false, norma: "Navarra: sin coeficientes multiplicadores", estado: V }; } }),
+
+  BIZ: regla({ id: "BIZ", nombre: "Bizkaia", norma: "Norma Foral 4/2015", estadoGlobal: V, parejaEquiparada: true,
+    grupo(h) { const l = linea(h); return ["desc", "asc", "conyuge", "pareja"].includes(l) ? "I" : l === "col2" ? "II" : l === "col3" || l === "afin" ? "III" : "IV"; },
+    redParentesco(h, g) { return { importe: { I: 400000, II: 40000, III: 20000, IV: 0 }[g], norma: "art. 43 NF 4/2015", estado: V }; },
+    redDiscapacidad(h) { return { importe: (h.discapacidad || 0) >= 33 ? 100000 : 0, norma: "art. 43 NF 4/2015", estado: V }; },
+    seguros: { limite: 400000, norma: "art. 43 NF 4/2015 (grupo I; otros grupos por porcentaje, PENDIENTE)", estado: P },
+    vivienda: { pct: 0.95, limite: 215000, permanencia: 0, norma: "art. 44 NF 4/2015 (2 años de convivencia)", estado: V, requiereConvivencia: true },
+    tarifa(h, g) {
+      const II = [[0, 0, 5.70], [9230, 526.11, 7.98], [27680, 1998.42, 10.26], [46130, 3891.39, 12.54], [92240, 9673.58, 15.58], [184460, 24041.46, 19.38], [461110, 77656.23, 23.18], [922190, 184534.57, 28.50], [2305420, 578755.12, 34.58]];
+      const IV = [[0, 0, 7.60], [9230, 701.48, 10.64], [27680, 2664.56, 13.68], [46130, 5188.52, 16.72], [92240, 12898.11, 20.52], [184460, 31821.66, 25.08], [461110, 101205.48, 29.64], [922190, 237869.59, 35.72], [2305420, 731959.34, 42.56]];
+      return { tramos: g === "I" ? [[0, 0, 1.5]] : g === "IV" ? IV : II, norma: "art. 47 NF 4/2015", estado: V };
+    },
+    coef(h, g, pp, ci) { return { k: 1, cuota: ci, salto: false, norma: "Bizkaia: sin coeficientes", estado: V }; } }),
+
+  GIP: regla({ id: "GIP", nombre: "Gipuzkoa", norma: "Norma Foral 2/2022", estadoGlobal: V, parejaEquiparada: true,
+    grupo(h) { const l = linea(h); return ["desc", "asc", "conyuge", "pareja"].includes(l) ? "I" : ["col2", "col3"].includes(l) || AFINES_REL.includes(h.relacion) ? "II" : "III"; },
+    redParentesco(h, g) { return { importe: { I: 400000, II: 16150, III: 8075 }[g], norma: "art. 44 NF 2/2022", estado: V }; },
+    redDiscapacidad(h) { return { importe: (h.discapacidad || 0) >= 33 ? 80000 : 0, norma: "art. 44 NF 2/2022", estado: V }; },
+    seguros: { limite: 400000, norma: "art. 44.2 NF 2/2022 (grupo I)", estado: P },
+    vivienda: { pct: 0.95, limite: 220000, permanencia: 0, norma: "art. 45 NF 2/2022 (2 años de convivencia)", estado: V, requiereConvivencia: true },
+    tarifa(h, g) {
+      const II = [[0, 0, 5.70], [8200, 467.40, 7.98], [24590, 1775.32, 10.26], [40980, 3456.94, 12.54], [81970, 8597.08, 15.58], [163940, 21368.01, 19.38], [409930, 69040.87, 23.18], [819670, 164018.60, 28.50], [2049130, 514414.70, 34.58]];
+      const III = [[0, 0, 7.60], [8200, 623.20, 10.64], [24590, 2367.10, 13.68], [40980, 4609.25, 16.72], [81970, 11462.78, 20.52], [163940, 28283.02, 25.08], [409930, 89977.31, 29.64], [819670, 211424.25, 35.72], [2049130, 650587.36, 42.56]];
+      return { tramos: g === "I" ? [[0, 0, 1.5]] : g === "II" ? II : III, norma: "art. 47 NF 2/2022", estado: V };
+    },
+    coef(h, g, pp, ci) { return { k: 1, cuota: ci, salto: false, norma: "Gipuzkoa: sin coeficientes", estado: V }; } }),
+
+  ALA: regla({ id: "ALA", nombre: "Álava / Araba", norma: "Norma Foral 11/2005", estadoGlobal: V, parejaEquiparada: true,
+    grupo(h) { const l = linea(h); return ["desc", "asc", "conyuge", "pareja"].includes(l) ? "0" : ["col2", "col3"].includes(l) || AFINES_REL.includes(h.relacion) ? "I" : "II"; },
+    redParentesco(h, g) { return { importe: { "0": 400000, I: 38156, II: 0 }[g], norma: "art. 22 NF 11/2005", estado: V }; },
+    redDiscapacidad(h) { const d = h.discapacidad || 0; return { importe: d >= 65 ? 176045 : d >= 33 ? 56109 : 0, norma: "art. 22 NF 11/2005 (tarifa reducida por discapacidad: no modelada)", estado: V }; },
+    seguros: { limite: 400000, norma: "art. 22 NF 11/2005 (grupo 0)", estado: P },
+    vivienda: { pct: 0.95, limite: 212242, permanencia: 0, norma: "art. 22 NF 11/2005 (2 años de convivencia)", estado: V, requiereConvivencia: true },
+    tarifa(h, g) {
+      const II = [[0, 0, 5.70], [9086, 517.90, 7.98], [27261, 1968.27, 10.26], [45431, 3832.51, 12.54], [90850, 9528.05, 15.58], [181706, 23683.42, 19.38], [454259, 76504.19, 23.18], [908518, 181801.42, 28.50], [2271297, 570193.44, 34.58]];
+      const III = [[0, 0, 7.60], [9086, 690.54, 10.64], [27261, 2624.36, 13.68], [45431, 5110.01, 16.72], [90850, 12704.07, 20.52], [181706, 31347.72, 25.08], [454259, 99704.01, 29.64], [908518, 234346.38, 35.72], [2271297, 721131.04, 42.56]];
+      return { tramos: g === "0" ? [[0, 0, 1.5]] : g === "I" ? II : III, norma: "art. 24 NF 11/2005", estado: V };
+    },
+    coef(h, g, pp, ci) { return { k: 1, cuota: ci, salto: false, norma: "Álava: sin coeficientes", estado: V }; } }),
+};
+
+export const TERRITORIOS = [
+  ["AND", "Andalucía"], ["ARA", "Aragón"], ["AST", "Asturias"], ["BAL", "Illes Balears"], ["CAN", "Canarias"], ["CANT", "Cantabria"],
+  ["CYL", "Castilla y León"], ["CLM", "Castilla-La Mancha"], ["CAT", "Cataluña"], ["VAL", "Comunitat Valenciana"], ["EXT", "Extremadura"],
+  ["GAL", "Galicia"], ["MAD", "Comunidad de Madrid"], ["MUR", "Región de Murcia"], ["RIO", "La Rioja"], ["NAV", "Navarra"],
+  ["ALA", "Álava / Araba"], ["BIZ", "Bizkaia"], ["GIP", "Gipuzkoa"], ["CEU", "Ceuta"], ["MEL", "Melilla"], ["EST", "Residía fuera de España"],
+];
+export const TERRITORIOS_FORALES_CIVIL = ["CAT", "ARA", "NAV", "ALA", "BIZ", "GIP", "GAL", "BAL"]; // derecho civil propio (total o parcial)
+
+// ─────────────────────────── Valoraciones ───────────────────────────
+// Art. 26.a Ley 29/1987 y art. 49.a-b RD 1629/1991 (VERIFICADO 30-09-2026, BOE consolidado; CM-002)
+export function pctUsufructoVitalicio(edad) { return clamp(89 - edad, 10, 70) / 100; } // vitalicio: 89 − edad, entre el 10 % y el 70 % (VERIFICADO)
+export function pctUsufructoTemporal(anios) { return Math.min(0.70, 0.02 * anios); } // temporal: 2 % por año, máximo 70 % (VERIFICADO)
+const NORMA_NUDA = "art. 26.a Ley 29/1987 y art. 51.2 RD 1629/1991";
+const FORALES_ISD = ["NAV", "BIZ", "GIP", "ALA"];
+
+export function valorBien(b) {
+  const base = b.tipo === "inmueble" ? Math.max(b.valorReferencia || 0, b.valor || 0) : (b.valor || 0); // art. 9.3
+  return base;
+}
+export function cuotaCausante(b) {
+  if (b.titularidad === "ganancial") return 0.5;
+  if (b.titularidad === "proindiviso") return clamp((b.porcentaje ?? 100) / 100, 0, 1);
+  return 1;
+}
+
+// ─────────────────────────── Reparto ───────────────────────────
+// Reparto intestado de derecho común (arts. 912-958 CC), por órdenes de llamamiento.
+// Campos: renuncia; estirpe (nombre del hijo o hermano premuerto al que representan nietos o sobrinos);
+// medio (medio hermano); lineaAsc ("paterna" | "materna") para abuelos.
+// o (control de calidad 07-10-2026, I6): variantes forales que remiten al Código Civil con otros derechos del viudo (Galicia, Mallorca y Menorca):
+// usufDesc/usufAsc/usufAbuelos (fracción del usufructo del viudo), notaDesc/notaAsc (texto con su norma), parejaComoConyuge, notaFinal.
+export function repartoIntestado(personas, o = {}) {
+  const der = {}; const add = (id, d) => (der[id] = der[id] || []).push(d);
+  const notas = [], avisos = [];
+  const norm = (t) => String(t || "").trim().toLowerCase();
+  const vivos = personas.filter((p) => !p.renuncia);
+  const renunciaron = personas.filter((p) => p.renuncia);
+  // Cónyuge separado legalmente o de hecho: no hereda abintestato ni tiene usufructo legal (arts. 834 y 945 CC)
+  const separados = vivos.filter((p) => p.relacion === "conyuge" && p.separado);
+  for (const p of separados) avisos.push(`${p.nombre} no hereda sin testamento: el cónyuge separado legalmente o de hecho queda excluido (arts. 834 y 945 CC).`);
+  const cony = vivos.find((p) => p.relacion === "conyuge" && !p.separado) || (o.parejaComoConyuge ? vivos.find((p) => p.relacion === "pareja_hecho") : undefined);
+  const conCony = (lineas, usufructo, nota) => {
+    for (const l of lineas) {
+      if (cony && usufructo) { add(l.id, { tipo: "pleno", fraccion: (1 - usufructo) * l.f }); add(l.id, { tipo: "nuda", fraccion: usufructo * l.f, usufructuarioId: cony.id }); }
+      else add(l.id, { tipo: "pleno", fraccion: l.f });
+    }
+    if (cony && usufructo) add(cony.id, { tipo: "usufructo", fraccion: usufructo });
+    notas.push(nota);
+  };
+  // Representación: nietos o sobrinos agrupados por estirpe. Si la estirpe es de alguien vivo o que renunció, no representan (arts. 929-931 CC).
+  const representantes = (repr, cabezas) => {
+    const vivosNom = new Set(cabezas.filter((c) => !c.renuncia).map((c) => norm(c.nombre)));
+    const renNom = new Set(cabezas.filter((c) => c.renuncia).map((c) => norm(c.nombre)));
+    const grupos = {}; const fuera = [];
+    for (const r of repr) {
+      const e = norm(r.estirpe);
+      if (e && (vivosNom.has(e) || renNom.has(e))) { fuera.push(r); continue; }
+      (grupos[e || "_" + r.id] = grupos[e || "_" + r.id] || []).push(r);
+    }
+    return { grupos: Object.values(grupos), fuera };
+  };
+  const todosDesc = personas.filter((p) => linea(p) === "desc");
+  const hijosTodos = todosDesc.filter((p) => p.relacion === "hijo");
+  const hijos = hijosTodos.filter((p) => !p.renuncia);
+  const nietosV = vivos.filter((p) => linea(p) === "desc" && p.relacion !== "hijo");
+
+  // 1. Descendientes
+  let lineasDesc = [];
+  if (hijos.length || nietosV.length) {
+    const { grupos, fuera } = representantes(nietosV, hijosTodos);
+    const n = hijos.length + grupos.length;
+    if (n > 0) {
+      lineasDesc = [...hijos.map((h) => ({ id: h.id, f: 1 / n })), ...grupos.flatMap((g) => g.map((p) => ({ id: p.id, f: 1 / n / g.length })))];
+      if (grupos.length) notas.push("Los nietos heredan por estirpes, en representación de su progenitor premuerto (arts. 924-934 CC).");
+      // Auditoría r5 (H7): un nieto sin «desciende de» se trata como estirpe de un hijo premuerto que no consta; si su progenitor vive, no hereda.
+      const sinEst = nietosV.filter((p) => !norm(p.estirpe));
+      if (sinEst.length && hijos.length) avisos.push(`${sinEst.map((p) => p.nombre).join(", ")}: figura${sinEst.length > 1 ? "n" : ""} como descendiente${sinEst.length > 1 ? "s" : ""} de segundo grado sin indicar de quién desciende${sinEst.length > 1 ? "n" : ""}. Se ha supuesto que representa${sinEst.length > 1 ? "n" : ""} a un hijo premuerto que no está en el expediente y recibe${sinEst.length > 1 ? "n" : ""} su parte (arts. 924-934 CC). Si su progenitor vive o ha renunciado, no hereda${sinEst.length > 1 ? "n" : ""} sin testamento (arts. 929-931 CC): indícalo en «Desciende de».`);
+      for (const f of fuera) avisos.push(`${f.nombre} no hereda: su progenitor ${f.estirpe} vive o ha renunciado, y no cabe representación (arts. 929-931 CC).`);
+    } else if (fuera.length && hijosTodos.length && hijosTodos.every((h) => h.renuncia)) {
+      lineasDesc = fuera.map((p) => ({ id: p.id, f: 1 / fuera.length }));
+      notas.push("Todos los hijos han renunciado: heredan los nietos por derecho propio y por cabezas (art. 923 CC).");
+    }
+  }
+  if (lineasDesc.length) {
+    conCony(lineasDesc, cony ? o.usufDesc ?? 1 / 3 : 0, cony ? o.notaDesc || "Cónyuge viudo: usufructo del tercio de mejora (art. 834 CC). Descendientes: el resto en pleno dominio y la nuda propiedad de ese tercio (arts. 930-934 CC)." : "Descendientes por partes iguales (arts. 930-934 CC).");
+  } else {
+    // 2. Ascendientes: padres; a falta de ellos, abuelos (por líneas si concurren ambas: art. 940 CC)
+    const padres = vivos.filter((p) => p.relacion === "padre");
+    const abuelos = vivos.filter((p) => p.relacion === "abuelo");
+    let lineasAsc = [];
+    if (padres.length) { lineasAsc = padres.map((p) => ({ id: p.id, f: 1 / padres.length })); }
+    else if (abuelos.length) {
+      const pat = abuelos.filter((a) => a.lineaAsc === "paterna"), mat = abuelos.filter((a) => a.lineaAsc === "materna");
+      if (pat.length && mat.length && pat.length + mat.length === abuelos.length) lineasAsc = [...pat.map((a) => ({ id: a.id, f: 0.5 / pat.length })), ...mat.map((a) => ({ id: a.id, f: 0.5 / mat.length }))];
+      else { lineasAsc = abuelos.map((a) => ({ id: a.id, f: 1 / abuelos.length })); if (abuelos.length > 1) avisos.push("Abuelos: si son de las dos líneas, la mitad corresponde a los paternos y la mitad a los maternos (art. 940 CC). Indica la línea de cada uno."); }
+    }
+    if (lineasAsc.length) conCony(lineasAsc, cony ? (padres.length ? o.usufAsc ?? 1 / 2 : o.usufAbuelos ?? o.usufAsc ?? 1 / 2) : 0, cony ? (padres.length ? o.notaAsc : o.notaAbuelos || o.notaAsc) || "Cónyuge viudo: usufructo de la mitad (art. 837 CC). Ascendientes: el resto en pleno dominio y la nuda propiedad de esa mitad (arts. 935-942 CC)." : padres.length ? "Heredan los padres por partes iguales, o el que sobreviva en todo (arts. 935-936 CC)." : "Heredan los abuelos, los más próximos en grado (arts. 939-941 CC).");
+    else if (cony) { add(cony.id, { tipo: "pleno", fraccion: 1 }); notas.push("Sin descendientes ni ascendientes hereda el cónyuge no separado (arts. 943-944 CC)."); }
+    else {
+      // 4. Colaterales: hermanos y sobrinos (arts. 946-951 CC)
+      const hermTodos = personas.filter((p) => p.relacion === "hermano");
+      const herm = hermTodos.filter((p) => !p.renuncia);
+      const sobV = vivos.filter((p) => p.relacion === "sobrino");
+      const { grupos, fuera } = representantes(sobV, hermTodos);
+      // Vínculo de cada estirpe de sobrinos: "medio" en el sobrino = hijo de un medio hermano premuerto (art. 951 CC).
+      // El doble vínculo se mira entre hermanos vivos y representados (arts. 948-949 CC: los sobrinos toman la porción de su progenitor).
+      const estMedio = (g) => g.some((p) => p.medio);
+      for (const g of grupos) if (g.some((p) => p.medio) && g.some((p) => !p.medio)) avisos.push(`Sobrinos de ${g[0].estirpe || "una misma estirpe"}: no coincide la marca de "hijo de medio hermano" entre ellos. Se ha tratado la estirpe como de medio vínculo; revísalo.`);
+      const hayDoble = herm.some((x) => !x.medio) || grupos.some((g) => !estMedio(g));
+      const peso = (medio) => (medio && hayDoble ? 1 : 2);
+      let lineasCol = [];
+      if (herm.length) {
+        const tot = herm.reduce((s, h) => s + peso(h.medio), 0) + grupos.reduce((s, g) => s + peso(estMedio(g)), 0);
+        lineasCol = [...herm.map((h) => ({ id: h.id, f: peso(h.medio) / tot })), ...grupos.flatMap((g) => g.map((p) => ({ id: p.id, f: peso(estMedio(g)) / tot / g.length })))];
+        const mezcla = (herm.some((h) => h.medio) || grupos.some(estMedio)) && hayDoble;
+        notas.push("Hermanos por cabezas" + (grupos.length ? " y sobrinos por estirpes en representación de su progenitor premuerto (art. 948 CC)" : "") + (mezcla ? "; los medio hermanos, y los sobrinos que representan a un medio hermano, reciben la mitad que los de doble vínculo (arts. 949 y 951 CC)" : "") + " (arts. 946-951 CC).");
+        for (const f of fuera) avisos.push(`${f.nombre} no hereda: su progenitor ${f.estirpe} vive o ha renunciado (art. 929 CC).`);
+        const sinEstS = sobV.filter((p) => !norm(p.estirpe)); // auditoría r5 (H7): como con los nietos
+        if (sinEstS.length) avisos.push(`${sinEstS.map((p) => p.nombre).join(", ")}: sobrino${sinEstS.length > 1 ? "s" : ""} sin indicar de qué hermano desciende${sinEstS.length > 1 ? "n" : ""}. Se ha supuesto que representa${sinEstS.length > 1 ? "n" : ""} a un hermano premuerto que no está en el expediente (art. 948 CC). Si su progenitor vive o ha renunciado, no hereda${sinEstS.length > 1 ? "n" : ""} sin testamento (art. 929 CC): indícalo en «Desciende de».`);
+      } else if (sobV.length) {
+        lineasCol = sobV.map((p) => ({ id: p.id, f: 1 / sobV.length }));
+        notas.push("Solo sobrinos: heredan por cabezas (arts. 927 y 947-951 CC).");
+        if (sobV.some((p) => p.medio) && sobV.some((p) => !p.medio)) avisos.push("Concurren solo sobrinos, unos hijos de hermanos de doble vínculo y otros de medio hermanos: el motor reparte por cabezas (art. 927 CC), pero el art. 951 CC remite a las reglas del doble vínculo y la doctrina está dividida. Revisar con el abogado.");
+      } else {
+        // 5. Resto de colaterales hasta el cuarto grado: el más próximo excluye al más lejano (arts. 954-955 CC)
+        const tios = vivos.filter((p) => p.relacion === "tio"), primos = vivos.filter((p) => p.relacion === "primo");
+        const g = tios.length ? tios : primos;
+        if (g.length) { lineasCol = g.map((p) => ({ id: p.id, f: 1 / g.length })); notas.push(`${tios.length ? "Tíos" : "Primos"}: heredan por cabezas los colaterales de grado más próximo, sin distinción de líneas (arts. 954-955 CC).`); }
+      }
+      if (lineasCol.length) conCony(lineasCol, 0, "");
+      else notas.push(o.notaFinal || "No hay parientes con derecho a heredar sin testamento: heredaría el Estado o la comunidad autónoma (arts. 956-958 CC). Revisar con el abogado.");
+    }
+  }
+  const excl = vivos.filter((p) => !der[p.id] && p !== cony && !["desc", "asc", "conyuge", "col2", "col3", "col4"].includes(linea(p)));
+  for (const p of excl) avisos.push(`${p.nombre} (${RELACIONES[p.relacion]?.label.toLowerCase()}) no es heredero sin testamento en derecho común${linea(p) === "pareja" ? ": la pareja de hecho no tiene derechos en la sucesión intestada del Código Civil (sí en algunos derechos forales)" : ""}.`);
+  if (renunciaron.length) notas.push(`Renuncia de ${renunciaron.map((r) => r.nombre).join(", ")}: su parte acrece a los coherederos del mismo grado (arts. 922 y 981 CC) y sus descendientes no le representan (art. 929 CC); si renuncian todos los del grado, heredan los del siguiente por derecho propio (art. 923 CC).`);
+  return { derechos: der, notas: notas.filter(Boolean), avisos };
+}
+
+// Testamento "del uno para el otro": usufructo universal al cónyuge y nuda propiedad a los hijos por partes iguales
+export function repartoUsufructoUniversal(personas) {
+  const vivos = personas.filter((p) => !p.renuncia);
+  const esCony = (p) => ["conyuge", "pareja_hecho", "pareja_no_inscrita"].includes(p.relacion);
+  const cony = vivos.find(esCony);
+  // Renuncia del usufructuario: el legado de usufructo no tiene efecto y se refunde en la masa (art. 888 CC); los descendientes, ya
+  // herederos de la nuda propiedad, consolidan el pleno dominio. No es acrecimiento entre coherederos (arts. 982-985 CC): no hay
+  // llamamiento conjunto a la misma cuota. Antes la función devolvía sin derechos y todas las cuotas salían a 0 €.
+  const conyRen = !cony && personas.find((p) => esCony(p) && p.renuncia);
+  // Nietos cuyo progenitor vive y acepta no reciben la nuda propiedad (no representan: arts. 929-931 CC). Auditoría 01-10-2026, N-3.
+  const norm = (t) => String(t || "").trim().toLowerCase();
+  const hijosVivos = new Set(vivos.filter((p) => p.relacion === "hijo").map((p) => norm(p.nombre)));
+  const fuera = vivos.filter((p) => linea(p) === "desc" && p.relacion !== "hijo" && norm(p.estirpe) && hijosVivos.has(norm(p.estirpe)));
+  const hijos = vivos.filter((p) => linea(p) === "desc" && !fuera.includes(p));
+  // Por estirpes: los nietos (o bisnietos) de un hijo premuerto que indican de quién descienden comparten la cabeza de ese hijo
+  // (sustitución vulgar a favor de los descendientes, lo habitual en estos testamentos; arts. 774 y 924-926 CC). Sin estirpe, cada uno es una cabeza.
+  const cabezas = []; const porEst = {};
+  for (const h of hijos) { if (h.relacion !== "hijo" && norm(h.estirpe)) { const k = norm(h.estirpe); if (!porEst[k]) { porEst[k] = []; cabezas.push(porEst[k]); } porEst[k].push(h); } else cabezas.push([h]); }
+  const frac = (h) => { const g = cabezas.find((c) => c.includes(h)); return 1 / cabezas.length / g.length; };
+  const hayEstirpes = Object.keys(porEst).length > 0;
+  const der = {}; const add = (id, d) => (der[id] = der[id] || []).push(d);
+  const avisosFuera = fuera.map((p) => `${p.nombre} no recibe ${conyRen ? "parte" : "nuda propiedad"}: su progenitor ${p.estirpe} vive y hereda (arts. 929-931 CC). Si el testamento le nombra, introdúcelo por porcentajes.`);
+  if (hayEstirpes) avisosFuera.push(`Los descendientes de ${Object.keys(porEst).map((k) => porEst[k][0].estirpe).join(" y ")} reciben por estirpes la parte de su progenitor premuerto (sustitución vulgar, art. 774 CC). Si el testamento llama a los nietos por cabezas, introdúcelo por porcentajes.`);
+  if (conyRen && hijos.length) {
+    for (const h of hijos) add(h.id, { tipo: "pleno", fraccion: frac(h) });
+    return { derechos: der, notas: [`${conyRen.nombre} renuncia al usufructo universal: el legado no tiene efecto y se refunde en la herencia (art. 888 CC), de modo que los descendientes, herederos de la nuda propiedad, reciben el pleno dominio por partes iguales. Si el testamento nombra un sustituto para el usufructo (art. 774 CC), se aplica la sustitución: revisar el testamento.`], avisos: avisosFuera };
+  }
+  if (!cony || !hijos.length) return { derechos: {}, notas: ["Este modelo necesita cónyuge (o pareja) y al menos un descendiente."] };
+  add(cony.id, { tipo: "usufructo", fraccion: 1 });
+  for (const h of hijos) add(h.id, { tipo: "nuda", fraccion: frac(h), usufructuarioId: cony.id });
+  return { derechos: der, notas: [`Usufructo universal al cónyuge y nuda propiedad a los descendientes por partes iguales${hayEstirpes ? ", por estirpes" : ""}. Suele ir con cautela socini: si un hijo exige su legítima libre, se reduce a la estricta. Revisar el testamento.`], avisos: avisosFuera };
+}
+
+export function repartoPorcentajes(personas) {
+  const activos = personas.filter((p) => !p.renuncia && (Number(p.pct) || 0) > 0);
+  const total = activos.reduce((s, p) => s + Number(p.pct), 0);
+  const renunciado = personas.filter((p) => p.renuncia).reduce((s, p) => s + (Number(p.pct) || 0), 0);
+  const der = {}; const notas = [];
+  for (const p of activos) der[p.id] = [{ tipo: "pleno", fraccion: (Number(p.pct) / (total || 1)) }];
+  if (renunciado) notas.push(`Hay renuncias (${renunciado} %): su parte se ha repartido entre los demás en proporción (derecho de acrecer, arts. 981-987 CC). Si el testamento prevé sustitutos, se aplican ellos. Fiscalmente, quien recibe la parte renunciada tributa con su propio parentesco, aplicando el coeficiente multiplicador del renunciante si es superior al suyo (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991).`);
+  if (Math.abs(total + renunciado - 100) > 0.01) notas.push(`Los porcentajes suman ${total + renunciado} %, no 100 %. Se han normalizado.`);
+  return { derechos: der, notas };
+}
+
+// ─────────────────────────── Vecindad civil y sucesión intestada foral (control de calidad 07-10-2026, I6) ───────────────────────────
+// La sucesión se rige por la ley personal del causante al fallecer, que entre españoles es la de su VECINDAD CIVIL (arts. 9.8, 14 y 16.1 CC),
+// no por la residencia fiscal que decide qué comunidad cobra el impuesto (art. 32 Ley 22/2009). Sin dato en el expediente, se supone la del
+// territorio de residencia y se avisa: la vecindad se adquiere por filiación, opción o residencia continuada de dos o diez años (arts. 14-15 CC).
+export const VECINDADES = { comun: "derecho común (Código Civil)", CAT: "catalana", ARA: "aragonesa", NAV: "navarra", VASCO: "vasca", GAL: "gallega", BAL: "balear" };
+export function vecindadCivil(caso) {
+  const map = (t) => (["ALA", "BIZ", "GIP", "VASCO"].includes(t) ? "VASCO" : TERRITORIOS_FORALES_CIVIL.includes(t) ? t : "comun");
+  const v = caso && caso.vecindadCivil;
+  if (v && v !== "auto") return { id: v === "comun" ? "comun" : map(v), supuesta: false, residencia: map(caso.ccaa) };
+  return { id: map(caso && caso.ccaa), supuesta: true, residencia: map(caso && caso.ccaa) };
+}
+const esParejaRel = (p) => p.relacion === "pareja_hecho" || p.relacion === "pareja_no_inscrita";
+
+// Cataluña · Codi civil de Catalunya, llibre IV (Ley 10/2008), título IV. Cotejado el 07-10-2026 con dos fuentes secundarias concordantes
+// (Economist & Jurist, «El régimen de la sucesión intestada en Cataluña»; notariosyregistradores.com, resumen del libro IV) y con el preámbulo
+// oficial de la Ley 10/2008; el texto consolidado del BOE no se pudo leer entero (PENDIENTE el cotejo literal de la numeración de los apartados):
+//  · Orden: descendientes; cónyuge viudo o conviviente en pareja estable; ascendientes; colaterales hasta el 4.º grado; Generalitat.
+//  · Con descendientes, el viudo o conviviente tiene el usufructo universal de la herencia, libre de fianza (art. 442-3), que no se pierde por
+//    nuevo matrimonio o convivencia (art. 442-4.3), y puede conmutarlo en el plazo de un año desde la muerte por la cuarta parte alícuota de la
+//    herencia en propiedad más el usufructo de la vivienda conyugal o familiar (art. 442-5).
+//  · Sin descendientes hereda todo el viudo o conviviente, antes que los ascendientes, a salvo la legítima de los progenitores (art. 451-4).
+//  · Hermanos y sobrinos sin distinción de doble o sencillo vínculo (arts. 442-9 y 442-10, PENDIENTE de cotejo literal); colaterales hasta el
+//    4.º grado (art. 442-11); a falta de todos, la Generalitat (art. 442-13).
+//  · El conviviente en pareja estable (art. 234-1 CCCat: más de dos años de convivencia, hijo común o escritura pública) tiene los mismos derechos.
+// o.conmutacion: el viudo ejercita la conmutación · o.valorVivienda y o.netoReparto: para valorar el usufructo de la vivienda como fracción del caudal.
+export function repartoIntestadoCAT(personas, o = {}) {
+  const vivos = personas.filter((p) => !p.renuncia);
+  const conyV = vivos.find((p) => p.relacion === "conyuge" && !p.separado);
+  const parejas = vivos.filter(esParejaRel);
+  const cony = conyV || parejas[0] || null;
+  const notas = [], avisos = [];
+  for (const p of vivos.filter((q) => q.relacion === "conyuge" && q.separado)) avisos.push(`${p.nombre} no hereda: el cónyuge separado legalmente o de hecho, o con demanda de separación, nulidad o divorcio en trámite al fallecer, queda excluido de la sucesión intestada (CCCat, libro IV; apartado exacto PENDIENTE de cotejo).`);
+  if (conyV && parejas.length) avisos.push(`Constan a la vez un cónyuge no separado (${conyV.nombre}) y una pareja (${parejas.map((p) => p.nombre).join(", ")}): se ha tomado al cónyuge. Si el matrimonio estaba roto de hecho, marca la separación y revisa.`);
+  if (cony && esParejaRel(cony)) avisos.push(`${cony.nombre}: el conviviente en pareja estable tiene en la sucesión intestada los mismos derechos que el cónyuge viudo (arts. 442-3 a 442-5 CCCat) si la convivencia duraba al fallecer. Acredita que era pareja estable: más de dos años de convivencia ininterrumpida, un hijo común o escritura pública (art. 234-1 CCCat). En el impuesto, si no consta acreditada, el cálculo la trata como extraño (grupo IV).`);
+  const resto = personas.filter((p) => p.relacion !== "conyuge" && !esParejaRel(p));
+  if (resto.some((p) => p.medio)) avisos.push("Cataluña: los medio hermanos heredan igual que los de doble vínculo (art. 442-10 CCCat, según dos fuentes secundarias; PENDIENTE de cotejo literal). Se ha repartido sin distinción.");
+  const base = repartoIntestado(resto.map((p) => ({ ...p, medio: false })));
+  const der = base.derechos;
+  const L = (id) => personas.find((p) => p.id === id);
+  const descIds = Object.keys(der).filter((id) => linea(L(id)) === "desc");
+  const tipoGrupo = Object.keys(der).map((id) => linea(L(id)));
+  for (const a of base.avisos) if (!/no es heredero sin testamento en derecho común/.test(a)) avisos.push(a);
+  const notaRepr = "La representación de los descendientes de un hijo premuerto (por estirpes) y el acrecimiento por renuncia se calculan con la misma regla que en el Código Civil (arts. 441-6 y 442-1 CCCat: PENDIENTE de cotejo literal).";
+  if (descIds.length) {
+    if (cony && !o.conmutacion) {
+      for (const id of descIds) der[id] = der[id].map((d) => (d.tipo === "pleno" ? { tipo: "nuda", fraccion: d.fraccion, usufructuarioId: cony.id } : d));
+      der[cony.id] = [{ tipo: "usufructo", fraccion: 1 }];
+      notas.push(`Cataluña, sin testamento: los hijos heredan por partes iguales la nuda propiedad y ${cony.nombre} tiene el usufructo universal de toda la herencia, libre de fianza (art. 442-3 CCCat), que no se pierde por un nuevo matrimonio o convivencia (art. 442-4.3 CCCat).`);
+      notas.push(`Conmutación: en el plazo de un año desde el fallecimiento, ${cony.nombre} puede cambiar el usufructo universal por la cuarta parte de la herencia en propiedad más el usufructo de la vivienda conyugal o familiar (art. 442-5 CCCat). Si la ejercita, márcalo en el expediente y el reparto se recalcula.`);
+    } else if (cony) {
+      const fv = clamp(0.75 * (Number(o.valorVivienda) || 0) / (Number(o.netoReparto) || 1), 0, 0.75);
+      for (const id of descIds) der[id] = der[id].flatMap((d) => (d.tipo === "pleno" ? [{ tipo: "pleno", fraccion: d.fraccion * (0.75 - fv) }, ...(fv > 0 ? [{ tipo: "nuda", fraccion: d.fraccion * fv, usufructuarioId: cony.id }] : [])] : [d]));
+      der[cony.id] = [{ tipo: "pleno", fraccion: 0.25 }, ...(fv > 0 ? [{ tipo: "usufructo", fraccion: fv }] : [])];
+      notas.push(`Cataluña, sin testamento, con conmutación: ${cony.nombre} recibe la cuarta parte de la herencia en propiedad y el usufructo de la vivienda conyugal o familiar en lo que no le pertenece (art. 442-5 CCCat); los hijos, el resto. La conmutación se ejercita dentro del año siguiente al fallecimiento.`);
+      if (fv > 0) notas.push(`El usufructo de la vivienda se ha valorado como el ${grpPct(fv)} del caudal a repartir (tres cuartas partes del valor de la vivienda en la herencia frente al caudal neto): es una aproximación; en la partición se concreta sobre la vivienda.`);
+      else avisos.push("Conmutación sin vivienda familiar en el expediente: solo se ha atribuido la cuarta parte en propiedad. Si la vivienda conyugal o familiar es del causante, márcala como vivienda habitual.");
+    }
+    notas.push(notaRepr);
+  } else if (cony) {
+    for (const k of Object.keys(der)) delete der[k];
+    der[cony.id] = [{ tipo: "pleno", fraccion: 1 }];
+    notas.push(`Cataluña, sin testamento ni descendientes: hereda ${cony.nombre} toda la herencia, antes que los ascendientes y los colaterales (CCCat, libro IV, orden de suceder del título IV).`);
+    const padres = vivos.filter((p) => p.relacion === "padre");
+    if (padres.length) avisos.push(`${padres.map((p) => p.nombre).join(" y ")} no ${padres.length > 1 ? "heredan" : "hereda"} sin testamento porque hay viudo o conviviente, pero ${padres.length > 1 ? "conservan" : "conserva"} la legítima de los progenitores: una cuarta parte del caudal, como derecho de crédito frente al heredero (art. 451-4 CCCat).`);
+  } else if (tipoGrupo.includes("asc")) notas.push("Cataluña: a falta de descendientes y de viudo o conviviente heredan los progenitores por partes iguales; a falta de ellos, los ascendientes más próximos, por líneas (arts. 442-6 a 442-8 CCCat; reparto por líneas PENDIENTE de cotejo literal).");
+  else if (tipoGrupo.some((l) => l === "col2" || l === "col3")) notas.push(`Cataluña: heredan los hermanos por cabezas${tipoGrupo.includes("col3") ? " y los sobrinos por representación de su progenitor premuerto" : ""}, sin distinción de doble o sencillo vínculo (arts. 442-9 y 442-10 CCCat).`);
+  else if (tipoGrupo.includes("col4")) notas.push("Cataluña: heredan los colaterales más próximos hasta el cuarto grado (art. 442-11 CCCat).");
+  else notas.push("No hay parientes con derecho a heredar sin testamento: hereda la Generalitat de Catalunya (art. 442-13 CCCat). Revisar con el abogado.");
+  if (personas.some((p) => p.renuncia)) notas.push("Hay renuncias: su parte acrece a los coherederos o pasa a los llamados siguientes; reglas del CCCat (arts. 462-1 y siguientes) PENDIENTES de cotejo literal.");
+  notas.push("Cuarta vidual: si el viudo o conviviente no tiene recursos suficientes para sus necesidades, puede reclamar hasta la cuarta parte del activo hereditario líquido (art. 452-1 CCCat). Depende de su situación económica: no se cuantifica aquí.");
+  return { derechos: der, notas, avisos, regimen: "CAT" };
+}
+const grpPct = (f) => (Math.round(f * 10000) / 100).toLocaleString("es-ES") + " %";
+
+// Galicia · Ley 2/2006: la sucesión intestada se rige por el Código Civil (remisión del art. 267: fuente secundaria, Economist & Jurist,
+// PENDIENTE de cotejo literal), con los derechos propios del viudo (VERIFICADOS en el control de legítimas): usufructo vitalicio de una cuarta parte
+// con descendientes (art. 253) y de la mitad sin ellos (art. 254). La pareja de hecho inscrita en el Registro de Galicia se equipara al cónyuge
+// (disposición adicional 3.ª). A falta de parientes, hereda la Comunidad Autónoma de Galicia (arts. 267-269).
+export function repartoIntestadoGAL(personas) {
+  const r = repartoIntestado(personas, {
+    usufDesc: 1 / 4, notaDesc: "Galicia, sin testamento: orden del Código Civil (remisión del art. 267 Ley 2/2006). El viudo (o la pareja de hecho inscrita, disposición adicional 3.ª) tiene el usufructo vitalicio de una cuarta parte de la herencia (art. 253 Ley 2/2006); los descendientes, el resto en pleno dominio y la nuda propiedad de esa cuarta parte (arts. 930-934 CC).",
+    usufAsc: 1 / 2, notaAsc: "Galicia, sin testamento: heredan los ascendientes (orden del Código Civil por remisión del art. 267 Ley 2/2006) y el viudo, o la pareja de hecho inscrita, tiene el usufructo vitalicio de la mitad (art. 254 Ley 2/2006).",
+    parejaComoConyuge: true, notaFinal: "No hay parientes con derecho a heredar sin testamento: hereda la Comunidad Autónoma de Galicia (arts. 267-269 Ley 2/2006). Revisar con el abogado.",
+  });
+  if (personas.some((p) => p.relacion === "pareja_hecho" && !p.renuncia)) r.avisos.push("Galicia: la pareja de hecho se equipara al cónyuge si está inscrita en el Registro de Parejas de Hecho de Galicia (disposición adicional 3.ª Ley 2/2006). Compruébalo.");
+  r.avisos.push("Galicia: la remisión de la sucesión intestada al Código Civil (art. 267 Ley 2/2006) se ha tomado de fuente secundaria: PENDIENTE de cotejo literal. Los derechos del viudo (arts. 253-254) están cotejados.");
+  return { ...r, regimen: "GAL" };
+}
+
+// Illes Balears · Mallorca y Menorca: «La sucesión ab intestato se rige por lo dispuesto en el Código civil, sin perjuicio de los derechos que
+// reconoce al cónyuge viudo el artículo 45» (art. 53 Compilación, citado por Economist & Jurist; art. 45.3 VERIFICADO en el control de legítimas):
+// usufructo de la mitad con descendientes, de dos tercios con los padres y universal en los demás casos. Eivissa y Formentera, la pareja estable
+// (Ley 18/2001) y el viudo separado de hecho (reforma de la Ley 7/2017) no están cotejados: se bloquea el reparto automático.
+export function repartoIntestadoBAL(personas, o = {}) {
+  const eivissa = ["eivissa", "ibiza", "formentera"].includes(String(o.isla || "").toLowerCase());
+  if (eivissa) return bloqueoReparto("BAL", "Eivissa y Formentera tienen su propio régimen sucesorio (libro III de la Compilación), que el programa no modela.", "Compilación de Derecho Civil de las Illes Balears, libro III");
+  const vivos = personas.filter((p) => !p.renuncia);
+  if (vivos.some(esParejaRel)) return bloqueoReparto("BAL", "En Baleares la pareja estable inscrita tiene en la sucesión los derechos del cónyuge viudo (Ley 18/2001), regla que no está cotejada en el programa.", "Ley 18/2001 de parejas estables de las Illes Balears · art. 53 Compilación");
+  if (vivos.some((p) => p.relacion === "conyuge" && p.separado)) return bloqueoReparto("BAL", "La Ley 7/2017 cambió los derechos del cónyuge separado de hecho en el art. 45 de la Compilación: no está cotejado en el programa.", "art. 45 Compilación (redacción de la Ley 7/2017)");
+  const r = repartoIntestado(personas, {
+    usufDesc: 1 / 2, notaDesc: "Mallorca y Menorca, sin testamento: orden del Código Civil (art. 53 Compilación balear). El viudo tiene el usufructo de la mitad de la herencia (art. 45 Compilación); los descendientes, el resto en pleno dominio y la nuda propiedad de esa mitad.",
+    usufAsc: 2 / 3, notaAsc: "Mallorca y Menorca, sin testamento: heredan los padres (orden del Código Civil, art. 53 Compilación) y el viudo tiene el usufructo de dos tercios (art. 45 Compilación).",
+    usufAbuelos: 1, notaAbuelos: "Mallorca y Menorca, sin testamento: heredan los abuelos (orden del Código Civil, art. 53 Compilación) y el viudo tiene el usufructo universal (art. 45 Compilación, «en los demás casos»: aplicación a los abuelos PENDIENTE de confirmar).",
+    notaFinal: "No hay parientes con derecho a heredar sin testamento: heredan la Comunidad Autónoma, los consejos insulares y los ayuntamientos según la Compilación balear. Revisar con el abogado.",
+  });
+  if (!o.isla) r.avisos.push("Illes Balears: no consta la isla. Se ha aplicado el régimen de Mallorca y Menorca; en Eivissa y Formentera rige otro (libro III de la Compilación). Indícala en el expediente.");
+  return { ...r, regimen: "BAL" };
+}
+
+// ─────────── Aragón, Navarra y País Vasco: sucesión legal propia y bienes troncales (ronda 4, 07-10-2026; informe docs-r4/civil.md) ───────────
+// Fuentes y estado de cada regla:
+//  · PAÍS VASCO · Ley 5/2015, de 25 de junio, de Derecho Civil Vasco. Leída en el BOE (BOE-A-2015-8273, texto publicado el 24-07-2015, sin
+//    modificaciones en los artículos usados): VERIFICADO.
+//    Art. 110: hay sucesión legal si no se ha dispuesto válidamente de toda la herencia o de parte de ella. Art. 112: bienes no troncales, por
+//    este orden: 1.º hijos o descendientes; 2.º cónyuge viudo no separado legalmente o por mutuo acuerdo que conste de modo fehaciente, o
+//    miembro superviviente de la pareja de hecho; 3.º ascendientes; 4.º colaterales dentro del cuarto grado. Art. 113: los hijos por partes
+//    iguales; los nietos, por representación. Art. 114: a falta de descendientes sucede el cónyuge o la pareja, antes que ascendientes y
+//    colaterales, y «en todo caso» conserva sus derechos legitimarios de usufructo (art. 52: la mitad de los bienes con descendientes, dos
+//    tercios sin ellos) y el de habitación de la vivienda (art. 54). Art. 115: los padres por mitad, el que sobreviva la totalidad; después,
+//    los demás ascendientes por mitad entre líneas. Art. 116: hermanos e hijos de hermanos fallecidos (representación solo si concurren con
+//    hermanos; doble vínculo, doble porción) y después los parientes más próximos hasta el cuarto grado. Art. 117: Administración General del
+//    País Vasco (un tercio para ella, otro para la diputación foral y otro para el municipio de la última residencia), a beneficio de inventario.
+//    Troncalidad: art. 111 (bienes troncales por el orden del art. 66; los derechos del viudo o pareja recaen en ellos solo si faltan o no
+//    bastan los no troncales; sin tronqueros, todos son no troncales), arts. 61-68 (solo bienes raíces del infanzonado o tierra llana de
+//    Bizkaia, Aramaio y Llodio; línea descendente, ascendente de procedencia y colateral de procedencia hasta el cuarto grado; el más
+//    próximo excluye al más remoto, art. 73) y art. 70 (la troncalidad prevalece sobre la legítima; la del viudo se paga primero con bienes no
+//    troncales). Ayala (arts. 88-95): libertad de disponer; no tiene reglas propias de sucesión legal.
+//  · NAVARRA · Fuero Nuevo, leyes 304-307 tras la Ley Foral 21/2019. El BOE consolidado no se pudo leer entero (el texto excede lo que la
+//    herramienta descarga): transcripción de papelea.com (leyes 304, 305, 306 y 307.2-3) y dos estudios de la reforma (notariosyregistradores.com,
+//    Iura Vasconiae). PENDIENTE de cotejo literal. Ley 304: 1.º descendientes; 2.º cónyuge no excluido del usufructo de viudedad (ley 254:
+//    la separación legal o de hecho lo excluye); 3.º ascendientes de grado más próximo, por mitad entre líneas; 4.º hermanos de doble o sencillo
+//    vínculo por partes iguales, con representación; 5.º colaterales hasta el cuarto grado, sin representación; 6.º Comunidad Foral. Ley 305:
+//    sucesión troncal solo sin descendientes. Ley 306: troncales, los inmuebles adquiridos a título lucrativo de parientes hasta el cuarto
+//    grado (o por permuta de troncales o retracto gentilicio). Ley 307: parientes de la familia de procedencia; 2.º hermanos de doble o
+//    sencillo vínculo con representación; 3.º colaterales hasta el cuarto grado. El llamamiento 1.º de la ley 307 NO SE HA PODIDO LEER: si
+//    viven ascendientes y hay bienes troncales, el reparto se bloquea. Usufructo de viudedad del cónyuge sobre todos los bienes (ley 253;
+//    alcance PENDIENTE de cotejo literal). La pareja estable no tiene derechos en la sucesión legal (ley 113 y STC 93/2013).
+//  · ARAGÓN · Código del Derecho Foral de Aragón (D. Leg. 1/2011). El BOE consolidado (BOA-d-2011-90007) no se pudo leer más allá del preámbulo;
+//    arts. 535-536 VERIFICADOS en el BOE (Ley 3/2016, BOE-A-2016-2409). El resto, con tres fuentes secundarias concordantes (Economist & Jurist,
+//    mundojuridico.info, tema 118 de notariosyregistradores.com) y vLex (arts. 516-523): PENDIENTE de cotejo literal. Art. 517: primero los
+//    descendientes (hijos por partes iguales; nietos por sustitución legal), a salvo el usufructo de viudedad; sin ellos, los bienes recobrables
+//    y troncales a quienes tienen derecho a recobro y a los parientes troncales, y los demás a ascendientes, cónyuge, colaterales hasta el
+//    cuarto grado y Comunidad Autónoma (o el Hospital de Nuestra Señora de Gracia, art. 536). Arts. 524-525: recobro de liberalidades.
+//    Art. 526: bienes troncales: 1.º hermanos, hijos y nietos de hermanos por la línea de procedencia; 2.º el padre o la madre de esa línea;
+//    3.º colaterales más próximos hasta el cuarto grado (sexto en los de abolorio). Arts. 527-528: troncales de abolorio y simples (recibidos a
+//    título gratuito de ascendientes o colaterales hasta el sexto grado). Arts. 529-530: ascendientes. Art. 531: cónyuge no separado
+//    legalmente o de hecho por mutuo acuerdo fehaciente, sin demanda de nulidad, separación o divorcio en trámite. Arts. 532-534: colaterales
+//    (doble vínculo, doble porción). Usufructo de viudedad sobre todos los bienes del premuerto (art. 283, VERIFICADO en el control de legítimas).
+//    La pareja estable no casada no hereda sin testamento.
+// El programa no sabe qué bienes son troncales: el abogado los marca en la ficha del bien (troncal y línea de procedencia) y, si hace falta,
+// la línea de cada pariente (padre o madre, medio hermanos, tíos y primos). Si la línea de alguien decide el reparto y no consta, se bloquea.
+export const LEY_REPARTO = {
+  comun: "Código Civil (vecindad civil común)",
+  CAT: "Derecho civil catalán (Código civil de Cataluña, libro IV)",
+  ARA: "Derecho civil aragonés (Código del Derecho Foral de Aragón)",
+  NAV: "Derecho civil navarro (Fuero Nuevo de Navarra)",
+  VASCO: "Derecho civil vasco (Ley 5/2015 de Derecho Civil Vasco)",
+  GAL: "Derecho civil gallego (Ley 2/2006) y, por remisión, el Código Civil",
+  BAL: "Derecho civil balear (Compilación) y, por remisión, el Código Civil",
+};
+export function bloqueoReparto(regimen, motivo, norma, accion) {
+  return { derechos: {}, notas: [], avisos: [], regimen, bloqueado: { regimen, motivo, norma, estado: P,
+    titulo: `Reparto legal no calculado: vecindad civil ${VECINDADES[regimen] || regimen}`,
+    accion: accion || "Sin testamento, el reparto depende del derecho civil propio de la vecindad del causante. Determínalo con el abogado e introdúcelo a mano (Herederos › Testamento › reparto por porcentajes, o usufructo y nuda propiedad), o corrige la vecindad civil si no es foral. Mientras tanto no se calculan cuotas por heredero." } };
+}
+// Suma ponderada de repartos parciales: cada parte reparte una fracción f del caudal (derechos en fracciones de esa parte)
+export function combinarDerechos(partes) {
+  const der = {};
+  for (const { f, derechos } of partes) {
+    if (!(f > 1e-12)) continue;
+    for (const [id, ds] of Object.entries(derechos || {})) for (const d of ds) {
+      const arr = (der[id] = der[id] || []);
+      const igual = arr.find((e) => e.tipo === d.tipo && (e.usufructuarioId || null) === (d.usufructuarioId || null));
+      if (igual) igual.fraccion += d.fraccion * f; else arr.push({ ...d, fraccion: d.fraccion * f });
+    }
+  }
+  for (const id of Object.keys(der)) { der[id] = der[id].filter((d) => d.fraccion > 1e-12); for (const d of der[id]) d.fraccion = Math.round(d.fraccion * 1e12) / 1e12; if (!der[id].length) delete der[id]; }
+  return der;
+}
+// Grava con un usufructo de fracción u (del total de la parte) a favor de conyId lo que los demás reciben en pleno dominio
+function gravarUsufructo(der, conyId, u) {
+  if (!conyId || !(u > 0)) return der;
+  const out = {};
+  for (const [id, ds] of Object.entries(der)) out[id] = ds.flatMap((d) => (d.tipo === "pleno" ? [...(u < 1 ? [{ tipo: "pleno", fraccion: d.fraccion * (1 - u) }] : []), { tipo: "nuda", fraccion: d.fraccion * u, usufructuarioId: conyId }] : [d]));
+  out[conyId] = [...(out[conyId] || []), { tipo: "usufructo", fraccion: u }];
+  return out;
+}
+const nombres = (L) => L.map((p) => p.nombre).join(", ");
+// ¿Pertenece el pariente a la línea de procedencia L ("paterna" | "materna") del bien troncal? true, false o null (no consta)
+function enLineaTroncal(p, L) {
+  if ((p.relacion === "hermano" || p.relacion === "sobrino") && !p.medio) return true; // de doble vínculo: está en las dos líneas
+  if (!L) return null;
+  if (p.lineaAsc === "paterna" || p.lineaAsc === "materna") return p.lineaAsc === L;
+  return null;
+}
+const LADO = { paterna: "paterna", materna: "materna" };
+// Llamamientos a los bienes troncales sin descendientes. «pend»: llamamiento no cotejado (si hay parientes de ese grupo, se bloquea).
+const TRONCAL = {
+  ARA: { niveles: [{ rel: ["hermano", "sobrino"], t: "hermanos e hijos de hermanos de la línea de procedencia (art. 526.1.º CDFA)" }, { rel: ["padre"], t: "el padre o la madre de la línea de procedencia (art. 526.2.º CDFA)" }, { rel: ["tio", "primo"], t: "los colaterales más próximos de la línea de procedencia hasta el cuarto grado (art. 526.3.º CDFA)" }],
+    norma: "arts. 517, 526-528 CDFA", sin: "Sin parientes troncales de esa línea, el bien se reparte como no troncal (art. 517.2 CDFA, PENDIENTE de cotejo literal)." },
+  NAV: { niveles: [{ rel: ["padre", "abuelo"], pend: "El primer llamamiento de la ley 307 del Fuero Nuevo (tras la Ley Foral 21/2019) no se ha podido leer en fuente oficial y, si viven ascendientes, decide el reparto de los bienes troncales." }, { rel: ["hermano", "sobrino"], t: "hermanos de doble o sencillo vínculo de la familia de procedencia, con representación (ley 307.2 Fuero Nuevo)" }, { rel: ["tio", "primo"], t: "los colaterales más próximos de la familia de procedencia hasta el cuarto grado, sin representación (ley 307.3 Fuero Nuevo)" }],
+    norma: "leyes 305-307 Fuero Nuevo", sin: "Sin parientes troncales de esa familia, el bien se reparte como no troncal (ley 307, PENDIENTE de cotejo literal)." },
+  VASCO: { niveles: [{ rel: ["padre"], t: "el ascendiente de la línea de procedencia (arts. 66.2, 73 y 111 Ley 5/2015)" }, { rel: ["abuelo"], t: "los ascendientes de la línea de procedencia (arts. 66.2, 73 y 111 Ley 5/2015)" }, { rel: ["hermano", "sobrino"], t: "los colaterales de la línea de procedencia: hermanos e hijos de hermanos (arts. 66.3, 72.2 y 111 Ley 5/2015)" }, { rel: ["tio", "primo"], t: "los colaterales de la línea de procedencia hasta el cuarto grado (arts. 66.3, 67 y 111 Ley 5/2015)" }],
+    norma: "arts. 61-73 y 111 Ley 5/2015", sin: "Sin parientes tronqueros, el bien deja de ser troncal y se reparte con los demás (arts. 63.2 y 111.2 Ley 5/2015)." },
+};
+// Herederos de los bienes troncales de una línea: { derechos, nota } · null (sin tronqueros) · { bloqueo, accion }
+function tronqueros(reg, personas, L) {
+  const T = TRONCAL[reg];
+  for (const nv of T.niveles) {
+    const grupo = personas.filter((p) => nv.rel.includes(p.relacion));
+    const vivos = grupo.filter((p) => !p.renuncia);
+    if (!vivos.length) continue;
+    if (nv.pend) return { bloqueo: nv.pend, accion: `Viven ${nombres(vivos)}. Determina con el abogado quién hereda los bienes troncales e introduce el reparto a mano, o desmarca los bienes que no sean troncales.` };
+    const dudosos = vivos.filter((p) => enLineaTroncal(p, L) === null);
+    if (dudosos.length) return { bloqueo: `${L ? "" : "Algún bien troncal no tiene línea de procedencia y "}${L ? "N" : "n"}o consta la línea de ${nombres(dudosos)}, y de ella depende quién hereda los bienes troncales${L ? ` de la línea ${LADO[L]}` : ""}.`, accion: `${L ? "" : "Indica en la ficha de cada bien troncal si procede de la familia del padre (línea paterna) o de la madre (línea materna). "}Indica en la ficha de ${nombres(dudosos)} su línea (paterna o materna).` };
+    const dentro = grupo.filter((p) => enLineaTroncal(p, L) === true);
+    if (!dentro.some((p) => !p.renuncia)) continue;
+    const sub = repartoIntestado(dentro.map((p) => ({ ...p, medio: false })));
+    if (Object.keys(sub.derechos).length) return { derechos: sub.derechos, nota: nv.t };
+  }
+  return null;
+}
+// Reparto sin testamento de Aragón, Navarra y el País Vasco. o.troncales: [{ id, descripcion, valor, linea, tipo }] (bienes marcados
+// troncales y no legados); o.baseTroncal: caudal del que se toman las fracciones (bienes de la herencia menos legados; las deudas se
+// imputan en proporción, aproximación avisada); o.hayInmuebles.
+export function repartoIntestadoForal(reg, personas, o = {}) {
+  const notas = [], avisos = [];
+  const vivos = personas.filter((p) => !p.renuncia);
+  const sep = vivos.filter((p) => p.relacion === "conyuge" && p.separado);
+  const conyV = vivos.find((p) => p.relacion === "conyuge" && !p.separado);
+  const parejas = vivos.filter(esParejaRel);
+  const parejaVasca = reg === "VASCO" ? parejas.find((p) => p.relacion === "pareja_hecho") : null;
+  const cony = conyV || parejaVasca || null;
+  const resto = personas.filter((p) => p.relacion !== "conyuge" && !esParejaRel(p));
+  const L = { ARA: "Derecho civil aragonés", NAV: "Derecho civil navarro", VASCO: "Derecho civil vasco" }[reg];
+  const filtra = (r) => { for (const a of r.avisos || []) avisos.push(a.replace("no es heredero sin testamento en derecho común", `no es heredero sin testamento en el ${L.toLowerCase()}`)); return r; };
+  // Cónyuge separado y pareja
+  if (reg === "ARA") {
+    for (const p of sep) avisos.push(`${p.nombre} no hereda: el art. 531 CDFA excluye al cónyuge separado legalmente o de hecho por mutuo acuerdo que conste fehacientemente, o con demanda de nulidad, separación o divorcio en trámite, y la separación extingue también el usufructo de viudedad. Si la separación era solo de hecho y sin acuerdo fehaciente, sí hereda: desmarca la separación (PENDIENTE de cotejo literal).`);
+    for (const p of parejas) avisos.push(`${p.nombre}: la pareja estable no casada no hereda sin testamento en Aragón. Conserva el mobiliario y el ajuar de la vivienda habitual y puede vivir en ella gratis durante un año (régimen de las parejas estables no casadas del CDFA; artículo PENDIENTE de cotejo).`);
+  } else if (reg === "NAV") {
+    for (const p of sep) avisos.push(`${p.nombre} no hereda ni tiene el usufructo de viudedad: la separación legal o de hecho lo excluye (leyes 254 y 304.2 Fuero Nuevo, PENDIENTE de cotejo literal).`);
+    for (const p of parejas) avisos.push(`${p.nombre}: la pareja estable no tiene derechos en la sucesión legal navarra ni el usufructo de viudedad, salvo que el causante se los atribuyera en testamento, pacto o donación (ley 113 Fuero Nuevo; STC 93/2013). PENDIENTE de cotejo literal.`);
+  } else {
+    for (const p of sep) avisos.push(`${p.nombre} no hereda: el art. 112 Ley 5/2015 excluye al cónyuge separado legalmente o por mutuo acuerdo que conste de modo fehaciente, y el art. 55 le quita la legítima de usufructo y la habitación. Si la separación era solo de hecho y sin acuerdo fehaciente, sí hereda: desmarca la separación.`);
+    if (conyV && parejaVasca) avisos.push(`Constan a la vez un cónyuge no separado (${conyV.nombre}) y una pareja de hecho (${parejaVasca.nombre}): se ha tomado al cónyuge. Revisa la situación.`);
+    if (cony && cony.relacion === "pareja_hecho") avisos.push(`${cony.nombre}: el miembro superviviente de la pareja de hecho hereda como el cónyuge (arts. 112 y 114 Ley 5/2015). Debe ser una pareja de hecho inscrita en el registro del País Vasco (Ley 2/2003; requisito PENDIENTE de cotejo literal).`);
+    for (const p of parejas.filter((q) => q.relacion === "pareja_no_inscrita")) avisos.push(`${p.nombre}: la pareja de hecho no inscrita no hereda sin testamento en el País Vasco (Ley 2/2003). Si está inscrita, márcalo en su ficha.`);
+  }
+  // 1. Descendientes
+  const desc = repartoIntestado(resto.filter((p) => linea(p) === "desc"));
+  const hayDesc = Object.keys(desc.derechos).length > 0;
+  const troncales = (o.troncales || []).filter((b) => b && b.valor > 0);
+  const valTr = troncales.reduce((s, b) => s + b.valor, 0);
+  if (hayDesc) {
+    filtra(desc);
+    let der = desc.derechos;
+    const repr = desc.notas.find((n) => /estirpes|derecho propio/.test(n));
+    if (reg === "VASCO") {
+      if (cony) der = gravarUsufructo(der, cony.id, 1 / 2);
+      notas.push(`${L}, sin testamento: heredan los hijos por partes iguales${repr ? " y los nietos por representación" : ""} (arts. 112 y 113 Ley 5/2015).${cony ? ` ${cony.nombre} conserva su legítima: el usufructo de la mitad de todos los bienes (arts. 114.2 y 52.1), y el derecho de habitación en la vivienda conyugal o de la pareja mientras no se vuelva a casar ni conviva con otra persona (art. 54).` : ""}`);
+    } else if (reg === "ARA") {
+      if (cony) der = gravarUsufructo(der, cony.id, 1);
+      notas.push(`${L}, sin testamento: heredan los hijos por partes iguales${repr ? " y sus descendientes por sustitución legal" : ""} (arts. 517 y 521-523 CDFA).${cony ? ` ${cony.nombre} tiene el usufructo de viudedad sobre todos los bienes (arts. 517 y 283 CDFA): los hijos reciben la nuda propiedad.` : ""}`);
+      if (cony) avisos.push(`Usufructo de viudedad de ${cony.nombre}: corresponde si la ley aragonesa regía los efectos del matrimonio (art. 9.8 CC) y no se excluyó ni se renunció en capitulaciones o escritura. Compruébalo; si no corresponde, el reparto es solo entre los hijos.`);
+    } else {
+      if (cony) der = gravarUsufructo(der, cony.id, 1);
+      notas.push(`${L}, sin testamento: heredan los hijos por partes iguales${repr ? " y sus descendientes por representación" : ""} (ley 304.1 Fuero Nuevo).${cony ? ` ${cony.nombre} tiene el usufructo de viudedad sobre todos los bienes del premuerto (ley 253; alcance PENDIENTE de cotejo literal): los hijos reciben la nuda propiedad.` : ""}`);
+    }
+    if (repr) notas.push(repr);
+    if (troncales.length) notas.push(`Bienes troncales: habiendo descendientes, siguen el mismo reparto (${reg === "ARA" ? "art. 517 CDFA" : reg === "NAV" ? "ley 305 Fuero Nuevo" : "los descendientes son tronqueros, art. 66.1 Ley 5/2015"}).`);
+    if (personas.some((p) => p.renuncia)) notas.push("Hay renuncias: quien renuncia no es representado; su parte acrece a los coherederos y, si renuncian todos los del grado, heredan los del siguiente por derecho propio (como en los arts. 922-923 y 929 CC; en Aragón, arts. 519.2 y 520 CDFA).");
+    return { derechos: combinarDerechos([{ f: 1, derechos: der }]), notas, avisos, regimen: reg };
+  }
+  // 2. Sin descendientes: bienes no troncales
+  const FINAL = {
+    ARA: "No hay parientes con derecho a heredar sin testamento: hereda la Comunidad Autónoma de Aragón, que destina los bienes a establecimientos de asistencia social (art. 535 CDFA, VERIFICADO), o el Hospital de Nuestra Señora de Gracia si el causante murió allí (art. 536). Revisar con el abogado.",
+    NAV: "No hay parientes con derecho a heredar sin testamento: hereda la Comunidad Foral de Navarra, que destina los bienes a fines de interés social (ley 304.6 Fuero Nuevo). Revisar con el abogado.",
+    VASCO: "No hay parientes con derecho a heredar sin testamento: hereda la Administración General del País Vasco, que se queda un tercio y da otro a la diputación foral y otro al municipio de la última residencia, siempre a beneficio de inventario (art. 117 Ley 5/2015). Revisar con el abogado.",
+  };
+  const NOTA_ASC = {
+    ARA: `${L}, sin testamento ni descendientes: heredan los ascendientes; los padres por partes iguales y, si falta uno, el otro; a falta de ellos, los más próximos, por mitad entre líneas (arts. 529-530 CDFA, como los arts. 935-941 CC).`,
+    NAV: `${L}, sin testamento ni descendientes: heredan los ascendientes de grado más próximo, por mitad entre las líneas paterna y materna y por partes iguales dentro de cada una (ley 304.3 Fuero Nuevo).`,
+    VASCO: `${L}, sin testamento ni descendientes: heredan los padres por mitad o el que sobreviva la totalidad; a falta de ellos, los demás ascendientes por mitad entre líneas, y todo para una línea si en la otra no hay (art. 115 Ley 5/2015).`,
+  };
+  const NOTA_COL = {
+    ARA: `${L}, sin testamento: heredan los hermanos e hijos y nietos de hermanos (los de doble vínculo, doble porción que los medio hermanos) y, a falta de ellos, los demás colaterales más próximos hasta el cuarto grado (arts. 532-534 CDFA).`,
+    NAV: `${L}, sin testamento: heredan los hermanos, de doble o sencillo vínculo por partes iguales, y los hijos de los premuertos por representación; a falta de ellos, los colaterales más próximos hasta el cuarto grado, por partes iguales y sin representación (leyes 304.4 y 304.5 Fuero Nuevo).`,
+    VASCO: `${L}, sin testamento: heredan los hermanos e hijos de hermanos fallecidos (los de doble vínculo, doble porción que los medio hermanos; los sobrinos por estirpes si concurren con hermanos) y, a falta de ellos, los parientes más próximos hasta el cuarto grado (art. 116 Ley 5/2015).`,
+  };
+  let noTr;
+  if (cony && reg !== "ARA") {
+    noTr = { derechos: { [cony.id]: [{ tipo: "pleno", fraccion: 1 }] }, notas: [reg === "NAV" ? `${L}, sin testamento ni descendientes: hereda ${cony.nombre}, antes que los ascendientes y los hermanos (ley 304.2 Fuero Nuevo, tras la Ley Foral 21/2019).` : `${L}, sin testamento ni descendientes: hereda ${cony.nombre}, antes que los ascendientes y los colaterales (art. 114.1 Ley 5/2015).`], avisos: [] };
+  } else {
+    // Aragón: ascendientes, cónyuge, colaterales (el orden del Código Civil) con el usufructo de viudedad universal; Navarra y País Vasco sin viudo
+    noTr = filtra(repartoIntestado(reg === "ARA" ? [...resto, ...(cony ? [cony] : [])] : reg === "NAV" ? resto.map((p) => ({ ...p, medio: false })) : resto, reg === "ARA" ? { usufAsc: 1, usufAbuelos: 1 } : {}));
+    const lin = Object.keys(noTr.derechos).map((id) => linea(personas.find((p) => p.id === id)));
+    if (lin.includes("asc")) noTr.notas = [NOTA_ASC[reg] + (cony ? ` ${cony.nombre} conserva el usufructo de viudedad sobre todos los bienes (art. 283 CDFA): los ascendientes reciben la nuda propiedad.` : "")];
+    else if (cony) noTr.notas = [`${L}, sin testamento ni descendientes ni ascendientes: hereda ${cony.nombre}, antes que los hermanos y demás colaterales (art. 531 CDFA).`];
+    else if (lin.some((l) => l === "col2" || l === "col3" || l === "col4")) noTr.notas = [NOTA_COL[reg], ...noTr.notas.filter((n) => /^Solo sobrinos|no coincide/.test(n))];
+    else noTr.notas = [FINAL[reg]];
+    if (reg === "NAV" && resto.some((p) => p.medio) && lin.some((l) => l === "col2" || l === "col3")) avisos.push("Navarra: los medio hermanos heredan igual que los de doble vínculo (ley 304.4 Fuero Nuevo). Se ha repartido sin distinción.");
+  }
+  // 3. Bienes troncales (solo sin descendientes)
+  const base = Number(o.baseTroncal) || 0;
+  const validos = troncales.filter((b) => reg === "ARA" || b.tipo === "inmueble");
+  if (validos.length < troncales.length) avisos.push(`${nombres(troncales.filter((b) => !validos.includes(b)).map((b) => ({ nombre: b.descripcion || "Un bien" })))}: marcado como troncal, pero en ${reg === "NAV" ? "Navarra solo son troncales los inmuebles (ley 306 Fuero Nuevo)" : "el País Vasco solo lo son los bienes raíces (arts. 61 y 64 Ley 5/2015)"}. Se reparte como no troncal.`);
+  const partes = [];
+  let fTr = 0;
+  const notasTr = [];
+  if (validos.length && base > 0) {
+    const porLinea = {};
+    for (const b of validos) (porLinea[b.linea === "paterna" || b.linea === "materna" ? b.linea : ""] = porLinea[b.linea === "paterna" || b.linea === "materna" ? b.linea : ""] || []).push(b);
+    for (const [lin, bs] of Object.entries(porLinea)) {
+      const t = tronqueros(reg, personas, lin || null);
+      if (t && t.bloqueo) return bloqueoReparto(reg, `Hay bienes troncales y ${t.bloqueo.charAt(0).toLowerCase()}${t.bloqueo.slice(1)}`, TRONCAL[reg].norma, t.accion);
+      const f = Math.min(1, bs.reduce((s, b) => s + b.valor, 0) / base);
+      const desc = bs.map((b) => b.descripcion || "bien troncal").join(", ");
+      if (!t) { notasTr.push(`${desc}: ${TRONCAL[reg].sin}`); continue; }
+      partes.push({ f, derechos: t.derechos, lin });
+      fTr += f;
+      const quien = Object.keys(t.derechos).map((id) => personas.find((p) => p.id === id)?.nombre).filter(Boolean).join(", ");
+      notasTr.push(`Bienes troncales${lin ? ` de la línea ${LADO[lin]}` : ""} (${desc}): heredan ${quien}, como ${t.nota}.`);
+    }
+  }
+  fTr = Math.min(1, fTr);
+  const fNo = 1 - fTr;
+  // Derechos del viudo sobre los troncales
+  if (cony && partes.length) {
+    if (reg === "VASCO") {
+      const falta = Math.max(0, 2 / 3 - fNo);
+      if (falta > 1e-9) { for (const p of partes) p.derechos = gravarUsufructo(p.derechos, cony.id, falta / fTr); notasTr.push(`Los bienes no troncales no bastan para la legítima de ${cony.nombre} (usufructo de dos tercios, art. 52.2 Ley 5/2015): el usufructo que falta, el ${grpPct(falta)} del caudal, recae sobre los troncales (arts. 70.3 y 111.1). Los tronqueros pueden conmutarlo en dinero (art. 70.6).`); }
+      else notasTr.push(`${cony.nombre} recibe los bienes no troncales, que bastan para su legítima de usufructo; los troncales quedan libres para los tronqueros (arts. 70.3 y 111.1 Ley 5/2015).`);
+    } else {
+      for (const p of partes) p.derechos = gravarUsufructo(p.derechos, cony.id, 1);
+      notasTr.push(reg === "ARA" ? `${cony.nombre} conserva el usufructo de viudedad también sobre los bienes troncales (art. 283 CDFA): los parientes troncales reciben la nuda propiedad.` : `${cony.nombre} conserva el usufructo de viudedad también sobre los bienes troncales (ley 253 Fuero Nuevo; PENDIENTE de cotejo literal): los parientes troncales reciben la nuda propiedad.`);
+    }
+  }
+  const der = combinarDerechos([{ f: partes.length ? fNo : 1, derechos: noTr.derechos }, ...partes]);
+  if (cony && reg !== "ARA") { const asc = vivos.filter((p) => linea(p) === "asc" && !der[p.id]); if (asc.length) avisos.push(`${nombres(asc)} no ${asc.length > 1 ? "heredan" : "hereda"}${partes.length ? " los bienes no troncales" : ""}: ${reg === "NAV" ? "el cónyuge precede a los ascendientes (ley 304 Fuero Nuevo)" : "el cónyuge o la pareja preceden a los ascendientes, que no son legitimarios (arts. 47 y 114 Ley 5/2015)"}.`); }
+  notas.push(...noTr.notas, ...notasTr);
+  if (partes.length) avisos.push(`Bienes troncales: suponen el ${grpPct(fTr)} del caudal a repartir. Las deudas y gastos se han imputado en proporción a su valor: es una aproximación; en la partición se adjudican los bienes concretos a sus herederos.`);
+  // Avisos de lo que el programa no sabe
+  if (!validos.length) {
+    if (reg === "ARA") avisos.push("Aragón, sin descendientes: los bienes que el causante recibió gratis de ascendientes o colaterales hasta el sexto grado (troncales simples) y los que estuvieron en la familia las dos generaciones anteriores (de abolorio) van a los parientes de la línea de procedencia (arts. 526-528 CDFA). Si hay alguno, márcalo como troncal en su ficha; si no, todo se reparte como no troncal.");
+    else if (reg === "NAV" && o.hayInmuebles) avisos.push("Navarra, sin descendientes: los inmuebles que el causante recibió a título lucrativo de parientes hasta el cuarto grado son troncales y van a la familia de procedencia (leyes 305-307 Fuero Nuevo). Si hay alguno, márcalo como troncal en su ficha.");
+    else if (reg === "VASCO" && o.hayInmuebles) avisos.push("País Vasco, sin descendientes: los bienes raíces del infanzonado o tierra llana de Bizkaia, de Aramaio y de Llodio son troncales si hay parientes tronqueros, y van a los ascendientes y colaterales de la línea de procedencia (arts. 61-68 y 111 Ley 5/2015). Si hay alguno, márcalo como troncal en su ficha.");
+  } else if (reg === "ARA") avisos.push("Bienes de abolorio: el llamamiento a los colaterales llega hasta el sexto grado (art. 526.3.º CDFA); el programa solo distingue parientes hasta primos (cuarto grado). Revisa si hay parientes más lejanos de la línea.");
+  if (reg === "ARA") {
+    avisos.push("Recobro (arts. 524-525 CDFA): sin descendientes, los ascendientes o hermanos que donaron bienes al causante los recobran si aún existen en la herencia, a salvo el usufructo de viudedad. El programa no lo calcula: si hay bienes donados por ellos, sácalos del reparto.");
+    if (cony) avisos.push(`Usufructo de viudedad de ${cony.nombre}: corresponde si la ley aragonesa regía los efectos del matrimonio (art. 9.8 CC) y no se excluyó ni se renunció. Si ${cony.nombre} hereda bienes del causante y muere sin haber dispuesto de ellos, los que queden pasan a los parientes del causante llamados en ese momento (CDFA, PENDIENTE de cotejo literal).`);
+  }
+  if (personas.some((p) => p.renuncia)) notas.push("Hay renuncias: su parte acrece a los coherederos o pasa a los llamados siguientes, como en los arts. 922-923 CC" + (reg === "ARA" ? " (arts. 519-520 CDFA)" : "") + ".");
+  return { derechos: der, notas: notas.filter(Boolean), avisos, regimen: reg };
+}
+// Reparto sin testamento según la vecindad civil del causante
+export function repartoLegal(personas, vec, o = {}) {
+  const id = vec && vec.id || "comun";
+  if (id === "CAT") return repartoIntestadoCAT(personas, o);
+  if (id === "GAL") return repartoIntestadoGAL(personas);
+  if (id === "BAL") return repartoIntestadoBAL(personas, o);
+  if (id === "ARA" || id === "NAV" || id === "VASCO") return repartoIntestadoForal(id, personas, o);
+  return { ...repartoIntestado(personas), regimen: "comun" };
+}
+
+// ─────────────────────────── Legítimas (control de intangibilidad) ───────────────────────────
+// Derecho común (arts. 806-857 CC) y resumen de los regímenes forales. Fuentes cotejadas el 29-09-2026 (texto consolidado, dos fuentes):
+// VERIFICADO: CC 806-810, 812-821, 823, 834, 837-840, 851, 853, 855, 857, 985, 1056 · CCCat 451-3, 451-5, 451-6, 452-1 · CDFA 283, 486, 487, 489 ·
+// Ley 5/2015 (País Vasco) 47-49, 51-52 · Ley 2/2006 (Galicia) 238, 243, 253, 254 · Compilación balear 41-43, 45, 65, 79 · Fuero Nuevo ley 267.
+// Ronda 4 (07-10-2026): Ley 5/2015 arts. 47-55, 61-73, 88-95 y 110-117 VERIFICADOS en el BOE (BOE-A-2015-8273).
+// PENDIENTE: CDFA 492-494 y 509 · Ley 5/2015 56-60 · Fuero Nuevo leyes 253-254 (alcance literal) y 268-271 · Galicia 244-252 (cómputo e imputación) · Compilación balear 46-51 y 80-81.
+// El motor ESTIMA la posición de cada legitimario con los valores del expediente; la calificación jurídica (inoficiosidad, preterición, desheredación) es del abogado.
+export const LEGITIMA_REGIMENES = {
+  comun: { nombre: "Código Civil (derecho común)", norma: "arts. 806-857 CC", estado: V },
+  CAT: { nombre: "Cataluña · Código Civil de Cataluña, libro IV", norma: "arts. 451-1 a 451-27 y 452-1 CCCat", estado: V },
+  ARA: { nombre: "Aragón · Código del Derecho Foral", norma: "arts. 486-515 y 283 CDFA", estado: P },
+  NAV: { nombre: "Navarra · Fuero Nuevo", norma: "leyes 267-271 y 253-254 Compilación", estado: P },
+  VASCO: { nombre: "País Vasco · Ley 5/2015 de Derecho Civil Vasco", norma: "arts. 47-57 y 70 Ley 5/2015", estado: P }, // 47-55 y 70 VERIFICADOS en el BOE (ronda 4); 56-60, PENDIENTES
+  GAL: { nombre: "Galicia · Ley 2/2006 de Derecho Civil", norma: "arts. 238-266 Ley 2/2006", estado: V },
+  BAL: { nombre: "Illes Balears · Compilación de Derecho Civil", norma: "arts. 41-51 (Mallorca y Menorca) y 79-81 (Eivissa y Formentera) Compilación", estado: P },
+};
+export function calcularLegitimas(caso) {
+  const herederos = (caso.herederos || []).map((h) => ({ ...h, edad: h.edad == null || h.edad === "" || Number.isNaN(Number(h.edad)) ? null : Number(h.edad) }));
+  const derechos = caso.derechos || {}, masa = caso.masa || {};
+  const porId = Object.fromEntries(herederos.map((h) => [h.id, h]));
+  const norm = (t) => String(t || "").trim().toLowerCase();
+  const legados = (caso.legados || []).filter((l) => l && porId[l.legatarioId] && !porId[l.legatarioId].renuncia);
+  const donaciones = (caso.donaciones || []).filter((d) => d && d.valor > 0);
+  const netoReparto = Number(masa.netoReparto) || 0, neto = Number(masa.neto) || 0;
+  const donTotal = r2(donaciones.reduce((s, d) => s + (Number(d.valor) || 0), 0));
+  const base = r2(neto + donTotal); // art. 818 CC: relictum líquido (sin las cargas del testamento) + donatum colacionable
+  const pct = (h) => pctUsufructoVitalicio(h && h.edad != null ? h.edad : 40);
+  const edadFalta = (h) => !h || h.edad == null;
+  // Valor económico que recibe cada persona: porción según derechos (usufructo y nuda al valor fiscal), legados y donaciones imputables
+  const recibeDe = (h) => {
+    let v = 0, usufructo = 0;
+    for (const d of derechos[h.id] || []) {
+      if (d.tipo === "usufructo") { v += netoReparto * d.fraccion * pct(h); usufructo += d.fraccion; }
+      else if (d.tipo === "nuda") v += netoReparto * d.fraccion * (1 - pct(porId[d.usufructuarioId]));
+      else v += netoReparto * d.fraccion;
+    }
+    const leg = legados.filter((l) => l.legatarioId === h.id).reduce((s, l) => s + (Number(l.valor) || 0), 0);
+    const don = donaciones.filter((d) => d.herederoId === h.id).reduce((s, d) => s + (Number(d.valor) || 0), 0);
+    return { porcion: r2(v), legados: r2(leg), donaciones: r2(don), total: r2(v + leg + don), usufructo, tieneDerechos: (derechos[h.id] || []).length > 0 || leg > 0 };
+  };
+  const testado = caso.reparto === "porcentajes" || caso.reparto === "usufructoUniversal";
+  const vivos = herederos.filter((h) => !h.renuncia);
+  const conySeparado = vivos.find((h) => h.relacion === "conyuge" && h.separado);
+  const cony = vivos.find((h) => h.relacion === "conyuge" && !h.separado); // el separado legalmente o de hecho no es legitimario (art. 834 CC)
+  const desc = herederos.filter((h) => linea(h) === "desc");
+  const asc = vivos.filter((h) => linea(h) === "asc");
+  const hayDesc = desc.some((h) => !h.renuncia && !h.desheredado) || desc.some((h) => h.desheredado && desc.some((n) => n.relacion !== "hijo" && !n.renuncia && norm(n.estirpe) === norm(h.nombre)));
+  const intang = [], notas = [], pendientes = [];
+  const it = (o) => intang.push(o);
+  const regimenId = vecindadCivil(caso).id; // misma regla que el reparto sin testamento (control de calidad 07-10-2026, I6)
+  const RG = LEGITIMA_REGIMENES[regimenId];
+  const estadoDe = (h, minima, rec) => h.renuncia ? "renuncia" : h.desheredado ? "desheredado" : minima > 0 && edadFalta(h) && (rec.usufructo > 0) ? "no verificable" : rec.total + 1 >= minima ? "cubierta" : "vulnerada";
+  const fila = (h, tipo, minima, norma, nota) => { const rec = recibeDe(h); const estado = estadoDe(h, minima, rec); return { id: h.id, nombre: h.nombre, relacion: h.relacion, tipo, legitimaMinima: r2(minima), recibe: rec.total, porcion: rec.porcion, legados: rec.legados, donaciones: rec.donaciones, deficit: estado === "vulnerada" ? r2(Math.max(0, minima - rec.total)) : 0, estado, norma, nota: nota || "" }; };
+  // Estirpes de descendientes: hijos que cuentan + nietos que representan a un hijo premuerto o desheredado (arts. 814.3 y 857 CC; en derecho común el renunciante no hace número: art. 985.2)
+  const estirpes = (contarRenunciantes, contarDesheredados = contarRenunciantes) => {
+    const hijos = desc.filter((h) => h.relacion === "hijo");
+    const nietos = desc.filter((h) => h.relacion !== "hijo" && !h.renuncia);
+    const nomHijos = new Set(hijos.map((h) => norm(h.nombre)));
+    const out = [];
+    for (const h of hijos) {
+      const repr = nietos.filter((n) => norm(n.estirpe) && norm(n.estirpe) === norm(h.nombre));
+      if (h.desheredado && repr.length) { out.push({ cabeza: h, miembros: repr, representada: true }); continue; }
+      if (h.renuncia && !contarRenunciantes) continue;
+      if (h.desheredado && !contarDesheredados) continue;
+      out.push({ cabeza: h, miembros: [h] });
+    }
+    for (const n of nietos) if (!norm(n.estirpe) || !nomHijos.has(norm(n.estirpe))) { const k = norm(n.estirpe) || "_" + n.id; const g = out.find((e) => e.clave === k); if (g) g.miembros.push(n); else out.push({ cabeza: n, miembros: [n], clave: k, propia: true }); }
+    // Si repudian todos los hijos y no queda ninguna estirpe, los nietos de los renunciantes son legitimarios por derecho propio y por cabezas
+    // (art. 807.1 CC, por analogía con el art. 923 CC; criterio doctrinal: se avisa).
+    if (!out.length && !contarRenunciantes && hijos.length && hijos.every((h) => h.renuncia || h.desheredado)) {
+      const propios = nietos.filter((n) => hijos.some((h) => h.renuncia && norm(h.nombre) === norm(n.estirpe)));
+      for (const n of propios) out.push({ cabeza: n, miembros: [n], derechoPropio: true });
+      const msg = "Todos los hijos han repudiado: se trata a sus descendientes como legitimarios por derecho propio y por cabezas (arts. 807.1 y 923 CC por analogía). Criterio doctrinal: confirmarlo con el abogado.";
+      if (propios.length && !notas.includes(msg)) notas.push(msg);
+    }
+    return out;
+  };
+  const filasDesc = (fracTotal, norma, contarRenunciantes, notaEst) => {
+    const E = estirpes(contarRenunciantes), n = E.length;
+    const out = [];
+    for (const e of E) for (const m of e.miembros) out.push(fila(m, "descendiente", n ? fracTotal * base / n / e.miembros.length : 0, norma, e.representada ? `Representa a ${e.cabeza.nombre}, desheredado (art. 857 CC)` : e.derechoPropio ? "Por derecho propio: todos los hijos han repudiado" : m.relacion !== "hijo" ? "Por estirpes" : notaEst || ""));
+    for (const h of desc) if (!out.some((f) => f.id === h.id)) {
+      // Descendiente de grado más lejano cuyo progenitor vive o ha repudiado: no representa ni es legitimario (arts. 807.1, 929 y 985.2 CC). Auditoría 01-10-2026, C-3.
+      const noLegitimario = !h.renuncia && !h.desheredado && h.relacion !== "hijo";
+      if (noLegitimario) { const f = fila(h, "no legitimario", 0, "arts. 807, 929 y 985.2 CC", `No es legitimario: su progenitor${h.estirpe ? " " + h.estirpe : ""} vive o ha repudiado, y no cabe representación (arts. 929 y 985.2 CC). Puede recibir la mejora o el tercio libre si el testamento se lo atribuye.`); f.estado = "no legitimario"; f.deficit = 0; out.push(f); continue; }
+      out.push(fila(h, "descendiente", h.renuncia ? 0 : fracTotal * base / (n + 1), norma, h.renuncia ? "Renuncia: su parte pasa a los demás legitimarios por derecho propio (art. 985 CC)" : "Desheredado: si la causa (arts. 852-853 CC) no se prueba, conserva la legítima (art. 851 CC)"));
+    }
+    return { filas: out, n };
+  };
+  const res = { regimen: regimenId, regimenNombre: RG.nombre, norma: RG.norma, estado: RG.estado, base, neto, netoReparto, donaciones: donTotal, testado, herederos: [], tercios: null, viudo: null, colectiva: null, intangibilidad: intang, notas, pendientes, resumen: "" };
+
+  if (regimenId === "comun") {
+    let estricta = 0, mejora = 0, libre = base, legAsc = 0;
+    if (hayDesc) {
+      estricta = base / 3; mejora = base / 3; libre = base / 3;
+      const { filas, n } = filasDesc(1 / 3, "arts. 806-808 CC", false);
+      res.herederos.push(...filas);
+      res.tercios = { estricta: r2(estricta), mejora: r2(mejora), libre: r2(libre), fracciones: [1 / 3, 1 / 3, 1 / 3], etiquetas: ["Legítima estricta", "Mejora", "Libre disposición"], norma: "art. 808 CC", estado: V };
+      res.resumen = `Con descendientes, la legítima es de dos tercios del haber (art. 808 CC): un tercio de legítima estricta, que se reparte por cabezas o estirpes entre ${n} ${n === 1 ? "legitimario" : "legitimarios"}, y un tercio de mejora que el causante puede atribuir a cualquiera de ellos. El tercio restante es de libre disposición.`;
+      if (cony) { const v = r2(mejora * pct(cony)); res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "mejora", fraccion: 1 / 3, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 834 CC", estado: V }; res.herederos.push(fila(cony, "conyuge", v, "art. 834 CC", "Usufructo del tercio de mejora, valorado por su edad (art. 26 Ley 29/1987)")); }
+      // Legítima larga: los dos tercios (estricta + mejora) solo pueden recaer en descendientes (arts. 808 y 823 CC), con la carga del usufructo legal del viudo sobre la mejora
+      const larga = r2(estricta + mejora - (res.viudo ? res.viudo.valor : 0));
+      // La mejora puede atribuirse a cualquier descendiente, también a un nieto que no es legitimario (art. 823 CC): lo que este reciba cuenta para la legítima larga
+      const recibenDesc = r2(res.herederos.filter((h) => (h.tipo === "descendiente" && h.estado !== "renuncia") || h.tipo === "no legitimario").reduce((s, h) => s + h.recibe, 0));
+      res.larga = { importe: larga, recibenDescendientes: recibenDesc, estado: recibenDesc + 1 >= larga ? "cubierta" : "vulnerada", deficit: r2(Math.max(0, larga - recibenDesc)), norma: "arts. 808 y 823 CC", estadoNorma: V };
+      if (n === 1) {
+        const filasLeg = res.herederos.filter((q) => q.tipo === "descendiente" && q.estado !== "renuncia" && q.estado !== "desheredado");
+        const aOtrosDesc = r2(res.herederos.filter((q) => q.tipo === "no legitimario").reduce((s, q) => s + q.recibe, 0)); // mejora que el testador haya dado a otros descendientes
+        const minEstricta = filasLeg.length ? estricta / filasLeg.length : 0;
+        for (const h of filasLeg) { h.legitimaMinima = r2(Math.max(minEstricta, (larga - aOtrosDesc) / filasLeg.length)); h.estado = estadoDe(porId[h.id], h.legitimaMinima, recibeDe(porId[h.id])); h.deficit = h.estado === "vulnerada" ? r2(Math.max(0, h.legitimaMinima - h.recibe)) : 0; h.nota = "Única estirpe: le corresponden legítima estricta y mejora, dos tercios" + (res.viudo ? " menos el usufructo legal del viudo" : "") + (aOtrosDesc > 0 ? ", menos la mejora atribuida a otros descendientes" : "") + " (arts. 808 y 823 CC)"; }
+      }
+      else if (res.larga.estado === "vulnerada") it({ tipo: "cuantitativa", gravedad: "alta", titulo: "Los descendientes en conjunto reciben menos de dos tercios", detalle: `El tercio de mejora solo puede atribuirse a hijos o descendientes (art. 823 CC): entre todos les corresponden al menos ${Math.round(larga).toLocaleString("es-ES")} € (dos tercios${res.viudo ? " menos el usufructo legal del viudo" : ""}) y reciben ${Math.round(recibenDesc).toLocaleString("es-ES")} €. Lo atribuido a extraños por encima del tercio libre es inoficioso.`, accion: "Reducir las disposiciones a favor de no descendientes en lo que excedan del tercio de libre disposición (arts. 817-820 CC).", norma: "arts. 808, 817-820 y 823 CC", estado: V });
+    } else if (asc.length) {
+      legAsc = cony ? base / 3 : base / 2; libre = base - legAsc;
+      const padres = asc.filter((h) => h.relacion === "padre"), abuelos = asc.filter((h) => h.relacion === "abuelo");
+      const grupo = padres.length ? padres : abuelos;
+      const norma = cony ? "arts. 809-810 CC (un tercio por concurrir el cónyuge)" : "arts. 809-810 CC";
+      if (padres.length) for (const p of padres) res.herederos.push(fila(p, "ascendiente", legAsc / padres.length, norma, padres.length === 1 ? "Único progenitor: toda la legítima de los ascendientes (art. 810 CC)" : "Por mitad entre los dos (art. 810 CC)"));
+      else {
+        const pat = abuelos.filter((a) => a.lineaAsc === "paterna"), mat = abuelos.filter((a) => a.lineaAsc === "materna");
+        const porLineas = pat.length && mat.length && pat.length + mat.length === abuelos.length;
+        for (const a of abuelos) res.herederos.push(fila(a, "ascendiente", porLineas ? legAsc / 2 / (a.lineaAsc === "paterna" ? pat.length : mat.length) : legAsc / abuelos.length, norma, porLineas ? "Por mitad entre las líneas paterna y materna (art. 810 CC)" : "Abuelos del mismo grado: indica la línea de cada uno para repartir por líneas (art. 810 CC)"));
+      }
+      for (const h of asc.filter((h) => !grupo.includes(h))) res.herederos.push(fila(h, "ascendiente", 0, "art. 810 CC", "Ascendiente de grado más remoto: no es legitimario mientras vivan los más próximos"));
+      res.tercios = { estricta: r2(legAsc), mejora: 0, libre: r2(libre), fracciones: [cony ? 1 / 3 : 1 / 2, 0, cony ? 2 / 3 : 1 / 2], etiquetas: ["Legítima de ascendientes", "", "Libre disposición"], norma: "art. 809 CC", estado: V };
+      res.resumen = `Sin descendientes, la legítima de los padres o ascendientes es ${cony ? "un tercio del haber, por concurrir con el cónyuge viudo" : "la mitad del haber"} (art. 809 CC), repartida según el art. 810 CC.`;
+      if (cony) { const v = r2(base / 2 * pct(cony)); res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "mitad", fraccion: 1 / 2, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 837 CC", estado: V }; res.herederos.push(fila(cony, "conyuge", v, "art. 837 CC", "Usufructo de la mitad de la herencia, valorado por su edad")); }
+    } else if (cony) {
+      const v = r2(base * 2 / 3 * pct(cony));
+      res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "dos tercios", fraccion: 2 / 3, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 838 CC", estado: V };
+      res.herederos.push(fila(cony, "conyuge", v, "art. 838 CC", "Usufructo de dos tercios de la herencia, valorado por su edad"));
+      res.tercios = { estricta: 0, mejora: 0, libre: r2(base), fracciones: [0, 0, 1], etiquetas: ["", "", "Libre disposición"], norma: "art. 838 CC", estado: V };
+      res.resumen = "Sin descendientes ni ascendientes, el único legitimario es el cónyuge viudo, con el usufructo de dos tercios de la herencia (art. 838 CC). La propiedad de todo el caudal es de libre disposición.";
+    } else {
+      res.tercios = { estricta: 0, mejora: 0, libre: r2(base), fracciones: [0, 0, 1], etiquetas: ["", "", "Libre disposición"], norma: "art. 807 CC", estado: V };
+      res.resumen = "No hay herederos forzosos (art. 807 CC): todo el caudal es de libre disposición.";
+    }
+    // Intangibilidad cuantitativa (arts. 813.1, 815, 817-820)
+    const vul = res.herederos.filter((h) => h.estado === "vulnerada");
+    if (vul.length) it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima ${vul.length === 1 ? "posiblemente lesionada" : "posiblemente lesionada"}: ${vul.map((h) => h.nombre).join(", ")}`, detalle: `Con los valores del expediente, ${vul.map((h) => `${h.nombre} recibe ${Math.round(h.recibe).toLocaleString("es-ES")} € frente a un mínimo de ${Math.round(h.legitimaMinima).toLocaleString("es-ES")} €`).join("; ")}. El testador no puede privar a los herederos forzosos de su legítima (art. 813 CC).`, accion: "Reclamar el complemento de legítima (art. 815 CC) o reducir las disposiciones inoficiosas: primero la institución de heredero, después legados y mejoras a prorrata (arts. 817-820 CC).", norma: "arts. 813, 815 y 817-820 CC", estado: V });
+    // Intangibilidad cualitativa (art. 813.2): gravamen sobre la legítima estricta (usufructo más allá del tercio de mejora)
+    if (hayDesc && cony) {
+      const uCony = (derechos[cony.id] || []).filter((d) => d.tipo === "usufructo").reduce((s, d) => s + d.fraccion, 0);
+      if (uCony > 1 / 3 + 1e-6) it({ tipo: "cualitativa", gravedad: "media", titulo: uCony >= 1 - 1e-6 ? "Usufructo universal del cónyuge: grava la legítima estricta" : "Usufructo del cónyuge por encima del tercio de mejora", detalle: `El usufructo del viudo alcanza el ${Math.round(uCony * 100)} % de la herencia; la ley solo le reserva el del tercio de mejora (art. 834 CC). Sobre la legítima estricta no cabe gravamen ni condición (art. 813.2 CC), salvo que el testamento incluya una cautela socini: cada hijo elige entre respetar el usufructo universal (y recibir más que su estricta) o exigir su legítima estricta libre, quedando el resto para el cónyuge. Sin cautela, los legitimarios pueden optar por cumplir la disposición o entregar al usufructuario solo la parte de libre disposición (art. 820.3.º CC).`, accion: "Comprobar en el testamento si hay cautela socini y advertir a los hijos de la opción antes de aceptar. Valor fiscal del usufructo: 89 − edad, entre el 10 % y el 70 % (art. 26 Ley 29/1987).", norma: "arts. 813.2, 820.3.º y 834 CC", estado: V });
+    }
+    // Preterición (art. 814): descendiente conocido sin atribución alguna en una sucesión testada
+    const noLeg = new Set(res.herederos.filter((h) => h.tipo === "no legitimario").map((h) => h.id));
+    if (testado) for (const h of desc.filter((h) => !h.renuncia && !h.desheredado && !noLeg.has(h.id))) { const rec = recibeDe(h); if (!rec.tieneDerechos && rec.donaciones === 0) it({ tipo: "pretericion", gravedad: "alta", titulo: `Posible preterición de ${h.nombre}`, detalle: `${h.nombre} es descendiente y no recibe nada en el reparto del testamento. La preterición no perjudica la legítima (art. 814 CC): si es no intencional y afecta a todos los hijos se anulan las disposiciones patrimoniales; si afecta a alguno, se anula la institución de heredero y valen legados y mejoras no inoficiosos. Si el hijo nació o fue reconocido después del testamento, la preterición suele ser no intencional.`, accion: "Confirmar con el testamento si la omisión es intencional. Si hay preterición, el reparto debe rehacerse antes de la partición (arts. 814 y 815 CC).", norma: "art. 814 CC", estado: V }); }
+    // Desheredación (arts. 848-857)
+    for (const h of desc.filter((h) => h.desheredado)) it({ tipo: "desheredacion", gravedad: "media", titulo: `${h.nombre} consta desheredado`, detalle: "La desheredación exige causa legal expresada en el testamento (arts. 848-849 y 853 CC: negar alimentos, maltrato de obra o injuria grave, entre otras). Si el desheredado la niega, la prueba corresponde a los herederos (art. 850 CC); sin causa probada, se anula la institución de heredero en lo que le perjudique (art. 851 CC). Sus hijos y descendientes ocupan su lugar respecto a la legítima (art. 857 CC).", accion: "Revisar la causa alegada en el testamento y si el desheredado tiene descendientes, que conservan la legítima estricta.", norma: "arts. 848-857 CC", estado: V });
+    if (donTotal) it({ tipo: "donaciones", gravedad: "baja", titulo: "Donaciones computadas para la legítima", detalle: `Se han añadido ${Math.round(donTotal).toLocaleString("es-ES")} € de donaciones colacionables al valor líquido de la herencia (art. 818 CC). Las hechas a hijos se imputan a su legítima; las hechas a extraños, al tercio libre (art. 819 CC). Si resultan inoficiosas se reducen, pero solo después de las mandas testamentarias (art. 820.1.º CC).`, accion: "Valorar las donaciones al tiempo de la muerte del causante y comprobar si el donante las dispensó de colación (art. 1036 CC).", norma: "arts. 818-820 CC", estado: V });
+    if (caso.hayEmpresa && hayDesc) it({ tipo: "empresa", gravedad: "baja", titulo: "Empresa en la herencia: pago de la legítima en metálico", detalle: "El testador puede adjudicar la explotación económica o el control de la sociedad a uno de los herederos y ordenar que la legítima de los demás se pague en metálico, incluso con dinero extrahereditario y aplazado hasta cinco años (art. 1056.2 CC). Si el testamento no lo prevé, cualquier legitimario puede exigir su legítima en bienes de la herencia.", accion: "Comprobar si el testamento usa la facultad del art. 1056.2 CC y, en su caso, el plazo y la forma de pago.", norma: "art. 1056 CC", estado: V });
+    if (conySeparado) notas.push(`${conySeparado.nombre} consta como cónyuge separado legalmente o de hecho: no es legitimario (art. 834 CC).`);
+    if (res.viudo && res.viudo.edadFalta) { pendientes.push("Edad del cónyuge viudo (valor del usufructo)"); notas.push(`Falta la edad de ${res.viudo.nombre}: el usufructo se ha valorado como si tuviera 40 años.`); }
+    if (res.herederos.some((h) => h.tipo === "descendiente" && h.estado !== "renuncia") && !cony && herederos.some((h) => h.relacion === "pareja_hecho" || h.relacion === "pareja_no_inscrita")) notas.push("La pareja de hecho no es legitimaria en el Código Civil (art. 807 CC): solo recibe lo que le deje el testamento, con cargo al tercio libre.");
+    return res;
+  }
+
+  // ─── Regímenes forales ───
+  const nHijosQueHacenNumero = (incluirRenunciantes) => estirpes(incluirRenunciantes).length;
+  const notaForal = (t) => notas.push(t);
+  // Sin testamento, el reparto del expediente sigue el Código Civil: la sucesión intestada foral puede ser distinta, así que no se afirma lesión alguna
+  const cierreForal = (out) => {
+    if (!testado) {
+      let cambio = false;
+      for (const h of out.herederos) if (h.estado === "vulnerada") { h.estado = "no verificable"; h.deficit = 0; h.nota = (h.nota ? h.nota + ". " : "") + "Reparto intestado calculado con el Código Civil"; cambio = true; }
+      if (out.colectiva && out.colectiva.estado === "vulnerada") { out.colectiva.estado = "no verificable"; cambio = true; }
+      out.intangibilidad = out.intangibilidad.filter((i) => i.tipo !== "cuantitativa");
+      if (cambio || out.herederos.length) notas.push(["CAT", "GAL", "BAL"].includes(regimenId)
+        ? "Sin testamento no hay disposiciones que reducir: la sucesión legal respeta las legítimas. El reparto del expediente sigue la sucesión intestada de este derecho civil propio (ver las notas del reparto)."
+        : "Sin testamento no hay disposiciones que reducir: la sucesión legal respeta las legítimas. El reparto del expediente sigue la sucesión legal de este derecho civil propio, con los bienes troncales que se hayan marcado (ver las notas del reparto).");
+    }
+    return out;
+  };
+  if (regimenId === "CAT") {
+    const leg = r2(base / 4), n = nHijosQueHacenNumero(true);
+    res.tercios = { estricta: hayDesc || asc.length ? leg : 0, mejora: 0, libre: r2(base - (hayDesc || asc.length ? leg : 0)), fracciones: [hayDesc || asc.length ? 1 / 4 : 0, 0, hayDesc || asc.length ? 3 / 4 : 1], etiquetas: ["Legítima (1/4)", "", "Libre disposición"], norma: "art. 451-5 CCCat", estado: V };
+    if (hayDesc) { const { filas } = filasDesc(1 / 4, "arts. 451-3, 451-5 y 451-6 CCCat", true, "Legítima individual: la cuarta parte dividida entre los hijos que hacen número"); res.herederos.push(...filas); }
+    else if (asc.length) { const padres = asc.filter((h) => h.relacion === "padre"); for (const p of padres) res.herederos.push(fila(p, "ascendiente", leg / padres.length, "art. 451-4 CCCat", "Legítima de los progenitores a falta de descendientes (art. 451-4 CCCat: texto PENDIENTE de cotejo)")); pendientes.push("art. 451-4 CCCat (legítima de los progenitores)"); }
+    res.resumen = `Cataluña: la legítima es la cuarta parte del valor líquido de la herencia más las donaciones de los diez años anteriores (art. 451-5 CCCat)${hayDesc ? `, dividida por igual entre los ${n} hijos que hacen número, incluidos los que renuncian o han sido desheredados justamente (art. 451-6 CCCat)` : asc.length ? ", que corresponde a los progenitores a falta de descendientes" : ""}. Es un derecho de crédito (pars valoris) que se puede pagar en dinero o en bienes; no hay tercio de mejora ni usufructo legal del viudo.`;
+    if (cony) { res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "cuarta viudal", fraccion: 1 / 4, valor: null, pct: null, norma: "art. 452-1 CCCat", estado: V }; notaForal("El cónyuge o conviviente no es legitimario en Cataluña: solo tiene derecho a la cuarta viudal si no tiene recursos suficientes, hasta un máximo de la cuarta parte del activo hereditario líquido (art. 452-1 CCCat). Depende de su situación económica: no se cuantifica aquí."); }
+    const vul = res.herederos.filter((h) => h.estado === "vulnerada");
+    if (vul.length) it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima catalana posiblemente insatisfecha: ${vul.map((h) => h.nombre).join(", ")}`, detalle: `${vul.map((h) => `${h.nombre} recibe ${Math.round(h.recibe).toLocaleString("es-ES")} € frente a ${Math.round(h.legitimaMinima).toLocaleString("es-ES")} € de legítima individual`).join("; ")}.`, accion: "El legitimario puede reclamar el pago o el suplemento de la legítima (arts. 451-10 y 451-15 CCCat) y, si procede, la reducción de legados y donaciones inoficiosas (arts. 451-22 y siguientes). Prescripción: diez años (art. 451-27 CCCat). Artículos PENDIENTES de cotejo literal.", norma: "arts. 451-10, 451-15, 451-22 a 451-27 CCCat", estado: P });
+    pendientes.push("arts. 451-10, 451-15 y 451-22 a 451-27 CCCat (reclamación, suplemento y reducción)");
+    return cierreForal(res);
+  }
+  if (regimenId === "GAL") {
+    const leg = r2(base / 4);
+    res.tercios = { estricta: hayDesc ? leg : 0, mejora: 0, libre: r2(base - (hayDesc ? leg : 0)), fracciones: [hayDesc ? 1 / 4 : 0, 0, hayDesc ? 3 / 4 : 1], etiquetas: ["Legítima (1/4)", "", "Libre disposición"], norma: "art. 243 Ley 2/2006", estado: V };
+    if (hayDesc) { const { filas, n } = filasDesc(1 / 4, "arts. 238 y 243 Ley 2/2006", false, "La cuarta parte se divide entre los hijos o sus linajes"); res.herederos.push(...filas); res.resumen = `Galicia: la legítima de los descendientes es la cuarta parte del haber hereditario líquido, dividida entre ${n} ${n === 1 ? "hijo o linaje" : "hijos o linajes"} (art. 243 Ley 2/2006). Los ascendientes no son legitimarios (art. 238). Es un derecho de crédito (pars valoris) que puede pagarse en dinero.`; }
+    else res.resumen = "Galicia: sin descendientes, los ascendientes no son legitimarios (art. 238 Ley 2/2006); el único legitimario posible es el cónyuge viudo no separado.";
+    if (cony) { const f = hayDesc ? 1 / 4 : 1 / 2; const v = r2(base * f * pct(cony)); res.viudo = { id: cony.id, nombre: cony.nombre, sobre: hayDesc ? "cuarta parte" : "mitad", fraccion: f, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: hayDesc ? "art. 253 Ley 2/2006" : "art. 254 Ley 2/2006", estado: V }; res.herederos.push(fila(cony, "conyuge", v, hayDesc ? "art. 253 Ley 2/2006" : "art. 254 Ley 2/2006", `Usufructo vitalicio de ${hayDesc ? "una cuarta parte" : "la mitad"} del haber, valorado por su edad`)); }
+    const vul = res.herederos.filter((h) => h.estado === "vulnerada");
+    if (vul.length) it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima gallega posiblemente insatisfecha: ${vul.map((h) => h.nombre).join(", ")}`, detalle: `${vul.map((h) => `${h.nombre} recibe ${Math.round(h.recibe).toLocaleString("es-ES")} € frente a ${Math.round(h.legitimaMinima).toLocaleString("es-ES")} €`).join("; ")}.`, accion: "El legitimario puede exigir el pago de su legítima (art. 249) y la reducción de legados y donaciones inoficiosas (arts. 251-252 Ley 2/2006). Cómputo e imputación de donaciones: arts. 244-248. Artículos PENDIENTES de cotejo literal.", norma: "arts. 244-252 Ley 2/2006", estado: P });
+    pendientes.push("arts. 244-252 Ley 2/2006 (cómputo, imputación y reducción)");
+    return cierreForal(res);
+  }
+  if (regimenId === "BAL") {
+    const eivissa = caso.isla === "eivissa" || caso.isla === "ibiza" || caso.isla === "formentera";
+    const n = nHijosQueHacenNumero(true);
+    const f = hayDesc ? (n > 4 ? 1 / 2 : 1 / 3) : asc.length && !eivissa ? 1 / 4 : 0;
+    res.tercios = { estricta: r2(base * f), mejora: 0, libre: r2(base * (1 - f)), fracciones: [f, 0, 1 - f], etiquetas: [hayDesc ? `Legítima (${n > 4 ? "1/2" : "1/3"})` : asc.length ? "Legítima de los padres (1/4)" : "", "", "Libre disposición"], norma: eivissa ? "art. 79 Compilación balear" : "arts. 42-43 Compilación balear", estado: V };
+    if (hayDesc) { const { filas } = filasDesc(f, eivissa ? "art. 79 Compilación balear" : "art. 42 Compilación balear", true, "Hacen número los hijos y estirpes, incluidos renunciantes y desheredados (art. 42)"); res.herederos.push(...filas); }
+    else if (asc.length && !eivissa) { const padres = asc.filter((h) => h.relacion === "padre"); for (const p of padres) res.herederos.push(fila(p, "ascendiente", base / 4 / padres.length, "art. 43 Compilación balear", padres.length === 1 ? "Único progenitor: toda la cuarta parte" : "Por mitad entre ambos")); }
+    res.resumen = `${eivissa ? "Eivissa y Formentera" : "Mallorca y Menorca"}: la legítima de los hijos es la tercera parte del haber si son cuatro o menos y la mitad si son más de cuatro (${eivissa ? "art. 79" : "art. 42"} Compilación balear)${!eivissa ? "; a falta de descendientes, la de los padres es la cuarta parte (art. 43)" : ""}. ${eivissa ? "En Eivissa y Formentera el cónyuge viudo no figura entre los legitimarios (art. 79): PENDIENTE de cotejo." : "El cónyuge viudo es legitimario: usufructo de la mitad con descendientes, de dos tercios con padres y universal en los demás casos (art. 45)."}`;
+    if (cony && !eivissa) { const fc = hayDesc ? 1 / 2 : asc.length ? 2 / 3 : 1; const v = r2(base * fc * pct(cony)); res.viudo = { id: cony.id, nombre: cony.nombre, sobre: hayDesc ? "mitad" : asc.length ? "dos tercios" : "universal", fraccion: fc, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 45.3 Compilación balear", estado: V }; res.herederos.push(fila(cony, "conyuge", v, "art. 45.3 Compilación balear", `Usufructo ${fc === 1 ? "universal" : "de " + (fc === 0.5 ? "la mitad" : "dos tercios")}, valorado por su edad`)); }
+    if (eivissa) pendientes.push("arts. 79-81 Compilación balear (Eivissa y Formentera)");
+    const vul = res.herederos.filter((h) => h.estado === "vulnerada");
+    if (vul.length) it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima balear posiblemente insatisfecha: ${vul.map((h) => h.nombre).join(", ")}`, detalle: `${vul.map((h) => `${h.nombre} recibe ${Math.round(h.recibe).toLocaleString("es-ES")} € frente a ${Math.round(h.legitimaMinima).toLocaleString("es-ES")} €`).join("; ")}.`, accion: "Reclamar el complemento y la reducción de disposiciones inoficiosas (arts. 46-51 Compilación balear: PENDIENTE de cotejo). La legítima balear es pars bonorum: da derecho a bienes de la herencia salvo que el testador autorice el pago en dinero (art. 48).", norma: "arts. 46-51 Compilación balear", estado: P });
+    pendientes.push("arts. 46-51 Compilación balear (cómputo, imputación y pago)");
+    return cierreForal(res);
+  }
+  if (regimenId === "VASCO" || regimenId === "ARA") {
+    const vasco = regimenId === "VASCO";
+    const f = hayDesc ? (vasco ? 1 / 3 : 1 / 2) : 0;
+    const importe = r2(base * f);
+    const recibenDesc = r2(desc.filter((h) => !h.renuncia).reduce((s, h) => s + recibeDe(h).total, 0));
+    res.tercios = { estricta: importe, mejora: 0, libre: r2(base - importe), fracciones: [f, 0, 1 - f], etiquetas: [hayDesc ? `Legítima colectiva (${vasco ? "1/3" : "1/2"})` : "", "", "Libre disposición"], norma: vasco ? "art. 49 Ley 5/2015" : "art. 486 CDFA", estado: V };
+    if (hayDesc) {
+      res.colectiva = { fraccion: f, importe, recibenDescendientes: recibenDesc, estado: recibenDesc + 1 >= importe ? "cubierta" : "vulnerada", deficit: r2(Math.max(0, importe - recibenDesc)), nota: "Colectiva: el testador la puede asignar a uno solo de los descendientes y apartar a los demás; no se comprueba por cabezas.", norma: vasco ? "arts. 48-49 Ley 5/2015" : "art. 486 CDFA", estadoNorma: V };
+      for (const h of desc) res.herederos.push({ ...fila(h, "descendiente", 0, vasco ? "arts. 48-49 Ley 5/2015" : "art. 486 CDFA", ""), legitimaMinima: null, deficit: 0, estado: h.renuncia ? "renuncia" : h.desheredado ? "desheredado" : "colectiva", nota: "Colectiva: no se comprueba por cabezas" });
+      if (res.colectiva.estado === "vulnerada") it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima colectiva posiblemente insatisfecha (${vasco ? "un tercio" : "la mitad"} del caudal)`, detalle: `El conjunto de los descendientes recibe ${Math.round(recibenDesc).toLocaleString("es-ES")} € frente a ${Math.round(importe).toLocaleString("es-ES")} € de legítima colectiva.`, accion: vasco ? "Los legitimarios pueden pedir la reducción de las disposiciones que excedan de la parte de libre disposición (art. 56 Ley 5/2015; acciones: arts. 58-60, PENDIENTE de cotejo)." : "Los legitimarios pueden ejercitar la acción de lesión de la legítima colectiva y reducir liberalidades (arts. 494-500 CDFA: PENDIENTE de cotejo).", norma: vasco ? "arts. 56-60 Ley 5/2015" : "arts. 494-500 CDFA", estado: P });
+    }
+    if (vasco) {
+      res.resumen = `País Vasco: la legítima de los descendientes es colectiva, un tercio del caudal (art. 49 Ley 5/2015). El causante puede distribuirla libremente entre ellos, atribuirla a uno solo y apartar a los demás de forma expresa o tácita; la preterición equivale al apartamiento (art. 48). Los ascendientes no son legitimarios (art. 47). El cónyuge o pareja de hecho tiene el usufructo de la mitad de los bienes con descendientes y de dos tercios sin ellos (art. 52), y el derecho de habitación en la vivienda (art. 54); los pierde el separado por sentencia firme o por mutuo acuerdo fehaciente (art. 55). En Bizkaia (tierra llana), Aramaio y Llodio la troncalidad prevalece sobre la legítima (art. 70). En el valle de Ayala rige la libertad de disponer (art. 89).`;
+      if (cony || vivos.some((h) => h.relacion === "pareja_hecho" && h.inscrita !== false)) { const c = cony || vivos.find((h) => h.relacion === "pareja_hecho"); const fc = hayDesc ? 1 / 2 : 2 / 3; const v = r2(base * fc * pct(c)); res.viudo = { id: c.id, nombre: c.nombre, sobre: hayDesc ? "mitad" : "dos tercios", fraccion: fc, valor: v, pct: pct(c), edadFalta: edadFalta(c), norma: "art. 52 Ley 5/2015", estado: V }; res.herederos.push(fila(c, "conyuge", v, "art. 52 Ley 5/2015", `Usufructo de ${hayDesc ? "la mitad" : "dos tercios"} de los bienes, valorado por su edad`)); }
+      pendientes.push("arts. 56-60 Ley 5/2015 (reducción y acciones)");
+      if (caso.ccaa === "BIZ" || caso.ccaa === "ALA") notaForal("Troncalidad: los bienes raíces del infanzonado o tierra llana de Bizkaia, de Aramaio y de Llodio son troncales si hay parientes tronqueros; la troncalidad prevalece sobre la legítima y la legítima del viudo se paga primero con bienes no troncales (arts. 61-70 Ley 5/2015, VERIFICADO). Marca esos bienes como troncales en su ficha.");
+      notaForal("Valle de Ayala (Ayala, Amurrio, Okondo y algunos poblados de Artziniega): quien tiene esa vecindad civil local puede disponer libremente apartando a sus legitimarios «con poco o mucho» (art. 89 Ley 5/2015). Si es el caso, la legítima colectiva no se aplica.");
+    } else {
+      res.resumen = "Aragón: la mitad del caudal computable (relicto más donaciones actualizadas, art. 489 CDFA) debe recaer en descendientes, que son los únicos legitimarios; la legítima es colectiva y puede atribuirse a uno solo o distribuirse desigualmente (art. 486). Cabe instituir heredero a un extraño de forma clara y explícita (art. 487). El cónyuge viudo no es legitimario, pero tiene el usufructo de viudedad sobre todos los bienes del premuerto (art. 283 CDFA), salvo exclusión o renuncia.";
+      if (cony) { res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "viudedad universal", fraccion: 1, valor: r2(base * pct(cony)), pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 283 CDFA", estado: V }; notaForal("El usufructo de viudedad aragonés es un derecho de familia, no una legítima: recae sobre todos los bienes del premuerto (art. 283 CDFA) y es compatible con la legítima colectiva de los descendientes. Debe constar la vecindad civil aragonesa al contraer matrimonio."); }
+      pendientes.push("arts. 490-515 CDFA (intangibilidad, preterición, desheredación)");
+    }
+    return cierreForal(res);
+  }
+  if (regimenId === "NAV") {
+    res.tercios = { estricta: 0, mejora: 0, libre: r2(base), fracciones: [0, 0, 1], etiquetas: ["", "", "Libre disposición"], norma: "ley 267 Compilación", estado: V };
+    for (const h of desc) res.herederos.push({ ...fila(h, "descendiente", 0, "leyes 267-268 Compilación", ""), legitimaMinima: 0, deficit: 0, estado: h.renuncia ? "renuncia" : "formal", nota: "Legítima formal: sin contenido económico exigible" });
+    res.resumen = "Navarra: la legítima es puramente formal. No tiene contenido patrimonial exigible ni atribuye la cualidad de heredero; basta la mención de los legitimarios (ley 267 Compilación, redacción de la Ley Foral 21/2019). El causante dispone libremente de todo el caudal. El cónyuge viudo tiene el usufructo de viudedad (antes llamado de fidelidad) sobre todos los bienes del premuerto, salvo que esté excluido por separación legal o de hecho (leyes 253 y 254: PENDIENTE de cotejo literal). La pareja estable solo lo tiene si el causante se lo atribuyó (ley 113).";
+    if (cony) { res.viudo = { id: cony.id, nombre: cony.nombre, sobre: "usufructo de viudedad", fraccion: 1, valor: r2(base * pct(cony)), pct: pct(cony), edadFalta: edadFalta(cony), norma: "leyes 253-254 Compilación", estado: P }; notaForal(`El usufructo de viudedad navarro es un derecho de familia, no una legítima: se ha valorado sobre todo el caudal con la regla fiscal (${Math.round(pct(cony) * 100)} % por la edad). Alcance literal de la ley 253 PENDIENTE de cotejo.`); }
+    if (testado) for (const h of desc.filter((h) => !h.renuncia)) { if (!recibeDe(h).tieneDerechos) it({ tipo: "pretericion", gravedad: "baja", titulo: `${h.nombre} no aparece en el reparto`, detalle: "En Navarra la omisión de un legitimario no da derecho a una porción económica; la institución formal se cumple con la mención de los legitimarios en el acto de disposición (ley 267). Los efectos de la preterición (leyes 269-271) están PENDIENTES de cotejo.", accion: "Comprobar que el testamento menciona a todos los legitimarios, aunque sea de forma colectiva.", norma: "leyes 267-271 Compilación", estado: P }); }
+    pendientes.push("leyes 253 y 268-271 Compilación de Navarra");
+    return cierreForal(res);
+  }
+  return res;
+}
+
+// ─────────────────────────── Impuesto sobre Sucesiones ───────────────────────────
+export function calcularISD(caso) {
+  const R = REGLAS[caso.ccaa];
+  if (!R) throw new Error(`Territorio no soportado: ${caso.ccaa}`);
+  caso = { ...caso, herederos: (caso.herederos || []).map((h) => ({ ...h, edadFalta: h.edad == null || h.edad === "" || Number.isNaN(h.edad), edad: h.edad == null || h.edad === "" || Number.isNaN(h.edad) ? 40 : h.edad, relacion: h.relacion === "pareja_hecho" && !h.inscrita ? "pareja_no_inscrita" : h.relacion })) };
+  const fecha = caso.fechaFallecimiento;
+  const alertas = [], pendientes = new Set();
+  const vec = vecindadCivil(caso);
+  const personas = (caso.herederos || []).filter((h) => !h.renuncia);
+  const porId = Object.fromEntries((caso.herederos || []).map((h) => [h.id, h]));
+
+  // 1. Inventario y liquidación de gananciales
+  const bienes = (caso.bienes || []).map((b) => {
+    const total = Math.max(0, Number(valorBien(b)) || 0), cuota = cuotaCausante(b); // un valor negativo o no numérico es un error de datos: cuenta 0 (pruebas de robustez, 04-10-2026)
+    return { ...b, valorTotal: r2(total), valorHerencia: r2(total * cuota), cuota };
+  });
+  const brutoTotal = r2(bienes.reduce((s, b) => s + b.valorTotal, 0));
+  const gananciales = r2(bienes.filter((b) => b.titularidad === "ganancial").reduce((s, b) => s + b.valorTotal, 0));
+  const bruto = r2(bienes.reduce((s, b) => s + b.valorHerencia, 0));
+  const pos = (v) => Math.max(0, Number(v) || 0);
+  const deudas = r2((caso.deudas || []).reduce((s, d) => s + pos(d.importe) * (d.ganancial ? 0.5 : 1), 0));
+  const gastos = r2((caso.gastos || []).reduce((s, g) => s + pos(g.importe), 0));
+  // Legado válido: legatario que existe en el expediente y no renuncia. Si renuncia, el legado se refunde en la masa (art. 888 CC); si ya no
+  // está en el expediente (persona quitada), se ignora y se avisa (control de calidad 07-10-2026, I8).
+  const legadoValido = (b) => !!(b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia);
+  const legados = bienes.filter(legadoValido);
+  for (const b of bienes.filter((q) => q.legatarioId && !porId[q.legatarioId])) alertas.push(`${b.descripcion || "Un bien"} figura como legado a una persona que ya no está en el expediente: se trata como parte de la herencia. Revisa a quién se legó.`);
+  const valorLegados = r2(legados.reduce((s, b) => s + b.valorHerencia, 0));
+  const netoReparto = r2(Math.max(0, bruto - valorLegados - deudas - gastos)); // los herederos pagan deudas; los legatarios, no
+  const neto = r2(Math.max(0, bruto - deudas - gastos));
+  const vivienda = bienes.find((b) => b.esViviendaHabitual && !legadoValido(b));
+  const valorVivienda = vivienda ? vivienda.valorHerencia : 0;
+
+  // 2. Ajuar doméstico (art. 15 Ley 29/1987)
+  // CM-003 (mesa jurídica, 01-10-2026). Modos: "residencial" (por defecto salvo en Andalucía), "ata" (por defecto en Andalucía; antes "sts"),
+  // "3pct" (todo el caudal, solo manual) y cualquier otro valor ("cero", "ninguno"): sin ajuar. "sts" se acepta como alias del modo por defecto
+  // del territorio (expedientes guardados antes de la 0.4.2, en los que "sts" era el criterio por defecto).
+  let ajuar = 0, notaAjuar = "", baseAjuar = 0, normaAjuar = "art. 15 Ley 29/1987", estadoAjuar = V;
+  const modo = !caso.ajuar || caso.ajuar === "sts" ? (caso.ccaa === "AND" ? "ata" : "residencial") : caso.ajuar;
+  const conyuge = personas.find((h) => linea(h) === "conyuge");
+  const menosViudo = conyuge && caso.conyugeViviendaCatastral ? 0.03 * caso.conyugeViviendaCatastral : 0;
+  if (modo === "residencial") {
+    // Inmuebles de uso residencial (vivienda habitual o segunda vivienda, con anejos) no arrendados ni cedidos al devengo. La base no incluye
+    // bienes adicionados, donaciones acumuladas ni seguros (art. 34.3 RISD): el inventario del motor no los contiene.
+    const resid = (b) => b.tipo === "inmueble" && (b.usoResidencial ?? !!b.esViviendaHabitual) && !b.arrendadoOCedido;
+    baseAjuar = r2(bienes.filter(resid).reduce((s, b) => s + b.valorHerencia, 0));
+    ajuar = 0.03 * baseAjuar - menosViudo;
+    normaAjuar = "art. 15 Ley 29/1987; art. 34 RD 1629/1991; STS 499/2020; TEAC RG 6258/2024 (doctrina)";
+    notaAjuar = "3 % del valor de los inmuebles de uso residencial no arrendados ni cedidos (art. 15 Ley 29/1987; STS 499/2020; TEAC 30-05-2025, RG 6258/2024). Se excluyen dinero, valores e inmuebles no residenciales." + (menosViudo ? " Se descuenta el 3 % del valor catastral de la vivienda habitual del matrimonio (art. 15 Ley 29/1987)." : "");
+  } else if (modo === "ata") {
+    // Bienes muebles de uso personal y doméstico. Los vehículos no son ajuar: el art. 4.Cuatro Ley 19/1991 (Patrimonio), al que remite la definición,
+    // excluye los bienes del art. 18 (joyas, pieles de carácter suntuario, vehículos, embarcaciones y aeronaves). Hallazgo H40, 06-10-2026.
+    baseAjuar = r2(bienes.filter((b) => b.tipo === "otro").reduce((s, b) => s + b.valorHerencia, 0));
+    ajuar = 0.03 * baseAjuar;
+    normaAjuar = "art. 15 Ley 29/1987 (criterio de la Agencia Tributaria de Andalucía; práctica real por confirmar)"; estadoAjuar = P;
+    notaAjuar = "3 % solo sobre bienes de uso personal y doméstico, excluidos dinero, títulos y activos inmobiliarios (texto de la Agencia Tributaria de Andalucía) y los vehículos, joyas y embarcaciones (art. 4.Cuatro y art. 18 Ley 19/1991). Práctica real de la ATA por confirmar: si aplica el criterio del TEAC, la base serían las viviendas de uso residencial.";
+  } else if (modo === "3pct") {
+    baseAjuar = bruto;
+    ajuar = 0.03 * bruto - menosViudo;
+    normaAjuar = "art. 15 Ley 29/1987 (3 % de todo el caudal, opción manual)";
+    notaAjuar = "3 % de todo el caudal relicto (art. 15 Ley 29/1987), elegido a mano.";
+    alertas.push("Ajuar al 3 % de todo el caudal: el Tribunal Supremo (STS 499/2020) excluye dinero, valores e inmuebles no residenciales; el TEAC (30-05-2025) fija la base en las viviendas de uso residencial no arrendadas ni cedidas.");
+  } else notaAjuar = "Se declara que no hay ajuar o se prueba su inexistencia.";
+  ajuar = r2(Math.max(0, ajuar));
+
+  // 3. Reparto de derechos
+  let rep;
+  if (caso.reparto === "usufructoUniversal") rep = repartoUsufructoUniversal(caso.herederos || []);
+  else if (caso.reparto === "porcentajes") rep = repartoPorcentajes(caso.herederos || []);
+  // Sin testamento: reparto según la VECINDAD CIVIL del causante, no según la comunidad del impuesto (control de calidad 07-10-2026, I6)
+  else rep = repartoLegal(caso.herederos || [], vec, { isla: caso.isla, conmutacion: caso.conmutacionCat === true, valorVivienda, netoReparto,
+    // Bienes marcados troncales por el abogado (Aragón, Navarra y País Vasco): fracción sobre los bienes de la herencia menos los legados (ronda 4)
+    troncales: bienes.filter((b) => b.troncal && !legadoValido(b)).map((b) => ({ id: b.id, descripcion: b.descripcion, valor: b.valorHerencia, linea: b.lineaTroncal, tipo: b.tipo })),
+    baseTroncal: r2(bruto - valorLegados), hayInmuebles: bienes.some((b) => b.tipo === "inmueble" && !legadoValido(b)) });
+  if (rep.bloqueado) alertas.unshift(`${rep.bloqueado.titulo}. ${rep.bloqueado.motivo} ${rep.bloqueado.accion} (${rep.bloqueado.norma}; PENDIENTE).`);
+  const derechos = rep.derechos;
+  for (const a of rep.avisos || []) alertas.push(a);
+  for (const h of caso.herederos || []) if (h.edadFalta && !h.renuncia) alertas.push(`Falta la edad de ${h.nombre}: se ha supuesto que es mayor de 21 años. Complétala: cambia el grupo y el valor del usufructo.`);
+  if ((caso.herederos || []).some((h) => h.relacion === "pareja_no_inscrita")) alertas.push("Pareja de hecho no inscrita: tributa como extraño (grupo IV). Si está inscrita en un registro oficial de parejas, márcalo: se equipara al cónyuge en el impuesto (en Andalucía, art. 26 Ley 5/2021).");
+
+  // 4. Valor adquirido por cada persona
+  const adq = {};
+  for (const h of personas) {
+    let v = 0, vv = 0, ve = 0, pleno = 0, nudaUsuf = 0, nudaDe = [];
+    for (const d of derechos[h.id] || []) {
+      let f = 1;
+      if (d.tipo === "usufructo") f = pctUsufructoVitalicio(h.edad);
+      if (d.tipo === "nuda") {
+        const pu = pctUsufructoVitalicio(porId[d.usufructuarioId]?.edad ?? 70);
+        f = 1 - pu;
+        nudaUsuf += netoReparto * d.fraccion * pu; // valor del usufructo que grava su nuda propiedad (valor íntegro − valor de la nuda)
+        if (!nudaDe.includes(d.usufructuarioId)) nudaDe.push(d.usufructuarioId);
+      }
+      v += netoReparto * d.fraccion * f;
+      vv += (vivienda ? valorVivienda : 0) * d.fraccion * f;
+      ve += bienes.filter((b) => b.tipo === "empresa" && !legadoValido(b)).reduce((s, b) => s + b.valorHerencia, 0) * d.fraccion * f;
+      if (d.tipo !== "usufructo") pleno += d.fraccion;
+    }
+    const leg = legados.filter((b) => b.legatarioId === h.id);
+    const vl = leg.reduce((s, b) => s + b.valorHerencia, 0);
+    adq[h.id] = { porcion: v, legados: vl, vivienda: vv + leg.filter((b) => b.esViviendaHabitual).reduce((s, b) => s + b.valorHerencia, 0), empresa: ve + leg.filter((b) => b.tipo === "empresa").reduce((s, b) => s + b.valorHerencia, 0), propiedad: pleno, nudaUsuf, nudaDe };
+  }
+  // Criterio de la vivienda habitual: por cuotas (DGT, por defecto) o íntegra al adjudicatario (STSJ Andalucía 1011/2026, litigioso)
+  if (caso.criterioVivienda === "TSJA2026" && vivienda && adq[caso.viviendaA]) {
+    for (const id in adq) adq[id].vivienda = id === caso.viviendaA ? valorVivienda + legados.filter((b) => b.legatarioId === id && b.esViviendaHabitual).reduce((s, b) => s + b.valorHerencia, 0) : legados.filter((b) => b.legatarioId === id && b.esViviendaHabitual).reduce((s, b) => s + b.valorHerencia, 0);
+    alertas.push(`Reducción por vivienda habitual aplicada íntegra a ${porId[caso.viviendaA].nombre}, adjudicatario de la vivienda (STSJ Andalucía 1011/2026). La Agencia Tributaria de Andalucía la reparte por cuotas (Res. DGT 2/1999 y V2622-21): criterio litigioso.`);
+  }
+  const totalAdq = Object.values(adq).reduce((s, a) => s + a.porcion + a.legados, 0) || 1;
+  // Ajuar: los legados entran en la base del 3 %, pero el ajuar se imputa solo a los herederos, a prorrata de su participación en el resto de la masa
+  // (porción, sin legados): art. 23.2 RISD; STS 24-06-2021, rec. 8000/2019. El legatario de bienes concretos recibe 0; el que además es heredero, solo
+  // por su porción (auditoría I-5 y CM-003, misma regla). Si nadie recibe porción hereditaria (toda la herencia en legados), se reparte entre los legatarios.
+  const totalHer = Object.values(adq).reduce((s, a) => s + a.porcion, 0);
+  const hayDescendientes = personas.some((h) => linea(h) === "desc");
+  const hayDescCausante = (caso.herederos || []).some((h) => linea(h) === "desc"); // existencia de descendientes, aunque repudien (art. 20.2.c Ley 29/1987)
+  const empPct = R.empresa.pctFecha ? tramosPorFecha(R.empresa.pctFecha, fecha) : R.empresa.pct;
+  // Parentesco exigido para la reducción por empresa (auditoría 01-10-2026, I-4)
+  const empresaElegible = (h, g) => {
+    const l = linea(h), E = R.empresa;
+    if (E.parentesco === "gruposI-III") {
+      if (["I", "II", "III"].includes(g)) return { ok: true };
+      if (E.extranoConRequisitos && h.requisitoLaboralEmpresa === true) return { ok: true, nota: "sin parentesco: contrato laboral o de servicios de 5 años y 3 en funciones de dirección" };
+      return { ok: false, motivo: `${h.nombre} no tiene el parentesco exigido (grupos I a III) ni consta que cumpla los requisitos laborales para las personas sin parentesco (contrato de 5 años y 3 en funciones de dirección, arts. 30-31 Ley 5/2021)` };
+    }
+    if (l === "desc" || l === "conyuge" || (l === "pareja" && R.parejaEquiparada)) return { ok: true };
+    const colat3 = ["hermano", "sobrino", "tio"].includes(h.relacion), colatAfin = ["sobrino_afin", "tio_afin"].includes(h.relacion);
+    if (l === "asc" || colat3 || colatAfin) {
+      if (hayDescCausante) return { ok: false, motivo: `${h.nombre} no puede aplicar la reducción por empresa: ascendientes y colaterales solo tienen derecho cuando no existen descendientes (art. 20.2.c Ley 29/1987)` };
+      return { ok: true, nota: colatAfin ? "colateral por afinidad: inclusión según criterio jurisprudencial, PENDIENTE de cotejo" : "a falta de descendientes" };
+    }
+    return { ok: false, motivo: `${h.nombre} no tiene el parentesco exigido para la reducción por empresa (cónyuge o descendientes; a falta de estos, ascendientes y colaterales hasta el tercer grado: art. 20.2.c Ley 29/1987)` };
+  };
+
+  // 5. Cálculo por persona
+  // I7 (control de calidad 07-10-2026): quien tiene derechos en el reparto sigue siendo heredero aunque el neto sea 0 € (más deudas que bienes):
+  // se muestra con 0 € a pagar, no desaparece. En algunas comunidades hay que presentar la autoliquidación aunque salga 0 €.
+  const res = personas.filter((h) => adq[h.id] && (adq[h.id].porcion + adq[h.id].legados > 0 || (derechos[h.id] || []).length > 0 || (caso.seguros || []).some((s) => s.beneficiarioId === h.id))).map((h) => {
+    const a = adq[h.id];
+    const g = R.grupo(h);
+    const t = [];
+    const add = (paso, valor, norma, estado, nota) => { t.push({ paso, valor: r2(valor), norma, estado, nota }); if (estado === P && norma) pendientes.add(norma); };
+    const ajuarH = r2(totalHer > 0 ? ajuar * (a.porcion / totalHer) : ajuar * ((a.porcion + a.legados) / totalAdq));
+    const seguros = r2((caso.seguros || []).filter((s) => s.beneficiarioId === h.id).reduce((s, x) => s + pos(x.importe), 0));
+    let pp = h.patrimonioPreexistente || 0;
+    if (linea(h) === "conyuge" && gananciales) { pp += gananciales / 2; }
+    add("Porción hereditaria", a.porcion);
+    if (a.legados) add("Legados recibidos", a.legados);
+    add("Ajuar doméstico imputado", ajuarH, ajuar ? `${normaAjuar} · imputación: art. 23 RD 1629/1991` : normaAjuar, estadoAjuar);
+    if (seguros) add("Seguros de vida (se acumulan)", seguros, "art. 9.1.c Ley 29/1987", V);
+    const bi = r2(a.porcion + a.legados + ajuarH + seguros);
+    add("Base imponible", bi);
+
+    const empOk = a.empresa > 0 && caso.aplicarEmpresa && empPct ? empresaElegible(h, g) : null;
+    if (empOk && !empOk.ok) alertas.push(empOk.motivo + ".");
+    const c = { fecha, bi, enPlazo: caso.enPlazo, conRequerimiento: caso.conRequerimiento === true, hayDescendientes, usaEmpresa: !!(empOk && empOk.ok) };
+    const reds = [];
+    const rp = R.redParentesco(h, g, c); if (rp.importe) reds.push({ paso: `Reducción por parentesco (grupo ${g})`, ...rp });
+    const rd = R.redDiscapacidad(h, g, c); if (rd.importe) reds.push({ paso: `Reducción por discapacidad (${h.discapacidad} %)`, ...rd });
+    const segEleg = esDescAscCony(h, R.parejaEquiparada);
+    if (seguros && segEleg && R.seguros.limite) reds.push({ paso: "Reducción por seguros de vida", importe: Math.min(seguros, R.seguros.limite), norma: R.seguros.norma, estado: R.seguros.estado });
+    const vEleg = esDescAscCony(h, R.parejaEquiparada) || (["hermano", "sobrino", "tio", "primo"].includes(h.relacion) && h.edad > 65 && h.convivio2anios);
+    const antesViv = bi - reds.reduce((s, r) => s + r.importe, 0);
+    if (a.vivienda > 0 && vEleg && antesViv <= 0) alertas.push(`${h.nombre}: no se aplica la reducción por vivienda habitual porque la base ya queda en 0 €; así no nace la obligación de mantener la vivienda.`);
+    if (a.vivienda > 0 && vEleg && antesViv > 0 && caso.noAplicarVivienda) alertas.push(`${h.nombre}: no se aplica la reducción por vivienda habitual por decisión del expediente (venta prevista antes del plazo de mantenimiento).`);
+    if (a.vivienda > 0 && vEleg && antesViv > 0 && !caso.noAplicarVivienda && (!R.vivienda.requiereConvivencia || h.convivio2anios)) {
+      const pct = R.vivienda.pctFn ? R.vivienda.pctFn(valorVivienda, h) : R.vivienda.pct;
+      let lim = R.vivienda.limite;
+      if (R.vivienda.limiteMinimoPorHeredero) lim = Math.max(R.vivienda.limiteMinimoPorHeredero, lim * (a.vivienda / (valorVivienda || 1)));
+      const imp = lim ? Math.min(a.vivienda * pct, lim) : a.vivienda * pct;
+      if (imp > 0) { reds.push({ paso: `Reducción por vivienda habitual (${Math.round(pct * 100)} %)`, importe: imp, norma: R.vivienda.norma, estado: R.vivienda.estado }); if (R.vivienda.permanencia) alertas.push(`${h.nombre}: la reducción por vivienda habitual exige mantenerla ${R.vivienda.permanencia} años.`); }
+    }
+    if (empOk && empOk.ok) { reds.push({ paso: `Reducción por empresa familiar (${Math.round(empPct * 100)} %)`, importe: a.empresa * empPct, norma: R.empresa.norma + (empOk.nota ? `; ${empOk.nota}` : "") + (["NAV", "BIZ", "GIP", "ALA"].includes(R.id) ? "; parentesco comprobado con la regla estatal, norma foral PENDIENTE" : "") + " (requisitos de la empresa y de permanencia a verificar)", estado: P }); }
+    const suma0 = reds.reduce((s, r) => s + r.importe, 0);
+    for (const x of R.ajusteReducciones(h, g, c, suma0)) reds.push(x);
+    let suma = reds.reduce((s, r) => s + r.importe, 0);
+    // K2 (control de calidad 07-10-2026): cada reducción guarda también lo que realmente se aplica (lo que queda de base, por orden), para que el
+    // informe no muestre «−1.000.000 €» sobre una base de 8.257 €. El valor de la traza sigue siendo el importe legal de la reducción.
+    { let quedan = Math.max(0, bi); for (const r of reds) { const ap = Math.min(r.importe, quedan); quedan = r2(quedan - ap); add(r.paso, -r.importe, r.norma, r.estado); t[t.length - 1].aplicado = -r2(ap); } }
+    const bl = r2(Math.max(0, bi - suma));
+    add("Base liquidable", bl);
+    c.bl = bl;
+
+    // Cuota íntegra (con acumulación de donaciones: art. 30 Ley 29/1987)
+    const tf = R.cuotaEspecial ? null : R.tarifa(h, g);
+    const cuotaDe = (base) => {
+      if (R.cuotaEspecial) { const q = R.cuotaEspecial(base, h, g); return { ci: q.ci, tn: q.norma, te: q.estado }; }
+      const don = Number(h.donacionesPreviasBL) || 0;
+      if (don > 0) { const tot = cuotaTarifa(base + don, tf.tramos); return { ci: r2(base * tot / (base + don)), tn: tf.norma + " · tipo medio con donaciones de los 4 años anteriores (art. 30 Ley 29/1987)", te: tf.estado }; }
+      return { ci: cuotaTarifa(base, tf.tramos), tn: tf.norma, te: tf.estado };
+    };
+    let ci, tn, te, k, tipoMedio;
+    // CM-002 (mesa jurídica, 30-09-2026). Nuda propiedad: tipo medio efectivo correspondiente al valor íntegro de los bienes (art. 26.a Ley 29/1987; art. 51.2 RISD).
+    // BL teórica = valor íntegro (nuda al 100 %) − reducciones; tipo medio = cuota tributaria teórica (con coeficiente) / BL teórica, con dos decimales;
+    // cuota tributaria = BL real × tipo medio. Territorios forales: norma propia no cotejada, se mantiene la tarifa sobre el valor de la nuda.
+    const nudaComun = a.nudaUsuf > 0 && !FORALES_ISD.includes(R.id); // también con BL 0: el tipo medio se guarda para la consolidación
+    if (nudaComun) {
+      const blT = r2(Math.max(0, bi + a.nudaUsuf - suma));
+      const q = cuotaDe(blT), kT = R.coef(h, g, pp, q.ci);
+      tipoMedio = blT > 0 ? r2(kT.cuota / blT * 100) : 0;
+      add("Base liquidable teórica (nuda propiedad por su valor íntegro)", blT, NORMA_NUDA + ": PENDIENTE de criterio DGT si, con pleno dominio y nuda a la vez, el valor íntegro incluye ambos, y si se restan todas las reducciones (art. 26.a LISD) o solo la de parentesco (art. 51.2 RISD)", P,
+        `Valor íntegro ${r2(bi + a.nudaUsuf)} € (base imponible + ${r2(a.nudaUsuf)} € del usufructo que grava la nuda) menos ${r2(suma)} € de reducciones`);
+      add(`Cuota tributaria teórica · tipo medio efectivo ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`, kT.cuota, `${NORMA_NUDA} (tarifa: ${q.tn}; coeficiente ×${kT.k}: ${kT.norma})`, V);
+      t[t.length - 1].tipoMedio = tipoMedio;
+      ci = r2(bl * tipoMedio / 100); tn = `${NORMA_NUDA}: base liquidable × tipo medio efectivo del ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`; te = V;
+      add("Cuota íntegra", ci, tn, te);
+      t[t.length - 1].tipoMedio = tipoMedio;
+      k = { k: 1, cuota: ci, salto: false, norma: kT.norma, estado: kT.estado };
+      add(`Coeficiente multiplicador ×1 · el del grupo (×${kT.k}) ya está dentro del tipo medio efectivo`, k.cuota, k.norma, k.estado);
+      alertas.push(`${h.nombre}: cuando se extinga el usufructo de ${a.nudaDe.map((id) => porId[id]?.nombre || "el usufructuario").join(" y ")}, consolidará el pleno dominio y tributará por el valor atribuido al usufructo al constituirse (${Math.round(a.nudaUsuf).toLocaleString("es-ES")} €), menos la reducción no agotada, con este mismo tipo medio efectivo del ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} % (art. 26.c Ley 29/1987; art. 51.2 RD 1629/1991). Conviene guardar este cálculo.`);
+    } else {
+      ({ ci, tn, te } = cuotaDe(bl));
+      add("Cuota íntegra", ci, tn, te);
+      k = R.coef(h, g, pp, ci);
+      // La nota del art. 22.3 solo cuando el coeficiente depende del patrimonio preexistente en este caso (k o cuota distintos de los de patrimonio 0):
+      // no en Andalucía (art. 38 Ley 5/2021), territorios forales sin coeficiente o patrimonio dentro del primer tramo.
+      const k0 = linea(h) === "conyuge" && gananciales ? R.coef(h, g, 0, ci) : null;
+      const nota223 = k0 && (k0.k !== k.k || k0.cuota !== k.cuota) ? " · incluye la mitad de gananciales en su patrimonio previo (art. 22.3 Ley 29/1987)" : "";
+      add(`Coeficiente multiplicador ×${k.k}${k.salto ? " (regla de salto de tramo)" : ""}${nota223}`, k.cuota, k.norma, k.estado);
+      if (a.nudaUsuf > 0 && bl > 0) { alertas.push(`${h.nombre}: nuda propiedad en territorio foral. Se aplica la tarifa sobre el valor de la nuda; la regla foral equivalente al tipo medio efectivo (${NORMA_NUDA} en régimen común) no está cotejada (PENDIENTE).`); pendientes.add(`${R.norma}: valoración y tipo de la nuda propiedad`); }
+    }
+    c.cuota = k.cuota;
+    let cuota = k.cuota;
+    for (const b of R.bonif(h, g, c)) {
+      const imp = r2(cuota * b.pct);
+      add(b.pct ? `Bonificación ${(b.pct * 100).toLocaleString("es-ES", { maximumFractionDigits: 2 })} %` : "Bonificación no aplicable", -imp, b.norma, b.estado);
+      cuota = r2(cuota - imp);
+    }
+    add("A pagar", cuota);
+    return { id: h.id, nombre: h.nombre, relacion: h.relacion, grupo: g, baseImponible: bi, baseLiquidable: bl, cuotaIntegra: ci, cuotaTributaria: k.cuota, aIngresar: cuota, valorAdquirido: r2(a.porcion + a.legados), derechos: derechos[h.id] || [], traza: t, ...(tipoMedio != null ? { tipoMedio, valorUsufructoNuda: r2(a.nudaUsuf), reduccionNoAgotada: r2(Math.max(0, suma - bi)) } : {}) };
+  });
+
+  // 6. Alertas jurídicas
+  // Vecindad civil (I6): el reparto sin testamento y las legítimas siguen la vecindad civil del causante; el impuesto, la residencia.
+  if (vec.id !== "comun") alertas.push(vec.supuesta
+    ? `Vecindad civil ${VECINDADES[vec.id]} supuesta por la residencia en ${R.nombre}, territorio con derecho civil propio: ese derecho decide el reparto sin testamento y las legítimas. La vecindad es la del causante al fallecer (arts. 9.8 y 16.1 CC) y se adquiere por filiación, opción o residencia continuada (arts. 14-15 CC): confírmala e indícala en el expediente.`
+    : `Vecindad civil ${VECINDADES[vec.id]} indicada en el expediente: el reparto sin testamento y las legítimas siguen su derecho civil propio${vec.residencia !== vec.id ? `, aunque el impuesto lo cobre ${R.nombre} por la residencia (art. 32 Ley 22/2009)` : ""}.`);
+  else if (!vec.supuesta && vec.residencia !== "comun") alertas.push(`Vecindad civil común indicada en el expediente aunque residía en ${R.nombre}, territorio con derecho civil propio: el reparto y las legítimas siguen el Código Civil (arts. 9.8 y 16.1 CC). Confirma que no adquirió la vecindad del territorio por residencia de diez años (art. 14.5 CC).`);
+  // I7: más deudas que bienes
+  const pasivo = r2(deudas + gastos), fmtE = (v) => Math.round(v).toLocaleString("es-ES") + " €";
+  if (pasivo > bruto + 0.005) alertas.unshift(`Más deudas que bienes: las deudas (${fmtE(deudas)}) y los gastos (${fmtE(gastos)}) superan el caudal del causante (${fmtE(bruto)}) en ${fmtE(pasivo - bruto)}. Quien acepta pura y simplemente responde de las deudas también con sus propios bienes (arts. 1003 y 1911 CC). Antes de cualquier acto que suponga aceptación (art. 999 CC), valorar aceptar a beneficio de inventario, que limita la responsabilidad al valor de los bienes heredados (arts. 1010 y 1023 CC), o repudiar ante notario (art. 1008 CC)${vec.id === "CAT" ? "; en Cataluña, la toma de inventario en plazo produce ese efecto (arts. 461-14 a 461-16 CCCat, PENDIENTE de cotejo)" : ""}. Los herederos siguen en el cálculo con 0 € de cuota.`);
+  else if (valorLegados > 0 && bruto - deudas - gastos < valorLegados - 0.005) alertas.unshift(`Los legados (${fmtE(valorLegados)}) superan lo que queda de la herencia después de pagar deudas y gastos (${fmtE(Math.max(0, bruto - deudas - gastos))}): primero se paga a los acreedores y después los legados (art. 1027 CC, con beneficio de inventario), que deben reducirse (arts. 887-891 CC). El heredero que acepta pura y simplemente responde de ellos con sus propios bienes (art. 1003 CC).`);
+  if ((caso.herederos || []).some((h) => h.renuncia)) {
+    alertas.push("Hay renuncias: deben hacerse ante notario (art. 1008 CC) y antes de cualquier acto que implique aceptación (art. 999 CC).");
+    const orden = { I: 1, II: 2, III: 3, IV: 4 };
+    const peorRen = Math.max(...(caso.herederos || []).filter((h) => h.renuncia).map((h) => orden[REGLAS.EST.grupo(h)] || 4));
+    if (res.some((h) => (orden[REGLAS.EST.grupo(h)] || 4) < peorRen)) alertas.push("Renuncia pura, simple y gratuita: quien recibe la parte renunciada no tributa por ella con el parentesco del renunciante, sino como adquirente directo del causante, con su propio parentesco; pero se le aplica el coeficiente multiplicador del renunciante si es superior al suyo (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991). Si la renuncia es a favor de persona determinada, el renunciante tributa por la herencia y el beneficiario, además, por la donación (art. 28.2). Revisar la cuota de los beneficiarios.");
+  }
+  // CM-002 (e): renuncia del cónyuge a un usufructo ya aceptado (art. 51.6 RD 1629/1991)
+  if ((caso.herederos || []).some((h) => h.renuncia && linea(h) === "conyuge") && (caso.reparto === "usufructoUniversal" || (caso.reparto !== "porcentajes" && (caso.herederos || []).some((h) => ["desc", "asc"].includes(linea(h))))))
+    alertas.push("El cónyuge renuncia: si ya había aceptado el usufructo, la renuncia posterior no es una repudiación de la herencia, sino una donación a los nudos propietarios, que tributa aparte (art. 51.6 RD 1629/1991). Confirmar cuándo se renuncia.");
+  // Renuncia al usufructo universal antes de aceptarlo: efecto fiscal (art. 28 Ley 29/1987; art. 58 RD 1629/1991). Solo aviso: no se recalcula el coeficiente del renunciante.
+  if (caso.reparto === "usufructoUniversal" && (caso.herederos || []).some((h) => h.renuncia && ["conyuge", "pareja_hecho", "pareja_no_inscrita"].includes(h.relacion)) && !(caso.herederos || []).some((h) => !h.renuncia && ["conyuge", "pareja_hecho", "pareja_no_inscrita"].includes(h.relacion)))
+    alertas.push("Renuncia al usufructo universal: se ha calculado a los descendientes por el pleno dominio, con su propio parentesco. Si la renuncia es pura, simple y gratuita, tributan por la parte renunciada aplicando el coeficiente del renunciante si es mayor que el suyo (depende del patrimonio preexistente del viudo, incluida su mitad de gananciales) (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991). Si renuncia a favor de alguien en concreto o a cambio de algo, acepta y transmite (art. 1000 CC): el viudo tributa por el usufructo y el beneficiario, además, por la donación (art. 28.2 Ley 29/1987). Hecha después de prescrito el impuesto, la renuncia tributa como donación (art. 28.3).");
+  if ((caso.herederos || []).some((h) => !h.renuncia && (h.edad ?? 99) < 18)) alertas.push("Hay herederos menores de edad: la partición puede exigir defensor judicial o aprobación judicial. Derivar al abogado.");
+  if ((caso.herederos || []).some((h) => h.discapacidad)) alertas.push("Se usan datos de discapacidad (categoría especial de datos): requieren consentimiento explícito.");
+  if (caso.reparto === "porcentajes" && hayDescendientes) {
+    const desc = personas.filter((h) => linea(h) === "desc" && RELACIONES[h.relacion].grado === 1);
+    const estricta = desc.length ? (neto / 3) / desc.length : 0;
+    for (const h of desc) { const v = (derechos[h.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : 0), 0) * netoReparto + (adq[h.id]?.legados || 0); if (v + 1 < estricta) alertas.push(`Posible lesión de la legítima de ${h.nombre}: recibe ${Math.round(v).toLocaleString("es-ES")} € y su legítima estricta aproximada es ${Math.round(estricta).toLocaleString("es-ES")} € (arts. 806-808 y 818 CC). Revisar.`); }
+  }
+  if (valorLegados && valorLegados > neto / 3 && hayDescendientes) alertas.push("Los legados superan el tercio de libre disposición: pueden afectar a las legítimas. Revisar.");
+  if (caso.enPlazo === false) alertas.push(`${RECARGO_FORAL[caso.ccaa] ? RECARGO_FORAL[caso.ccaa].aviso : "Presentación fuera de plazo: si no ha habido requerimiento, se paga el recargo del art. 27 LGT (1 % más otro 1 % por cada mes completo de retraso; pasados 12 meses, 15 % más intereses de demora; un 25 % menos de recargo si se paga al presentar)."}${caso.ccaa === "MAD" ? " En Madrid la bonificación de los grupos I y II no exige plazo; la del grupo III solo se pierde por los bienes declarados después de un requerimiento (art. 25.1 D. Leg. 1/2010)." : ""}`);
+  if (caso.ccaa === "MAD") for (const h of personas.filter((h) => h.relacion === "pareja_hecho")) alertas.push(h.registroPareja && h.registroPareja !== "MAD"
+    ? `${h.nombre}: Madrid equipara al cónyuge las uniones de hecho de la Ley 11/2001 de la Comunidad de Madrid (art. 26 D. Leg. 1/2010). Una inscripción solo en otro registro probablemente tributa en el grupo IV: el cálculo mantiene la equiparación, PENDIENTE de confirmar.`
+    : `${h.nombre}: comprobar que la pareja está inscrita en el Registro de Uniones de Hecho de la Comunidad de Madrid (Ley 11/2001; art. 26 D. Leg. 1/2010). Si solo lo está en otro registro, la equiparación es dudosa (PENDIENTE).`);
+  // Galicia, Ley 5/2025 (art. 6.Cinco D. Leg. 1/2011, devengos desde 01-01-2026): las reducciones por parentesco y discapacidad son únicas entre el mismo
+  // causante y heredero; en la segunda y siguientes adquisiciones solo se aplica lo no consumido (pactos sucesorios, donaciones con reducción previa).
+  if (caso.ccaa === "GAL" && fecha >= "2026-01-01") alertas.push("Galicia: desde el 01-01-2026 las reducciones por parentesco y discapacidad son únicas entre el mismo causante y heredero (art. 6.Cinco D. Leg. 1/2011, Ley 5/2025). Si el heredero ya recibió del causante por pacto sucesorio u otra adquisición con reducción, descuenta lo consumido: el cálculo aplica la reducción completa.");
+  if (caso.aplicarEmpresa && caso.ccaa === "CAT") alertas.push("En Cataluña la reducción por empresa es incompatible con la bonificación de grupos I y II: comparar ambas vías.");
+  if (gananciales) alertas.push(`Se ha liquidado la sociedad de gananciales: ${Math.round(gananciales / 2).toLocaleString("es-ES")} € pertenecen al cónyuge viudo y no forman parte de la herencia (arts. 1344 y 1392 CC).`);
+
+  const total = r2(res.reduce((s, x) => s + x.aIngresar, 0));
+  // C2 (control de calidad 07-10-2026): recargo del art. 27 LGT si se calcula fuera de plazo y el plazo ya venció a la fecha de referencia
+  const plazoISD = caso.fechaReferencia ? plazoPresentacionISD(fecha, { hoy: caso.fechaReferencia, prorroga: caso.prorrogaISD === true, ccaa: caso.ccaa }) : null;
+  const recargo = caso.enPlazo === false && plazoISD && plazoISD.fueraDePlazo && !caso.conRequerimiento ? { ...recargoPresentacion(caso.ccaa, total, plazoISD.limite, caso.fechaReferencia), limite: plazoISD.limite } : null;
+  const eurA = (v) => v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (recargo && recargo.importe > 0) alertas.push(`Recargo estimado por presentar el ${caso.fechaReferencia.split("-").reverse().join("-")} (plazo vencido el ${plazoISD.limite.split("-").reverse().join("-")}): ${eurA(recargo.importe)} € (${recargo.etiqueta})${recargo.reducido < recargo.importe ? `; ${eurA(recargo.reducido)} € si se ingresa todo al presentar (art. 27.5 LGT)` : ""}.${recargo.foral ? ` ${recargo.norma}${recargo.estado === P ? " · PENDIENTE" : ""}.` : ""}`);
+  if (caso.enPlazo === false && caso.conRequerimiento) alertas.push("Con requerimiento previo de la Administración no se aplica el recargo del art. 27 LGT: la regularización puede llevar sanción (arts. 191 y siguientes LGT). Derivar al abogado.");
+  // Bonificaciones y plazo: Andalucía y Madrid están cotejadas (no exigen plazo a los grupos I y II); Extremadura lo exige (modelado). En el resto no
+  // se ha cotejado: se mantiene la bonificación y se da la cifra sin ella.
+  const sinBonif = r2(res.reduce((s, x) => s + x.cuotaTributaria, 0));
+  if (caso.enPlazo === false && !["AND", "MAD", "EXT"].includes(R.id) && sinBonif - total > 1) alertas.push(`Fuera de plazo: no se ha cotejado si las bonificaciones de ${R.nombre} exigen presentar en plazo (PENDIENTE). El cálculo las mantiene; si la norma lo exigiera, Sucesiones sería de ${sinBonif.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € más recargo.`);
+  return {
+    territorio: R.nombre, norma: R.norma, estadoGlobal: R.estadoGlobal, fecha,
+    masa: { brutoTotal, gananciales, mitadViudo: r2(gananciales / 2), bruto, deudas, gastos, legados: valorLegados, neto, netoReparto, ajuar, notaAjuar, modoAjuar: modo, baseAjuar, pasivoExcede: r2(Math.max(0, pasivo - bruto)) },
+    herederos: res, total, alertas, notasReparto: rep.notas, pendientes: [...pendientes], derechos,
+    vecindad: vec, regimenReparto: rep.regimen || "comun", leyReparto: caso.reparto === "usufructoUniversal" || caso.reparto === "porcentajes" ? null : LEY_REPARTO[rep.regimen || "comun"] || null, bloqueo: rep.bloqueado || null, plazoISD, recargo, totalConRecargo: r2(total + (recargo ? recargo.importe : 0)),
+  };
+}
+
+// ─────────────────────────── Plusvalía municipal ───────────────────────────
+export const COEF_PLUSVALIA_2026 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.20, 0.19, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40];
+// Coeficientes máximos del RDL 16/2025 (art. 107.4 TRLRHL), vigentes del 01-01-2026 hasta su derogación (Acuerdo del Congreso de 27-01-2026, BOE de 28-01-2026).
+// Los efectos producidos durante su vigencia se mantienen. Tabla: dos fuentes concordantes (texto del RDL publicado por Cuatrecasas y Tax Alert de KPMG, dic. 2025);
+// texto literal del BOE-A-2025-26458 no cotejado (la extracción del BOE corta antes del articulado). Auditoría 01-10-2026, C-7.
+export const COEF_PLUSVALIA_RDL16_2025 = [0.16, 0.15, 0.15, 0.15, 0.16, 0.18, 0.20, 0.22, 0.23, 0.21, 0.16, 0.13, 0.11, 0.10, 0.10, 0.10, 0.10, 0.12, 0.16, 0.22, 0.35];
+// CM-004 (mesa jurídica, 02-10-2026): las 21 cifras del RDL 8/2023 cotejadas cifra a cifra con dos fuentes oficiales (sede del Ayuntamiento de Madrid,
+// tabla vigente desde el 23-01-2025; BOP de Guadalajara n.º 45 de 04-01-2024) → VERIFICADO. RDL 16/2025: texto del BOE no cotejado → PENDIENTE.
+export const coefPlusvaliaLegal = (fecha) => (fecha >= "2026-01-01" && fecha <= "2026-01-27"
+  ? { tabla: COEF_PLUSVALIA_RDL16_2025, norma: "RDL 16/2025 (01-01 a 27-01-2026)", estado: P }
+  : { tabla: COEF_PLUSVALIA_2026, norma: "art. 107.4 TRLRHL, redacción del art. 24 RDL 8/2023 (vigente desde 01-01-2024; de nuevo desde 23-01-2025 y desde 28-01-2026)", estado: V });
+const DAC = (h) => ["desc", "asc", "conyuge"].includes(linea(h));
+const IPREM_ANUAL_14P = 8400; // 600 €/mes x 14 pagas: valor 2025. IPREM 2026 PENDIENTE de cotejo.
+
+// ─────────── Plusvalía en los territorios forales (Álava 01, Gipuzkoa 20, Navarra 31, Bizkaia 48) ───────────
+// El IIVTNU no se rige allí por el TRLRHL sino por la norma foral de cada territorio: coeficientes, tipo máximo, bonificaciones y exenciones propios.
+// Informe con artículos, URL y pendientes: docs-juridico/plusvalia-foral.md (07-10-2026). Regla de prudencia: si la tabla foral vigente en la fecha
+// del devengo no se ha podido cotejar, se usa la ENVOLVENTE (el mayor coeficiente de las tablas candidatas para cada año), para que la cifra nunca
+// quede por debajo de la liquidación posible; y si el tipo de la ordenanza no se conoce, el tipo máximo foral.
+// Navarra: art. 175.2 Ley Foral 2/1995 (redacción de la LF 17/2025, desde 01-01-2026). Fuente: texto consolidado de iberley.es; el BOE-A-2026-3910
+// confirma que la LF 17/2025 actualiza la tabla desde 01-01-2026, pero su extracción no llega a la tabla → PENDIENTE de segundo cotejo (BON).
+export const COEF_PLUSVALIA_NAV_2026 = [0.06, 0.16, 0.13, 0.26, 0.35, 0.37, 0.35, 0.41, 0.47, 0.52, 0.58, 0.53, 0.42, 0.37, 0.31, 0.26, 0.25, 0.15, 0.06, 0.06, 0.16];
+// Bizkaia: DFN 2/2024, de 14 de marzo (BOB n.º 55, 18-03-2024), art. 4.3 NF 8/1989 (misma tabla que el RDL 8/2023). Basauri aplica en 2026 una tabla de
+// 0,16 a 0,35 (la del RDL 16/2025): si Bizkaia la ha adoptado como máximo para 2026 (no cotejado), algunos años son mayores → envolvente de las dos.
+export const COEF_PLUSVALIA_BIZ_2024 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.20, 0.19, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40];
+// Gipuzkoa: DFN 2/2023, de 28 de diciembre (BOG 29-12-2023), art. 4.3 NF 16/1989, desde 01-01-2024. Tablas de 2025 y 2026 no localizadas.
+export const COEF_PLUSVALIA_GIP_2024 = [0.15, 0.15, 0.14, 0.15, 0.17, 0.18, 0.19, 0.18, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.29, 0.45];
+// Álava: Decreto Normativo de Urgencia Fiscal 12/2022, de 27 de diciembre (BOTHA 30-12-2022), art. 4 NF 46/1989, desde 01-01-2023 (la misma tabla que Gipuzkoa 2024).
+// Las ordenanzas de 2026 leídas (Oyón-Oion, Lantarón, Vitoria-Gasteiz) quedan todas por debajo; una tabla foral posterior no se ha localizado.
+export const COEF_PLUSVALIA_ALA_2023 = [0.15, 0.15, 0.14, 0.15, 0.17, 0.18, 0.19, 0.18, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.29, 0.45];
+const envolvente = (...ts) => ts[0].map((_, i) => Math.max(...ts.map((t) => t[i])));
+const DACP_FORAL = (h) => DAC(h) || linea(h) === "pareja"; // País Vasco: pareja de hecho de la Ley 2/2003 equiparada en las bonificaciones mortis causa
+export const PLUSVALIA_FORAL = {
+  NAV: { id: "NAV", nombre: "Navarra", prov: "31", norma: "Ley Foral 2/1995, de 10 de marzo, de Haciendas Locales de Navarra (arts. 172 a 178)",
+    tipoMax: 0.25, tipoMin: 0.08, normaTipo: "art. 176.2 LF 2/1995 (entre el 8 y el 25 %)", estadoTipo: V,
+    coef: COEF_PLUSVALIA_NAV_2026, desdeCoef: "2026-01-01", normaCoef: "art. 175.2 LF 2/1995, coeficientes máximos de 2026 (LF 17/2025)", estadoCoef: P,
+    notaCotejo: "Tabla leída solo en el texto consolidado de iberley (recotejada el 08-10-2026, coincide cifra a cifra); el BOE-A-2026-3910 confirma la actualización pero su texto llega cortado antes de la tabla.",
+    cotejo: [
+      { fecha: "2026-10-08", fuente: "iberley, art. 175 LF 2/1995 consolidado (última modificación del apartado 2: LF 17/2025, desde 01-01-2026)", url: "https://www.iberley.es/legislacion/articulo-175-haciendas-locales-navarra", resultado: "21 coeficientes idénticos a los del motor" },
+      { fecha: "2026-10-08", fuente: "BOE-A-2026-3910 (LF 17/2025): preámbulo «actualiza los coeficientes máximos a aplicar, a partir de 1 de enero de 2026»", url: "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2026-3910", resultado: "el texto descargable se corta en el art. 7.º; la tabla no se ha podido leer" },
+      { fecha: "2026-10-08", fuente: "BOE consolidado de la LF 2/1995 (actualizado a 20-02-2026) y vLex", url: "https://www.boe.es/buscar/act.php?id=BOE-A-1995-16401", resultado: "texto cortado antes del art. 175; Ordenanza n.º 4 de Pamplona remite a los máximos del art. 175.2 sin transcribirlos" },
+    ],
+    bonifMax: 0.95, normaBonif: "LF 2/1995: sin bonificación mortis causa propia (las herencias en línea recta y entre cónyuges están exentas)",
+    exencion: { aplica: DAC, norma: "art. 173.1.b LF 2/1995: exentas las transmisiones por herencia, legado o cualquier otro título gratuito entre ascendientes, descendientes y cónyuges (todos los municipios navarros; sin requisitos de vivienda ni solicitud)", estado: V },
+    artReal: "arts. 172.4 y 175.7 LF 2/1995", url: "https://www.iberley.es/legislacion/ley-foral-2-1995-10-mar-c-navarra-haciendas-locales-navarra-12368074" },
+  BIZ: { id: "BIZ", nombre: "Bizkaia", prov: "48", norma: "Norma Foral 8/1989, de 30 de junio, del IIVTNU de Bizkaia (adaptada por el DFN 7/2021 y la NF 3/2022)",
+    tipoMax: 0.30, normaTipo: "art. 5.1 NF 8/1989, redacción de la NF 3/2022 (máximo del 30 %)", estadoTipo: V,
+    coef: envolvente(COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025), desdeCoef: "2024-03-18", normaCoef: "art. 4.3 NF 8/1989: tabla del DFN 2/2024 y, por prudencia, la de 0,16 a 0,35 que Basauri aplica en 2026 (se toma el mayor de las dos para cada año); la actualización de la NF 4/2024 no se ha podido leer", estadoCoef: P,
+    notaCotejo: "La NF 4/2024, de medidas tributarias (BOB 30-12-2024), «actualiza los coeficientes máximos» para 2025, pero el PDF del BOB no se deja leer; la NF 7/2025 de presupuestos para 2026 no trae artículo sobre el impuesto en su índice. Si la tabla de 2025-2026 supera la envolvente en algún año, el cálculo quedaría corto: prioridad de cotejo.",
+    cotejo: [
+      { fecha: "2026-10-08", fuente: "DFN 2/2024 (BOB 55, 18-03-2024): el art. 4.3 NF 8/1989 manda actualizar los coeficientes cada año por norma foral, que puede ser la de presupuestos", url: "https://derecholocal.es/?p=13152", resultado: "confirmado el mecanismo; la tabla del decreto es una imagen" },
+      { fecha: "2026-10-08", fuente: "NF 4/2024, de 27 de diciembre, de medidas tributarias (resumen de fiscal-impuestos.com)", url: "https://www.fiscal-impuestos.com/node/38171", resultado: "actualiza los coeficientes máximos; tabla NO LOCALIZADA (el PDF del BOB no se deja leer)" },
+      { fecha: "2026-10-08", fuente: "NF 7/2025, de presupuestos de Bizkaia para 2026 (índice en iberley)", url: "https://www.iberley.es/legislacion/nf-7-2025-29-dic-bizkaia-presupuestos-generales-2026-territorio-historico-bizkaia-27285590", resultado: "sin disposición sobre el impuesto en el índice" },
+    ],
+    bonifMax: 1, normaBonif: "NF 8/1989: bonificación potestativa mortis causa de hasta el 100 % (descendientes, adoptados, cónyuge, pareja de hecho de la Ley 2/2003, ascendientes y adoptantes), según la ordenanza", beneficiario: DACP_FORAL,
+    artReal: "arts. 1.4 y 4.4 NF 8/1989", url: "https://derecholocal.es/?p=13152" },
+  GIP: { id: "GIP", nombre: "Gipuzkoa", prov: "20", norma: "Norma Foral 16/1989, de 5 de julio, del IIVTNU de Gipuzkoa (adaptada por el Decreto Foral-Norma 7/2021)",
+    tipoMax: 0.30, normaTipo: "NF 16/1989: el texto consolidado de 2018 fijaba un máximo del 15 %; el vigente tras la reforma de 2021 no se ha cotejado y se toma el 30 % por prudencia", estadoTipo: P,
+    coef: COEF_PLUSVALIA_GIP_2024, desdeCoef: "2024-01-01", normaCoef: "art. 4.3 NF 16/1989, tabla del DFN 2/2023 (desde 01-01-2024); las de 2025 y 2026 no se han localizado", estadoCoef: P,
+    notaCotejo: "El art. 4.3 manda actualizar la tabla cada año por norma foral (puede ser la de presupuestos); en la parte legible de la NF 4/2024 (presupuestos 2025) y de la NF 6/2025 (presupuestos 2026) no aparece.",
+    cotejo: [
+      { fecha: "2026-10-08", fuente: "Decreto Foral-Norma 7/2021 (art. 4.3: «Estos coeficientes máximos serán actualizados anualmente mediante norma foral»)", url: "https://derecholocal.es/?p=8474", resultado: "mecanismo confirmado; tabla en imagen" },
+      { fecha: "2026-10-08", fuente: "NF 6/2025, de 19 de diciembre, de presupuestos de Gipuzkoa para 2026", url: "https://www.fiscal-impuestos.com/sites/fiscal-impuestos.com/files/Gipuzkoa-Presupuestos.pdf", resultado: "visibles las DA 1.ª a 3.ª (interés de demora 4,0625 %, valores catastrales × 1,020); sin coeficientes del impuesto; texto cortado" },
+      { fecha: "2026-10-08", fuente: "NF 4/2024, de presupuestos de Gipuzkoa para 2025 (extracto)", url: "https://primeralecturaediciones.com/?p=20243311", resultado: "solo DA 1.ª y 3.ª; sin coeficientes" },
+    ],
+    bonifMax: 0.95, normaBonif: "NF 16/1989: bonificación potestativa mortis causa de hasta el 95 % (descendientes, adoptados, cónyuge, pareja de hecho de la Ley 2/2003, ascendientes y adoptantes), según la ordenanza", beneficiario: DACP_FORAL,
+    artReal: "arts. 1.3 y 4.4 NF 16/1989", url: "https://www.fiscal-impuestos.com/sites/fiscal-impuestos.com/files/NFL022288.pdf" },
+  ALA: { id: "ALA", nombre: "Álava", prov: "01", norma: "Norma Foral 46/1989, de 19 de julio, del IIVTNU de Álava (texto del DFN 4/2021, adaptado por el DNUF 8/2021)",
+    tipoMax: 0.30, normaTipo: "art. 5 NF 46/1989 (máximo del 30 %)", estadoTipo: V,
+    coef: COEF_PLUSVALIA_ALA_2023, desdeCoef: "2023-01-01", normaCoef: "art. 4 NF 46/1989, tabla del DNUF 12/2022 (BOTHA 150, 30-12-2022; desde 01-01-2023); no se ha localizado una tabla foral posterior", estadoCoef: P,
+    notaCotejo: "Los decretos forales de diciembre de 2023 y 2025 sobre coeficientes (51/2023 y 41/2025) solo tratan IRPF e Impuesto sobre Sociedades.",
+    cotejo: [
+      { fecha: "2026-10-08", fuente: "DNUF 12/2022 (BOTHA 150/2022), vigencia desde 31-12-2022", url: "https://derecholocal.es/?p=10908", resultado: "confirma norma, boletín y fecha; tabla no transcrita en esa página (la del motor viene de NFL021712)" },
+      { fecha: "2026-10-08", fuente: "Decreto Foral 51/2023 (BOTHA 29-12-2023) y Decreto Foral 41/2025 (BOTHA 146, 26-12-2025)", url: "https://www.fiscal-impuestos.com/node/40577", resultado: "coeficientes de IRPF e IS; no tocan el IIVTNU" },
+    ],
+    bonifMax: 1, normaBonif: "art. 7.2 NF 46/1989: bonificación potestativa mortis causa de hasta el 100 % (descendientes, adoptados, cónyuge, pareja de hecho de la Ley 2/2003, ascendientes y adoptantes), según la ordenanza", beneficiario: DACP_FORAL,
+    artReal: "arts. 1 y 4.5 NF 46/1989", url: "https://www.fiscal-impuestos.com/sites/fiscal-impuestos.com/files/NFL021712.pdf" },
+};
+const FORAL_PROV = { "01": "ALA", "20": "GIP", "31": "NAV", "48": "BIZ" };
+// Régimen foral de un municipio por su código INE (las dos primeras cifras son la provincia); null en régimen común
+export const regimenPlusvalia = (ine) => PLUSVALIA_FORAL[FORAL_PROV[String(ine || "").slice(0, 2)]] || null;
+// Coeficientes máximos aplicables: tabla foral (envolvente prudente) en los forales; art. 107.4 TRLRHL en régimen común
+export const coefPlusvaliaMax = (fecha, regimen) => (regimen && PLUSVALIA_FORAL[regimen] ? PLUSVALIA_FORAL[regimen].coef : coefPlusvaliaLegal(fecha).tabla);
+const bTramos = (S, tramos) => { let prev = 0, acc = 0; for (const [lim, p] of tramos) { acc += Math.max(0, Math.min(S, lim) - prev) * p; prev = lim; if (S <= lim) break; } return S > 0 ? acc / S : tramos[0][1]; };
+const DACP = (h) => DAC(h) || linea(h) === "pareja";
+const G1 = (h) => ["hijo", "padre", "conyuge", "pareja_hecho"].includes(h.relacion);
+// Bonificación que se introduce a mano (ordenanza no cotejada). Sin porcentaje introducido no se aplica ninguna: la cuota es la máxima posible y
+// la norma lo dice expresamente, en lugar de afirmar que hay un porcentaje «introducido a mano» (control de calidad 07-10-2026, D3).
+const manual = (c, norma) => { const pct = (Number(c.inmueble.bonifManual) || 0) / 100; return { pct, norma: pct > 0 ? norma : `${norma.replace(/: porcentaje introducido a mano$/, "")}. SIN BONIFICACIÓN APLICADA: no se ha introducido el porcentaje (cuota máxima posible); compruébalo en la ordenanza e indícalo en la ficha del inmueble`, estado: P, ...(pct > 0 ? {} : { bonifPendiente: true }) }; };
+const escalon = (v, T) => { for (const [lim, p] of T) if ((v || 0) <= lim) return p; return 0; };
+const GR = (h) => RELACIONES[h.relacion]?.grado;
+const DAC1 = (h) => linea(h) === "conyuge" || (["desc", "asc"].includes(linea(h)) && GR(h) === 1);
+const DAC2 = (h) => linea(h) === "conyuge" || (["desc", "asc"].includes(linea(h)) && GR(h) <= 2);
+const conv1 = (h) => h.convivio1anio ?? h.convivio2anios;
+const noLocalizada = (nombre, ord, extra) => ({ nombre, tipo: 0.30, estadoTipo: P, ...extra, bonif(c) { return DAC(c.heredero) ? manual(c, `${ord} ${nombre}: texto vigente no localizado; tipo provisional del 30 % (máximo legal). Bonificación introducida a mano`) : { pct: 0, norma: `${ord} ${nombre}`, estado: P }; } });
+export const ORDENANZAS = {
+  MADRID: { nombre: "Madrid", ccaa: "Comunidad de Madrid", tipo: 0.29, estadoTipo: P, bonif(c) {
+    // Tramos 95/85/70/40 según la Agencia Tributaria Madrid (2026). Los 95/90/75/45 anteriores eran una propuesta de 2021 no aprobada.
+    if (!(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) || !DACP(c.heredero)) return { pct: 0, norma: "art. 18 OF IIVTNU Madrid", estado: P };
+    const s = c.inmueble.valorCatastralSuelo;
+    return { pct: escalon(s, [[60000, 0.95], [100000, 0.85], [138000, 0.70], [Infinity, 0.40]]), norma: `art. 18 OF IIVTNU Madrid: ${c.inmueble.esViviendaHabitual ? "vivienda habitual del causante" : "local afecto (mantener titularidad y actividad 5 años)"}; 95/85/70/40 % según valor catastral del suelo; pareja inscrita equiparada (art. 18.2); rogada, 6+6 meses. Texto literal del art. 18.1 no cotejado`, estado: P };
+  } },
+  // ── Provincia de Málaga (investigación 28-09-2026) ──
+  MALAGA: { nombre: "Málaga", tipo: 0.29, estadoTipo: V, bonif(c) {
+    const h = c.heredero;
+    if (c.fecha < "2026-03-27") return DAC(h) ? manual(c, "OF nº 5 Málaga: devengo anterior al 27-03-2026, rige la versión previa de la ordenanza: porcentaje introducido a mano") : { pct: 0, norma: "OF nº 5 Málaga", estado: P };
+    if (!c.inmueble.esViviendaHabitual || !DAC(h)) return { pct: 0, norma: "art. 9 OF nº 5 Málaga", estado: V };
+    const vc = c.inmueble.valorCatastralTotal;
+    if (h.convivio2anios && h.colectivoVulnerable && h.ingresosAnuales != null && h.ingresosAnuales <= 1.7 * IPREM_ANUAL_14P)
+      return { pct: 0.95, norma: "art. 9.C OF nº 5 Málaga (pensionista, desempleado, <30, gran incapacidad o víctima VG; ingresos ≤ 1,7 IPREM — base IPREM PENDIENTE)", estado: P };
+    const pct = h.convivio2anios ? (vc <= 100000 ? 0.95 : vc <= 150000 ? 0.80 : vc <= 200000 ? 0.70 : vc <= 250000 ? 0.50 : 0.25) : (vc <= 150000 ? 0.375 : 0);
+    return { pct, norma: "art. 9 OF nº 5 Málaga (mod. BOP 26/03/2026, en vigor 27/03/2026); rogada, 6+6 meses; no transmitir inter vivos en 2 años; estar al corriente en el pago de todas las exacciones municipales y tener domiciliados los tributos periódicos", estado: V };
+  } },
+  MARBELLA: { nombre: "Marbella", tipo: 0.29, estadoTipo: P, bonif(c) {
+    const h = c.heredero;
+    if (!c.inmueble.esViviendaHabitual || !(DAC(h) || linea(h) === "pareja")) return { pct: 0, norma: "OF IIVTNU Marbella (sin cotejo literal): solo vivienda habitual a desc., asc., cónyuge o pareja de hecho", estado: P };
+    const vc = c.inmueble.valorCatastralTotal;
+    return { pct: vc <= 125000 ? 0.95 : vc <= 200000 ? 0.50 : vc <= 300000 ? 0.20 : 0, norma: "OF IIVTNU Marbella (libro OF 2026): tramos 95/50/20% según fuente secundaria, texto no cotejado", estado: P };
+  } },
+  MIJAS: { nombre: "Mijas", tipo: 0.30, tipoPorAnios: (a) => (a >= 20 ? 0.22 : 0.30), estadoTipo: V, bonif(c) {
+    const h = c.heredero;
+    if (!DAC(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "art. 8.1 OF IIVTNU Mijas", estado: V };
+    if (h.convivio2anios !== true) return { pct: 0, norma: "art. 8.1 OF IIVTNU Mijas: exige convivencia con el causante 2 años (padrón)", estado: V };
+    return { pct: c.inmueble.valorCatastralSuelo < 100000 ? 0.95 : 0, norma: "art. 8.1 OF IIVTNU Mijas (vigente desde 03/08/2023): 95% si VC del suelo < 100.000 €; mantener 2 años; rogada 6+6 meses", estado: V };
+  } },
+  FUENGIROLA: { nombre: "Fuengirola", tipo: 0.25, estadoTipo: P, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "OF IIVTNU Fuengirola (no localizada)", estado: P };
+    if (c.heredero.empadronadoMunicipio !== true) return { pct: 0, norma: "OF IIVTNU Fuengirola (no localizada): según prensa 2019 exige heredero empadronado en Fuengirola (dato no informado o no cumplido)", estado: P };
+    return { pct: 0.95, norma: "OF IIVTNU Fuengirola (no localizada; 95% según prensa 17/05/2019)", estado: P };
+  } },
+  VELEZ_MALAGA: { nombre: "Vélez-Málaga", tipo: 0.29, estadoTipo: V, bonif(c) {
+    const h = c.heredero;
+    if (!DAC(h)) return { pct: 0, norma: "art. 17 OF IIVTNU Vélez-Málaga", estado: V };
+    if (c.inmueble.esViviendaHabitual) return { pct: 0.95, norma: "art. 17.1 OF IIVTNU Vélez-Málaga (vigente desde 01/01/2024): 95% vivienda habitual del causante (padrón ≥1 año); reintegro escalonado si se vende en 10 años. Requisito de padrón del heredero PENDIENTE", estado: V };
+    if (h.empadronadoMunicipio1anio !== true) return { pct: 0, norma: "art. 17.2 OF Vélez-Málaga: exige heredero empadronado ≥1 año antes del fallecimiento (dato no informado o no cumplido)", estado: P };
+    const s = c.inmueble.valorCatastralSuelo || 0;
+    return { pct: s > 0 ? 0.75 * Math.min(1, 60000 / s) : 0.75, norma: "art. 17.2 OF Vélez-Málaga: 75% para un segundo inmueble, tope equivalente a VC 60.000 € (forma de aplicar el tope PENDIENTE); debe pedirse en la declaración", estado: P };
+  } },
+  TORREMOLINOS: { nombre: "Torremolinos", tipo: 0.28, estadoTipo: P, bonif(c) {
+    // D3 (control de calidad 07-10-2026): la OF nº 29 no se ha podido leer (robots.txt del Ayuntamiento; búsquedas sin resultado). Consta que el pleno
+    // de 27/01/2022 aprobó una bonificación mortis causa «hasta el 95 %» (prensa local), sin tramos ni requisitos conocidos. Sin porcentaje introducido,
+    // la cuota es la máxima posible y se avisa; no se inventa un porcentaje.
+    // Ronda 4 (08-10-2026): localizado el PDF oficial (torremolinos.es/wpsystem/wp-content/uploads/docs/ordenanzas/ordenanza_29.pdf), pero el
+    // robots.txt del Ayuntamiento impide leerlo; el portal de transparencia y el BOP de Málaga tampoco responden. Sigue sin porcentaje.
+    return DAC(c.heredero) ? manual(c, "OF nº 29 Torremolinos no cotejada (pleno 27/01/2022: bonificación mortis causa «hasta el 95 %», tramos y requisitos desconocidos): porcentaje introducido a mano") : { pct: 0, norma: "OF nº 29 Torremolinos", estado: P };
+  } },
+  BENALMADENA: { nombre: "Benalmádena", tipo: 0.275, estadoTipo: V, bonif(c) {
+    const h = c.heredero, l = linea(h);
+    if (!["desc", "conyuge", "pareja"].includes(l)) return { pct: 0, norma: "art. 12 OF IIVTNU Benalmádena: solo descendientes/adoptados, cónyuge o análoga relación de afectividad (no ascendientes)", estado: V };
+    if (!c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: "art. 12 OF IIVTNU Benalmádena: vivienda habitual del contribuyente con empadronamiento ininterrumpido ≥2 años", estado: V };
+    return { pct: 0.95, norma: "art. 12 OF IIVTNU Benalmádena (BOP 28/07/2022); incluye garaje y trastero vinculados", estado: V };
+  } },
+  ESTEPONA: { nombre: "Estepona", tipo: 0.20, estadoTipo: P, bonif(c) {
+    return DAC(c.heredero) ? manual(c, "OF 1.5 IIVTNU Estepona (texto de 2020: 95 % con posibles requisitos de convivencia y mantenimiento de 4 años; vigente no cotejada): porcentaje introducido a mano") : { pct: 0, norma: "OF 1.5 IIVTNU Estepona", estado: P };
+  } },
+  RINCON_DE_LA_VICTORIA: { nombre: "Rincón de la Victoria", tipo: 0.30, estadoTipo: V, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 9.2 OF IIVTNU Rincón de la Victoria", estado: V };
+    if (c.inmueble.esViviendaHabitual) return { pct: 0.95, norma: "art. 9.2.a OF IIVTNU Rincón de la Victoria (mod. BOP 06/08/2024): 95% vivienda habitual sin límite de valor; rogada 6+6 meses", estado: V };
+    if (c.causanteEmpadronadoMunicipio !== true) return { pct: 0, norma: "art. 9.2 OF Rincón de la Victoria: exige causante empadronado en el municipio (dato no informado o no cumplido)", estado: V };
+    const S = c.sumaVCOtrosInmuebles ?? c.inmueble.valorCatastralTotal;
+    return { pct: bTramos(S, [[50000, 0.85], [75000, 0.80], [120000, 0.75], [Infinity, 0.50]]), norma: "art. 9.2.b OF Rincón de la Victoria: 85/80/75/50% por tramos de la suma de VC de 2º y ulteriores inmuebles (cálculo por tramos PENDIENTE de interpretación)", estado: P };
+  } },
+  ANTEQUERA: { nombre: "Antequera", tipo: 0.28, estadoTipo: V, bonif(c) {
+    const h = c.heredero, l = linea(h), g = RELACIONES[h.relacion]?.grado;
+    if (!(l === "conyuge" || ((l === "desc" || l === "asc") && g === 1))) return { pct: 0, norma: "art. 9.1 OF nº 4 Antequera: solo cónyuge y línea recta de primer grado", estado: V };
+    if (!c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: "art. 9.2.c-d OF nº 4 Antequera: vivienda habitual de causante y adquirente, convivencia 2 años (padrón)", estado: V };
+    if (h.ingresosAnuales == null) return { pct: 0, norma: "art. 9.2.c OF nº 4 Antequera: exige ingresos del adquirente ≤ 1,5 × IPREM anual 14 pagas (dato no informado)", estado: V };
+    return { pct: h.ingresosAnuales <= 1.5 * IPREM_ANUAL_14P ? 0.95 : 0, norma: "art. 9 OF nº 4 Antequera (BOP 27/06/2022; mod. BOP 22/12/2023); mantener 2 años; solicitud dentro de plazo. Importe IPREM 2026 PENDIENTE", estado: V };
+  } },
+  RONDA: { nombre: "Ronda", tipo: 0.20, estadoTipo: V, bonif(c) {
+    return DAC(c.heredero) ? { pct: 0.95, norma: "art. 15 OF nº 5 Ronda (BOP 18/04/2022): 95% sin requisito de vivienda habitual ni de valor", estado: V } : { pct: 0, norma: "art. 15 OF nº 5 Ronda", estado: V };
+  } },
+  ALHAURIN_DE_LA_TORRE: { nombre: "Alhaurín de la Torre", tipo: 0.30, estadoTipo: V, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 6.2 OF IIVTNU Alhaurín de la Torre", estado: V };
+    return c.fecha >= "2024-01-01"
+      ? { pct: 0.95, norma: "art. 6.2 OF IIVTNU Alhaurín de la Torre (mod. BOP 20/10/2023, efectos 01/01/2024): 95% sin requisito de vivienda habitual", estado: V }
+      : { pct: 0.90, norma: "OF IIVTNU Alhaurín de la Torre (mod. 2022: 90%, según nota municipal)", estado: P };
+  } },
+  NERJA: { nombre: "Nerja", tipo: 0.21, estadoTipo: V, bonif(c) {
+    return DAC(c.heredero) ? { pct: 0.95, norma: "art. 9 OF IIVTNU Nerja (BOP 10/02/2022): 95% 'en todos los supuestos'; rogada 6+6 meses", estado: V } : { pct: 0, norma: "art. 9 OF IIVTNU Nerja", estado: V };
+  } },
+  // ── Capitales y grandes municipios andaluces (investigación 28-09-2026) ──
+
+  SEVILLA: { nombre: "Sevilla", tipo: 0.2653, estadoTipo: P, // 26,53 % según 4 fuentes secundarias 2026; texto 2022 decía 26,8 %. Web oficial ilegible.
+    bonif(c) {
+      const norma = "OF de medidas de solidaridad social (Sevilla), bonificación del IIVTNU por herencia — requisitos pendientes de comprobar en el texto oficial";
+      if (!DAC(c.heredero)) return { pct: 0 };
+      if (c.caudalTotal > 500000) return { pct: 0, norma: norma + " (caudal > 500.000 €)", estado: P };
+      if (c.inmueble.esViviendaHabitual) { const s = c.inmueble.valorCatastralSuelo; return { pct: s <= 10000 ? 0.95 : s <= 20000 ? 0.50 : s <= 50000 ? 0.30 : 0, norma: norma + " (vivienda habitual; mantener 3 años)", estado: P }; }
+      if (c.inmueble.esLocalAfecto) return { pct: 0.40, norma: norma + " (local afecto)", estado: P };
+      return { pct: 0.10, norma: norma + " (otros inmuebles urbanos)", estado: P };
+    } },
+  CORDOBA: { nombre: "Córdoba", tipo: 0.2752, estadoTipo: V,
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 8 OF 306 (propios)
+    bonif(c) {
+      if (!DACP(c.heredero)) return { pct: 0 };
+      if (c.inmueble.esViviendaHabitual) return { pct: 0.95, norma: "art. 11.2 OF nº 306 Córdoba (vivienda habitual del causante)", estado: V };
+      if (c.inmueble.esLocalAfecto) return { pct: 0.95, norma: "art. 11.2 OF nº 306 Córdoba (local afecto; mantener actividad 5 años)", estado: V };
+      return { pct: 0 };
+    } },
+  GRANADA: { nombre: "Granada", tipo: 0.30, estadoTipo: V,
+    bonif(c) {
+      if (!DAC(c.heredero)) return { pct: 0 }; // pareja de hecho NO incluida
+      return { pct: 0.50, norma: "art. 8 OF nº 5 Granada (BOP 24/12/2025): cualquier inmueble; exige autoliquidar e ingresar en plazo", estado: V };
+    } },
+  ALMERIA: { nombre: "Almería", tipo: 0.27, estadoTipo: P,
+    bonif(c) {
+      if (!c.inmueble.esViviendaHabitual || !DACP(c.heredero)) return { pct: 0 };
+      return { pct: 0.95, norma: "OF n.º 6 de Almería (modificada en 2023, efectos 2024) — requisitos pendientes de comprobar en el texto oficial", estado: P };
+    } },
+  CADIZ: { nombre: "Cádiz", tipo: 0.30, estadoTipo: P,
+    bonif(c) {
+      if (!c.inmueble.esViviendaHabitual || !DACP(c.heredero)) return { pct: 0 };
+      const s = c.inmueble.valorCatastralSuelo; // suelo de TODA la vivienda
+      return { pct: s <= 20000 ? 0.95 : s <= 30000 ? 0.50 : s <= 40000 ? 0.25 : 0, norma: "art. 13.2 OF nº 4 Cádiz (texto 2022): causante empadronado 2 años; mantener 5 años", estado: P };
+    } },
+  HUELVA: { nombre: "Huelva", tipo: 0.30, estadoTipo: P, // tipo NO LOCALIZADO: 30 % = máximo legal
+    bonif(c) { return DAC(c.heredero) ? manual(c, "OF 1.5 Huelva: existe bonificación mortis causa (DAC); % NO LOCALIZADO — introducir a mano") : { pct: 0 }; } },
+  JAEN: { nombre: "Jaén", tipo: 0.29, estadoTipo: V,
+    bonif(c) { return { pct: 0, norma: "OF IIVTNU Jaén (BOP 01/04/2022): sin bonificación (art. 12 suprimido)", estado: V }; } },
+  JEREZ: { nombre: "Jerez de la Frontera", tipo: 0.30, estadoTipo: V,
+    // Art. 11 OF 1.03, modificación definitiva BOP Cádiz n.º 192 de 03-10-2024 (pleno 28-06-2024). La ordenanza dice «valor catastral» sin precisar:
+    // se toma el valor catastral TOTAL del inmueble, que es lo prudente (con el del suelo los porcentajes serían iguales o mayores).
+    bonif(c) {
+      if (!DAC(c.heredero)) return { pct: 0, norma: "art. 11 OF 1.03 Jerez (BOP Cádiz 192, 03-10-2024): solo descendientes, ascendientes y cónyuge", estado: V };
+      const v = Number(c.inmueble.valorCatastralTotal) || 0, viv = !!c.inmueble.esViviendaHabitual;
+      const pct = viv ? (v <= 72562 ? 0.95 : v <= 103660 ? 0.8 : v <= 146000 ? 0.6 : v <= 207320 ? 0.3 : 0.2) : (v <= 207320 ? 0.3 : 0.2);
+      return { pct, norma: `art. 11 OF 1.03 Jerez (BOP Cádiz 192, 03-10-2024): ${viv ? "vivienda domicilio familiar del causante" : "resto de inmuebles"}, tramo por valor catastral (se toma el total; confirmar con el Ayuntamiento si es el del suelo); rogada; se pierde si se vende en 4 años`, estado: P };
+    } },
+  ALGECIRAS: { nombre: "Algeciras", tipo: 0.30, estadoTipo: P, // NO LOCALIZADO
+    bonif(c) { return DAC(c.heredero) ? manual(c, "OF nº 5 Algeciras: NO LOCALIZADA — introducir a mano") : { pct: 0 }; } },
+  DOS_HERMANAS: { nombre: "Dos Hermanas", tipo: 0.264, estadoTipo: V,
+    bonif(c) {
+      const conv = c.heredero.convivio1anio ?? c.heredero.convivio2anios;
+      if (!c.inmueble.esViviendaHabitual || !DACP(c.heredero) || !conv) return { pct: 0 };
+      return { pct: 0.95, norma: "art. 6 OF IIVTNU Dos Hermanas: heredero residente con el causante, empadronado ≥ 1 año", estado: P };
+    } },
+  ROQUETAS: { nombre: "Roquetas de Mar", tipo: 0.30, estadoTipo: P, // NO LOCALIZADO
+    bonif(c) { return DAC(c.heredero) ? manual(c, "OF IIVTNU Roquetas de Mar: NO LOCALIZADA — introducir a mano") : { pct: 0 }; } },
+  EL_EJIDO: { nombre: "El Ejido", tipo: 0.30, estadoTipo: P, // NO LOCALIZADO
+    bonif(c) { return DAC(c.heredero) ? manual(c, "OF 04 Plusvalía El Ejido: NO LOCALIZADA — introducir a mano") : { pct: 0 }; } },
+  SAN_FERNANDO: { nombre: "San Fernando", tipo: 0.30, estadoTipo: P, // NO LOCALIZADO
+    bonif(c) { return DAC(c.heredero) ? manual(c, "OF IIVTNU San Fernando: NO LOCALIZADA — introducir a mano") : { pct: 0 }; } },
+  MOTRIL: { nombre: "Motril", tipo: 0.255, estadoTipo: V,
+    coef: [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.20, 0.19, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 8.5 (= máximos 2024)
+    bonif(c) {
+      if (!c.inmueble.esViviendaHabitual || !G1(c.heredero) || !c.heredero.convivio2anios) return { pct: 0 };
+      // Devengos anteriores al 10/02/2026 se rigen por la versión previa (no leída): PENDIENTE
+      return { pct: 0.95, norma: "art. 10 OF nº 5 Motril (BOP Granada 09/02/2026): 1er grado, cónyuge o pareja; convivencia 2 años con el causante", estado: c.fecha >= "2026-02-10" ? V : P };
+    } },
+  // ── Capitales de provincia y grandes municipios del resto de España (investigación 28-09-2026) ──
+  // Galicia, Asturias, Cantabria, País Vasco, Navarra, La Rioja, Castilla y León
+  A_CORUNA: { nombre: "A Coruña", ccaa: "Galicia", tipo: 0.25, estadoTipo: P, bonif(c) {
+    const h = c.heredero, n = "art. 7 OF nº 53 A Coruña (texto 2022; tipo del 25 % según prensa 2024)";
+    if (!DAC(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo vivienda habitual del causante", estado: P };
+    if (h.ingresosAnuales == null) return { pct: 0.20, norma: n + ": 95/70/30/20 % según renta de la unidad familiar frente al IPREM; sin ingresos informados se aplica el tramo mínimo", estado: P };
+    const k = h.ingresosAnuales / IPREM_ANUAL_14P;
+    return { pct: k <= 1 ? 0.95 : k <= 2 ? 0.70 : k <= 3 ? 0.30 : 0.20, norma: n + ": vivienda habitual del causante; 95/70/30/20 % según renta frente al IPREM (1, 2 y 3 veces); rogada", estado: P };
+  } },
+  LUGO: { nombre: "Lugo", ccaa: "Galicia", tipo: 0.28, tipoPorAnios: (a) => (a <= 5 ? 0.28 : 0.27), estadoTipo: P, bonif(c) {
+    const n = "OF nº 201 Lugo (2026; artículo no localizado)";
+    if (!DACP(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": inmueble en el que estaba empadronado el causante", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[8000, 0.95], [16000, 0.50], [40000, 0.25]]), norma: n + ": 95/50/25 % según valor catastral del suelo (8.000, 16.000 y 40.000 €); rogada en plazo", estado: P };
+  } },
+  OURENSE: noLocalizada("Ourense", "OF nº 5", { ccaa: "Galicia" }),
+  PONTEVEDRA: { nombre: "Pontevedra", ccaa: "Galicia", tipo: 0.21, estadoTipo: P, bonif(c) {
+    const h = c.heredero, n = "OF 21 Pontevedra (artículo vigente no localizado)";
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: n + ": vivienda habitual del causante y residencia del heredero en ella 2 años", estado: P };
+    if (h.ingresosAnuales == null) return { pct: 0, norma: n + ": exige renta familiar inferior a 2 veces el IPREM (dato no informado)", estado: P };
+    return { pct: h.ingresosAnuales < 2 * IPREM_ANUAL_14P ? 0.95 : 0, norma: n + ": 95 % con renta inferior a 2 × IPREM; mantener 3 años", estado: P };
+  } },
+  VIGO: { nombre: "Vigo", ccaa: "Galicia", tipo: 0.30, estadoTipo: V, bonif(c) {
+    if (!DACP(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "art. 5 Ordenanza nº 6 Vigo: solo vivienda habitual del causante", estado: V };
+    return { pct: 0.50, norma: "art. 5 Ordenanza nº 6 Vigo: vivienda habitual del causante; pareja inscrita con 1 año de convivencia; mantener 4 años; rogada", estado: V };
+  } },
+  OVIEDO: { nombre: "Oviedo", ccaa: "Asturias", tipo: 0.20, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 5.1 OF nº 404 Oviedo (en vigor 01/01/2025)";
+    if (!DAC(h) || !c.inmueble.esViviendaHabitual || !conv1(h)) return { pct: 0, norma: n + ": vivienda habitual y convivencia con el causante el año anterior", estado: V };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[46000, 0.95], [70000, 0.60]]), norma: n + ": 95 % con suelo hasta 46.000 €, 60 % hasta 70.000 €; mantener 3 años; rogada 6 meses", estado: V };
+  } },
+  GIJON: noLocalizada("Gijón", "OF nº 1.03", { ccaa: "Asturias" }),
+  SANTANDER: { nombre: "Santander", ccaa: "Cantabria", tipo: 0.21, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 8 Ordenanza nº 5-I Santander";
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": vivienda habitual del causante los 2 años anteriores", estado: V };
+    if (c.inmueble.valorCatastralSuelo > 70000) return { pct: 0, norma: n + ": exige valor catastral del suelo hasta 70.000 €", estado: V };
+    if (h.ingresosAnuales == null) return { pct: 0, norma: n + ": exige ingresos del heredero hasta 2 × IPREM (dato no informado)", estado: V };
+    return { pct: h.ingresosAnuales <= 2 * IPREM_ANUAL_14P ? 0.95 : 0, norma: n + ": 95 %; ingresos hasta 2 × IPREM; exige adjudicación concreta (no proindiviso)", estado: V };
+  } },
+  // ── Territorios forales (07-10-2026): el régimen de cada territorio (PLUSVALIA_FORAL) fija el tope de tipo, coeficientes y bonificación ──
+  BILBAO: { nombre: "Bilbao", ccaa: "País Vasco", regimen: "BIZ", tipo: 0.30, estadoTipo: P, bonif(c) {
+    // Ordenanza no localizada (bilbao.eus no se deja leer); fuentes secundarias hablan de un 25 % sin contrastar: se aplica el máximo foral (30 %)
+    const n = "OF IIVTNU Bilbao: texto vigente no localizado; tipo provisional del 30 % (máximo foral, art. 5.1 NF 8/1989)";
+    return DACP_FORAL(c.heredero) ? manual(c, n + ". Bonificación introducida a mano (la NF 8/1989 permite hasta el 100 %)") : { pct: 0, norma: n, estado: P };
+  } },
+  DONOSTIA: { nombre: "Donostia-San Sebastián", ccaa: "País Vasco", regimen: "GIP", tipo: 0.30, estadoTipo: P, bonif(c) {
+    // Tipos por periodo en el anexo de la ordenanza 2026 (no localizado): se aplica el 30 %, tope prudente de Gipuzkoa
+    return DACP_FORAL(c.heredero) ? manual(c, "art. 7 OF IIVTNU Donostia (BOG 10/12/2025): 95 % si es vivienda habitual del heredero, 50 % en el supuesto del art. 7.1.b, 10 % en los demás casos; rogada. Porcentaje introducido a mano") : { pct: 0, norma: "art. 7 OF IIVTNU Donostia", estado: P };
+  } },
+  VITORIA: { nombre: "Vitoria-Gasteiz", ccaa: "País Vasco", regimen: "ALA", tipo: 0.30, estadoTipo: P, bonif(c) {
+    // Coeficientes propios de 0,15 a 0,40 sin transcribir: se usan los máximos forales de Álava (cálculo prudente)
+    const h = c.heredero, n = "OF nº 4 Vitoria-Gasteiz (BOTHA 26/12/2025)";
+    if (!(DAC1(h) || linea(h) === "pareja")) return { pct: 0, norma: n + ": primer grado, cónyuge o pareja de hecho", estado: P };
+    if (h.convivio2anios !== true) return { pct: 0, norma: n + ": exige que el inmueble sea la vivienda habitual del heredero", estado: P };
+    if (h.ingresosAnuales == null) return manual(c, n + ": 95/75/50/10 % según ingresos del heredero (27.200, 37.200 y 47.200 €); ingresos no informados, porcentaje a mano");
+    return { pct: escalon(h.ingresosAnuales, [[27200, 0.95], [37200, 0.75], [47200, 0.50], [Infinity, 0.10]]), norma: n + ": 95/75/50/10 % según ingresos del heredero; solicitud en un mes desde la notificación", estado: P };
+  } },
+  PAMPLONA: { nombre: "Pamplona", ccaa: "Navarra", regimen: "NAV", tipo: 0.1735, estadoTipo: V, bonif(c) {
+    // Las herencias entre ascendientes, descendientes y cónyuges están exentas por la propia LF 2/1995 (art. 173.1.b), que recoge el art. 3.1.b de la ordenanza
+    return DAC(c.heredero) ? { pct: 1, norma: "art. 3.1.b Ordenanza nº 4 Pamplona y art. 173.1.b LF 2/1995: exenta", estado: V } : { pct: 0, norma: "Ordenanza nº 4 Pamplona (2026): sin bonificaciones", estado: V };
+  } },
+  GETXO: { nombre: "Getxo", ccaa: "País Vasco", regimen: "BIZ", tipo: 0.0875, tipoPorAnios: (a) => (a <= 5 ? 0.075 : a <= 10 ? 0.08 : a <= 15 ? 0.085 : 0.0875), estadoTipo: P,
+    // Anexo I (coeficientes) y Anexo II (tipos) de la ordenanza de 2022; los coeficientes se limitan a los máximos forales vigentes (art. 9.2 de la ordenanza)
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], bonif(c) {
+    const h = c.heredero, n = "art. 5.5 OF IIVTNU Getxo (texto de 2022; versión de 2026 no cotejada)";
+    if (!(linea(h) === "conyuge" || linea(h) === "pareja")) return { pct: 0, norma: n + ": la única bonificación mortis causa es para el cónyuge o la pareja de hecho", estado: P };
+    if (!c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda habitual del causante", estado: P };
+    if (h.ingresosAnuales == null) return { pct: 0, norma: n + ": 33 % si la renta anual del beneficiario es inferior a 18.000 € (dato no informado)", estado: P };
+    return { pct: h.ingresosAnuales < 18000 ? 0.33 : 0, norma: n + ": 33 % con renta anual inferior a 18.000 €; rogada", estado: P };
+  } },
+  BASAURI: { nombre: "Basauri", ccaa: "País Vasco", regimen: "BIZ", tipo: 0.0776, tipoPorAnios: (a) => (a >= 20 ? 0.1129 : 0.0776), estadoTipo: P,
+    // OF nº 05 (2026), leída en euskera con traducción automática: 7,76 %; 11,29 % para más de 20 años (el año 20 justo se trata como «más de 20»: cálculo prudente)
+    coef: COEF_PLUSVALIA_RDL16_2025, bonif(c) {
+    const h = c.heredero, n = "OF nº 05 IIVTNU Basauri (2026, texto en euskera pendiente de cotejo en castellano o en el BOB)";
+    if (!DACP_FORAL(h)) return { pct: 0, norma: n + ": descendientes, ascendientes, cónyuge o pareja de hecho", estado: P };
+    if (!c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda habitual", estado: P };
+    if (h.convivio2anios !== true) return { pct: 0, norma: n + ": exige 2 años de convivencia con el causante", estado: P };
+    return { pct: 1, norma: n + ": 100 % de la vivienda habitual con 2 años de convivencia; mantenerla 4 años", estado: P };
+  } },
+  ERMUA: { nombre: "Ermua", ccaa: "País Vasco", regimen: "BIZ", tipo: 0.10, tipoPorAnios: (a) => (a <= 5 ? 0.10 : a <= 10 ? 0.09 : a <= 15 ? 0.08 : 0.07), estadoTipo: P,
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.12, 0.16, 0.22, 0.35], bonif() {
+    return { pct: 0, norma: "OF nº 5 IIVTNU Ermua (arts. 6 y 7): sin bonificación por herencia", estado: P };
+  } },
+  OYON: { nombre: "Oyón-Oion", ccaa: "País Vasco", regimen: "ALA", tipo: 0.16, estadoTipo: P,
+    coef: [0.12, 0.11, 0.13, 0.14, 0.15, 0.15, 0.14, 0.14, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.22, 0.28, 0.42], bonif(c) {
+    const h = c.heredero, n = "OF nº 5 IIVTNU Oyón-Oion (2026)";
+    if (!DACP_FORAL(h)) return { pct: 0, norma: n + ": descendientes, adoptados, ascendientes, cónyuge o pareja de hecho", estado: P };
+    if (h.convivio2anios !== true) return { pct: 0, norma: n + ": exige que el inmueble sea la vivienda habitual del heredero", estado: P };
+    if (h.ingresosAnuales == null) return manual(c, n + ": 95/75/50/10 % según ingresos del heredero (27.200, 37.200 y 47.200 €); ingresos no informados, porcentaje a mano");
+    return { pct: escalon(h.ingresosAnuales, [[27200, 0.95], [37200, 0.75], [47200, 0.50], [Infinity, 0.10]]), norma: n + ": 95/75/50/10 % según ingresos del heredero; vivienda habitual", estado: P };
+  } },
+  LANTARON: { nombre: "Lantarón", ccaa: "País Vasco", regimen: "ALA", tipo: 0.12, estadoTipo: P,
+    // BOTHA n.º 49, 29-04-2026 (art. 7.3): la lectura agrupa 2 a 4 años en 0,14; a 4 años se toma 0,16 (valor de la tabla de la que procede), el mayor
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], bonif(c) {
+    const h = c.heredero, n = "art. 5.3 OF IIVTNU Lantarón (BOTHA 29/04/2026)";
+    if (!DACP_FORAL(h)) return { pct: 0, norma: n + ": descendientes, adoptados, ascendientes, cónyuge o pareja de hecho", estado: P };
+    if (h.convivio2anios !== true) return { pct: 0, norma: n + ": exige que el inmueble sea la vivienda habitual del heredero", estado: P };
+    if (h.ingresosAnuales == null) return { pct: 0, norma: n + ": 90 % con ingresos brutos anuales hasta 21.957,50 € (dato no informado)", estado: P };
+    return { pct: h.ingresosAnuales <= 21957.5 ? 0.90 : 0, norma: n + ": 90 % con ingresos brutos anuales hasta 21.957,50 € y vivienda habitual del heredero", estado: P };
+  } },
+  LOGRONO: { nombre: "Logroño", ccaa: "La Rioja", tipo: 0.30, estadoTipo: P, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 4 bis OF nº 6 Logroño", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralTotal, [[50000, 0.80], [100000, 0.65], [150000, 0.50], [200000, 0.35], [300000, 0.20]]), norma: "art. 4 bis.1 OF nº 6 Logroño: 80/65/50/35/20 % según valor catastral total. Si el heredero lleva 10 años empadronado en la vivienda y la mantiene 3 más, 95 %: introducirlo a mano. Coeficientes propios de 2026 (máximos −7,5 %) no localizados", estado: P };
+  } },
+  BURGOS: { nombre: "Burgos", ccaa: "Castilla y León", tipo: 0.21, estadoTipo: P, bonif(c) {
+    return DAC(c.heredero) ? manual(c, "OF nº 503 Burgos (BOP 08/01/2026, no cotejado): el texto de 2022 daba 60 % entre padres e hijos y 30 % al cónyuge. Porcentaje introducido a mano") : { pct: 0, norma: "OF nº 503 Burgos", estado: P };
+  } },
+  LEON: { nombre: "León", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, l = linea(h);
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "art. 15 OF IIVTNU León: vivienda habitual del causante al menos los 2 últimos años", estado: V };
+    return { pct: l === "asc" ? 0.50 : 0.95, norma: "art. 15 OF IIVTNU León: 95 % cónyuge, pareja inscrita y descendientes; 50 % ascendientes; rogada", estado: V };
+  } },
+  PALENCIA: { nombre: "Palencia", ccaa: "Castilla y León", tipo: 0.298, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 7 OF IIVTNU Palencia";
+    if (!DAC1(h) || !c.inmueble.esViviendaHabitual || !conv1(h)) return { pct: 0, norma: n + ": primer grado o cónyuge, vivienda habitual del causante y residencia del heredero en ella el año anterior", estado: V };
+    return { pct: 0.95, norma: n + ": 95 %; solicitud en el plazo de la declaración", estado: V };
+  } },
+  ZAMORA: { nombre: "Zamora", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const h = c.heredero, ok = linea(h) === "conyuge" || (linea(h) === "desc" && h.edad != null && h.edad < 18);
+    return { pct: ok ? 0.95 : 0, norma: "art. 14 OF 1.5 Zamora: 95 % solo al cónyuge y a descendientes menores de edad. Tipo no localizado: 30 % provisional", estado: P };
+  } },
+  VALLADOLID: { nombre: "Valladolid", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) ? 0.95 : 0, norma: "OF IIVTNU Valladolid (BOP 15/12/2025): 95 % a ascendientes, descendientes y cónyuge; demás requisitos y tipo no localizados", estado: P };
+  } },
+  SALAMANCA: { nombre: "Salamanca", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 6.6 OF nº 3 Salamanca";
+    if (c.inmueble.esLocalAfecto && DAC(h)) return { pct: 0.50, norma: n + ": 50 % inmuebles afectos a actividad económica", estado: V };
+    if (linea(h) !== "desc" || !c.inmueble.esViviendaHabitual || (h.discapacidad || 0) <= 33 || h.convivio2anios !== true) return { pct: 0, norma: n + ": 95 % solo a descendientes con discapacidad superior al 33 % que vivían en la vivienda habitual del causante", estado: V };
+    return { pct: 0.95, norma: n + ": 95 %; mantener 4 años", estado: V };
+  } },
+  AVILA: { nombre: "Ávila", ccaa: "Castilla y León", tipo: 0.20, estadoTipo: P, bonif(c) {
+    const n = "art. 13.3 Ordenanza nº 4 Ávila";
+    if (!DACP(c.heredero) || !c.inmueble.esViviendaHabitual || c.inmueble.valorCatastralSuelo > 100000) return { pct: 0, norma: n + ": vivienda del causante y suelo hasta 100.000 €", estado: P };
+    return { pct: 0.95, norma: n + ": 95 %; mantener 4 años y 6 meses; incluye hasta 2 garajes y trastero", estado: P };
+  } },
+  SEGOVIA: { ...noLocalizada("Segovia", "OF IIVTNU", { ccaa: "Castilla y León" }), tipo: 0.15 },
+  SORIA: { nombre: "Soria", ccaa: "Castilla y León", tipo: 0.18, estadoTipo: V,
+    coef: [0.14, 0.03, 0.06, 0.09, 0.12, 0.15, 0.16, 0.12, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 5.3 OF 22 (BOPSO 26/09/2025; corrección 06/10/2025)
+    bonif(c) {
+      if (!DAC(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "art. 8.3 OF nº 22 Soria", estado: V };
+      return { pct: 0.25, norma: "art. 8.3 OF nº 22 Soria: 25 % vivienda habitual", estado: V };
+    } },
+  // Castilla-La Mancha, Madrid, Extremadura, Aragón
+  GUADALAJARA: { nombre: "Guadalajara", ccaa: "Castilla-La Mancha", tipo: 0.30, tipoPorAnios: (a) => (a >= 20 ? 0.18 : a === 19 ? 0.25 : 0.30), estadoTipo: V,
+    coef: [0.14, 0.13, 0.14, 0.15, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.10, 0.13, 0.17, 0.23, 0.29, 0.45], // art. 8 (los que superan el máximo legal se limitan en el cálculo)
+    bonif(c) {
+      const h = c.heredero, n = "art. 12.1 OF IIVTNU Guadalajara";
+      if (!DACP(h) || h.convivio2anios !== true) return { pct: 0, norma: n + ": convivencia con el causante 2 años (padrón)", estado: V };
+      return { pct: 0.95, norma: n + ": 95 %; el heredero no puede tener otros inmuebles; mantener 2 años; rogada", estado: V };
+    } },
+  CUENCA: noLocalizada("Cuenca", "OF nº 5", { ccaa: "Castilla-La Mancha" }),
+  TOLEDO: { nombre: "Toledo", ccaa: "Castilla-La Mancha", tipo: 0.2988, tipoPorAnios: (a) => (a <= 5 ? 0.2988 : a <= 10 ? 0.2888 : a <= 15 ? 0.2689 : 0.259), estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 12 OF nº 2 Toledo";
+    if (!(DAC1(h) || linea(h) === "pareja") || !(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto)) return { pct: 0, norma: n + ": primer grado, cónyuge o pareja inscrita; vivienda habitual (2 años) o local afecto", estado: V };
+    return { pct: 0.95, norma: n + ": 95 % sin límite de valor; rogada", estado: V };
+  } },
+  CIUDAD_REAL: { nombre: "Ciudad Real", ccaa: "Castilla-La Mancha", tipo: 0.30, tipoPorAnios: (a) => (a <= 15 ? 0.30 : 0.2994), estadoTipo: P, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 10.1 OF C-3 Ciudad Real", estado: P };
+    const b = (c.base || 0) * (c.fraccion ?? 1);
+    return { pct: escalon(b, [[10000, 0.50], [25000, 0.45], [50000, 0.40], [100000, 0.35]]), norma: "art. 10.1 OF C-3 Ciudad Real (texto 2022): 50/45/40/35 % según la base imponible de cada heredero (10.000, 25.000, 50.000 y 100.000 €)", estado: P };
+  } },
+  ALBACETE: { nombre: "Albacete", ccaa: "Castilla-La Mancha", tipo: 0.2744, estadoTipo: P, bonif(c) {
+    if (!DAC1(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "OF IIVTNU Albacete: primer grado o cónyuge; causante empadronado 2 años en la vivienda", estado: P };
+    return { pct: 0.95, norma: "OF IIVTNU Albacete: 95 %; mantener 3 años; solicitud en 6 meses (artículo no localizado)", estado: P };
+  } },
+  ALCALA_DE_HENARES: { nombre: "Alcalá de Henares", ccaa: "Comunidad de Madrid", tipo: 0.26, estadoTipo: P, bonif(c) {
+    const h = c.heredero, n = "OF nº 7 Alcalá de Henares";
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual || h.convivio2anios !== true || c.inmueble.valorCatastralSuelo > 100000) return { pct: 0, norma: n + ": vivienda habitual, convivencia 2 años y valor catastral del terreno hasta 100.000 € (alcance del límite por confirmar)", estado: P };
+    return { pct: 0.95, norma: n + ": 95 %; mantener 4 años; solicitud en 6 meses", estado: P };
+  } },
+  MOSTOLES: { nombre: "Móstoles", ccaa: "Comunidad de Madrid", tipo: 0.25, estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) ? 0.95 : 0, norma: "OF IIVTNU Móstoles (según prensa 2023): 95 % vivienda habitual y local afecto; beneficiarios y requisitos no cotejados", estado: P };
+  } },
+  CACERES: { nombre: "Cáceres", ccaa: "Extremadura", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const l = linea(c.heredero);
+    return l === "conyuge" || l === "desc" ? manual(c, "OF IIVTNU Cáceres (2022): 70/60/50/40 % según valor catastral (20.000, 25.000 y 30.000 €) para cónyuge y descendientes; base de valor y requisitos por confirmar. Porcentaje a mano") : { pct: 0, norma: "OF IIVTNU Cáceres", estado: P };
+  } },
+  BADAJOZ: { nombre: "Badajoz", ccaa: "Extremadura", tipo: 0.2574, estadoTipo: P, bonif(c) {
+    const l = linea(c.heredero);
+    return { pct: (l === "conyuge" || l === "desc") && c.inmueble.esViviendaHabitual ? 0.95 : 0, norma: "OF IIVTNU Badajoz (BOP 01/07/2022): 95 % vivienda habitual a hijos y cónyuge; requisitos no cotejados", estado: P };
+  } },
+  ZARAGOZA: { nombre: "Zaragoza", ccaa: "Aragón", tipo: 0.28, estadoTipo: P, bonif(c) {
+    const n = "OF nº 9 Zaragoza (2026)";
+    if (!DACP(c.heredero)) return { pct: 0, norma: n, estado: P };
+    if (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) return { pct: 0.95, norma: n + ": 95 % vivienda habitual sin límite de valor y locales afectos; rogada", estado: P };
+    if (c.inmueble.valorCatastralSuelo > 200000) return { pct: 0, norma: n + ": suelo superior a 200.000 €", estado: P };
+    return { pct: 0.65, norma: n + ": 65 % otros inmuebles con suelo hasta 200.000 €; una segunda vivienda, garaje o trastero llega al 95 % (ajustar a mano)", estado: P };
+  } },
+  HUESCA: { nombre: "Huesca", ccaa: "Aragón", tipo: 0, tipoFecha: (f) => (f >= "2026-01-01" ? 0 : 0.30), estadoTipo: V,
+    alerta: (f) => (f >= "2026-01-01" ? "Huesca suprimió el impuesto para devengos desde el 1 de enero de 2026: no hay plusvalía que pagar." : "Huesca: fallecimiento anterior a 2026, rige la ordenanza anterior (no cotejada). Tipo provisional del 30 %."),
+    bonif(c) { return c.fecha >= "2026-01-01" ? { pct: 0, norma: "OF nº 3 Huesca derogada con efectos 01/01/2026", estado: V } : manual(c, "OF nº 3 Huesca (versión anterior a 2026): porcentaje introducido a mano"); } },
+  TERUEL: { nombre: "Teruel", ccaa: "Aragón", tipo: 0.30, estadoTipo: V,
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.15, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 7.4 (el de 9 años puede ser errata)
+    bonif(c) { return { pct: DACP(c.heredero) ? 0.95 : 0, norma: "art. 5.1 OF nº 6 Teruel: 95 % en cualquier terreno urbano; no exige vivienda habitual", estado: V }; } },
+  // Cataluña, Comunitat Valenciana, Región de Murcia, Illes Balears, Canarias, Ceuta y Melilla
+  BARCELONA: { nombre: "Barcelona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const h = c.heredero, ok = DAC(h) || (linea(h) === "pareja" && h.convivio2anios === true);
+    if (!ok || !(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto)) return { pct: 0, norma: "art. 9 OF 1.3 Barcelona", estado: P };
+    return { pct: 0.95, norma: `art. 9.${c.inmueble.esViviendaHabitual ? "1 OF 1.3 Barcelona: vivienda habitual del causante; mantener 3 años" : "2 OF 1.3 Barcelona: local afecto; mantener la actividad 5 años"}; rogada, 6+6 meses`, estado: P };
+  } },
+  GIRONA: { nombre: "Girona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const h = c.heredero, l = linea(h);
+    if (!["desc", "conyuge", "pareja"].includes(l) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "OF IIVTNU Girona: vivienda habitual del causante", estado: P };
+    const bajo = (c.inmueble.valorCatastralSuelo || 0) <= 9946.85, disc = (h.discapacidad || 0) >= 65;
+    return { pct: disc ? (bajo ? 0.70 : 0.40) : bajo ? 0.50 : 0.20, norma: "OF IIVTNU Girona 2026: 50/20 % según valor del suelo (9.946,85 €); 70/40 % con discapacidad del 65 %; 90 % si el viudo ya tenía el 50 % (a mano)", estado: P };
+  } },
+  LLEIDA: noLocalizada("Lleida", "OF 1.5", { ccaa: "Cataluña" }),
+  TARRAGONA: { nombre: "Tarragona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, ok = DAC2(h) || linea(h) === "pareja";
+    if (!ok || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "art. 7.3 OF nº 12 Tarragona: vivienda habitual del causante con 2 años de padrón", estado: V };
+    return { pct: (c.inmueble.valorCatastralSuelo || 0) <= 15000 ? 0.95 : 0.50, norma: "art. 7.3 OF nº 12 Tarragona (BOPT 12/05/2025): 95 % con suelo hasta 15.000 €, 50 % por encima; se pierde si se vende en 2 años", estado: V };
+  } },
+  CASTELLON: { nombre: "Castelló de la Plana", ccaa: "Comunitat Valenciana", tipo: 0.21, tipoPorAnios: (a) => (a <= 10 ? 0.21 : 0.27), estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) ? 0.50 : 0, norma: "OF IIVTNU Castelló (según prensa, oct. 2023): 50 % en un solo inmueble por herencia, el de menor valor", estado: P };
+  } },
+  VALENCIA: { nombre: "València", ccaa: "Comunitat Valenciana", tipo: 0.297, estadoTipo: V, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 10.A OF IIVTNU València", estado: V };
+    return c.fecha >= "2024-01-01" ? { pct: 0.95, norma: "art. 10.A OF IIVTNU València: 95 % sin requisito de vivienda ni de mantenimiento (fallecimientos desde 2024); rogada, 6+6 meses", estado: V } : manual(c, "OF IIVTNU València anterior a 2024: porcentaje introducido a mano");
+  } },
+  ALICANTE: { nombre: "Alicante", ccaa: "Comunitat Valenciana", tipo: 0.30, estadoTipo: V, bonif(c) {
+    return { pct: DAC2(c.heredero) && c.inmueble.esViviendaHabitual ? 0.60 : 0, norma: "art. 13 OF IIVTNU Alicante: 60 % vivienda habitual del causante (2 años de padrón), hasta segundo grado; rogada, 6+6 meses", estado: V };
+  } },
+  ELCHE: { nombre: "Elche", ccaa: "Comunitat Valenciana", tipo: 0.30, estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) && c.inmueble.esViviendaHabitual ? 0.50 : 0, norma: "art. 8.A OF IIVTNU Elche (texto 2020): 50 % en la vivienda habitual del causante (2 años de padrón)", estado: P };
+  } },
+  MURCIA: { nombre: "Murcia", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) ? 0.95 : 0, norma: "Ordenanza 3.5 Murcia: 95 % vivienda habitual o local del causante con 2 años de padrón (fuente secundaria); tipo por confirmar", estado: P };
+  } },
+  CARTAGENA: { nombre: "Cartagena", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: V, bonif(c) {
+    if (!DAC1(c.heredero)) return { pct: 0, norma: "art. 10 OF IIVTNU Cartagena", estado: V };
+    return c.inmueble.esViviendaHabitual ? { pct: 0.95, norma: "art. 10.1.a OF IIVTNU Cartagena (BORM 11/12/2024): 95 % vivienda habitual (2 años de padrón); rogada", estado: V } : { pct: 0.10, norma: "art. 10.1.b OF IIVTNU Cartagena: 10 % resto de inmuebles", estado: V };
+  } },
+  PALMA: { nombre: "Palma", ccaa: "Illes Balears", tipo: 0.18, estadoTipo: P, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 9 OF IIVTNU Palma", estado: P };
+    return c.inmueble.esViviendaHabitual ? { pct: 0.95, norma: "art. 9 OF IIVTNU Palma: 95 %; mantener 5 años; rogada. Tipo del 18 % según prensa", estado: P } : manual(c, "art. 9 OF IIVTNU Palma: desde 2025 cualquier vivienda heredada (según prensa); porcentaje a mano");
+  } },
+  LAS_PALMAS_GC: { nombre: "Las Palmas de Gran Canaria", ccaa: "Canarias", tipo: 0.30, estadoTipo: V, bonif(c) {
+    if (!DAC(c.heredero)) return { pct: 0, norma: "art. 9.1 OF IIVTNU Las Palmas de G.C.", estado: V };
+    const s = c.inmueble.valorCatastralSuelo;
+    return c.inmueble.esViviendaHabitual
+      ? { pct: escalon(s, [[35000, 0.95], [51000, 0.75], [60000, 0.50], [Infinity, 0.10]]), norma: "art. 9.1.a OF IIVTNU Las Palmas de G.C.: vivienda habitual; 95/75/50/10 % según valor catastral del suelo", estado: V }
+      : { pct: escalon(s, [[35000, 0.75], [51000, 0.50], [60000, 0.30], [Infinity, 0.10]]), norma: "art. 9.1.b OF IIVTNU Las Palmas de G.C.: otros inmuebles no arrendados; 75/50/30/10 %", estado: V };
+  } },
+  SANTA_CRUZ_TENERIFE: { nombre: "Santa Cruz de Tenerife", ccaa: "Canarias", tipo: 0.30, estadoTipo: V, bonif(c) {
+    return { pct: DAC1(c.heredero) ? 0.95 : 0, norma: "art. 4.3 OF IIVTNU Santa Cruz de Tenerife: 95 % de oficio en primer grado y cónyuge, solo si se declara en plazo", estado: V };
+  } },
+  CEUTA: { nombre: "Ceuta", ccaa: "Ceuta", tipo: 0.27, estadoTipo: V, bonif(c) {
+    return DAC(c.heredero) ? { pct: 0.975, norma: "art. 9 OF IIVTNU Ceuta: 50 % general (art. 9.1) y 95 % mortis causa sobre el resto (art. 9.2); rogada", estado: V } : { pct: 0.50, norma: "art. 9.1 OF IIVTNU Ceuta: 50 % general (art. 159.2 TRLRHL)", estado: V };
+  } },
+  MELILLA: { nombre: "Melilla", ccaa: "Melilla", tipo: 0.29, estadoTipo: V, bonif(c) {
+    const ok = DACP(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto);
+    return ok ? { pct: 0.975, norma: "art. 10 y DA 1ª OF IIVTNU Melilla: 50 % general y 95 % sobre el resto en vivienda habitual (2 años) o local afecto", estado: V } : { pct: 0.50, norma: "DA 1ª OF IIVTNU Melilla: 50 % general", estado: V };
+  } },
+  // ── Lotes 1 y 2: grandes municipios fuera de las capitales (investigación 28-09-2026; research/plusvalia-lote1.json y plusvalia-lote2.json) ──
+  // Cataluña
+  BADALONA: { nombre: "Badalona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 6.1 OF nº 4 Badalona (BOPB 18/07/2023)";
+    if (!DAC(h)) return { pct: 0, norma: n, estado: V };
+    if (c.inmueble.esLocalAfecto) return { pct: 0, norma: "art. 6.2 OF nº 4 Badalona: local de actividad heredado, 'hasta el 95 %' manteniéndolo 5 años; porcentaje no determinado en el texto leído: ajustar a mano", estado: P };
+    if (!c.inmueble.esViviendaHabitual || !conv1(h)) return { pct: 0, norma: n + ": domicilio habitual del causante y del heredero (convivencia)", estado: V };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[30000, 0.95], [45000, 0.50], [60000, 0.25]]), norma: n + ": 95/50/25 % según valor catastral del suelo (30.000, 45.000 y 60.000 €; por encima, nada); mantener 10 años; rogada", estado: V };
+  } },
+  SABADELL: { nombre: "Sabadell", ccaa: "Cataluña", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 5 OF 2.5 Sabadell (texto 2026)";
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual || !conv1(h)) return { pct: 0, norma: n + ": vivienda habitual del causante en la que también estaba empadronado el heredero (pareja inscrita: convivencia el último año)", estado: V };
+    return { pct: (c.inmueble.valorCatastralSuelo || 0) < 44000 ? 0.95 : 0.30, norma: n + ": 95 % con suelo inferior a 44.000 €, 30 % en otro caso; mantener 5 años; causante al corriente de tributos municipales; rogada, 6+6 meses", estado: V };
+  } },
+  SANT_CUGAT_DEL_VALLES: { nombre: "Sant Cugat del Vallès", ccaa: "Cataluña", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, l = linea(h), n = "art. 6.2 OF nº 4 Sant Cugat del Vallès (2026)";
+    if (!(DAC1(h) || l === "pareja")) return { pct: 0, norma: n + ": primer grado, cónyuge o pareja", estado: V };
+    if (c.inmueble.esViviendaHabitual) return { pct: 0.95, norma: n + ": 95 % vivienda habitual del causante; liquidación complementaria si se vende en 4 años", estado: V };
+    if (c.inmueble.esLocalAfecto && h.relacion === "hijo") return { pct: 0.75, norma: n + ": 75 % local de actividad de padres a hijos si continúa la actividad; mantener 4 años", estado: V };
+    return { pct: l === "conyuge" || l === "pareja" ? 0.60 : 0.50, norma: n + ": otros inmuebles, 60 % cónyuge o pareja y 50 % primer grado; mantener 4 años. Plazo de solicitud no cotejado", estado: V };
+  } },
+  MANRESA: { nombre: "Manresa", ccaa: "Cataluña", tipo: 0.30, estadoTipo: V,
+    alerta: () => "Manresa: la bonificación depende de los ingresos del heredero del año anterior (95 % hasta 19.244,36 €, 70 % hasta 24.055,45 €). Introduce el porcentaje a mano.",
+    bonif(c) {
+      const h = c.heredero, l = linea(h), n = "art. 8 OF nº 4 Manresa (en vigor 28/01/2026)";
+      const ok = l === "conyuge" || l === "pareja" || (l === "desc" && GR(h) <= 2) || (l === "asc" && GR(h) === 1);
+      if (!ok || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": cónyuge, pareja inscrita, descendientes hasta 2º grado o ascendientes de 1er grado; vivienda habitual del causante 2 años", estado: V };
+      return manual(c, n + ": 95 % con ingresos del heredero del año anterior hasta 19.244,36 €, 70 % hasta 24.055,45 €, sin bonificación por encima (tramo superior por cotejar); exige autoliquidar en plazo. Porcentaje introducido a mano");
+    } },
+  MATARO: { nombre: "Mataró", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const n = "art. 8.1 OF 2.1 Mataró (texto 2025; límites de 2026 no cotejados)";
+    if (!DACP(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": vivienda habitual del causante (2 años de padrón)", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[78647, 0.95], [117971, 0.75], [Infinity, 0.50]]), norma: n + ": 95/75/50 % según valor catastral del suelo (78.647 y 117.971 €); mantener 4 años; rogada, 6+6 meses", estado: P };
+  } },
+  RUBI: { nombre: "Rubí", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const h = c.heredero, n = "art. 6 OF nº 7 Rubí (BOPB 27/12/2023; versiones 2025-2026 no cotejadas)";
+    if (!DAC1(h)) return { pct: 0, norma: n + ": primer grado o cónyuge", estado: P };
+    if (c.inmueble.esViviendaHabitual && conv1(h)) return { pct: 0.85, norma: n + ": 85 % vivienda habitual con convivencia el año anterior (95 % si se cede a la bolsa municipal de vivienda 5 años: ajustar a mano); mantener 3 años", estado: P };
+    return { pct: 0.15, norma: n + ": 15 % general en herencias a primer grado y cónyuge; mantener 3 años", estado: P };
+  } },
+  // Comunidad de Madrid
+  LEGANES: { nombre: "Leganés", ccaa: "Comunidad de Madrid", tipo: 0.27, tipoPorAnios: (a) => (a <= 5 ? 0.27 : a <= 19 ? 0.26 : 0.25), estadoTipo: V,
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 5.2 OF nº 4 (tabla propia = máximos de 2023)
+    bonif(c) {
+      const h = c.heredero, n = "art. 7 OF nº 4 Leganés (BOCM 03/01/2026)";
+      if (!DAC(h)) return { pct: 0, norma: n, estado: V };
+      if (!c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": no queda claro si alcanza a inmuebles distintos de la vivienda habitual; texto literal por cotejar (ajustar a mano)", estado: P };
+      if (h.convivio2anios !== true) return { pct: 0, norma: n + ": vivienda habitual; exige convivencia con el causante los 2 años anteriores y seguir empadronado", estado: V };
+      return { pct: escalon(c.inmueble.valorCatastralSuelo, [[30000, 0.95], [50000, 0.75], [70000, 0.50], [Infinity, 0.15]]), norma: n + ": 95/75/50/15 % según valor catastral del suelo (30.000, 50.000 y 70.000 €); mantener 4 años; rogada", estado: V };
+    } },
+  FUENLABRADA: { nombre: "Fuenlabrada", ccaa: "Comunidad de Madrid", tipo: 0.30, tipoPorAnios: (a) => (a <= 5 ? 0.30 : 0.138), estadoTipo: V, bonif(c) {
+    const n = "art. 9 OF nº 5 Fuenlabrada (texto 2026)";
+    if (!DAC(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda habitual del causante", estado: V };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[40000, 0.95], [50000, 0.75], [60000, 0.50], [75000, 0.25], [100000, 0.15]]), norma: n + ": 95/75/50/25/15 % según valor catastral del suelo (40.000 a 100.000 €; por encima, nada); si la vivienda son varios inmuebles, solo aquel en que estaba empadronado el causante; rogada, 6+6 meses", estado: V };
+  } },
+  TORREJON_DE_ARDOZ: { nombre: "Torrejón de Ardoz", ccaa: "Comunidad de Madrid", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const n = "art. 13 OF nº 5 Torrejón de Ardoz";
+    if (!DAC(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda habitual del causante (padrón los 2 años anteriores)", estado: V };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[12000, 0.75], [20000, 0.50], [Infinity, 0.15]]), norma: n + ": 75/50/15 % según valor catastral del suelo (12.000 y 20.000 €); mantener 5 años; rogada, 6+6 meses", estado: V };
+  } },
+  RIVAS_VACIAMADRID: { nombre: "Rivas-Vaciamadrid", ccaa: "Comunidad de Madrid", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const n = "art. 13.2 OF nº 5 Rivas-Vaciamadrid (vigente desde 01/01/2026)";
+    if (DAC(c.heredero)) return { pct: 0.95, norma: n + ": 95 % en cualquier terreno, sin vivienda habitual ni límite de valor; declarar en plazo; mantener 4 años", estado: V };
+    return { pct: 0, norma: n + ": el resumen del texto cita también parejas inscritas y herederos intestados; lista literal sin cotejar (ajustar a mano)", estado: P };
+  } },
+  POZUELO_DE_ALARCON: { nombre: "Pozuelo de Alarcón", ccaa: "Comunidad de Madrid", tipo: 0.29, estadoTipo: V, bonif(c) {
+    const n = "art. 5.3 OF nº 203 Pozuelo de Alarcón";
+    if (!DAC(c.heredero) || !(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto)) return { pct: 0, norma: n + ": vivienda habitual del causante (2 años de padrón) o local afecto", estado: V };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[60000, 0.95], [100000, 0.75], [200000, 0.50], [Infinity, 0.25]]), norma: n + `: 95/75/50/25 % según valor catastral del suelo (60.000, 100.000 y 200.000 €)${c.inmueble.esLocalAfecto && !c.inmueble.esViviendaHabitual ? "; local afecto: mantener titularidad y actividad 5 años" : ""}; rogada`, estado: V };
+  } },
+  ALCORCON: { nombre: "Alcorcón", ccaa: "Comunidad de Madrid", tipo: 0.30, tipoPorAnios: (a) => (a <= 5 ? 0.30 : a <= 10 ? 0.29 : a <= 15 ? 0.28 : 0.27), estadoTipo: P,
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], // art. 8.3 (= máximos del RDL 26/2021)
+    bonif(c) {
+      const h = c.heredero, l = linea(h), n = "art. 9.2 OF IIVTNU Alcorcón (BOCM 28/04/2022; lista literal de beneficiarios sin cotejar)";
+      if (c.inmueble.esLocalAfecto && (l === "desc" || l === "conyuge")) return { pct: 0.95, norma: n + ": 95 % local afecto a la actividad; mantener la actividad 4 años", estado: P };
+      if (!c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: n + ": vivienda habitual con el heredero empadronado 2 años", estado: P };
+      if (l === "conyuge") return { pct: 0.95, norma: n + ": 95 % al cónyuge; no transmitir en 4 años", estado: P };
+      const desc = l === "desc" && ((h.edad != null && h.edad < 25) || (h.discapacidad || 0) > 65);
+      if (!desc || h.ingresosAnuales == null || h.ingresosAnuales >= 8000) return { pct: 0, norma: n + ": descendientes solo si son menores de 25 años, incapacitados o con discapacidad superior al 65 %, con rentas inferiores a 8.000 €", estado: P };
+      return { pct: 0.95, norma: n + ": 95 % descendiente con rentas inferiores a 8.000 €; no transmitir en 4 años", estado: P };
+    } },
+  LAS_ROZAS: { nombre: "Las Rozas de Madrid", ccaa: "Comunidad de Madrid", tipo: 0.27, estadoTipo: P,
+    alerta: () => "Las Rozas: la ordenanza tiene tabla propia de coeficientes (art. 9.3) que no se ha leído completa; se aplican los máximos legales, que pueden ser superiores. Cotejar.",
+    bonif(c) {
+      const h = c.heredero, n = "art. 6 OF nº 4 Las Rozas (BOCM 26/04/2022)";
+      if (!DAC1(h) || !(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto)) return { pct: 0, norma: n + ": primer grado o cónyuge; vivienda habitual del causante (2 años de padrón) o local afecto", estado: P };
+      return { pct: 0.95, norma: n + `: 95 %; ${c.inmueble.esViviendaHabitual ? "mantener 5 años" : "mantener titularidad y actividad 5 años"}; rogada, 6+6 meses`, estado: P };
+    } },
+  VALDEMORO: { nombre: "Valdemoro", ccaa: "Comunidad de Madrid", tipo: 0.30, tipoPorAnios: (a) => (a <= 5 ? 0.30 : a <= 10 ? 0.29 : 0.28), estadoTipo: P,
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], // art. 10.2 (= máximos del RDL 26/2021)
+    bonif(c) {
+      return { pct: DACP(c.heredero) ? 0.50 : 0, norma: "art. 6 OF nº 5 Valdemoro (fecha de BOCM no localizada): 50 % en cualquier inmueble a línea directa, cónyuge o pareja inscrita; al corriente de tributos; rogada", estado: P };
+    } },
+  BOADILLA_DEL_MONTE: { nombre: "Boadilla del Monte", ccaa: "Comunidad de Madrid", tipo: 0.24, estadoTipo: P, bonif(c) {
+    const n = "art. 6.3 OF IIVTNU Boadilla del Monte (texto 2024; modificación 2026 sin publicación definitiva confirmada)";
+    if (!DACP(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": vivienda habitual del causante", estado: P };
+    return { pct: 0.95, norma: n + ": 95 %; mantener 3 años; rogada", estado: P };
+  } },
+  COLMENAR_VIEJO: { nombre: "Colmenar Viejo", ccaa: "Comunidad de Madrid", tipo: 0.13, estadoTipo: P,
+    alerta: () => "Colmenar Viejo: la ordenanza tiene tabla propia de coeficientes (art. 8.3) que no se ha leído completa; se aplican los máximos legales, que pueden ser superiores. Cotejar.",
+    bonif(c) {
+      return { pct: DAC(c.heredero) && c.inmueble.esViviendaHabitual ? 0.95 : 0, norma: "art. 6 OF IIVTNU Colmenar Viejo (versión 2022, fecha de BOCM no localizada): 95 % vivienda habitual del causante; rogada", estado: P };
+    } },
+  // Región de Murcia y Canarias
+  LORCA: { nombre: "Lorca", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: P, bonif(c) {
+    const h = c.heredero, n = "art. 11 OF nº 6 Lorca (texto vigente en 2024)";
+    if (!DAC(h)) return { pct: 0, norma: n, estado: P };
+    if (c.inmueble.esViviendaHabitual ? h.convivio2anios !== true : !c.inmueble.esLocalAfecto) return { pct: 0, norma: n + ": vivienda habitual con convivencia de 2 años, o local de negocio", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[20000, 0.95], [31000, 0.75], [56000, 0.50], [Infinity, 0.15]]), norma: n + ": 95/75/50/15 % según valor catastral del suelo (20.000, 31.000 y 56.000 €); mantener 5 años", estado: P };
+  } },
+  TELDE: { nombre: "Telde", ccaa: "Canarias", tipo: 0.29, estadoTipo: P, bonif(c) {
+    return { pct: DAC(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) ? 0.60 : 0, norma: "art. 7 OF nº 3 Telde (última modificación publicada: BOP 29/12/2003): 60 % vivienda habitual o empresa individual del causante; mantener 10 años", estado: P };
+  } },
+  // Andalucía
+  CHICLANA_DE_LA_FRONTERA: { nombre: "Chiclana de la Frontera", tipo: 0.30, estadoTipo: V,
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], // art. 7.4 OF 25 (= máximos del RDL 26/2021)
+    alerta: (f) => f >= "2026-01-01" ? "Chiclana: la tabla de coeficientes de la ordenanza reproduce los máximos de 2022 y prevé su actualización por norma legal; los datos que el Ayuntamiento comunica a Hacienda para 2026 son los máximos vigentes, y el motor los aplica (art. 107.4 TRLRHL)." : "Chiclana: la tabla de coeficientes de la ordenanza reproduce los máximos de 2022 y prevé su actualización por norma legal. El motor aplica el menor entre esa tabla y el máximo vigente; si el Ayuntamiento aplica directamente el máximo vigente, el coeficiente puede ser mayor. Confirmar.",
+    bonif(c) {
+      const h = c.heredero, n = "art. 9.1 OF nº 25 Chiclana (BOP Cádiz 11/04/2022)";
+      if (!DAC(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda del domicilio habitual del cónyuge viudo y de la unidad familiar", estado: V };
+      if (linea(h) === "conyuge") return { pct: 0.85, norma: n + ": 85 % en la vivienda habitual del cónyuge viudo", estado: V };
+      if (conv1(h)) return { pct: 0.85, norma: n + ": 85 % si la vivienda es domicilio habitual de la unidad familiar; criterio municipal por confirmar cuando no hay cónyuge viudo", estado: P };
+      return { pct: 0, norma: n + ": exige que sea el domicilio habitual del cónyuge viudo y de la unidad familiar", estado: V };
+    } },
+  EL_PUERTO_DE_SANTA_MARIA: { nombre: "El Puerto de Santa María", tipo: 0.30, estadoTipo: V,
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], // arts. 8-9 OF 5 (= máximos 2022); la Instrucción 2/2026 aplica el menor con el máximo legal
+    bonif(c) {
+      const h = c.heredero, n = "art. 15.2 OF nº 5 El Puerto de Santa María (BOP Cádiz 19/07/2022)";
+      if (!DAC(h) || !c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: n + ": domicilio familiar con los beneficiarios empadronados en él 2 años", estado: V };
+      return { pct: 0.95, norma: n + ": 95 %; no aplica si la herencia incluye más de un inmueble residencial o local (garajes y trasteros aparte): comprobar", estado: V };
+    } },
+  ALCALA_DE_GUADAIRA: { nombre: "Alcalá de Guadaíra", tipo: 0.30, estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 9 OF IIVTNU Alcalá de Guadaíra (mod. BOP Sevilla 08/05/2025)";
+    if (!c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo la vivienda habitual del causante", estado: V };
+    if (!DAC(h)) return { pct: 0, norma: n + ": también otros adquirentes con 'trato análogo para la continuación en el uso de la vivienda'; alcance por confirmar (ajustar a mano)", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralSuelo, [[60000, 0.95], [100000, 0.75], [138000, 0.50], [Infinity, 0.15]]), norma: n + ": 95/75/50/15 % según valor catastral del suelo (60.000, 100.000 y 138.000 €); mantener 3 años; se aplica en la autoliquidación", estado: V };
+  } },
+  SANLUCAR_DE_BARRAMEDA: { nombre: "Sanlúcar de Barrameda", tipo: 0.30, estadoTipo: V,
+    bonif(c) { return { pct: 0, norma: "OF nº 305 Sanlúcar de Barrameda (texto 2024): sin bonificación por herencia", estado: V }; } },
+  UTRERA: { nombre: "Utrera", tipo: 0.28, estadoTipo: V, bonif(c) {
+    const n = "art. 14 OF nº 3 Utrera";
+    if (!DAC(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": inmueble en que estaba empadronado el causante el año anterior", estado: V };
+    const s = c.inmueble.valorCatastralSuelo || 0;
+    return { pct: s <= 30000 ? 0.95 : s < 100000 ? 0.50 : 0, norma: n + ": 95 % con suelo hasta 30.000 €, 50 % por debajo de 100.000 €, nada desde 100.000 €; de oficio", estado: V };
+  } },
+  LINARES: { nombre: "Linares", tipo: 0.29, tipoPorAnios: (a) => (a <= 5 ? 0.29 : a <= 10 ? 0.28 : 0.27), estadoTipo: V, bonif(c) {
+    const h = c.heredero, n = "art. 12.2 OF nº 5 Linares (BOP Jaén 14/06/2024)";
+    if (!DAC1(h) || !c.inmueble.esViviendaHabitual || !conv1(h)) return { pct: 0, norma: n + ": primer grado o cónyuge; domicilio habitual común del causante (2 años de padrón) y del heredero", estado: V };
+    return { pct: 0.50, norma: n + ": 50 %; exige que sea el único inmueble del causante (comprobar); rogada, 6+6 meses", estado: V };
+  } },
+  LUCENA: { nombre: "Lucena", tipo: 0.30, estadoTipo: V,
+    coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 8.2 (tabla propia = máximos de 2023)
+    alerta: () => "Lucena: la tabla de coeficientes de la ordenanza (máximos de 2023) prevé su actualización por norma legal, y la versión de 2024 recoge en nota la del RDL 8/2023. El motor aplica el menor entre la tabla y el máximo de 2026; si el Ayuntamiento aplica el máximo vigente, el coeficiente puede ser mayor. Confirmar.",
+    bonif(c) {
+      const h = c.heredero, n = "art. 15 OF IIVTNU Lucena (BOP Córdoba 19/06/2023)";
+      if (!(DAC1(h) || linea(h) === "pareja")) return { pct: 0, norma: n + ": primer grado, cónyuge o pareja inscrita", estado: V };
+      if (!c.inmueble.esViviendaHabitual) return { pct: 0.30, norma: n + ".1: 30 % en inmuebles distintos de la vivienda habitual", estado: V };
+      const s = c.inmueble.valorCatastralSuelo || 0;
+      return { pct: s < 7500 ? 0.90 : s < 15000 ? 0.80 : s < 20000 ? 0.70 : 0.60, norma: n + ".2: vivienda habitual del causante (2 años de padrón), 90/80/70/60 % según valor catastral del suelo (7.500, 15.000 y 20.000 €). Huérfanos menores de primer grado por muerte de ambos padres en un año: 95 % (art. 15.3, ajustar a mano)", estado: V };
+    } },
+  // Asturias, Cantabria, Extremadura
+  SIERO: { nombre: "Siero", ccaa: "Asturias", tipo: 0.30, estadoTipo: V,
+    coef: [0.15, 0.15, 0.14, 0.15, 0.17, 0.18, 0.19, 0.18, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.29, 0.45], // art. 5.2 (= máximos de 2023; la propia ordenanza aplica el máximo legal si es menor)
+    bonif(c) { return { pct: DAC(c.heredero) ? 0.95 : 0, norma: "art. 3.3 OF IIVTNU Siero (BOPA 11/10/2023): 95 % en cualquier terreno, sin vivienda habitual ni límite de valor", estado: V }; } },
+  TORRELAVEGA: { nombre: "Torrelavega", ccaa: "Cantabria", tipo: 0.30, estadoTipo: V,
+    coef: [0.14, 0.13, 0.15, 0.16, 0.17, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.10, 0.12, 0.16, 0.20, 0.26, 0.36, 0.45], // art. 11 (= máximos 2022; la propia ordenanza aplica el máximo legal si es menor)
+    alerta: () => "Torrelavega: se aplica el 50 %. Si el heredero va a residir en la vivienda y la mantiene 2 años, la bonificación es del 95 % (art. 13.1): ajustar.",
+    bonif(c) {
+      const n = "art. 13.1 OF IIVTNU Torrelavega (BOC 02/06/2022)";
+      if (!DAC1(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": hijos, cónyuge o ascendientes de primer grado; vivienda habitual del causante y anejos", estado: V };
+      return { pct: 0.50, norma: n + ": 50 % si el heredero no va a residir en la vivienda; 95 % si reside en ella y la mantiene 2 años (el motor no recoge ese dato). Declaración y solicitud en plazo", estado: V };
+    } },
+  MERIDA: { nombre: "Mérida", ccaa: "Extremadura", tipo: 0.30, estadoTipo: V,
+    bonif(c) { return { pct: 0, norma: "OF IIVTNU Mérida (BOP Badajoz 19/04/2022): sin bonificación por herencia", estado: V }; } },
+  OTRO: { nombre: "Otro municipio", tipo: 0.30, estadoTipo: "INTRODUCIDO", bonif(c) { return { pct: DAC(c.heredero) ? (c.inmueble.bonifManual || 0) / 100 : 0, norma: "Bonificación introducida a mano según la ordenanza municipal", estado: "INTRODUCIDO" }; } },
+};
+// ── Ordenanzas declarativas (src/ordenanzas-datos.json → tools/generar-ordenanzas.mjs las vuelca aquí). Cada entrada lleva fuente y estado. ──
+// Esquema: { ine, nombre, ccaa?, tipo (0-0.30), tipoPorAnios?: [[hastaAnios, tipo]...] (último con null), coeficientes?: [21 valores 0..20] (solo si son propios e inferiores
+//   al máximo), bonif: null | { pct?: 0-0.95, tramos?: { base: "suelo"|"total", tramos: [[limite|null, pct]...] }, parentesco: "DAC"|"DACP"|"todos", viviendaHabitual: bool,
+//   convivencia?: bool, empadronado?: bool, mantener?: años, rogada?: bool, plazo?: "6 meses"..., articulo?: "art. X", pctResto?: 0-0.95 (otros inmuebles),
+//   limiteValorCatastral?: €, condicion?: "texto" (renta, edad…: no se aplica sola), viviendaHeredero?: bool }, bonifDesconocida?: bool,
+//   fuente: { url, titulo, fecha?, leido: bool }, estado: "V"|"P", notas?: "" }
+// __ORD_DATOS_INICIO__
+export const ORDENANZAS_DATOS = [{"ine":"02009","nombre":"Almansa","ccaa":"Castilla-La Mancha","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":4,"rogada":true,"plazo":"con la declaración del impuesto, dentro del plazo legal","articulo":"art. 10","limiteValorCatastral":null,"condicion":"Vivienda habitual del causante hasta el devengo y al menos los dos últimos años (padrón), con excepciones por residencia o convivencia con hijos dependientes; también anexos y locales de negocio. Mantener la propiedad «durante el plazo que persista el derecho a liquidar de la administración» (prescripción, 4 años).","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://almansa.es/wp-content/uploads/2024/03/O.F.-B4-Impuesto-sobre-el-incremento-de-valor-de-los-terrenos-de-naturaleza-Urbana-20220325.pdf","titulo":"Ordenanza fiscal B.4 del IIVTNU de Almansa (modificación BOP Albacete n.º 61 de 25/05/2022, adaptada al RDL 26/2021)","fecha":"2022-05-25","leido":true},"estado":"V","notas":"Art. 9: «el tipo de gravamen será del 28%». Art. 7.2: coeficientes = «el máximo actualizado vigente, de acuerdo con el artículo 107.4». Art. 10: «la cuota del impuesto se verá bonificada en un 95 por 100» en transmisiones mortis causa de la vivienda habitual (y anexos/local de negocio) a descendientes y ascendientes de primer grado por naturaleza o…"},{"ine":"02037","nombre":"Hellín","ccaa":"Castilla-La Mancha","tipo":0.29,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.hellin.es/images/hellinimages/documentos/ordenanzas/FISCALES/2-IMPUESTOS/IM-5-INCREMENTO%20VALOR%20TERRENOS%20DE%20NATURALEZA%20URBANA.pdf","titulo":"Ordenanza fiscal IM-5 del IIVTNU de Hellín (texto con modificaciones hasta 30/10/2017; web municipal)","fecha":"2017-10-30","leido":true},"estado":"P","notas":"Texto ANTERIOR al RDL 26/2021 (aún usa porcentaje anual 1,122 %). Art. 13: «tipo del 29 %». En esa versión no hay bonificación por transmisión mortis causa (solo devengo y plazo de declaración de 6 meses prorrogables a 1 año en sucesiones). No localizada la versión adaptada (2022 o posterior); el tipo y la ausencia de bonificación pueden haber cambiado:…"},{"ine":"03009","nombre":"Alcoi/Alcoy","ccaa":"Comunitat Valenciana","tipo":0.29,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 3.c"},"fuente":{"url":"https://www.alcoi.org/export/sites/default/es/areas/servicios_economicos/ordenanzas/descarga/2026_2_2_IIVTNU_Impuesto_Voluntario.pdf","titulo":"Ordenanza fiscal 2.2 del IIVTNU de Alcoi (texto 2026; última modif. BOP nº 248, 27-12-2024)","fecha":"2024-12-27","leido":true},"estado":"V","notas":"Tipo 29 % (art. 7.1; coincide con Hacienda). Coeficientes art. 6.3 = tabla máxima RDL 8/2023 (0,15…0,40), actualizable por ley → null. Art. 3.c: «bonificación del 95 % … por causa de muerte a favor de los descendientes y adoptados, los cónyuges, los ascendientes y los adoptantes de la vivienda habitual del causante»; vale también si el causante se…"},{"ine":"03050","nombre":"El Campello","ccaa":"Comunitat Valenciana","tipo":0.15,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 9"},"fuente":{"url":"https://www.elcampello.es/upload/documentos/ordenanzas_fiscales/iivtnu2022.pdf","titulo":"Ordenanza fiscal nº 4 del IIVTNU · BOP Alicante nº 93, 18-05-2022","fecha":"2022-03-24","leido":true},"estado":"V","notas":"HECHO: tipo único 15 % (art. 7), el más bajo del lote. Art. 6 reproduce la tabla legal 2022 (0,14 … 0,45) con cláusula de aplicación directa del nuevo máximo → coefPropios = null. Reducción 40 % (art. 10.1). Bonificación 75 % sin requisitos. Ordenanza original 2001, última modificación Pleno 24-03-2022 (BOP 93, 18-05-2022). Combinación muy favorable (15…"},{"ine":"03059","nombre":"Crevillent","ccaa":"Comunitat Valenciana","tipo":0.15,"tipoPorAnios":[[2,0.15],[4,0.16],[6,0.19],[7,0.25],[18,0.3],[19,0.28],[null,0.27]],"coeficientes":null,"bonif":null,"fuente":{"url":"https://crevillent.es/wp-content/uploads/2024/05/descargas-impuesto-sobre-el-incremento-del-valor-de-los-terrenos-de-naturaleza-urbana-es.pdf","titulo":"Ordenanza fiscal del IIVTNU","fecha":"2022-05-19","leido":true},"estado":"V","notas":"HECHO: tipo de gravamen distinto por cada periodo (art. 13.2): <1, 1 y 2 años 15 %; 3-4 años 16 %; 5-6 años 19 %; 7 años 25 %; 8-18 años 30 %; 19 años 28 %; 20+ años 27 %. Tabla legal 2022 con cláusula de aplicación directa del nuevo máximo (art. 7) → coefPropios = null. No establece bonificación mortis causa (búsqueda de «bonificación», «mortis causa»,…"},{"ine":"03063","nombre":"Dénia","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":[[5,0.3],[null,0.28]],"coeficientes":[0.15,0.15,0.14,0.15,0.17,0.18,0.19,0.18,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.29,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":null,"limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://oac.denia.es/adjuntos/edictes/1528ed_c.pdf","titulo":"Edicto aprobación definitiva modificación OF IIVTNU, art. 9 coeficientes (BOP Alicante nº 242 de 20/12/2023) + noticia municipal 16/03/2022 (denia.es/es/denia/actualitat/noticia.aspx?id=6111)","fecha":"2023-12-20","leido":true},"estado":"P","notas":"P: tipo y bonificación solo por la noticia municipal de 16/03/2022 (adaptación al RDL 26/2021): 'de 0 a 5 años el gravamen se fija en el 30%', 'de 6 a 20 años o más el gravamen es del 28%', y 'bonificación del 95% de la cuota íntegra' cuando se transmita la vivienda habitual (parentesco y requisitos NO verificados; DAC asumido). Coeficientes: tabla…"},{"ine":"03079","nombre":"Ibi","ccaa":"Comunitat Valenciana","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 6"},"fuente":{"url":"https://ibi.es/wp-content/uploads/2024/07/plusval20052.pdf","titulo":"Ordenanza fiscal del IIVTNU de Ibi (texto modificado 08-11-2004, vigor 01-01-2005)","fecha":"2004-11-08","leido":true},"estado":"P","notas":"El único texto localizado en la web municipal es de 2005 (método de porcentajes anuales anterior al RDL 26/2021); no he encontrado la versión adaptada. En ese texto: tipo 28 % (art. 5); art. 6: 50 % mortis causa a descendientes/adoptados hasta 2º grado, cónyuge y ascendientes/adoptantes hasta 2º grado si el inmueble fue vivienda habitual del causante al…"},{"ine":"03090","nombre":"Mutxamel","ccaa":"Comunitat Valenciana","tipo":0.27,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"con la declaración en los plazos legales de la ordenanza","articulo":"art. 8","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://dev.mutxamel.org/wp-content/uploads/2023/11/ofplusva.pdf","titulo":"Ordenança nº 4 – Ordenanza fiscal reguladora del IIVTNU (adaptada al RDL 26/2021; en vigor desde 05/05/2022), web municipal de Mutxamel","fecha":"2022-05-05","leido":true},"estado":"V","notas":"Art. 6: tipo 27 %. Art. 5: tabla propia (= máximos legales 2022) con cláusula: si algún coeficiente supera el máximo legal se aplica éste. Art. 8: 95 % sobre la cuota correspondiente a la vivienda habitual del causante (acreditada con certificado de empadronamiento), a favor de cónyuges, descendientes y adoptados y ascendientes y adoptantes 'hasta…"},{"ine":"03093","nombre":"Novelda","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.29],[15,0.28],[null,0.27]],"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 8","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza"},"fuente":{"url":"https://www.novelda.es/wp-content/uploads/2025/01/Ordenanza-Plusvalia.pdf","titulo":"Ordenanza fiscal del IIVTNU · BOP Alicante nº 124, 29-06-2023","fecha":"2023-06-29","leido":true},"estado":"V","notas":"HECHO: art. 6 contiene una tabla de tipos por periodo: <1-5 años 30 %; 6-10 29 %; 11-15 28 %; 16-20+ 27 %. DUDA: el art. 6.1 copia la frase legal «el tipo será el fijado por cada ayuntamiento, sin que pueda exceder el 30 %» y el lector dudó de si la tabla es propia; INFERENCIA: la ley no fija máximos por tramo, luego la tabla es la del Ayuntamiento.…"},{"ine":"03099","nombre":"Orihuela","ccaa":"Comunitat Valenciana","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":null},"fuente":{"url":"https://www.esdiario.com/comunidad-valenciana/alicante/220316/90084/orihuela-adapta-ordenanza-plusvalia.html","titulo":"Prensa (esdiario, 16-03-2022): Orihuela adapta la ordenanza de plusvalía al RDL 26/2021","fecha":"2022-03-16","leido":false},"estado":"P","notas":"Fuente secundaria (prensa). Tipo 28 % (coincide con Hacienda 2026). Bonificación del 50 % si el inmueble fue vivienda habitual del causante durante los 10 años anteriores al fallecimiento; parentesco no precisado en la noticia (DAC por defecto, sin verificar). Gestión delegada en SUMA; el BOP de Alicante (dip-alicante.es) bloquea la lectura automatizada."},{"ine":"03104","nombre":"Petrer","ccaa":"Comunitat Valenciana","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://petrer.es/wp-content/uploads/2019/04/2.04ORDENANZA_FISCAL_REGULADORA_DEL_IMPUESTO_SOBRE.pdf","titulo":"Ordenanza fiscal 2.04 del IIVTNU de Petrer (aprobada 25-10-2007)","fecha":"2007-10-25","leido":true},"estado":"P","notas":"Único texto localizado: 2007, anterior al RDL 26/2021. Tipo 28 % (art. 13). En ese texto NO hay bonificación mortis causa. Falta la versión adaptada (2022+); bonif null = 'sin bonificación' solo según el texto de 2007."},{"ine":"03121","nombre":"Santa Pola","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 8"},"fuente":{"url":"https://santapola.es/wp-content/uploads/bsk-pdf-manager/2025/01/IMPUESTO-SOBRE-EL-INCREMENTO-DE-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA-2025.pdf","titulo":"Ordenanza fiscal del IIVTNU de Santa Pola (BOP Alicante nº 71, 12-04-2022; texto publicado en la web en 2025)","fecha":"2022-04-12","leido":true},"estado":"V","notas":"Tipo 30 % (art. 6). Art. 8: «bonificación del 50 % de la cuota … por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes»; sin requisito de vivienda habitual, convivencia ni permanencia. Coeficientes: la ordenanza conserva la tabla RDL 26/2021 (0,14…0,45); por el art. 107.4 in fine se aplica el máximo…"},{"ine":"03122","nombre":"Sant Vicent del Raspeig/San Vicente del Raspeig","ccaa":"Comunitat Valenciana","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[6000,0.95],[18000,0.5],[null,0.25]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6"},"fuente":{"url":"https://raspeig.es/wp-content/uploads/2024/06/descargas-ordenanza-fiscal-reguladora-del-impuesto-sobre-el-incremento-del-valor-de-los-terrenos-de-naturaleza-urbana-es.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Sant Vicent del Raspeig (BOP Alicante nº 48, 10-03-2022)","fecha":"2022-03-10","leido":true},"estado":"V","notas":"Tipo 28 % (art. 5; coincide con Hacienda 2026). Coeficientes: 'el coeficiente máximo autorizado' (art. 4) → null. Art. 6: 25 % en toda transmisión mortis causa a descendientes/adoptados, cónyuges, ascendientes/adoptantes (pareja de hecho inscrita equiparada); si es vivienda habitual: 95 % con VC del suelo ≤ 6.000 €, 50 % entre 6.000 y 18.000 €; por…"},{"ine":"03133","nombre":"Torrevieja","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"bonificaciones (texto BOP 31-08-2022)"},"fuente":{"url":"https://torrevieja.es/sites/default/files/repositorio-archivos/PV%20modificada.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Torrevieja (BOP Alicante nº 165, 31-08-2022)","fecha":"2022-08-31","leido":true},"estado":"V","notas":"Tipo único 30 % (art. 6; coincide con Hacienda 2026). Bonificación mortis causa a descendientes y adoptados, cónyuges, ascendientes y adoptantes: 50 % si es la vivienda habitual del causante (acreditada con volante de empadronamiento del causante); 20 % para el resto de inmuebles. El texto no fija plazo de solicitud ni mantenimiento; no consta si es…"},{"ine":"03138","nombre":"el Verger","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.elverger.es/wp-content/uploads/2024/08/ORD-FISCAL-IIVTNU.pdf","titulo":"Ordenanza fiscal del IIVTNU de El Verger (aplicable desde 01-01-2007; publicada en la web en 2024)","fecha":"2007-01-01","leido":true},"estado":"P","notas":"Municipio <10.000 hab. Texto publicado en la web municipal (2024) pero de 2007, anterior al RDL 26/2021 (porcentajes anuales 3,7/3,5/3,2/3,0). Tipo único 30 % (art. 7). Sin bonificación mortis causa en ese texto. Vigencia de la versión adaptada sin confirmar."},{"ine":"03139","nombre":"La Vila Joiosa / Villajoyosa","ccaa":"Comunitat Valenciana","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":{"base":"total","tramos":[[60000,0.95],[120000,0.75],[null,0.25]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 9"},"fuente":{"url":"https://www.villajoyosa.com/wp-content/uploads/2022/02/lavila_110420220.pdf","titulo":"Ordenanza fiscal 2.04 del IIVTNU · BOP Alicante nº 70, 11-04-2022","fecha":"2022-02-17","leido":true},"estado":"V","notas":"HECHO: tipo 25 % (art. 8.1); tabla legal 2022 (0,14 … 0,45) con cláusula de actualización anual por LPGE (art. 7.4) → coefPropios = null; reducción máxima 60 % (art. 7.3). Bonificación escalonada por valor catastral (95/75/25 %) con requisito atípico de empadronamiento del BENEFICIARIO en el municipio 2 años además de la vivienda habitual del causante.…"},{"ine":"03902","nombre":"Pilar de la Horadada","ccaa":"Comunitat Valenciana","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 5.2","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://sede.pilardelahoradada.org/portal/gdConecta/CUD:10710660103752374661.pdf","titulo":"BOP Alicante nº 243 de 19/12/2014 – modificación de la ordenanza fiscal del IIVTNU (aprobación definitiva 30/10/2014)","fecha":"2014-12-19","leido":true},"estado":"P","notas":"P: único texto oficial localizado es de 2014, ANTERIOR al RDL 26/2021 (porcentajes anuales 2,6/2,4/2,5/2,6 %). Entonces: tipo 20 % (art. 7.2) y bonificación del 25 % de la cuota íntegra en transmisiones mortis causa a descendientes y adoptados, cónyuges y ascendientes y adoptantes (art. 5.2), sin requisito de vivienda. Falta la versión adaptada (2022+):…"},{"ine":"04003","nombre":"Adra","ccaa":"Andalucía","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 7","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.adra.es/documents/20122/1265492/IMPUESTO_SOBRFE_EL_INCREMENTO_DE_VALOR_DE_LOS_TERRENOS_DE_NATURALEZA_URBANA.pdf/8c0494da-a3ce-b923-0a8a-577f69ab26cb?t=1732300236182","titulo":"Ordenanza fiscal del IIVTNU de Adra (Pleno 26/01/2023; BOP Almería n.º 64 de 04/04/2023)","fecha":"2023-04-04","leido":true},"estado":"V","notas":"Art. 6.1: «El tipo de gravamen del Impuesto es el 28%». Art. 7: bonificación en transmisiones «a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes. Se aplicará el 25%» — sin requisito de vivienda habitual ni de valor. El art. 5.4 reproduce la tabla de coeficientes máximos de 2023…"},{"ine":"05002","nombre":"La Adrada","ccaa":"Castilla y León","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.6,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"no extraído"},"fuente":{"url":"https://www.diputacionavila.es/bops/2026/06-04-2026/06-04-2026_070626.pdf","titulo":"BOP Ávila 06-04-2026: modificación de la ordenanza fiscal del IIVTNU de La Adrada","fecha":"2026-04-06","leido":true},"estado":"P","notas":"Modificación publicada en 2026: «El tipo de gravamen del impuesto será del 30%»; «la cuota íntegra del impuesto se verá bonificada en un 60%» en transmisiones por causa de muerte de la vivienda habitual del causante, locales afectos a actividad económica o derechos reales sobre ellos, a favor de «descendientes, ascendientes, por naturaleza o adopción, y…"},{"ine":"05192","nombre":"Puerto Castilla","ccaa":"Castilla y León","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables por otros 6 desde el devengo (declaración)","articulo":"no extraído"},"fuente":{"url":"https://www.diputacionavila.es/bops/2025/02-06-2025/02-06-2025_122325.pdf","titulo":"BOP Ávila 02-06-2025: modificación de la ordenanza fiscal del IIVTNU de Puerto Castilla","fecha":"2025-06-02","leido":true},"estado":"P","notas":"Tipo 30 %. Bonificación «del 95 %» en transmisiones mortis causa de la vivienda habitual del causante a favor de «descendientes, ascendientes, por naturaleza o adopción, y del cónyuge»; vivienda habitual = «aquélla en la que constara empadronado en los 2 últimos años antes de producirse el fallecimiento»; acreditación por certificado de empadronamiento.…"},{"ine":"05220","nombre":"San Pedro del Arroyo","ccaa":"Castilla y León","tipo":0.16,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.6,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables por otros 6 desde el devengo","articulo":"no extraído"},"fuente":{"url":"https://www.diputacionavila.es/bops/2022/31-12-2022/31-12-2022_275622.pdf","titulo":"BOP Ávila 31-12-2022: ordenanza fiscal del IIVTNU de San Pedro del Arroyo","fecha":"2022-12-31","leido":true},"estado":"P","notas":"Tipo 16 %. Bonificación del 60 % de la cuota íntegra en transmisiones mortis causa a favor de «descendientes y adoptados, los cónyuges y los ascendientes y adoptantes»; «Este beneficio fiscal tiene carácter rogado»; solicitud en el plazo de declaración (6 meses prorrogables por otros 6). Sin requisito de vivienda habitual. Tabla de coeficientes = legal…"},{"ine":"06153","nombre":"Villanueva de la Serena","ccaa":"Extremadura","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.29],[15,0.28],[null,0.25]],"coeficientes":null,"bonif":{"pct":0.25,"tramos":{"base":"total","tramos":[[30000,0.25],[null,0]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 8","limiteValorCatastral":30000},"fuente":{"url":"https://villanuevadelaserena.es/wp-content/uploads/2024/02/4.-IMPUESTO-SOBRE-EL-INCREMENTO-DEL-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-UR...VALIA_-1.pdf","titulo":"Ordenanza nº 4 reguladora del IIVTNU · BOP Badajoz nº 82, 03-05-2022","fecha":"2022-05-03","leido":true},"estado":"V","notas":"HECHO: tramos 30/29/28/25 % (el texto dice «más de 16 años» para el 25 %). Tabla legal 2022 con actualización automática → coefPropios = null. Bonificación mortis causa muy baja: 25 % solo para vivienda habitual con VC ≤ 30.000 €. INFERENCIA: por encima de 30.000 € no hay bonificación (el resumen no muestra más tramos)."},{"ine":"07011","nombre":"Calvià","ccaa":"Illes Balears","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"total","tramos":[[300000,0.95],[null,0]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":5,"rogada":true,"plazo":null,"articulo":"art. 4.3.1","pctResto":0.5},"fuente":{"url":"https://calvia.com/ca/recursos/document-files/60492","titulo":"Ordenanza reguladora del IIVTNU — Ajuntament de Calvià (aprobada 28-04-2022)","fecha":"2022-04-28","leido":true},"estado":"V","notas":"Art. 4.3.1: «Podrán disfrutar de una bonificación del 95% de las cuotas… por causa de muerte, respecto de la transmisión de la propiedad de la vivienda habitual del o de la causante, de los locales afectos a la actividad económica…, a favor de los descendientes, ascendientes, por naturaleza o por adopción, y del o de la cónyuge». Equipara al cónyuge la…"},{"ine":"07012","nombre":"Campanet","ccaa":"Illes Balears","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 12.2"},"fuente":{"url":"https://intranet.caib.es/eboibfront/pdf/ca/2022/147/1122831","titulo":"BOIB 15-11-2022: Ordenança fiscal IIVTNU — Ajuntament de Campanet","fecha":"2022-11-15","leido":true},"estado":"P","notas":"Art. 12.2: 95 % descendents directes, adoptats, ascendents de 1r grau i cònjuges; 75 % descendents i ascendents de 2n grau en línia; 50 % parents de 3r i 4t grau. Sense requisit d'habitatge habitual. Tipus 26 % (art. 12.1). Coeficients art. 9.1 (0,14…0,45, taula RDL 26/2021) no capturats sencers → null. P: text 2022, sense confirmar modificacions."},{"ine":"07015","nombre":"Ciutadella de Menorca","ccaa":"Illes Balears","tipo":0.22,"tipoPorAnios":[[5,0.22],[10,0.21],[15,0.18],[null,0.18]],"coeficientes":null,"bonif":{"pct":0.2,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 4.b"},"fuente":{"url":"https://www.ajciutadella.org/WebEditor/Pagines/file/ordenances/fiscals/impostos/catala/OF_5_plusvalua.pdf","titulo":"Ordenança fiscal núm. 5 reguladora de l'IIVTNU · BOIB nº 66, 18-05-2024 (según cabecera del PDF); el texto cita BOIB 180, 30-12-2003","fecha":null,"leido":false},"estado":"P","notas":"HECHO: el PDF de la web municipal (cabecera BOIB 66 de 18-05-2024) contiene tipos por tramos 22/21/18/18 %, bonificación 20 % (primer grado, sin requisitos), reducción 40 % y PORCENTAJES ANUALES antiguos (2,6/2,4/2,5/2,2 %) sin tabla de coeficientes del RDL 26/2021; cita aprobación definitiva 10-12-2003 (BOIB 180, 30-12-2003). DUDA: contradicción entre…"},{"ine":"07026","nombre":"Eivissa","ccaa":"Illes Balears","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 5","pctResto":0.95},"fuente":{"url":"https://intranet.caib.es/eboibfront/pdf/es/2016/160/967912","titulo":"BOIB 16-12-2016: Ordenanza fiscal reguladora del IIVTNU — Ajuntament d'Eivissa","fecha":"2016-12-16","leido":true},"estado":"P","notas":"Tipo 30 % según Hacienda 2026 (3N); la ordenanza de 2016 decía 17 %, así que ha sido modificada después y el texto vigente no se ha localizado. Bonificación (art. 5, versión 2016) a descendientes, adoptados, cónyuges, ascendientes y adoptantes: parientes de 1.er-2.º grado 95 % vivienda habitual / 80 % otros inmuebles; otros grados 40 % / 30 %; otros 10…"},{"ine":"07033","nombre":"Manacor","ccaa":"Illes Balears","tipo":0.285,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"todos","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.2"},"fuente":{"url":"https://intranet.caib.es/eboibfront/pdf/es/2019/170/1049797","titulo":"BOIB 19-12-2019: texto de la Ordenanza 02I.OD del IIVTNU — Ajuntament de Manacor","fecha":"2019-12-19","leido":true},"estado":"P","notas":"Art. 6.2 (2019): «Se aplicará una bonificación del 75% de la cuota íntegra del impuesto en las transmisiones de terrenos… realizadas a título lucrativo por causa de muerte», sin limitar beneficiarios ni exigir vivienda habitual. Tipo 28,5 %. P: texto anterior al RDL 26/2021; el BOIB 22-03-2022 (núm. 40) publica la aprobación inicial de una modificación…"},{"ine":"07036","nombre":"Marratxí","ccaa":"Illes Balears","tipo":0.245,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 12"},"fuente":{"url":"https://www.marratxi.es/wp-content/uploads/2022/05/IIVTNU-1.pdf","titulo":"Ordenança fiscal reguladora de l'IIVTNU · BOIB nº 68, 26-05-2022","fecha":"2022-03-29","leido":true},"estado":"V","notas":"HECHO: tipo único 24,5 % (art. 11.1); sin tabla propia, «coeficient màxim actualitzat vigent … d'acord amb l'article 107» con modificación automática (art. 7.1) → coefPropios = null. Bonificación 50 % sin requisitos. Aprobada Pleno 29-03-2022 (acta leída) y publicada BOIB 68 de 26-05-2022."},{"ine":"07048","nombre":"Sant Josep de sa Talaia","ccaa":"Illes Balears","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 6.2.a"},"fuente":{"url":"https://www.caib.es/eboibfront/pdf/ca/2022/75/1113163","titulo":"Ordenança fiscal reguladora de l'IIVTNU · BOIB nº 75, 09-06-2022","fecha":"2022-03-31","leido":true},"estado":"V","notas":"HECHO: tipo único 20 % (art. 6.1); art. 5.2.a reproduce la tabla legal 2022 (0,14 … 0,45); según el resumen NO hay cláusula de actualización automática → INFERENCIA: por el art. 107.4 TRLRHL el máximo legal vigente se aplica directamente cuando el propio lo supera; se ha puesto coefPropios = null por coherencia con el resto del lote, pero estrictamente…"},{"ine":"07054","nombre":"Santa Eulària des Riu","ccaa":"Illes Balears","tipo":0.16,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6"},"fuente":{"url":"https://santaeulariadesriu.com/images/PDFS/20260226%20LLIBRE%20D%20ORDENANCES%20FISCALS%202026.pdf","titulo":"Llibre d'ordenances fiscals 2026 — Ajuntament de Santa Eulària des Riu (OF plusvàlua, aprovació Ple 04-12-2025, BOIB núm. 163 d'11-12-2025)","fecha":"2025-12-11","leido":true},"estado":"V","notas":"Art. 6: «S'estableix una bonificació del 95% de la quota íntegra de l'impost, en les transmissions de terrenys, i en la transmissió o constitució de drets reals de gaudi limitatius del domini, realitzades a títol lucratiu per causa de mort a favor dels descendents i adoptats, els cònjuges i els ascendents i adoptants.» No exige vivienda habitual en el…"},{"ine":"08005","nombre":"L'Ametlla del Vallès","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.1"},"fuente":{"url":"https://bop.diba.cat/anuncio/descargar-pdf/3874998","titulo":"BOPB 17-12-2025: Ordenança fiscal núm. 5 IIVTNU — Ajuntament de l'Ametlla del Vallès","fecha":"2025-12-17","leido":true},"estado":"V","notas":"Art. 6.1: «Es concedirà una bonificació del 90 per cent de la quota de l'impost… a favor dels seus descendents de primer grau i adoptats, els cònjuges i els seus ascendents de primer grau i adoptants»; habitatge habitual del causant (padró), +1 traster i 2 places; no cedit a tercers. Tipus 30 % (art. 8); coeficients: remet al 107.4."},{"ine":"08006","nombre":"Arenys de Mar","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.85,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses, prorrogable a 1 año (art. 11.6)","articulo":"art. 6.2","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3227289","titulo":"Ordenança fiscal núm. 4 de l'IIVTNU d'Arenys de Mar, text consolidat (BOPB 02-05-2022, CVE 202210066925); bonificació modificada al BOPB 27-12-2023 (75 %) i 24-12-2025 (85 %)","fecha":"2025-12-24","leido":true},"estado":"V","notas":"Art. 8: «tipus de gravamen del 30 per cent». Art. 6.2: bonificación en las transmisiones por causa de muerte de la vivienda habitual del causante (la del padrón; la baja por motivos de salud acreditados no la rompe; vivienda, un trastero y hasta dos plazas en el mismo edificio) a descendientes de primer grado y adoptados, cónyuges y ascendientes de…"},{"ine":"08051","nombre":"Castellar del Vallès","ccaa":"Cataluña","tipo":0.2995,"tipoPorAnios":null,"coeficientes":[0.16,0.15,0.15,0.15,0.16,0.18,0.2,0.22,0.23,0.21,0.16,0.13,0.11,0.1,0.1,0.1,0.1,0.12,0.16,0.22,0.35],"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[20000,0.75],[null,0.5]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":3,"rogada":true,"plazo":"dentro del plazo de la autoliquidación","articulo":"art. 6.1"},"fuente":{"url":"https://seu.castellarvalles.cat/arxius/ordenanca/769/arxiu/ordenanca_fiscal_num._4_2026__impost_sobre_lincrement_de_valor_dels_terrenys_de_naturalesa_urbana.pdf","titulo":"Ordenança fiscal núm. 4 (2026) Impost sobre l'increment de valor dels terrenys de naturalesa urbana — Ajuntament de Castellar del Vallès","fecha":"2025-10-16","leido":true},"estado":"V","notas":"Art. 6.1: bonificació en transmissions mortis causa de l'habitatge habitual del causant a «descendents i ascendents (per naturalesa o adopció…), el cònjuge o la parella de fet del causant», «quan… s'acrediti haver conviscut el darrer any amb la persona causant»: 75 % si el valor cadastral del sòl de l'habitatge ≤ 20.000 €, 50 % si és superior; mantenir 3…"},{"ine":"08056","nombre":"Castelldefels","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":3,"rogada":true,"plazo":"dentro del plazo de declaración (art. 13)","articulo":"art. 6.B.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3233933","titulo":"Ordenança fiscal núm. 5 de l'IIVTNU de Castelldefels, text íntegre (BOPB 05-05-2022, CVE 202210073129)","fecha":"2022-05-05","leido":true},"estado":"V","notas":"Art. 8: «tipus del 30%». Art. 6.B.1: «Es concedirà una bonificació del 95% de la quota de l'impost en les transmissions de vivenda habitual del causant» por causa de muerte a descendientes de primer grado y adoptados, cónyuges y ascendientes de primer grado; vivienda habitual = la del padrón del causante (el ingreso forzoso en residencia o el traslado…"},{"ine":"08073","nombre":"Cornellà de Llobregat","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":null,"rogada":true,"plazo":"6 meses (prorrogable a 1 año) — plazo de declaración mortis causa, art. 12","articulo":"art. 7.2"},"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3877602","titulo":"BOPB 24-12-2025: aprobación definitiva modificación OOFF 2026 de Cornellà de Llobregat (OOFF núm. 4 IIVTNU, extracto)","fecha":"2025-12-24","leido":true},"estado":"P","notas":"Art. 7.2 (literal): «Els cònjuges, descendents i adoptats, ascendents i adoptants… 95%»; «Les parelles de fet que compleixin amb l'establert a l'article 234.1 del Codi Civil de Catalunya… 95%»; «sempre i quan l'objecte tributari sigui el seu habitatge habitual» (del adquirente), con empadronamiento ininterrumpido mínimo 2 años antes de la transmisión (o…"},{"ine":"08075","nombre":"Dosrius","ccaa":"Cataluña","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses, prorrogable a 1 año (art. 11)","articulo":"art. 6.2"},"fuente":{"url":"https://bop.diba.cat/anuncio/descargar-pdf/3901710","titulo":"BOPB 23-02-2026: Ordenança fiscal núm. 4 IIVTNU — Ajuntament de Dosrius","fecha":"2026-02-23","leido":true},"estado":"V","notas":"Art. 6.2: «Es concedirà una bonificació del 90% per cent de la quota de l'impost… per causa de mort a favor dels seus descendents de primer grau i adoptats, els cònjuges i els seus ascendents de primer grau i adoptants»; «S'equipara el matrimoni amb la parella de fet legalment inscrita»; habitatge habitual = on figura empadronat el causant (+1 traster, 2…"},{"ine":"08077","nombre":"Esplugues de Llobregat","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[60101.21,0.95],[100000,0.6],[185000,0.4],[null,0.2]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":null,"rogada":true,"plazo":"1 año desde el devengo","articulo":"art. 6.3"},"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3596876","titulo":"BOPB 14-03-2024: text íntegre modificat de l'Ordenança fiscal núm. 3 IIVTNU — Ajuntament d'Esplugues de Llobregat","fecha":"2024-03-14","leido":true},"estado":"V","notas":"Art. 6.3: bonificació en transmissions per causa de mort que afectin «l'habitatge habitual del causant… a favor dels seus descendents de primer grau i adoptants, els cònjuges i els seus ascendents de primer grau i adoptants, i les parelles de fet degudament inscrites». Trams per valor cadastral del sòl: 0-60.101,21 € 95 %; fins a 100.000 € 60 %; fins a…"},{"ine":"08110","nombre":"Malgrat de Mar","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://malgratdemar-prd.diba.cat/media/repository//documents_oficials/ordenances_fiscals/2024/05_-_IIVTNU_1.pdf","titulo":"Ordenança fiscal 05 IIVTNU (versió 2024; modificació 21-12-2023) — Ajuntament de Malgrat de Mar","fecha":"2023-12-21","leido":true},"estado":"P","notas":"Porcentaje de la bonificación no localizado o no modelable: se calcula sin ella y se puede indicar a mano. Bonificación del art. 6.1 por SUPERFICIE del suelo, no por valor (estructura no soportada por el esquema): <200 m² 95 %; 200-300 m² 75 %; 300-400 m² 50 %; 400-500 m² 25 %; >500 m² 10 %. Beneficiarios descendientes, adoptados, cónyuges, ascendientes;…","bonifDesconocida":true},{"ine":"08118","nombre":"El Masnou","ccaa":"Cataluña","tipo":0.23,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":2,"rogada":true,"articulo":"art. 6.2"},"fuente":{"url":"https://elmasnou.cat/media/repository/documents_oficials/normativa_fiscal/ordenances_fiscals_2022/6._Impost_increment_valor_terrenys1_abril_2022.pdf","titulo":"Ordenança fiscal núm. 6 Impost sobre l'increment de valor dels terrenys de naturalesa urbana · BOPB 07-04-2022","fecha":"2022-02-17","leido":true},"estado":"V","notas":"HECHO: tipo 23 % (art. 8). Art. 7.8 reproduce la tabla legal 2022 (0,14 … 0,45) con cláusula de aplicación directa del nuevo máximo legal si el propio lo supera → coefPropios = null (INFERENCIA: estrictamente, los valores 2022 inferiores al máximo vigente seguirían aplicándose; no verificado). Bonificación 95 % limitada a parientes de primer grado y…"},{"ine":"08124","nombre":"Mollet del Vallès","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3602184","titulo":"BOPB 19-03-2024: text modificat de l'Ordenança fiscal 1.2.2 IIVTNU — Ajuntament de Mollet del Vallès","fecha":"2024-03-19","leido":true},"estado":"P","notas":"Porcentaje de la bonificación no localizado o no modelable: se calcula sin ella y se puede indicar a mano. PORCENTAJE NO LOCALIZADO: el BOPB leído (texto íntegro modificado 2024) recoge la bonificación del art. 6.2 para «transmissions d'habitatges realitzades a títol lucratiu per causa de mort» del «habitatge habitual del causant» (padrón) a…","bonifDesconocida":true},{"ine":"08125","nombre":"Montcada i Reixac","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"6 meses, prorrogable a 1 año (art. 11.5.b)","articulo":"art. 6.2","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3476515","titulo":"Ordenança fiscal núm. 4 de l'IIVTNU de Montcada i Reixac, text íntegre (BOPB 26-06-2023, CVE 202310098847)","fecha":"2023-06-26","leido":true},"estado":"P","notas":"Art. 8: «tipus de gravamen únic del 30%». Art. 7.8: coeficientes máximos legales vigentes. Art. 6.2: «Es concedirà una bonificació del 95 per cent de la quota de l'Impost» en transmisiones por causa de muerte de la vivienda habitual del causante (la del padrón; la baja por salud acreditada no la rompe; vivienda, un trastero y hasta dos plazas) a…"},{"ine":"08172","nombre":"Premià de Mar","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.15,0.15,0.14,0.14,0.16,0.18,0.19,0.2,0.19,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"art. 11.6","articulo":"art. 6","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/descargar-pdf/3617262","titulo":"BOPB: aprovació definitiva de la modificació de l'Ordenança fiscal 2.4 IIVTNU (exercici 2024 i següents)","fecha":"2024-04-23","leido":true},"estado":"V","notas":"Art. 8: tipus 30 %. Art. 7.8: taula pròpia (= màxims 2024) amb clàusula: si el nou màxim legal és inferior s'aplica aquest. Art. 6: 95 % a descendents de primer grau i adoptats, cònjuges i ascendents de primer grau i adoptants; s'equipara la parella de fet legalment inscrita; habitatge habitual = on figuri empadronat el causant (més un traster i fins a…"},{"ine":"08180","nombre":"Ripollet","ccaa":"Cataluña","tipo":0.29,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":5,"rogada":true,"articulo":"art. 6.2"},"fuente":{"url":"https://www.ripollet.cat/ajuntament/exposicio-publica/ordenances-reglaments-plans-i-bases/ordenances-fiscals-2026/ordenances-fiscals-2026/ordenanca-fiscal-num-04-impost-sobre-lincrement-de-valor-dels-terrenys-de-naturalesa-urbana.pdf","titulo":"Ordenança fiscal núm. 04 Impost sobre l'increment de valor dels terrenys de naturalesa urbana (2026) · BOPB (número y fecha no constan); vigor 01-01-2026","fecha":"2025-11-27","leido":true},"estado":"V","notas":"HECHO: tipo único 29 % (art. 8.2); sin tabla propia: «pel coeficient màxim que correspongui … dels establerts a l'article 107.4» (art. 7.9) → coefPropios = null. Bonificación baja (40 %) con convivencia 2 años y mantenimiento 5 años. Aprobada definitivamente Pleno 27-11-2025. Población ~39.000."},{"ine":"08181","nombre":"La Roca del Vallès","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.2","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza"},"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3877034","titulo":"BOPB 22-12-2025: Ordenança fiscal núm. 4 IIVTNU 2026 — Ajuntament de la Roca del Vallès","fecha":"2025-12-22","leido":true},"estado":"V","notas":"Art. 6.2: «Es concedirà una bonificació del 75 per cent de la quota… per causa de mort a favor dels seus descendents de primer grau i adoptats, els cònjuges i els seus ascendents de primer grau i adoptants»; «La bonificació serà del 90 per cent… si la totalitat d'ingressos anuals de cadascun dels subjectes passius que hi consten empadronats no superi…"},{"ine":"08196","nombre":"Sant Andreu de la Barca","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[30000,0.95],[null,0.25]]},"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":true,"empadronado":false,"mantener":3,"rogada":null,"plazo":null,"articulo":"art. 6.2","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3211651","titulo":"Ordenança fiscal núm. 3 de l'IIVTNU de Sant Andreu de la Barca, text íntegre (BOPB 29-03-2022, CVE 202210048799); art. 6.2 i 7.8 modificats al BOPB 23-12-2025","fecha":"2025-12-23","leido":true},"estado":"V","notas":"Art. 8: «tipus de gravamen del 30 %». Art. 6.2 (redacción de 2022 y nueva redacción publicada en el BOPB de 23-12-2025 con los mismos porcentajes): transmisiones por causa de muerte «que afectin a l'habitatge habitual del causant» a favor de descendientes de primer grado y adoptados, cónyuges y ascendientes de primer grado y adoptantes, «sempre i quant…"},{"ine":"08200","nombre":"Sant Boi de Llobregat","ccaa":"Cataluña","tipo":0.296,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":4,"rogada":true,"plazo":"plazos del art. 11","articulo":"art. 6.2"},"fuente":{"url":"https://seu-e.cat/documents/20804088/21732497/ORDENA05.pdf/b33fdb65-2c82-42e2-a70d-ab547b26df46","titulo":"«Ordenances fiscals 2026» — OF IIVTNU (seu-e.cat, entitat 20804088; municipi no identificat al text)","fecha":null,"leido":true},"estado":"P","notas":"IDENTIDAD INFERIDA: el texto no nombra el municipio; se atribuye a Sant Boi porque su tipo (29,60 %, art. 8) coincide con el que Sant Boi comunica a Hacienda para 2026 (3N) y no con ningún otro grande de la provincia. Art. 6.2 (literal): «…sempre i quan l'objecte tributari sigui el seu habitatge habitual, entenem com habitatge habitual aquell que figuri…"},{"ine":"08217","nombre":"Sant Joan Despí","ccaa":"Cataluña","tipo":0.28,"tipoPorAnios":null,"coeficientes":[0.15,0.15,0.14,0.15,0.17,0.18,0.19,0.18,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.29,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":4,"rogada":true,"plazo":null,"articulo":"art. 6","viviendaHeredero":true},"fuente":{"url":"https://sjdespi.cat/sites/default/files/ordenanca_fiscal_4_impost_sobre_lincrement_del_valor_dels_terrenys_de_naturalesa_urbana.pdf","titulo":"Ordenança fiscal núm. 4 Impost sobre l'increment del valor dels terrenys de naturalesa urbana — Ajuntament de Sant Joan Despí","fecha":"2023-12-21","leido":true},"estado":"V","notas":"Art. 6: «En les transmissions a títol lucratiu per causa de mort… tindran la bonificació… sempre que l'objecte tributari sigui el seu habitatge habitual o bé es tracti de locals afectes a activitats empresarials o professionals…» Cònjuge, descendents/adoptats, ascendents/adoptants: 95 %. «Les parelles de fet degudament inscrites… tindran la mateixa…"},{"ine":"08219","nombre":"Vilassar de Mar","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"plazo de la autoliquidación","articulo":"art. 6.1"},"fuente":{"url":"https://bop.diba.cat/anunci/veure-pdf/3961438","titulo":"BOPB 23-06-2026: Ordenança fiscal núm. 05 IIVTNU (text íntegre amb modificació) — Ajuntament de Vilassar de Mar","fecha":"2026-06-23","leido":true},"estado":"V","notas":"Art. 6.1: «Es concedirà una bonificació del 40 per cent de la quota» en transmissions per causa de mort de l'habitatge habitual del causant (empadronat de forma continuada almenys 2 anys abans, o des de l'adquisició) a descendents i adoptats, cònjuges i ascendents de 1r grau i adoptants; inclou 1 traster i 2 places; no cedit a tercers. Sol·licitud dins…"},{"ine":"08228","nombre":"Sant Martí Sesgueioles","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.2"},"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3875000","titulo":"BOPB 16-12-2025: Ordenança fiscal núm. 5 IIVTNU — Ajuntament de Sant Martí Sesgueioles","fecha":"2025-12-16","leido":true},"estado":"V","notas":"Art. 6.2: «Es concedirà una bonificació del 95% per cent de la quota de l'Impost… que afectin a l'habitatge habitual del causant realitzades a títol lucratiu per causa de mort a favor dels seus descendents de primer grau i adoptats, els cònjuges i els seus ascendents de primer grau i adoptants»; no cedit a tercers. Tipus 30 %. Coeficients art. 7.9 =…"},{"ine":"08245","nombre":"Santa Coloma de Gramenet","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":[{"pct":0.75,"tramos":null,"parentesco":"CP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"6 meses (1 año con prórroga)","articulo":"art. 6.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},{"pct":0.5,"tramos":null,"parentesco":"D1","viviendaHabitual":true,"pctResto":null,"convivencia":true,"empadronado":false,"mantener":4,"rogada":null,"plazo":"6 meses (1 año con prórroga)","articulo":"art. 6.4","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false}],"bonifDesconocida":false,"fuente":{"url":"https://bop.diba.cat/anuncio/ver-pdf/3225829","titulo":"Ordenança fiscal núm. 5 de l'IIVTNU de Santa Coloma de Gramenet, text íntegre (BOPB 04-05-2022, CVE 202210065184)","fecha":"2022-05-04","leido":true},"estado":"P","notas":"Art. 8: «tipus de gravamen del 30%». Art. 6: (1) cónyuge: 75 % de la cuota relativa al domicilio habitual y una plaza de aparcamiento; (3) la pareja estable acreditada se equipara; (4) descendientes de primer grado: 50 % del domicilio habitual y una plaza si convivieron con el causante en ese domicilio los dos años anteriores (padrón; la estancia en…"},{"ine":"08252","nombre":"Barberà del Vallès","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.8,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 6","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza"},"fuente":{"url":"https://seu-e.cat/documents/28543/18160764/Annex+1.pdf/ef73874c-0791-4d94-9636-5bb1c0b91d21","titulo":"Ordenança fiscal IIVTNU (modificació GT2024/15 per a 2025) · BOPB (número y fecha no constan en el anexo)","fecha":"2024-10-23","leido":true},"estado":"V","notas":"HECHO: tipo 30 % para todos los periodos (art. 8). Art. 7.9 reproduce la tabla legal con cláusula de aplicación directa del nuevo máximo → coefPropios = null. Bonificación muy asimétrica: cónyuge 80 % (95 % si renta <20.000 €) y solo 10 % para descendientes/ascendientes de primer grado; pct = 0,80 corresponde al cónyuge. Aprobada Pleno 23-10-2024…"},{"ine":"08266","nombre":"Cerdanyola del Vallès","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"plazo del art. 11.6 (declaración)","articulo":"art. 6"},"fuente":{"url":"https://www.cerdanyola.cat/sites/default/files/fitxers/ordenanca_04_2024.pdf","titulo":"Ordenança fiscal núm. 4 Impost sobre l'increment de valor dels terrenys de naturalesa urbana — Ajuntament de Cerdanyola del Vallès (darrera modificació 21-03-2024)","fecha":"2024-03-21","leido":true},"estado":"V","notas":"Art. 6: «Es concedirà una bonificació del 95 per cent de la quota de l'Impost… que afectin al domicili habitual del causant realitzades a títol lucratiu per causa de mort a favor dels descendents de primer grau i adoptats, els cònjuges i els ascendents de primer grau i adoptants». «Les parelles que convisquin tindran que estar legalment constituïdes…"},{"ine":"08279","nombre":"Terrassa","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[9999,0.95],[19999,0.75],[29999,0.55],[39999,0.4],[49999,0.3],[null,0.2]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":4,"rogada":true,"plazo":"plazo de la OF 2.04 (no capturado)","articulo":"OF 2.04","viviendaHeredero":true},"fuente":{"url":"https://aoberta.terrassa.cat/tramits/fitxa.jsp?id=7794","titulo":"Seu electrònica Ajuntament de Terrassa — Bonificació de la plusvàlua (fitxa del tràmit, remet a l'OF 2.04)","fecha":null,"leido":true},"estado":"P","notas":"Ficha oficial del trámite (el PDF de la OF 2.04 está bloqueado por robots.txt): beneficiarios descendientes/adoptados, cónyuge, ascendientes/adoptantes; el inmueble debe ser vivienda habitual DEL HEREDERO, que reside y está empadronado antes del fallecimiento; no transmitir en 4 años. Tramos por valor catastral del suelo: hasta 9.999 € 95 %; hasta 19.999…"},{"ine":"08301","nombre":"Viladecans","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.viladecans.cat/sites/default/files/documents/1.05_ooff_2024_iivtnu.pdf","titulo":"Ordenança fiscal 1.05 IIVTNU 2024 — Ajuntament de Viladecans","fecha":"2023-12-21","leido":true},"estado":"P","notas":"Porcentaje de la bonificación no localizado o no modelable: se calcula sin ella y se puede indicar a mano. Art. 5.1: bonificación a «descendents de primer grau i adoptats, els cònjuges, i els seus ascendents de primer grau i adoptants, sempre i quan hagin conviscut amb el causant durant els dos anys anteriors a la defunció»; «S'equipara el matrimoni amb…","bonifDesconocida":true},{"ine":"08307","nombre":"Vilanova i la Geltrú","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":[[0,0.2065],[5,0.206],[6,0.2165],[18,0.3],[19,0.2942],[null,0.2478]],"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.1307,0.1089,0.0981,0.0871,0.0871,0.0871,0.0871,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://bop.diba.cat/anuncio/descargar-pdf/3871150","titulo":"BOPB: aprovació definitiva de la modificació de l'Ordenança fiscal núm. 6 IIVTNU (arts. 5 i 6) per a l'exercici 2026 i següents","fecha":"2025-12-09","leido":true},"estado":"P","notas":"P: modificació parcial (només art. 5 coeficients i art. 6 tipus) llegida al BOPB; la bonificació mortis causa no forma part del text publicat i no s'ha pogut llegir el text consolidat (bonifDesconocida). Art. 6: tipus per període: <1 any 20,65 %; 1-5 anys 20,60 %; 6 anys 21,65 %; 7-18 anys 30 %; 19 anys 29,42 %; ≥20 anys 24,78 % (tipo=0,30 és el màxim;…"},{"ine":"09018","nombre":"Aranda de Duero","ccaa":"Castilla y León","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.4"},"fuente":{"url":"https://www.arandadeduero.es/archivos/editor/ficheros/20220803094858PLUSVALIA%202022.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (Aranda de Duero), aprobada por el Pleno 09-03-2022, BOP Burgos n.º 87 de 09-05-2022","fecha":"2022-05-09","leido":true},"estado":"V","notas":"Art. 6.1: tipo 20 %. Art. 6.4: «se aplicará una bonificación del 75% en la cuota del impuesto cuando los adquirientes sean sus descendientes o adoptados en primer grado, sus ascendientes o adoptantes en primer grado, y el cónyuge o pareja de hecho, cuando se trate de parejas inscritas en el correspondiente registro, siempre que el bien adquirido sea la…"},{"ine":"09219","nombre":"Miranda de Ebro","ccaa":"Castilla y León","tipo":0.15,"tipoPorAnios":[[10,0.15],[null,0.13]],"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"pctResto":0.5,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"plazo de la declaración del impuesto","articulo":"art. 6","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://mirandadeebro.es/wp-content/uploads/FMS/B1/02/Nueva Ordenanza Fiscal IIVTNU.pdf","titulo":"Nueva Ordenanza Fiscal del IIVTNU (Pleno 03/03/2022; rige desde el día siguiente a su publicación en el BOP de Burgos), web municipal (actualizada 17/04/2024)","fecha":"2022-03-03","leido":true},"estado":"V","notas":"Art. 14: tipo 15 % para periodos de 0 a 10 años y 13 % de 11 a 20 años. Art. 9: coeficiente = máximo actualizado vigente del art. 107.4 (null). Art. 6.1: 50 % en transmisiones mortis causa a descendientes y adoptados, cónyuges y ascendientes y adoptantes (cualquier inmueble); art. 6.2: 75 % si es la vivienda habitual del causante (empadronado de forma…"},{"ine":"10148","nombre":"Plasencia","ccaa":"Extremadura","tipo":0.278,"tipoPorAnios":[[5,0.278],[10,0.254],[15,0.232],[null,0.205]],"coeficientes":null,"bonif":{"pct":0.8,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 15"},"fuente":{"url":"https://bop.dip-caceres.es/bop/services/anuncios/contenidoPdfIdAnuncio?csv=BOP-2023-4352","titulo":"Ordenanza fiscal reguladora del IIVTNU (modificación 2023) · BOP Cáceres nº 127, 06-07-2023","fecha":"2023-07-06","leido":true},"estado":"V","notas":"HECHO: tramos 27,8 / 25,4 / 23,2 / 20,5 %; coeficientes = máximos legales actualizables. Bonificación 80 % sin mención a vivienda habitual, empadronamiento ni mantenimiento. Fuente secundaria (tasasmunicipales.info) confirma los mismos tipos para 2025. DUDA: la ausencia total de requisitos en una bonificación del 80 % es inusual; conviene leer el art. 15…"},{"ine":"11008","nombre":"Los Barrios","ccaa":"Andalucía","tipo":0.2756,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://losbarrios.es/wp-content/uploads/2022/05/Ordenanza-Fiscal-no-6.pdf","titulo":"Ordenanza fiscal n.º 6 reguladora del IIVTNU (Los Barrios), 9.ª modificación (BOP Cádiz n.º 98 de 25/05/2022)","fecha":"2022-05-25","leido":true},"estado":"P","notas":"Texto 2022 leído: art. 13.2 «El tipo de gravamen se fija en el 27,56 por ciento y será único»; art. 14 (bonificaciones) «ha sido derogado»: sin bonificación por herencia en esa versión. Coeficientes art. 11 = máximos legales 2022 (rige el máximo legal vigente). PERO: BOP Cádiz n.º 37 de 24/02/2025 publica la «aprobación definitiva de la modificación de…"},{"ine":"11022","nombre":"La Línea de la Concepción","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bopcadiz.es/export/sites/default/.boletines_pdf/2022/08_agosto/BOP165_29-08-22.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (La Línea de la Concepción), aprobación definitiva de la modificación (BOP Cádiz n.º 165 de 29/08/2022, anuncio 89.775)","fecha":"2022-08-29","leido":true},"estado":"P","notas":"Texto completo (arts. 1-23). Art. 14: «tipo de gravamen del treinta por ciento (30 por 100)». Sin bonificación por transmisión mortis causa: solo exenciones del art. 5 (bienes culturales, operaciones entre cónyuges) y no sujeciones del art. 4. Art. 17: plazo de declaración mortis causa 6 meses. Coeficientes del art. 7.3 = tabla legal máxima de 2022…"},{"ine":"11030","nombre":"Rota","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[20000,0.95],[30000,0.5],[40000,0.25],[null,0]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":1,"rogada":true,"plazo":"al formular la declaración del art. 10","articulo":"art. 5"},"fuente":{"url":"https://www.bopcadiz.es/export/sites/default/.boletines_pdf/2022/06_junio/BOP111_13-06-22.pdf","titulo":"Ordenanza fiscal n.º 1.3 reguladora del IIVTNU (Rota), aprobación definitiva de la modificación (BOP Cádiz n.º 111 de 13/06/2022)","fecha":"2022-06-13","leido":true},"estado":"V","notas":"Art. 7.1: «tipo del 30 por 100». Art. 5: bonificación en transmisión «de la que ha sido la vivienda habitual del transmitente» por causa de muerte a favor de descendientes y adoptados, cónyuges y ascendientes; «Se equipararán a los cónyuges las parejas de hecho inscritas en el Registro». «El 95 % si el valor catastral del terreno es igual o inferior a…"},{"ine":"11033","nombre":"San Roque","ccaa":"Andalucía","tipo":0.21,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":null,"rogada":true,"plazo":"plazo de la declaración-liquidación","articulo":"art. 7","viviendaHeredero":true},"fuente":{"url":"https://transparencia.sanroque.es/sites/default/files/2024-02/plusvalia.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (San Roque), modificación de 2015 (exposición BOP Cádiz n.º 171 de 04/09/2015; definitiva BOP n.º 222 de 16/11/2015)","fecha":"2015-11-16","leido":true},"estado":"P","notas":"Texto leído es la versión de 2015 (anterior al RDL 26/2021: aún usa porcentajes anuales 3,7/3,5/3,2/3 %). Art. 7: «tipo de gravamen del 21 por 100, que será único». Bonificación 95 % a descendientes, adoptados, cónyuges, ascendientes y adoptantes «siempre que dicha transmisión se refiera a la vivienda habitual del adquirente durante, al menos, los dos…"},{"ine":"11035","nombre":"Tarifa","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 8","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza","viviendaHeredero":true},"fuente":{"url":"https://www.aytotarifa.com/wp-content/uploads/2026/04/ORDENANZA-REGULADORA-IIVTNU-CUADRO-COEFICIENTES-ANO-2026-1.pdf","titulo":"Ordenanza reguladora del IIVTNU (Tarifa), texto con cuadro de coeficientes 2026 (web municipal)","fecha":null,"leido":true},"estado":"V","notas":"Art. 7: «tipo de gravamen establecido que es del 30%». Art. 8 literal: 95 % «a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes cuando se cumplan los dos siguientes supuestos: 1.- … sólo será aplicable a la vivienda habitual del causante y cuando también constituya la vivienda habitual del adquirente, entendiendo como…"},{"ine":"12027","nombre":"Benicarló","ccaa":"Comunitat Valenciana","tipo":0.25,"tipoPorAnios":[[5,0.25],[10,0.2],[15,0.185],[null,0.185]],"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 12.4"},"fuente":{"url":"https://www.ajuntamentdebenicarlo.org/pdo/ppdo-shostd.php?i_pdo=9068&idioma=v","titulo":"Ordenanza fiscal I.05 Impuesto sobre el incremento de valor de los terrenos de naturaleza urbana · BOP Castellón nº 155, 24-12-2009 (versión leída)","fecha":null,"leido":false},"estado":"P","notas":"HECHO: la versión leída en la web municipal es la de 2009 (vigor 01-01-2010): tipos por tramos 25/20/18,5/18,5 %, porcentajes anuales 2,4/2,3/2,3/2,2 %, bonificación 25 % (primer grado) sin requisitos. INFERENCIA: debe existir adaptación de 2022 no localizada. PENDIENTE: BOP Castellón 2022."},{"ine":"12084","nombre":"Onda","ccaa":"Comunitat Valenciana","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"C","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 13"},"fuente":{"url":"https://www.onda.es/ond/uploaded/SeuElectronica/ORDENANZAFISCALIIVTNUparalaweb.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (texto 2018)","fecha":null,"leido":false},"estado":"P","notas":"HECHO: el texto publicado en la sede (firmado 05-09-2018) es anterior al RDL 26/2021: porcentaje anual único 2,4 % (art. 9), tipo 25 % (art. 11), reducción 60 % (art. 8.4), bonificación 95 % SOLO para el cónyuge viudo sobre vivienda habitual con 2 años de empadronamiento (los descendientes no tienen bonificación). INFERENCIA: debe existir adaptación de…"},{"ine":"12135","nombre":"Vila-real","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":null,"empadronado":null,"mantener":null,"rogada":null,"plazo":null,"articulo":null},"fuente":{"url":"https://www.vila-real.es/portal/p_20_contenedor1.jsp?seccion=s_fnot_d4_v1.jsp&contenido=62037&tipo=8&nivel=1400&codResi=1&language=es","titulo":"Nota de prensa Ayuntamiento de Vila-real: El Pleno avala el cambio en la ordenanza que bonifica la plusvalía por la herencia de la vivienda habitual entre cónyuges (11/03/2022)","fecha":"2022-03-11","leido":true},"estado":"P","notas":"Solo fuentes secundarias (nota de prensa municipal y castellonplaza.com 10/03/2022): Pleno 11/03/2022 aprueba modificación de la ordenanza: tipo único 30 %; bonificación 95 % en herencia de la VIVIENDA HABITUAL solo para el CÓNYUGE; 50 % vivienda no habitual (según prensa); 20 % para descendientes y ascendientes. OJO: el 95 % NO se extiende a…","noLocalizado":false},{"ine":"12138","nombre":"Vinaròs","ccaa":"Comunitat Valenciana","tipo":0.1,"tipoPorAnios":[[7,0.1],[null,0.19]],"coeficientes":null,"bonif":{"pct":0.05,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 9"},"fuente":{"url":"https://www.vinaros.es/sites/default/files/2022-05/08%20IIVTNU%20CASTELLANO.pdf","titulo":"Ordenanza fiscal nº 8 reguladora del IIVTNU · BOP Castellón nº 65, 31-05-2022 (vigor 01-06-2022)","fecha":"2022-03-24","leido":true},"estado":"V","notas":"HECHO: tipo por tramos (art. 8): «hasta 7 años, el 10 %; a partir de 7 años, el 19 %» (INFERENCIA sobre el corte exacto: se ha codificado 0-7 → 10 %, 8-20 → 19 %; conviene leer el literal). Tabla legal 2022 (0,14 … 0,45) con cláusula de aplicación directa del nuevo máximo (art. 6.2) → coefPropios = null. Reducción 40 % (art. 7.5.b). Bonificación general…"},{"ine":"13071","nombre":"Puertollano","ccaa":"Castilla-La Mancha","tipo":0,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.miciudadreal.es/2025/09/26/puertollano-el-pleno-deroga-el-impuesto-de-plusvalias-para-estimular-el-mercado-inmobiliario/","titulo":"Prensa (Mi Ciudad Real, 26/09/2025): el Pleno aprueba inicialmente la derogación de la Ordenanza Fiscal n.º 5 del IIVTNU, con efectos 01/01/2026","fecha":"2025-09-26","leido":true},"estado":"P","notas":"FUENTE SECUNDARIA. Pleno de septiembre de 2025: «ha aprobado por unanimidad de manera inicial la derogación de la Ordenanza Fiscal número 5, Impuesto sobre el Incremento del Valor de los Terrenos de Naturaleza Urbana», con efectos desde el 01/01/2026. No he podido leer la aprobación definitiva en el BOP Ciudad Real (bop.dipucr.es y puertollano.es fallan…"},{"ine":"13087","nombre":"Valdepeñas","ccaa":"Castilla-La Mancha","tipo":0,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.valdepenas.es/normativa/normativa-tributaria/","titulo":"Ayuntamiento de Valdepeñas, Normativa tributaria: «Ordenanza Fiscal nº 3. Texto Refundido, Impuesto sobre el incremento del valor de los terrenos de naturaleza urbana. ** Derogada desde 02-07-2024» (enlaza la publicación en el BOP Ciudad Real de la aprobación definitiva de la derogación)","fecha":"2024-07-02","leido":true},"estado":"P","notas":"IMPUESTO SUPRIMIDO: el IIVTNU es potestativo (art. 59.2 TRLRHL) y Valdepeñas derogó su ordenanza; la web municipal la marca «Derogada desde 02-07-2024» y enlaza el anuncio del BOP de aprobación definitiva de la derogación (no he podido abrir ese PDF: el lector lo rechaza). Nota municipal de 06/05/2024: «la derogación de las plusvalías, quedando por tanto…"},{"ine":"14007","nombre":"Baena","ccaa":"Andalucía","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"con la declaración obligatoria presentada en plazo (6 meses prorrogables a 1 año)","articulo":"art. 10.1"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/03-02-2026/BOP-A-2026-217.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Baena, texto íntegro modificado (BOP Córdoba n.º 22 de 03/02/2026)","fecha":"2026-02-03","leido":true},"estado":"V","notas":"Art. 10.1: «Gozarán de una bonificación del 95% de la cuota íntegra del impuesto, los sujetos pasivos que sean cónyuges, ascendientes o adoptantes así como descendientes y adoptados, todos ellos en primer grado…», cuando el inmueble «constituya la residencia habitual de alguno de los sujetos pasivos» (vivienda en que figure empadronado el sujeto pasivo a…"},{"ine":"14013","nombre":"Cabra","ccaa":"Andalucía","tipo":0.258,"tipoPorAnios":null,"coeficientes":[0.14,0.12,0.14,0.15,0.16,0.16,0.14,0.11,0.09,0.08,0.07,0.07,0.07,0.07,0.09,0.11,0.15,0.19,0.24,0.33,0.42],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 10.2"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/06-05-2022/BOP-A-2022-1418.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Cabra, texto modificado (BOP Córdoba n.º 86 de 06/05/2022)","fecha":"2022-05-06","leido":true},"estado":"V","notas":"Art. 10.2: «Se establece una bonificación del 95 por ciento de la cuota íntegra del impuesto en las transmisiones… realizadas a título lucrativo por causa de muerte a favor del cónyuge así como de los descendientes y ascendientes, por naturaleza o adopción, todos ellos de primer grado de consanguinidad». Sin requisito de vivienda habitual,…"},{"ine":"14014","nombre":"Cañete de las Torres","ccaa":"Andalucía","tipo":0,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/01-07-2022/BOP-A-2022-2360.pdf","titulo":"Supresión del IIVTNU y derogación de su ordenanza fiscal, Cañete de las Torres (BOP Córdoba n.º 126 de 01/07/2022)","fecha":"2022-07-01","leido":true},"estado":"V","notas":"IMPUESTO SUPRIMIDO: «queda automáticamente elevado a definitivo el acuerdo… aprobación inicial supresión Impuesto sobre el incremento de valor de los terrenos de naturaleza urbana (plusvalía) y derogación de la Ordenanza Fiscal reguladora del mismo» (provisional BOP n.º 69 de 11/04/2022). Codificado tipo 0 = no hay plusvalía municipal. El texto derogado…"},{"ine":"14033","nombre":"Guadalcázar","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 10.a"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/16-05-2025/BOP-A-2025-1492.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Guadalcázar, texto íntegro (BOP Córdoba n.º 94 de 16/05/2025)","fecha":"2025-05-16","leido":true},"estado":"V","notas":"Art. 10.a: bonificación del 25 % de la cuota íntegra en transmisiones mortis causa a descendientes y adoptados, cónyuges, ascendientes y adoptantes; «se aplicará por el órgano gestor, previa solicitud de la persona interesada». Sin vivienda habitual. Tipo 30 % (art. 9). Coeficientes art. 8: tabla 2024 (0,09…0,40) = máximos. Municipio pequeño."},{"ine":"14036","nombre":"Hornachuelos","ccaa":"Andalucía","tipo":0.1741,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":2,"rogada":true,"plazo":"12 meses desde el devengo","articulo":"art. 14"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/17-12-2025/BOP-A-2025-4433.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Hornachuelos, texto íntegro (BOP Córdoba n.º 241 de 17/12/2025)","fecha":"2025-12-17","leido":true},"estado":"V","notas":"Art. 14: «Se establece una bonificación del 95 % de la cuota íntegra… de la vivienda residencia habitual y permanente del causante» a descendientes y adoptados, cónyuges, ascendientes o adoptantes; convivencia con el causante los dos años anteriores (padrón, con excepciones); mantener la adquisición dos años; rogada, dentro de los doce meses desde el…"},{"ine":"14042","nombre":"Montilla","ccaa":"Andalucía","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"antes de la aprobación de la liquidación","articulo":"art. 9.3"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/28-12-2023/BOP-A-2023-5536.pdf","titulo":"Ordenanza fiscal n.º 5 reguladora del IIVTNU de Montilla, modificación para 2024 (BOP Córdoba de 28/12/2023)","fecha":"2023-12-28","leido":true},"estado":"V","notas":"Art. 9.3: «…cuando se trate de la vivienda habitual del causante… se aplicará una bonificación del 50% siempre que se realice a favor del cónyuge o de los descendientes y adoptados, ascendientes o adoptantes. Esta bonificación deberá ser solicitada por el sujeto pasivo con carácter previo a la aprobación de la liquidación… Se entenderá por vivienda…"},{"ine":"14049","nombre":"Palma del Río","ccaa":"Andalucía","tipo":0.2516,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":null,"fuente":{"url":"https://palmadelrio.es/wp-content/uploads/2025/02/06.2024-Ordenanza-Incremento-Terrenos-N.Urbana_DEFINITIVO.pdf","titulo":"Ordenanza fiscal n.º 6 reguladora del IIVTNU de Palma del Río, texto definitivo (Pleno 26/10/2023)","fecha":"2023-10-26","leido":true},"estado":"V","notas":"Sin bonificación mortis causa: la ordenanza no tiene artículo de bonificaciones (solo exenciones del art. 4: dación en pago y entidades). Tipo único 25,16 % (art. 9.1). Coeficientes art. 7: tabla del RDL 26/2021 (0,14/0,13/0,15/0,16/0,17/0,17/0,16/0,12/0,10/0,09/0,08×4/0,10/0,12/0,16/0,20/0,26/0,36/0,45) con la cláusula «si… alguno de los coeficientes……"},{"ine":"14055","nombre":"Priego de Córdoba","ccaa":"Andalucía","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.3,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":4,"rogada":true,"plazo":"con la declaración en plazo (art. 10: 6 meses prorrogables a 1 año)","articulo":"art. 5.1"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/03-04-2024/BOP-A-2024-1087.pdf","titulo":"Ordenanza fiscal n.º 5 reguladora del IIVTNU de Priego de Córdoba, modificación definitiva (BOP Córdoba n.º 64 de 03/04/2024)","fecha":"2024-04-03","leido":true},"estado":"V","notas":"Art. 5.1 (texto 2022 en BOP n.º 43 de 04/03/2022, confirmado en las versiones de 2024 y 2025): «Cuando el incremento de valor se manifieste por causa de muerte, respecto de la transmisión de la propiedad de la vivienda habitual del causante… a favor de los descendientes, ascendientes, por naturaleza o adopción, y del cónyuge, la cuota del impuesto se…"},{"ine":"14056","nombre":"Puente Genil","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.3,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"a solicitud del sujeto pasivo (sin plazo específico)","articulo":"art. 12","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza"},"fuente":{"url":"https://bop.dipucordoba.es/show/20220331/announcement/930","titulo":"Ordenanza fiscal reguladora del IIVTNU de Puente Genil, aprobación definitiva de la modificación (BOP Córdoba n.º 62 de 31/03/2022)","fecha":"2022-03-31","leido":true},"estado":"V","notas":"Art. 12: vivienda habitual del causante, mortis causa: «bonificación… del 95% siempre que se realice a favor del cónyuge, o de descendientes y/o adoptados menores de 21 años de edad convivientes en dicha vivienda. Cuando dicha transmisión se efectué a favor de descendientes y/o adoptados mayores de 21 años de edad, ascendientes o adoptantes, la…"},{"ine":"14902","nombre":"La Guijarrosa","ccaa":"Andalucía","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"CDP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 11"},"fuente":{"url":"https://bop.dipucordoba.es/visor-pdf/30-06-2025/BOP-A-2025-2125.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de La Guijarrosa, texto íntegro (BOP Córdoba n.º 124 de 30/06/2025)","fecha":"2025-06-30","leido":true},"estado":"V","notas":"Art. 11: bonificación del 50 % para la vivienda habitual del causante transmitida a su cónyuge (pareja de hecho inscrita equiparada) o descendientes; NO ascendientes (parentesco «CDP», fuera del esquema). Vivienda habitual = residencia continuada del causante, su cónyuge e hijos al menos los dos últimos años (padrón). A solicitud del interesado. Tipo 28…"},{"ine":"15002","nombre":"Ames","ccaa":"Galicia","tipo":0.25,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 108.5 (ordenanza)","limiteValorCatastral":null,"condicion":"Escala segundo a cota tributaria (computada pola totalidade dos inmobles transmitidos): ata 10.000 € 90 %; 10.000,01-20.000 € 85 %; máis de 20.000 € 80 %","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.dacoruna.gal/index.php/download_file/view/79462/","titulo":"Deputación da Coruña – Táboa informativa das ordenanzas fiscais do IIVTNU dos concellos con xestión delegada (vixente desde 28/01/2026; act. 27/08/2026) – Ames: BOP nº 83 de 03/05/2022","fecha":"2026-08-27","leido":true},"estado":"V","notas":"Tipo 25 %. Bonificación a descendentes e adoptados, cónxuxes e ascendentes e adoptantes, sen requisito de vivenda habitual, por escala da COTA (non do valor catastral): ata 10.000 € 90 %, 10.000,01-20.000 € 85 %, >20.000 € 80 %. pct=0,90 é o tramo habitual; revisar se a cota supera 10.000 €. Fonte: táboa oficial do órgano xestor (Deputación da Coruña),…"},{"ine":"15005","nombre":"Arteixo","ccaa":"Galicia","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"todos","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 11.2"},"fuente":{"url":"https://arteixo.org/wp-content/uploads/2020/12/of005.pdf","titulo":"Ordenanza fiscal n.º 5 do IIVTNU (Arteixo), última modificación aprobada 26-11-2015, BOP A Coruña n.º 16 de 26-01-2016","fecha":"2016-01-26","leido":true},"estado":"P","notas":"Art. 11: «A cota íntegra deste imposto será a resultante de aplicar á base impoñible o tipo do 20%». Art. 11.2: «Gozarán dunha bonificación do 95 % sobre a cota íntegra do imposto ... realizadas a título lucrativo por causa de morte a favor de: a) Ascendentes e adoptantes b) Descendentes e adoptados c) Cónxuxe d) Quen convivise...» (o extractor cortou o…"},{"ine":"15017","nombre":"Cambre","ccaa":"Galicia","tipo":0.22,"tipoPorAnios":null,"coeficientes":[0.15,0.15,0.14,0.14,0.16,0.18,0.19,0.2,0.19,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.75,"tramos":null,"parentesco":"DACP1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":4,"rogada":true,"plazo":null,"articulo":"art. 108.5 (ordenanza)","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.dacoruna.gal/index.php/download_file/view/79462/","titulo":"Deputación da Coruña – Táboa informativa das ordenanzas fiscais do IIVTNU dos concellos con xestión delegada (vixente desde 28/01/2026; act. 27/08/2026) – Cambre: BOP nº 100 de 27/05/2022","fecha":"2026-08-27","leido":true},"estado":"V","notas":"Tipo 22 %. 75 % a descendentes e adoptados de primeiro grao, cónxuxes e ascendentes e adoptantes de primeiro grao, se o ben foi a vivenda habitual do causante á data do devengo e polo menos os dous últimos anos (certificado de empadroamento); equipárase ao cónxuxe a parella inscrita no rexistro de unións de feito con convivencia mínima dun ano; o sucesor…"},{"ine":"15024","nombre":"Cerceda","ccaa":"Galicia","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.cerceda.org/attachments/ordenanzas/plusvalia.pdf","titulo":"Ordenanza fiscal reguladora do IIVTNU (Cerceda), sen data no documento","fecha":null,"leido":true},"estado":"P","notas":"Tipo 25 % en todos os períodos. O texto non contén bonificación mortis causa (art. 3.3 só remite a 'a bonificación que se estableza'). P: texto sen data e anterior ao RDL 26/2021 (porcentaxes anuais 2,6/2,4/2,5); ausencia de bonificación non confirmada. Municipio < 10.000 hab.","bonifDesconocida":true},{"ine":"15031","nombre":"Culleredo","ccaa":"Galicia","tipo":0.25,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[2500,0.95],[10000,0.75],[30000,0.5],[null,0.15]]},"parentesco":"DACP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses desde o falecemento, prorrogable outros 6","articulo":"art. 108.5 (ordenanza)","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.dacoruna.gal/index.php/download_file/view/79462/","titulo":"Deputación da Coruña – Táboa informativa das ordenanzas fiscais do IIVTNU dos concellos con xestión delegada (vixente desde 28/01/2026; act. 27/08/2026) – Culleredo: BOP nº 128 de 07/07/2022","fecha":"2026-08-27","leido":true},"estado":"V","notas":"Tipo 25 %. Bonificación por tramos de valor catastral do solo: ≤2.500 € 95 %; 2.500-10.000 € 75 %; 10.000-30.000 € 50 %; >30.000 € 15 %. Beneficiarios: ascendentes, descendentes, cónxuxe viúvo e parella inscrita no Rexistro de Unións de Feito. Require vivenda habitual do causante (ou local de negocio afecto á actividade do causante: neste caso manter…"},{"ine":"15054","nombre":"Narón","ccaa":"Galicia","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.15,0.15,0.14,0.14,0.16,0.18,0.19,0.2,0.19,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"art. 11.3.b; antes de rematar o período voluntario","articulo":"art. 108.5 (ordenanza)","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.dacoruna.gal/index.php/download_file/view/79462/","titulo":"Deputación da Coruña – Táboa informativa das ordenanzas fiscais do IIVTNU dos concellos con xestión delegada (vixente desde 28/01/2026; act. 27/08/2026) – Narón: BOP nº 76 de 22/04/2022","fecha":"2026-08-27","leido":true},"estado":"V","notas":"Tipo 30 %. 50 % nas transmisións mortis causa e pactos de mellora da vivenda habitual do causante a cónxuxe, descendentes ou ascendentes por natureza ou adopción; tamén a quen reciba do ordenamento un trato análogo pola continuación no uso da vivenda por convivir co causante. Rogada. Fonte: táboa oficial do órgano xestor (Deputación da Coruña), que…"},{"ine":"15058","nombre":"Oleiros","ccaa":"Galicia","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[20000,0.75],[null,0.5]]},"parentesco":"DACP1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"6 meses, prorrogable a 1 año (art. 14.2.b)","articulo":"art. 6","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.oleiros.org/documents/39407/7bf1feea-fb73-96e2-0c76-52315a3ede74","titulo":"Ordenanza fiscal n.º 13 del IIVTNU de Oleiros, texto consolidado (última modificación: Pleno 30-06-2022, BOP A Coruña n.º 128 de 07-07-2022)","fecha":"2022-07-07","leido":true},"estado":"V","notas":"Art. 10: «a cota íntegra deste imposto será a resultante de aplicar á base impoñible o tipo do 30%». Art. 9.1: tabla propia de coeficientes (la de 2022) con el máximo legal como tope; se transcribe y el programa aplica el menor de ambos. Art. 6.1: bonificación por tramos «de valor catastral do solo do inmoble», 75 % hasta 20.000 € y 50 % por encima, en…"},{"ine":"15078","nombre":"Santiago de Compostela","ccaa":"Galicia","tipo":0.22,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[150253.03,0.95],[null,0.5]]},"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 4 (texto 2003)"},"fuente":{"url":"https://intranet.presantiagodecompostela.gnoss.com/sites/intranet.concello/files/2024-04/ORF_10304_0.pdf","titulo":"Ordenanza 1.03: Imposto sobre o aumento de valor dos terreos de natureza urbana (Concello de Santiago, texto aprobado 17/01/2003)","fecha":"2003-01-17","leido":true},"estado":"P","notas":"Único texto localizado es la versión de 2003 (art. 7: «A cota tributaria íntegra será a que resulte de aplicar á base impoñible o tipo do 26%»; art. 4: bonificación 95 % si valor catastral ≤ 150.253,03 € y 50 % si superior, para descendentes/adoptados, ascendentes/adoptantes e cónxuxe; rogada; sin requisito de vivienda habitual). DESACTUALIZADO: Hacienda…","noLocalizado":false},{"ine":"17023","nombre":"Blanes","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.blanes.cat/oiapdocs.nsf/C4D1E479FC15BA81C12580AE0037421C/$file/ORDENANCES%20FISCALS%202025.pdf","titulo":"Ordenança fiscal 114.00 Plusvàlua urbana (Ordenances fiscals 2025)","fecha":null,"leido":false},"estado":"P","notas":"HECHO (libro 2025, p. 108): «Tipus gravamen 30 %»; coeficientes «els màxims previstos en cada moment a l'article 107.4 del TRLRHL» → coefPropios = null. El lector se cortó antes del artículo de bonificaciones. PENDIENTE: bonificación mortis causa y fecha/BOP."},{"ine":"17117","nombre":"Palafrugell","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://seu.palafrugell.cat/informacio-municipal/ordenanca-fiscal-numero-4-impost-sobre-l-increment-de-valor-dels-terrenys-de-naturalesa-urbana-iivtnu","titulo":"Seu electrònica de Palafrugell – Ordenança fiscal núm. 4 IIVTNU (vigent des de l'01/01/2025; recollida al llibre d'ordenances fiscals 2026)","fecha":"2025-01-01","leido":true},"estado":"P","notas":"Porcentaje de la bonificación no localizado o no modelable: se calcula sin ella y se puede indicar a mano. P perquè la bonificació depèn de la SUPERFÍCIE (no modelable com a % o trams de valor). Art. 8: tipus 30 %. Art. 7.4: coeficients = màxim actualitzat vigent (null). Art. 9.1 (segons la seu): transmissions hereditàries a ascendents/descendents i…"},{"ine":"18017","nombre":"Almuñécar","ccaa":"Andalucía","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables por otros 6 (la autoliquidación con la bonificación vale como solicitud)","articulo":"art. 8"},"fuente":{"url":"https://portaltransparencia.almunecar.es/wp-content/uploads/2022/06/ORDENANZA-FISCAL-REGULADORA-DEL-IMPUESTO-SOBRE-EL-INCREMENTO-DE-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Almuñécar, texto adaptado al RDL 26/2021 (BOP Granada n.º 104 de 02/06/2022)","fecha":"2022-06-02","leido":true},"estado":"V","notas":"Art. 8: «bonificación del 50% en la cuota íntegra del impuesto» en transmisiones mortis causa a favor de «descendientes y adoptados, los cónyuges y los ascendientes y adoptantes»; «Se equipara al cónyuge a quien hubiere convivido con el causante con análoga relación de afectividad» inscrito en el Registro andaluz de parejas de hecho. Rogada, en el plazo…"},{"ine":"18023","nombre":"Baza","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":[[0,0.04],[1,0.04],[2,0.07],[3,0.1],[4,0.12],[5,0.15],[6,0.16],[7,0.25],[16,0.3],[17,0.26],[18,0.21],[19,0.16],[null,0.13]],"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"C","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6.3","limiteValorCatastral":null,"condicion":"«vivienda familiar» (no define si del causante o del cónyuge)","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://ayuntamientodebaza.es/download/1108/ordenanzas-fiscales/5340/04-ordenanza-fiscal-reguladora-impuesto-sobre-incremento-valor-terrenos-naturaleza-urbana.pdf","titulo":"Ordenanza fiscal n.º 4 del IIVTNU de Baza (texto «Actualización enero 2022», web municipal)","fecha":"2022-01-01","leido":true},"estado":"V","notas":"Art. 9: escala de tipos por periodo de generación: <1 año 4 %; 1 año 4 %; 2 años 7 %; 3 años 10 %; 4 años 12 %; 5 años 15 %; 6 años 16 %; 7 años 25 %; 8 a 16 años 30 %; 17 años 26 %; 18 años 21 %; 19 años 16 %; 20 o más 13 % (formato tipoPorAnios: [años máximos, tipo]). Coeficientes art. 8.4 = máximos legales con actualización anual: null. Art. 6.3: «Se…"},{"ine":"18905","nombre":"Las Gabias","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.2,"tramos":null,"parentesco":"DAC1","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":"de oficio, condicionada a presentar la autoliquidación en plazo (art. 13)","articulo":"art. 10.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.lasgabias.es/wp-content/uploads/sites/8/2023/02/ORDENANZA-FISCAL-REGULADORA-DEL-IMPUESTO-SOBRE-EL-INCREMENTO-DE-VALOR.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Las Gabias (texto íntegro, BOP Granada n.º 105 de 03/06/2022)","fecha":"2022-06-03","leido":true},"estado":"V","notas":"Art. 9: «tipo impositivo de un 30%». Art. 10.1: «Gozarán de una bonificación del 20 % de la cuota del impuesto, los sujetos pasivos que sean cónyuges, ascendientes o adoptantes así como descendientes y adoptados, en los supuestos de… transmisiones… a título lucrativo por causa de muerte»; descendiente/ascendiente = solo parentesco por consanguinidad de…"},{"ine":"21005","nombre":"Almonte","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 11","limiteValorCatastral":24000,"condicion":"Tope sobre el valor catastral del SUELO (no se divide por el coeficiente de propiedad): «siempre que el valor catastral del suelo no exceda de 24.000,00 €»","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.almonte.es/export/sites/almonte/es/.galleries/01_ayuntamiento/documentos-ordenanzas/ordenanzas-fiscales-impuestos/3-04_Impuesto_sobre_el_Incremento_del_Valor_de_los_Terrenos_de_Naturaleza_Urbana.pdf","titulo":"Ordenanza fiscal 3-04 del IIVTNU de Almonte (texto consolidado; última modificación BOP Huelva n.º 223 de 23/11/2023)","fecha":"2023-11-23","leido":true},"estado":"V","notas":"Art. 10: «El tipo de gravamen del impuesto será del 30%». Art. 11 (literal): «…por causa de muerte, respecto de la transmisión de la propiedad de la vivienda habitual del causante… a favor de los descendientes y adoptados y los cónyuges, y los ascendientes y adoptantes, la cuota del impuesto se verá bonificada en un 40 %, siempre que el valor catastral…"},{"ine":"22048","nombre":"Barbastro","ccaa":"Aragón","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 5 ter"},"fuente":{"url":"https://barbastro.org/attachments/article/1645/ORDENANZA%20FISCAL%20N%C2%BA%205%20versi%C3%B3n%202022%20LA%20BUENA.pdf","titulo":"Ordenanza fiscal nº 5 IIVTNU, versión 2022 (BOPHU nº 100, 26-05-2022) — Ayuntamiento de Barbastro (sede electrónica, normativa)","fecha":"2022-05-26","leido":true},"estado":"V","notas":"Art. 5 ter: «gozarán de una bonificación del 75% de la cuota íntegra del impuesto, las transmisiones de terrenos… realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y ascendientes y adoptantes en los supuestos no contemplados en el apartado anterior». No exige vivienda habitual. Art. 5 bis: 80 % para…"},{"ine":"23002","nombre":"Alcalá la Real","ccaa":"Andalucía","tipo":0.12,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":{"base":"suelo","tramos":[[60000,0.95],[100000,0.85],[138000,0.7],[null,0.4]]},"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"6 meses desde el devengo, prorrogables por otros 6","articulo":"art. 12","limiteValorCatastral":null,"condicion":"Vivienda habitual = aquella en que el causante constara empadronado los 2 últimos años antes del fallecimiento (art. 12.2). También locales afectos a la actividad económica del causante (mantener actividad 5 años, art. 12.4).","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://transparencia.alcalalareal.es/wp-content/uploads/2024/04/17.-BOP-DEFINITIVO-2024-03-26-N.60-IIVTNU.pdf","titulo":"Ordenanza fiscal n.º 6 del IIVTNU de Alcalá la Real, texto íntegro (BOP Jaén n.º 60 de 26/03/2024, pág. 4438)","fecha":"2024-03-26","leido":true},"estado":"V","notas":"Art. 11: «…el tipo del 12%». Art. 12.1: bonificación en la transmisión «de la vivienda habitual del causante, de los locales afectos a la actividad económica ejercida por este… a favor de los descendientes, ascendientes, por naturaleza o adopción, y del cónyuge», por tramos de «valor catastral del suelo»: 95 % hasta 60.000 €; 85 % de 60.000 a 100.000 €;…"},{"ine":"23092","nombre":"Úbeda","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://aytoubeda.transparencialocal.gob.es/es_ES/media/92096","titulo":"Ordenanza fiscal reguladora del IIVTNU · BOP Jaén nº 66, 06-04-2022","fecha":"2022-04-01","leido":true},"estado":"V","notas":"HECHO: tipo 30 %; remite a los coeficientes del art. 107.4 TRLRHL sin tabla propia; reducción 40 % cinco años tras revisión catastral. No establece bonificación mortis causa."},{"ine":"24115","nombre":"Ponferrada","ccaa":"Castilla y León","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[24000,0.9],[null,0.75]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6"},"fuente":{"url":"https://ponferrada.org/en/informacion-municipal/normativa-municipal-1/ordenanza-fiscal-reguladora-impuestos-incremento-valor-terr.files/193577-Impuesto%2001%20Incremento%20de%20valor%20de%20los%20terrenos.pdf","titulo":"Ordenanza fiscal reguladora del Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana (Ayuntamiento de Ponferrada, texto 2022)","fecha":"2022-03-25","leido":true},"estado":"V","notas":"Art. 5.1: «Se fija el tipo de gravamen en el 27,00 % (veintisiete por ciento)». Art. 4.4: coeficiente «el máximo actualizado vigente, de acuerdo con el artículo 107.4» TRLRHL. Art. 6: «Las transmisiones mortis causa referentes a la vivienda habitual del causante, siempre que los adquirentes sean el cónyuge, los descendientes o los ascendientes por…","noLocalizado":false},{"ine":"24222","nombre":"Villaquilambre","ccaa":"Castilla y León","tipo":0.3,"tipoPorAnios":[[5,0.3],[null,0.26]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"el de la declaración: 6 meses, prorrogable a 1 año (art. 10.2.b)","articulo":"art. 8.3","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.villaquilambre.es/wordpress/wp-content/uploads/2024/06/2023-12-27-ORDENANZA-FISCAL-XIV-IIVTNU.pdf","titulo":"Ordenanza fiscal XIV del IIVTNU de Villaquilambre, texto íntegro (aprobación definitiva: Pleno 22-12-2023, BOP León n.º 244 de 27-12-2023; aplicable desde 01-01-2024)","fecha":"2023-12-27","leido":true},"estado":"V","notas":"Art. 8.1: «es inferior a cinco años, el 30 porciento» y «es de más de 5 años, el 26 porciento»; el caso de exactamente cinco años no está previsto y se calcula con el 30 % (cálculo prudente). Art. 7.3: coeficientes = «el máximo actualizado vigente». Art. 8.3: bonificación del 95 % de la cuota en las transmisiones lucrativas por causa de muerte a favor de…"},{"ine":"25072","nombre":"Cervera","ccaa":"Cataluña","tipo":0.25,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":null,"rogada":true,"plazo":"plazo de declaración (art. 11)","articulo":"art. 4.4"},"fuente":{"url":"https://seu-e.cat/documents/28875/13880030/Impost+increment+de+valor+de+terrenys+de+naturalesa+urbana/0771c431-9bd1-45c4-b83a-72fc50ab03be","titulo":"Ordenança fiscal IIVTNU — Ajuntament de Cervera (aprovació definitiva 09-05-2022, BOP Lleida núm. 88)","fecha":"2022-05-09","leido":true},"estado":"P","notas":"Art. 4.4: 95 % per a descendents, cònjuges i ascendents que adquireixen l'habitatge habitual, amb acreditació de convivència/residència abans de la defunció; art. 4.5: 50 % per als mateixos beneficiaris empadronats al municipi almenys 2 anys. «S'equipararà el matrimoni amb la parella de fet legalment inscrita». Sol·licitud dins del termini de declaració…"},{"ine":"25137","nombre":"Mollerussa","ccaa":"Cataluña","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":null,"rogada":true,"plazo":"plazo de declaración (art. 8)","articulo":"art. 4.4"},"fuente":{"url":"https://www.mollerussa.cat/docs/Ordenances%20i%20Reglaments/Ordenances%20Fiscals/2022/07%20-%20Impost%20sobre%20l%27Increment%20de%20Valors%20de%20Terrenys%20de%20Naturalesa%20Urbana%20%28IIVTNU%29.pdf","titulo":"Ordenança fiscal núm. 7 IIVTNU 2022 (aprovació 28-04-2022) — Ajuntament de Mollerussa","fecha":"2022-04-28","leido":true},"estado":"P","notas":"Art. 4.4.A: 95 % si l'immoble és l'habitatge habitual de l'adquirent i hi ha convivència mínima de 2 anys amb el causant (interrupcions per salut/social no compten); beneficiaris descendents de 1r grau i adoptats, cònjuges, ascendents de 1r grau i adoptants; cal escriptura d'acceptació d'herència dins del termini de declaració. Art. 4.4.B: 10 % per a la…"},{"ine":"26011","nombre":"Alfaro","ccaa":"La Rioja","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 5.1"},"fuente":{"url":"https://alfaro.es/ayuntamiento/Ordenanzas/20incremento.pdf","titulo":"Ordenanza fiscal n.º 20 reguladora del IIVTNU (Alfaro), última modificación 31-12-2020","fecha":"2020-12-31","leido":true},"estado":"P","notas":"Art. 13: tipo 30 %. Art. 5.1: «Se establece una bonificación del 90 por 100 en la cuota del impuesto para todas aquellas transmisiones de terrenos ... realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes»; requiere acreditar parentesco y aceptación de herencia (se…"},{"ine":"26036","nombre":"Calahorra","ccaa":"La Rioja","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":null,"articulo":"art. 9"},"fuente":{"url":"https://calahorra.es/wp-content/uploads/Ordenanza-Fiscal-reguladora-del-IIVTNU_coef-2026.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Calahorra (texto vigente desde 23-04-2024, BOR n.º 78 de 22-04-2024; coeficientes 2026)","fecha":"2024-04-22","leido":true},"estado":"V","notas":"Art. 8.1: tipo 20 %. Art. 9: «Se establece una bonificación del 25 por 100 de la cuota de este impuesto en las transmisiones de terrenos [...] realizadas a título lucrativo por causa de muerte a favor de los descendientes, ascendientes, por naturaleza o adopción, y del cónyuge»; se aplica «de oficio por el Ayuntamiento, sin necesidad de que sea…"},{"ine":"27051","nombre":"Ribadeo","ccaa":"Galicia","tipo":0.2486,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":5,"rogada":null,"plazo":null,"articulo":"art. 15"},"fuente":{"url":"https://www.ribadeo.gal/wp-content/uploads/1332151460ORDENANZA_FISCAL_REGULADORA_DO_IMPOSTO_SOBRE_INCREMENTO_DE_VALOR_DOS_TERREOS_DE_NATUREZA_URBANA_5.pdf","titulo":"Ordenanza fiscal n.º 15 do IIVTNU (Ribadeo), aprobada 09-11-2011, BOP Lugo n.º 263 de 17-11-2011","fecha":"2011-11-17","leido":true},"estado":"P","notas":"Art. 14: tipo 24,86 %. Art. 15: «Gozarán dunha bonificación do 95% da cuota do imposto, a transmisión de terreos ... por causa de morte a favor dos descendentes ...» (descendentes, adoptados, cónxuxes, ascendentes, adoptantes); requisitos: convivencia co causante nos 2 anos anteriores (empadroamento), vivenda habitual do finado (ou local da súa…"},{"ine":"27065","nombre":"Vilalba","ccaa":"Galicia","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://vilalba.gal/archivos/documentacion/ordenanzas/ORDENANZA-03.pdf","titulo":"Ordenanza fiscal n.º 3 do IIVTNU (Vilalba), última modificación aprobada polo Pleno o 01-04-2008","fecha":"2008-04-01","leido":true},"estado":"P","notas":"Art. 13: «A cota deste imposto será a resultante de aplicar á base impoñible o tipo do 27%». Sen bonificación mortis causa no texto (só art. 14, fusións/escisións). P: texto de 2008, anterior ao RDL 26/2021; ausencia de bonificación non confirmada para 2026.","bonifDesconocida":true},{"ine":"28003","nombre":"Alameda del Valle","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"con la declaración en plazo","articulo":"art. 11.a"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2024/04/01/BOCM-20240401-47.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Alameda del Valle, texto íntegro (BOCM n.º 77 de 01/04/2024)","fecha":"2024-04-01","leido":true},"estado":"V","notas":"Art. 11.a: «Bonificación del 95 por 100 de la cuota íntegra» a descendientes, adoptados, cónyuges, ascendientes y adoptantes; se equipara al cónyuge a quien hubiere convivido con el causante (certificado de registro de parejas). Bonificaciones de carácter rogado. Tipo 30 % (art. 10). Coeficientes: tabla 0,14…0,45 limitada a los máximos. Municipio pequeño."},{"ine":"28004","nombre":"El Álamo","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.28],[15,0.26],[20,0.23],[null,0.18]],"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses, prorrogable por otros 6 (fuera de plazo no se aplica); al corriente de pago con el Ayuntamiento","articulo":"art. 12","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/05/24/BOCM-20220524-68.PDF","titulo":"Ordenanza fiscal del IIVTNU de El Álamo, texto íntegro (aprobación definitiva de la modificación, BOCM n.º 122 de 24-05-2022)","fecha":"2022-05-24","leido":true},"estado":"V","notas":"Art. 11: tipo según el periodo de generación: hasta 5 años 30 %; hasta 10 años 28 %; hasta 15 años 26 %; hasta 20 años 23 %; más de 20 años 18 %. Art. 12: «bonificación del 25 % (veinticinco por ciento) de la cuota íntegra» en transmisiones por causa de muerte de la vivienda habitual del causante (al menos tres años, según la normativa del IRPF; también…"},{"ine":"28006","nombre":"Alcobendas","ccaa":"Comunidad de Madrid","tipo":0.295,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/12/29/BOCM-20231229-19.PDF","titulo":"BOCM 29/12/2023: Alcobendas, modificación de ordenanzas fiscales 2024 (O.F. 4.4 IIVTNU, art. 11.1)","fecha":"2023-12-29","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] TIPO verificado: BOCM 29/12/2023 modifica art. 11.1 de la O.F. 4.4: «tipo de gravamen del 29,5 %» (antes 30 %, BOCM 03/05/2022, BOCM-20220503-50), vigor 01/01/2024; coincide con Hacienda. Coeficientes: art. 6.3 (BOCM 03/05/2022) reproduce la tabla de…"},{"ine":"28009","nombre":"Algete","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.85,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 14"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/12/28/BOCM-20231228-60.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Algete, texto íntegro (BOCM n.º 308 de 28/12/2023)","fecha":"2023-12-28","leido":true},"estado":"V","notas":"Art. 14: «Tendrán una bonificación del 85% de la cuota del impuesto, previa justificación documental de los hechos o circunstancias…, las transmisiones de terreno… realizadas a título lucrativo por causa de muerte a favor de descendientes y adoptados, los cónyuges y los ascendientes y adoptantes». Sin vivienda habitual. Rogada por inferencia (art. 17:…"},{"ine":"28013","nombre":"Aranjuez","ccaa":"Comunidad de Madrid","tipo":0.11,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2017/12/29/BOCM-20171229-22.PDF","titulo":"BOCM 29/12/2017: Aranjuez, modificación de ordenanzas fiscales 2018 (IIVTNU art. 6.1)","fecha":"2017-12-29","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] BOCM 29/12/2017, art. 6.1: tipo impositivo del IIVTNU «en el 11,00 por 100»; coincide con Hacienda 2026 (11). Ese anuncio no contiene bonificación mortis causa (solo artículos modificados). La adaptación al RDL 26/2021 (2022) y el texto consolidado no…","bonifDesconocida":true},{"ine":"28014","nombre":"Arganda del Rey","ccaa":"Comunidad de Madrid","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/12/11/BOCM-20231211-54.PDF","titulo":"BOCM 11/12/2023: Arganda del Rey, modificación de la Ordenanza Fiscal nº 5 (IIVTNU), arts. 2.1.c) y 7.4","fecha":"2023-12-11","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] BOCM 11/12/2023 (Pleno 04/10/2023, definitiva 27/11/2023, vigor 01/01/2024) modifica solo art. 2.1.c) (no sujeción violencia de género) y art. 7.4 (tabla de coeficientes 2024 = máximos legales de la LPGE 2024: 0,15…0,45) → coeficientes máximos legales.…","bonifDesconocida":true},{"ine":"28015","nombre":"Arroyomolinos","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.29],[15,0.28],[null,0.27]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":false,"plazo":"declaración o autoliquidación presentada voluntariamente en plazo (6 meses prorrogables a 1 año, art. 12)","articulo":"art. 9","limiteValorCatastral":null,"condicion":"«siempre que se refiera a la vivienda habitual de los mismos» (de los adquirentes); empadronamiento al menos los dos años anteriores a la transmisión","viviendaHeredero":true},"bonifDesconocida":false,"fuente":{"url":"https://www.ayto-arroyomolinos.org/archivos/tramites/ordenanza-ivtnu_22.pdf","titulo":"Ordenanza fiscal 2.4 del IIVTNU de Arroyomolinos (última modificación BOCM n.º 236 de 04/10/2022)","fecha":"2022-10-04","leido":true},"estado":"V","notas":"Art. 8: escala de tipos «De 0 hasta 5 años» 30 %; «Hasta 10 años» 29 %; «Hasta 15 años» 28 %; «Hasta 20 años» 27 % (se aplica el 27 % también a 20 años o más). Art. 7.3: coeficientes = «el máximo actualizado vigente, de acuerdo con el artículo 107.4 del TRLRHL». Art. 9.1: «bonificación del 95 por 100 en los casos reales de transmisiones de terrenos……"},{"ine":"28019","nombre":"Belmonte de Tajo","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/07/18/BOCM-20220718-88.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Belmonte de Tajo, texto íntegro (BOCM n.º 169 de 18/07/2022)","fecha":"2022-07-18","leido":true},"estado":"V","notas":"Art. 13: «No se establecen bonificaciones». Tipo 30 % (art. 12). Coeficientes: tabla con actualización automática a los máximos. Municipio pequeño."},{"ine":"28021","nombre":"El Berrueco","ccaa":"Comunidad de Madrid","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2025/01/17/BOCM-20250117-43.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de El Berrueco, texto íntegro (BOCM n.º 14 de 17/01/2025)","fecha":"2025-01-17","leido":true},"estado":"V","notas":"Sin bonificación mortis causa en el texto íntegro. Tipo 26 % (art. 11). Coeficientes art. 10: tabla 2024 (0,15…0,40) → máximos legales. Pleno 27/12/2024. Municipio pequeño."},{"ine":"28037","nombre":"Cenicientos","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":false,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/09/09/BOCM-20220909-57.PDF","titulo":"Ordenanza fiscal del IIVTNU de Cenicientos, texto íntegro (aprobación definitiva de la modificación, BOCM n.º 215 de 09-09-2022)","fecha":"2022-09-09","leido":true},"estado":"V","notas":"Art. 7: «el tipo de gravamen del 30 %» y «No habrá bonificación alguna sobre la cuota íntegra del impuesto» en las transmisiones por causa de muerte. Plazo de declaración: 6 meses prorrogables a 1 año (art. 9.2.b)."},{"ine":"28041","nombre":"Cobeña","ccaa":"Comunidad de Madrid","tipo":0.29,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":null,"articulo":"art. 9.1"},"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2022/04/04/BOCM-20220404-78.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Cobeña, texto íntegro modificado (BOCM n.º 80 de 04/04/2022)","fecha":"2022-04-04","leido":true},"estado":"V","notas":"Art. 9.1: «bonificación del 95 por 100 de la cuota del impuesto, los sujetos pasivos que sean cónyuges, ascendientes o adoptantes, así como descendientes y adoptados»; se equipara al cónyuge a quien hubiera convivido con el causante con análoga relación de afectividad (certificado del Registro de Uniones de Hecho de la CM). Sin requisito de vivienda…"},{"ine":"28047","nombre":"Collado Villalba","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":null,"empadronado":null,"mantener":null,"rogada":null,"plazo":null,"articulo":null},"fuente":{"url":"https://noticiasparamunicipios.com/municipios-madrid/noticias-collado-villalba/collado-villalba-asi-queda-la-nueva-ordenanza-sobre-la-plusvalia/","titulo":"Prensa (noticiasparamunicipios.com): Collado Villalba, así queda la nueva ordenanza sobre la plusvalía (Pleno 31/03/2022)","fecha":"2022-03-31","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] Solo prensa: Pleno 31/03/2022 (aprobación provisional publicada BOCM 04/04/2022, BOCM-20220404-81): tipo 30 %; bonificación mortis causa del 40 % para cónyuge, pareja de hecho legalmente inscrita, ascendientes o descendientes de primer grado, sobre la…"},{"ine":"28049","nombre":"Coslada","ccaa":"Comunidad de Madrid","tipo":0.1335,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.15,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.1,0.13,0.17,0.23,0.29,0.45],"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[108200,0.95],[null,0]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":null,"empadronado":null,"mantener":null,"rogada":null,"plazo":null,"articulo":null},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/12/18/BOCM-20231218-62.PDF","titulo":"BOCM 18/12/2023: Coslada, modificación de las ordenanzas fiscales X, XIII (IIVTNU) y XIV; cuadro de coeficientes art. 6.4","fecha":"2023-12-18","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] COEFICIENTES PROPIOS (BOCM 18/12/2023, O.F. XIII art. 6.4, vigor 01/01/2024): tabla 0,14/0,13/0,14/0,15/0,17/0,17/0,16/0,12/0,10/0,09/0,08×4/0,09/0,10/0,13/0,17/0,23/0,29/0,45, inferior a los máximos 2024 en varios tramos (RE-LEÍDOS los 21 valores en…"},{"ine":"28061","nombre":"Galapagar","ccaa":"Comunidad de Madrid","tipo":0.15,"tipoPorAnios":null,"coeficientes":[0.14,0.14,0.13,0.13,0.14,0.16,0.17,0.18,0.17,0.14,0.11,0.09,0.08,0.08,0.08,0.08,0.09,0.12,0.15,0.21,0.36],"bonif":{"pct":0.95,"tramos":null,"parentesco":"todos","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":null,"articulo":"art. 4.4 (no sujeción)","limiteValorCatastral":null,"condicion":"No es una bonificación: el art. 4.4 declara NO SUJETAS todas las transmisiones mortis causa, sin límite de parentesco ni de inmueble. Un supuesto de no sujeción creado por ordenanza carece de cobertura en el TRLRHL; si el motor no admite 100 %, aplicar el 95 % (máximo del art. 108.4) y avisar.","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2024/12/31/BOCM-20241231-36.PDF","titulo":"Ordenanza fiscal n.º 5/2024 del IIVTNU de Galapagar, texto íntegro (Pleno 19/12/2024; BOCM n.º 311 de 31/12/2024, BOCM-20241231-36)","fecha":"2024-12-31","leido":true},"estado":"P","notas":"La ordenanza declara una exención o bonificación del 100 %; el art. 108.4 TRLRHL limita la bonificación al 95 %: se calcula con el 95 % y conviene confirmarlo con el ayuntamiento. MEJORA del registro pendiente. Art. 4.4: «En Galapagar, no estarán sujetas al IIVTNU ni las transmisiones de terrenos ni la transmisión o constitución de derechos reales de…"},{"ine":"28066","nombre":"Griñón","ccaa":"Comunidad de Madrid","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.85,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 13"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/07/26/BOCM-20220726-82.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Griñón, texto íntegro (BOCM n.º 176 de 26/07/2022)","fecha":"2022-07-26","leido":true},"estado":"V","notas":"Art. 13: «Se establece una bonificación de 85 por 100 de la cuota íntegra del Impuesto, en las transmisiones de terrenos… realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes». Sin requisito de vivienda habitual; la ordenanza no regula solicitud ni plazo (rogada: no…"},{"ine":"28068","nombre":"Guadarrama","ccaa":"Comunidad de Madrid","tipo":0.26,"tipoPorAnios":[[5,0.2],[10,0.21],[15,0.24],[null,0.26]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"6 meses, prorrogable a 1 año (art. 18.2.b)","articulo":"art. 6","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/06/01/BOCM-20220601-89.PDF","titulo":"Ordenanza fiscal del IIVTNU de Guadarrama, texto completo (aprobación definitiva de la modificación, BOCM n.º 129 de 01-06-2022)","fecha":"2022-06-01","leido":true},"estado":"V","notas":"Art. 15: tipo según el periodo de generación: 0 a 5 años 20 %; 6 a 10 años 21 %; 11 a 15 años 24 %; 16 a 20 años 26 %; más de 20 años 26 %; cuota mínima de 32,98 €. Art. 9: coeficientes máximos legales. Art. 6: «bonificación del 95 por 100 de la cuota íntegra del impuesto» en transmisiones por causa de muerte a descendientes y adoptados, cónyuges y…"},{"ine":"28073","nombre":"Humanes de Madrid","ccaa":"Comunidad de Madrid","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":null,"rogada":true,"plazo":"con la declaración del impuesto, dentro del plazo legal (fuera de plazo se pierde)","articulo":"art. 11"},"fuente":{"url":"https://transparencia.ayto-humanesdemadrid.es/storage/uploads/1768297422Ordenanza%20Fiscal%201.5%20IIVTNU%202026.pdf","titulo":"Ordenanza fiscal n.º 1.5 reguladora del IIVTNU de Humanes de Madrid, texto 2026 (portal de transparencia municipal)","fecha":null,"leido":true},"estado":"V","notas":"Art. 11: bonificación del 95 % de la cuota íntegra en la transmisión mortis causa de la vivienda habitual a favor de descendientes (naturaleza o adopción), ascendientes y cónyuge; la vivienda debe ser la habitual del causante y de los beneficiarios, con ocupación continuada los dos años inmediatamente anteriores al hecho causante, acreditada con…"},{"ine":"28080","nombre":"Majadahonda","ccaa":"Comunidad de Madrid","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 6"},"fuente":{"url":"https://www.majadahonda.org/documents/36614/61593/Ordenanza+Fiscal+N%C2%BA4%2C+Impuesto+sobre+el+Incremento+de+Valor+de+los+Terrenos+de+Naturaleza+Urbana.pdf/ce85d3e2-ff3d-1687-90f6-5cd411e82913","titulo":"Ordenanza Fiscal nº 4, Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana (Ayuntamiento de Majadahonda, texto consolidado con coeficientes desde 23/01/2025)","fecha":"2025-01-23","leido":true},"estado":"V","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] Art. 5: tipo del 20 % para todos los periodos de generación (máximo legal 30 %). Art. 4: tabla de coeficientes = máximos legales vigentes (versión 2025: 0,15…0,35), sin reducción propia → máximos legales. Art. 6: «Se concederá una bonificación del 95…"},{"ine":"28096","nombre":"Navalcarnero","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/07/14/BOCM-20230714-93.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Navalcarnero, texto íntegro (BOCM n.º 166 de 14/07/2023)","fecha":"2023-07-14","leido":true},"estado":"V","notas":"Sin bonificación mortis causa en el texto vigente: el art. 9.2 dice «La cuota líquida… será el resultado de aplicar… las bonificaciones previstas en el artículo siguiente», pero el art. 10 regula el devengo y no hay ningún artículo de bonificaciones (remisión vacía; posible errata de la ordenanza). Art. 4 solo recoge no sujeciones por divorcio y por…"},{"ine":"28099","nombre":"Navas del Rey","ccaa":"Comunidad de Madrid","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/10/19/BOCM-20221019-78.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Navas del Rey, texto íntegro (BOCM n.º 249 de 19/10/2022)","fecha":"2022-10-19","leido":true},"estado":"V","notas":"Art. 12 (Bonificaciones): «No se establecen». Tipo 26 % (art. 11). Coeficientes: máximos estatales (art. 10.4). Municipio pequeño."},{"ine":"28104","nombre":"Paracuellos de Jarama","ccaa":"Comunidad de Madrid","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[60000,0.78],[120000,0.3],[null,0.18]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":4,"rogada":true,"plazo":"en el impreso de la declaración del impuesto","articulo":"art. 6"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/09/29/BOCM-20220929-57.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Paracuellos de Jarama, texto íntegro modificado (BOCM de 29/09/2022)","fecha":"2022-09-29","leido":true},"estado":"V","notas":"Art. 6: «…a favor de los descendientes y adoptados, los cónyuges (o parejas de hecho) y los ascendientes y adoptantes gozarán de las bonificaciones…: a) El 78 por ciento si el valor catastral del suelo es inferior o igual a 60.000 euros. b) El 30 por ciento si… superior a 60.000 euros y no excede de 120.000 euros. c) El 18 por ciento si… superior a…"},{"ine":"28106","nombre":"Parla","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://sede.ayuntamientoparla.es/sta/CarpetaPublic/doEvent?APP_CODE=STA&PAGE_CODE=CATALOGO&DETALLE=6269000114591190507756","titulo":"Sede electrónica Ayuntamiento de Parla: trámite de declaración del IIVTNU (plusvalía)","fecha":null,"leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] La ficha del trámite menciona una «bonificación por convivencia del fallecido» acreditada mediante «Declaración Responsable de los herederos como que cumplen con los requisitos de la bonificación» y plazo de declaración mortis causa de 6 meses desde el…","bonifDesconocida":true},{"ine":"28107","nombre":"Patones","ccaa":"Comunidad de Madrid","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 9"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/07/04/BOCM-20220704-89.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Patones, texto íntegro (BOCM n.º 157 de 04/07/2022)","fecha":"2022-07-04","leido":true},"estado":"V","notas":"Art. 9: «Se establece una bonificación del 75 por 100 de la cuota íntegra del impuesto… realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes». Sin vivienda habitual ni plazo. Pareja de hecho solo en el art. 4.1.c (exención) → DAC. Tipo 25 % (art. 8.1). Coeficientes:…"},{"ine":"28113","nombre":"Pinto","ccaa":"Comunidad de Madrid","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":null,"articulo":"art. 16"},"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2023/05/16/BOCM-20230516-85.PDF","titulo":"Ordenanza fiscal n.º 1.5 reguladora del IIVTNU de Pinto, modificación definitiva (BOCM de 16/05/2023)","fecha":"2023-05-16","leido":true},"estado":"P","notas":"Re-leído en esta pasada. Art. 16.3: «a) El 95 por 100 para la vivienda habitual, un garaje y un trastero para el cónyuge supérstite; b) El 90 por 100 para la vivienda habitual, un garaje, un trastero y/o el local afecto a la actividad económica del causante, para ascendentes y descendentes». CODIFICADO 0,90 (descendientes/ascendientes); el motor debe…"},{"ine":"28122","nombre":"Ribatejada","ccaa":"Comunidad de Madrid","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/07/26/BOCM-20220726-96.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Ribatejada, texto íntegro (BOCM de 26/07/2022)","fecha":"2022-07-26","leido":true},"estado":"V","notas":"Sin bonificación mortis causa en el texto íntegro (solo exenciones subjetivas del art. 8 y dación en pago del art. 7.c). Tipo 27 % (art. 13). Coeficientes: tabla que «se actualizarán de acuerdo con las variaciones… de la normativa estatal» → máximos legales. Municipio pequeño."},{"ine":"28130","nombre":"San Fernando de Henares","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[32750,0.8],[65500,0.7],[99000,0.6],[null,0.5]]},"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":4,"rogada":false,"plazo":"declaración en plazo (art. 18.2.b: 6 meses prorrogables a 1 año)","articulo":"art. 15"},"fuente":{"url":"https://www.ayto-sanfernando.com/wp-content/uploads/2025/02/18-plus-valia.pdf","titulo":"Ordenanza fiscal n.º 18 reguladora del IIVTNU de San Fernando de Henares, texto vigente (última modificación BOCM n.º 262 de 03/11/2023)","fecha":"2023-11-03","leido":true},"estado":"V","notas":"Art. 15: «Las transmisiones de terrenos para uso residencial… realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes, y siempre que la declaración se presente en el plazo legalmente previsto, regulado en el art. 18.2.b)…, tendrán una bonificación según la siguiente escala»…"},{"ine":"28134","nombre":"San Sebastián de los Reyes","ccaa":"Comunidad de Madrid","tipo":0.227,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.2,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 7 (versión 2007/2008)"},"fuente":{"url":"https://bocm.es/boletin/CM_Orden_BOCM/2022/03/25/BOCM-20220325-82.PDF","titulo":"BOCM 25/03/2022 (nº 72): San Sebastián de los Reyes, modificación de la Ordenanza Fiscal nº 7 (IIVTNU), arts. 2, 3, 5, 6 y 9","fecha":"2022-03-25","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] TIPO verificado: art. 6 (BOCM 25/03/2022): «El tipo de gravamen del impuesto es del 22,7 %»; coincide con Hacienda. Art. 5.3: tabla = máximos legales con cláusula «serán actualizados anualmente mediante norma con rango legal… se aplicarán directamente,…"},{"ine":"28147","nombre":"Titulcia","ccaa":"Comunidad de Madrid","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.25,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 8.1"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/12/07/BOCM-20221207-93.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Titulcia, texto íntegro (BOCM n.º 291 de 07/12/2022)","fecha":"2022-12-07","leido":true},"estado":"V","notas":"Art. 8.1: bonificación del 25 % para la vivienda habitual del causante transmitida mortis causa a «el cónyuge, los descendientes o los ascendientes por naturaleza o adopción». Sin requisitos de plazo ni mantenimiento. Tipo 25 % (art. 7.1). Coeficientes: máximos del art. 107.4. Municipio pequeño."},{"ine":"28152","nombre":"Torrelodones","ccaa":"Comunidad de Madrid","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":5,"rogada":true,"plazo":"con la declaración del impuesto, en plazo","articulo":"art. 3"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2014/03/13/BOCM-20140313-71.PDF","titulo":"Ordenanza fiscal n.º 6 reguladora del IIVTNU de Torrelodones, aprobación definitiva (BOCM n.º 61 de 13/03/2014)","fecha":"2014-03-13","leido":true},"estado":"P","notas":"Texto de 2014 (anterior al RDL 26/2021). Art. 3: bonificación del «95 por 100 de la cuota íntegra» en transmisiones mortis causa a favor de «descendientes y adoptados, los cónyuges y los ascendientes y adoptantes», «siempre que la vivienda sea destinada a residencia habitual»; el adquirente debe haber convivido con el causante hasta el fallecimiento y…"},{"ine":"28168","nombre":"El Vellón","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":[[1,0.1],[2,0.15],[3,0.21],[4,0.26],[null,0.3]],"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"con la declaración: 6 meses, prorrogable a 1 año (art. 16.3.b)","articulo":"art. 13","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/05/06/BOCM-20220506-76.PDF","titulo":"Ordenanza fiscal del IIVTNU de El Vellón, texto íntegro (aprobación definitiva de la modificación, BOCM n.º 107 de 06-05-2022)","fecha":"2022-05-06","leido":true},"estado":"V","notas":"Art. 12: tipo según los años de tenencia: menos de 1 año y 1 año 10 %; 2 años 15 %; 3 años 21 %; 4 años 26 %; de 5 años en adelante 30 %. Art. 13: «Del 40 por 100 las realizadas a favor de cónyuges, descendientes, adoptantes y ascendientes en línea directa» (transmisiones lucrativas por causa de muerte a descendientes y adoptados, cónyuges y ascendientes…"},{"ine":"28171","nombre":"Villa del Prado","ccaa":"Comunidad de Madrid","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 5.1"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2025/02/26/BOCM-20250226-74.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Villa del Prado, texto íntegro (BOCM n.º 48 de 26/02/2025)","fecha":"2025-02-26","leido":true},"estado":"V","notas":"Art. 5.1: bonificación del 50 % de la cuota íntegra en transmisiones mortis causa a favor de descendientes y adoptados, cónyuges, ascendientes y adoptantes; sin vivienda habitual ni requisitos adicionales. Tipo 27 % (art. 3). Coeficientes: tabla 2024 (0,15…0,40) = máximos legales. Municipio pequeño."},{"ine":"28173","nombre":"Villamanrique de Tajo","ccaa":"Comunidad de Madrid","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"con la declaración en plazo","articulo":"art. 13"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/07/01/BOCM-20220701-70.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Villamanrique de Tajo, texto íntegro (BOCM n.º 155 de 01/07/2022)","fecha":"2022-07-01","leido":true},"estado":"P","notas":"Art. 13 (lectura por resumen, redacción confusa): 40 % para «cónyuges, adoptantes y ascendientes en línea directa» y 80 % para el usufructo del cónyuge viudo; vivienda habitual con empadronamiento ininterrumpido ≥2 años; rogada. No queda claro si alcanza a descendientes → P. Tipo 26 % (art. 12). Municipio pequeño."},{"ine":"28176","nombre":"Villanueva de la Cañada","ccaa":"Comunidad de Madrid","tipo":0.14,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":3,"rogada":true,"plazo":"con la declaración, en el plazo del art. 13","articulo":"art. 10","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"http://www.ayto-villacanada.es/wp-content/uploads/2025/11/IMPUESTO-SOBRE-EL-INCREMENTO-DEL-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA_25_11_2025.pdf","titulo":"Ordenanza fiscal del IIVTNU de Villanueva de la Cañada, texto vigente publicado por el Ayuntamiento (modificaciones en BOCM n.º 105 de 04-05-2022 y n.º 281 de 25-11-2025)","fecha":"2025-11-25","leido":true},"estado":"V","notas":"Art. 8: «El tipo de gravamen a aplicar a la base imponible del impuesto, será del 14 por 100». Art. 7: coeficientes = «el máximo actualizado vigente». Art. 10: «bonificación del 50% de la cuota íntegra» en las transmisiones por causa de muerte de la vivienda habitual (la del padrón del causante; si se trasladó a una residencia de mayores por edad o…"},{"ine":"28177","nombre":"Villanueva del Pardillo","ccaa":"Comunidad de Madrid","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/07/20/BOCM-20230720-61.PDF","titulo":"Modificación de la ordenanza fiscal del IIVTNU de Villanueva del Pardillo (BOCM n.º 171 de 20/07/2023)","fecha":"2023-07-20","leido":true},"estado":"P","notas":"Leída solo la modificación de 2023 (definitiva; provisional en BOCM n.º 117 de 18/05/2023): art. 10 «El tipo de gravamen del impuesto será del 30 por ciento»; art. 9.8 coeficientes = máximo actualizado vigente. Los artículos modificados no incluyen bonificaciones: bonif=null = DESCONOCIDO (no comprobado en el texto consolidado).","bonifDesconocida":true},{"ine":"28183","nombre":"Zarzalejo","ccaa":"Comunidad de Madrid","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"declaración en plazo (art. 15: 6 meses prorrogables a 1 año)","articulo":"art. 12"},"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2022/06/21/BOCM-20220621-72.PDF","titulo":"Ordenanza fiscal reguladora del IIVTNU de Zarzalejo, texto íntegro (BOCM n.º 146 de 21/06/2022)","fecha":"2022-06-21","leido":true},"estado":"V","notas":"Art. 12: «bonificación del 95 por 100 de la cuota íntegra… por causa de muerte… entre padres, hijos y cónyuge, o quien hubiera convivido con el causante… mediante inscripción en el Registro de parejas de hecho», para la vivienda habitual del causante (empadronado al menos los dos últimos años). OJO: «padres, hijos» = primer grado. Tipo 20 % (art. 11).…"},{"ine":"28903","nombre":"Tres Cantos","ccaa":"Comunidad de Madrid","tipo":0.175,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2023/12/18/BOCM-20231218-89.PDF","titulo":"BOCM 18/12/2023: Tres Cantos, modificación de ordenanzas fiscales (IBI, IVTM e IIVTNU art. 9), Pleno 17/10/2023, vigor 01/01/2024","fecha":"2023-12-18","leido":true},"estado":"P","notas":"[Arrastrado de la pasada anterior (ord-A-resultado.json), no re-leído en esta pasada salvo indicación.] TIPO verificado: art. 9 (BOCM 18/12/2023): «El tipo de gravamen será del 17,5 por 100»; coincide con Hacienda. Coeficientes (BOCM 03/06/2022, BOCM-20220603-105, art. 8.4): tabla fija 0,14…0,45 = máximos del RDL 26/2021, sin cláusula de actualización;…"},{"ine":"29042","nombre":"Coín","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://coin.es/el-ayuntamiento-aprueba-una-actualizacion-de-la-plusvalia-que-supone-una-rebaja-del-16","titulo":"Nota de prensa municipal: «El Ayuntamiento aprueba una actualización de la plusvalía que supone una rebaja del 16 %» (sin fecha; adaptación tras la STC de 2021)","fecha":null,"leido":true},"estado":"P","notas":"Fuente oficial pero secundaria (nota de prensa del Ayuntamiento, no la ordenanza): «El tipo de gravamen establecido en esta actualización de la ordenanza es del 30%». No menciona bonificación por herencia ni coeficientes. Texto de la ordenanza y BOP Málaga no localizados (bopmalaga.es inaccesible para el lector)."},{"ine":"30003","nombre":"Águilas","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables por otros 6","articulo":"art. 18.a","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://borm.es/services/anuncio/ano/2023/numero/5709/pdf?id=822087","titulo":"BORM nº 231, aprobación definitiva modificación ordenanzas fiscales (IIVTNU arts. 15, 17, 18)","fecha":"2023-10-05","leido":true},"estado":"V","notas":"Art. 17: tipo 30 %. Art. 15: tabla propia pero 'se entenderán automáticamente modificados a máximos' con la LPGE → coeficientes = máximos legales (null). Art. 18.a: 90 % de la cuota íntegra en transmisiones mortis causa a descendientes y adoptados, cónyuges y ascendientes y adoptantes, sin requisito de vivienda habitual. Solicitud art. 22.2. Texto…"},{"ine":"30004","nombre":"Albudeite","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses desde el fallecimiento, prorrogables por otros 6 (art. 17)","articulo":"art. 13","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://borm.es/services/anuncio/ano/2022/numero/2551/pdf?id=805614","titulo":"Ordenanza fiscal del IIVTNU de Albudeite, texto íntegro (aprobación definitiva, BORM n.º 117 de 23-05-2022)","fecha":"2022-05-23","leido":true},"estado":"V","notas":"Art. 12: «El tipo de gravamen de este impuesto queda fijado en el 30%». Art. 13: «bonificación del 95 por ciento de la cuota íntegra del impuesto» en transmisiones por causa de muerte a descendientes y adoptados, cónyuges y ascendientes y adoptantes, a solicitud del beneficiario y con la autoliquidación en plazo (6 meses prorrogables por otros 6, art.…"},{"ine":"30005","nombre":"Alcantarilla","ccaa":"Región de Murcia","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 12.1"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/1837/pdf?id=802181","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 88, 18-04-2022","fecha":"2021-12-23","leido":true},"estado":"V","notas":"HECHO: tipo único 20 % (art. 11), de los más bajos del lote. Tabla de 21 coeficientes propia pero con cláusula «si alguno de los coeficientes aprobados resultara superior al nuevo máximo legal, se aplicará este directamente»; los valores no se han transcrito → coefPropios = null (PENDIENTE de transcripción si difieren de la tabla legal). Bonificación 95…"},{"ine":"30008","nombre":"Alhama de Murcia","ccaa":"Región de Murcia","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 9","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://datos.alhamademurcia.es/descargas/118s-2022-ordenanzas-fiscales-ejercicio-2022con-plusvalia.pdf","titulo":"Ordenanzas fiscales de Alhama de Murcia, ejercicio 2022 (recopilación municipal), ordenanza del IIVTNU (última modificación: Pleno 29-10-2019)","fecha":"2019-10-29","leido":true},"estado":"P","notas":"Texto anterior al RDL 26/2021 (remite a los límites del art. 107.4 TRLRHL); no se ha localizado una versión posterior. Art. 8: «el tipo impositivo del 27%, por cada titular transmitente». Art. 9: transmisiones por causa de muerte a descendientes y adoptados, cónyuges y ascendientes o adoptantes: «Siempre que se trate de la primera residencia de éstos…"},{"ine":"30009","nombre":"Archena","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":[[0,0.3],[1,0.0403],[2,0.07],[3,0.0984],[4,0.1235],[5,0.1544],[6,0.1856],[7,0.2887],[18,0.3],[19,0.2375],[null,0.2]],"coeficientes":null,"bonif":{"pct":0.8,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":0.4,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses desde el fallecimiento, prorrogables por otros 6 (art. 17); al corriente de pago con el Ayuntamiento","articulo":"art. 13","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.borm.es/services/anuncio/808193/pdf","titulo":"Ordenanza fiscal del IIVTNU de Archena, texto íntegro (aprobación definitiva, BORM n.º 142 de 22-06-2022, pág. 20615)","fecha":"2022-06-22","leido":true},"estado":"V","notas":"Art. 12: tipo distinto para cada año de tenencia: 0 años 30 %; 1 año 4,03 %; 2 años 7 %; 3 años 9,84 %; 4 años 12,35 %; 5 años 15,44 %; 6 años 18,56 %; 7 años 28,87 %; de 8 a 18 años 30 %; 19 años 23,75 %; 20 años o más 20 %. Art. 10.4-10.5: cuadro de coeficientes con aplicación directa de la ley si baja algún máximo. Art. 13: transmisiones por causa de…"},{"ine":"30010","nombre":"Beniel","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.7,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"6 meses desde el fallecimiento, prorrogables por otros 6","articulo":"art. 13"},"fuente":{"url":"https://borm.es/services/anuncio/ano/2022/numero/2807/pdf?id=806561","titulo":"Modificación definitiva de la ordenanza fiscal del IIVTNU de Beniel (Pleno 17-03-2022; BORM 31-05-2022, anuncio 2807)","fecha":"2022-05-31","leido":true},"estado":"V","notas":"Tipo 30 % (art. 12). Art. 13: 70 % si es la vivienda habitual del causante (empadronamiento ininterrumpido al menos los dos años anteriores); 10 % para el resto de inmuebles. Beneficiarios: cónyuge, ascendientes y descendientes de PRIMER grado; «se equipara el matrimonio con la pareja de hecho legalmente inscrita». «El beneficio tiene carácter rogado».…"},{"ine":"30013","nombre":"Calasparra","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":false,"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2763/pdf?id=806517","titulo":"Ordenanza fiscal del IIVTNU de Calasparra, texto completo (aprobación definitiva de la modificación, BORM n.º 123 de 30-05-2022)","fecha":"2022-05-30","leido":true},"estado":"V","notas":"Art. 11: «El tipo de gravamen de este impuesto queda fijado en el 30%». Art. 9: cuadro de coeficientes con aplicación directa de la ley si baja algún máximo. Art. 12: la cuota líquida es la íntegra, «toda vez que no se establecen bonificaciones»: no hay bonificación por herencia. Plazo de autoliquidación por causa de muerte: 6 meses prorrogables por…"},{"ine":"30015","nombre":"Caravaca de la Cruz","ccaa":"Región de Murcia","tipo":0.08,"tipoPorAnios":[[1,0.08],[2,0.12],[3,0.16],[4,0.2],[5,0.24],[6,0.26],[null,0.3]],"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":true,"empadronado":true,"mantener":2,"rogada":true,"articulo":"art. 13.a"},"fuente":{"url":"https://caravacadelacruz.es/images/ficheros/Ayuntamiento/NormativaMunicipal/OrdenanzasMunicipales/20220420_PUBLICACION_BORM_Ordenanza_fiscal_reguladora_del_impuesto_sobre_el_incremento_de_valor_de_los_terrenos_de_naturaleza_urbana.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 90, 20-04-2022 (aprobación definitiva); nº 39, 17-02-2022 (inicial)","fecha":"2022-04-20","leido":true},"estado":"V","notas":"HECHO: tipo progresivo por período (art. 12): <1 año y 1 año 8 %; 2 años 12 %; 3 años 16 %; 4 años 20 %; 5 años 24 %; 6 años 26 %; 7 a 20+ años 30 %. Tabla legal 2022 con cláusula de actualización a la baja → coefPropios = null. Bonificación 90 % con convivencia 2 años (padrón) y mantenimiento 2 años; el texto exige convivencia, no vivienda habitual…"},{"ine":"30017","nombre":"Cehegín","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":{"base":"total","tramos":[[30000,0.95],[40000,0.6],[50000,0.4],[60000,0.15],[null,0.1]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 5"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/3354/pdf?id=808423","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 144, 24-06-2022","fecha":"2022-06-24","leido":true},"estado":"V","notas":"EXTRA (población ~15.000, fuera del rango). HECHO: tipo 30 %; remite a máximos del art. 107.4 con actualización automática; bonificación escalonada por valor catastral de la vivienda habitual. DUDA: el resumen dice «valor» sin precisar si es catastral total o del suelo (INFERENCIA: catastral total)."},{"ine":"30019","nombre":"Cieza","ccaa":"Región de Murcia","tipo":0.29,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[12000,0.9],[25000,0.5],[50000,0.25],[75000,0.1],[null,0.05]]},"parentesco":"DACP","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables por otros 6","articulo":"art. 17.3-5","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://borm.es/services/anuncio/ano/2022/numero/2660/pdf?id=805871","titulo":"BORM nº 120, ordenanza fiscal del IIVTNU (adaptación RDL 26/2021)","fecha":"2022-05-26","leido":true},"estado":"V","notas":"Art. 17.1: tipo 29 %. Art. 15: tabla propia (= máximos legales 2022) con cláusula de aplicación del nuevo máximo si es inferior. Art. 17.3: bonificación según 'la suma de los valores catastrales de los terrenos de los bienes que se transmiten' (≤12.000 € 90 %; ≤25.000 € 50 %; ≤50.000 € 25 %; ≤75.000 € 10 %; >75.000 € 5 %) a descendientes y adoptados,…"},{"ine":"30022","nombre":"Jumilla","ccaa":"Región de Murcia","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"articulo":"arts. 13-14 (y 17.2)"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2504/pdf?id=805561","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 114, 19-05-2022","fecha":"2022-05-09","leido":true},"estado":"V","notas":"HECHO: tipo único 25 % (art. 12). Tabla de 21 coeficientes = tabla legal 2022 (0,14-0,45) con cláusula «si una norma con rango legal actualiza a la baja alguno de los coeficientes, se aplicará directamente el nuevo» → coefPropios = null. Bonificación 50 % sin requisito de vivienda habitual."},{"ine":"30026","nombre":"Mazarrón","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2025/numero/6246/pdf?id=840397","titulo":"Ordenanza fiscal reguladora del IIVTNU (nueva, deroga íntegramente la de 2022) · BORM nº 294, 22-12-2025","fecha":"2025-12-16","leido":true},"estado":"V","notas":"HECHO (BORM 294, 22-12-2025, aprobada 16-12-2025): tipo único 30 % (art. 11); tabla de 21 coeficientes = tabla RDL 8/2023 (0,15…0,40) con cláusula de aplicación directa si la ley los baja → coefPropios = null; disposición derogatoria «íntegramente» de la ordenanza anterior. En el texto de 2025 NO aparece ninguna bonificación mortis causa (búsqueda de…"},{"ine":"30027","nombre":"Molina de Segura","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"Solicitud con la autoliquidación/declaración presentada en plazo (mortis causa: 6 meses prorrogables a 1 año)","articulo":"art. 13"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2046/pdf?id=803105","titulo":"BORM nº 97, 28/04/2022: Molina de Segura, Ordenanza fiscal reguladora del Impuesto sobre el Incremento del Valor de los Terrenos de Naturaleza Urbana (aprobación definitiva)","fecha":"2022-04-28","leido":true},"estado":"V","notas":"Art. 12: «El tipo de gravamen de este impuesto queda fijado en el 30%». Art. 10.4: tabla 0,14/0,13/0,15/0,16/0,17/0,17/0,16/0,12/0,10/0,09/0,08×4/0,10/0,12/0,16/0,20/0,26/0,36/0,45 = máximos del RDL 26/2021 → máximos legales (verificar si la ordenanza prevé actualización automática). Art. 13: «Se establece una bonificación del 95 por ciento de la cuota…","noLocalizado":false},{"ine":"30029","nombre":"Mula","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"articulo":"NO LOCALIZADO"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2213/pdf?id=803861","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 103, 06-05-2022","fecha":"2022-05-06","leido":true},"estado":"V","notas":"EXTRA (población ~17.000, fuera del rango). HECHO: tipo 30 %; tabla legal 2022; reducción art. 107.3 potestativa (art. 9); bonificación 95 % sin requisito de vivienda habitual."},{"ine":"30033","nombre":"Puerto Lumbreras","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.29],[15,0.28],[null,0.2]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 5"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2699/pdf?id=806095","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 121, 27-05-2022","fecha":"2022-05-18","leido":true},"estado":"V","notas":"EXTRA (población ~17.000, fuera del rango). HECHO: tramos 30/29/28/20 %; tabla legal con cláusula de actualización a la baja; bonificación 95 % sin requisito de vivienda habitual."},{"ine":"30034","nombre":"Ricote","ccaa":"Región de Murcia","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":null,"plazo":"6 meses prorrogables por otros 6","articulo":"art. 13.a"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2023/numero/3287/pdf?id=819557","titulo":"Modificación definitiva de la ordenanza fiscal del IIVTNU de Ricote (Pleno 16-05-2022; BORM 26-05-2023, anuncio 3287)","fecha":"2023-05-26","leido":true},"estado":"V","notas":"Municipio pequeño (<2.000 hab.), incluido porque su texto apareció en la búsqueda. Tipo 26 % (art. 12). Art. 13.a: 95 % de la cuota íntegra para la vivienda habitual del causante (empadronado ininterrumpidamente al menos 2 años) y 50 % para otras viviendas, a favor de descendientes y adoptados, cónyuges, ascendientes y adoptantes; requisito: no tener…"},{"ine":"30035","nombre":"San Javier","ccaa":"Región de Murcia","tipo":0.18,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":"6 meses desde el fallecimiento, prorrogables por otros 6 (art. 23.1.b)","articulo":"art. 17.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.sanjavier.es/es/descargar-fichero-L2Fzc2V0cy8xZjBiODBlYS8xMjIyLnBkZg++","titulo":"Ordenanza fiscal del IIVTNU de San Javier: modificaciones publicadas en el BORM n.º 287 de 15-12-2011 (art. 17.1) y n.º 277 de 29-11-2013 (art. 16.2, tipo); listado de normativa municipal","fecha":"2013-11-29","leido":true},"estado":"P","notas":"La web municipal (normativa) lista la ordenanza de 1989 y sus modificaciones de 2010, 2011 y 2013; no figura ninguna adaptación posterior al RDL 26/2021. Art. 16.2 (BORM 29-11-2013, desde 01-01-2014): «El tipo de gravamen del impuesto queda fijado en el 18%». Art. 17.1 (BORM 15-12-2011): bonificación del 95 % en las transmisiones por causa de muerte a…"},{"ine":"30036","nombre":"San Pedro del Pinatar","ccaa":"Región de Murcia","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.75,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 12.2"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2772/pdf?id=806526","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 123, 30-05-2022","fecha":"2022-05-19","leido":true},"estado":"V","notas":"HECHO: tipo 25 % (art. 11). Tabla legal 2022 con cláusula de actualización a la baja → coefPropios = null. pct = 0,75 corresponde a la vivienda habitual; resto de supuestos en requisitos."},{"ine":"30038","nombre":"Las Torres de Cotillas","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"6 meses desde el fallecimiento, prorrogables por otros 6 (art. 19.2); al corriente de pago con el Ayuntamiento","articulo":"art. 13","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.borm.es/services/anuncio/830746/pdf","titulo":"Ordenanza fiscal del IIVTNU de Las Torres de Cotillas, texto íntegro (aprobación definitiva de la modificación, BORM n.º 237 de 10-10-2024)","fecha":"2024-10-10","leido":true},"estado":"V","notas":"Art. 12.1: «el tipo de gravamen del 30%». Art. 10: cuadro de coeficientes con aplicación directa del máximo legal si baja. Art. 13: «bonificación del 95 por 100 de la cuota íntegra» en transmisiones por causa de muerte a descendientes y adoptados, cónyuges y ascendientes y adoptantes; se equipara al cónyuge la pareja inscrita en el Registro de Uniones de…"},{"ine":"30041","nombre":"La Unión","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.7,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 13"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/3053/pdf?id=807233","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 132, 10-06-2022","fecha":"2022-05-27","leido":true},"estado":"V","notas":"HECHO: tipo 30 % (art. 12); tabla legal 2022 con cláusula de actualización a la baja → coefPropios = null. El resumen menciona un «coeficiente reductor del 15 % sobre el valor catastral» como reducción del art. 107.3: DUDA sobre su alcance exacto; no se ha volcado a reduccionSuelo. Población ~21.000 (dentro del rango)."},{"ine":"30043","nombre":"Yecla","ccaa":"Región de Murcia","tipo":0.28,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":null,"articulo":"art. 10.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://borm.es/services/anuncio/ano/2022/numero/2983/pdf?id=807017","titulo":"BORM nº 89, Ordenanza Fiscal nº 6 reguladora del IIVTNU (adaptación RDL 26/2021)","fecha":"2022-04-19","leido":true},"estado":"V","notas":"Art. 9: tipo 28 %. Art. 8.3: tabla propia (= máximos legales de 2022) con cláusula: si un nuevo máximo legal resulta inferior se aplica éste directamente. Art. 10.1: 95 % en la transmisión mortis causa de la vivienda habitual a cónyuge, ascendientes/adoptantes y descendientes/adoptados; 'se entenderá exclusivamente por descendiente o ascendiente... un…"},{"ine":"30901","nombre":"Santomera","ccaa":"Región de Murcia","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.29],[15,0.28],[null,0.27]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 13"},"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2023/numero/1642/pdf?id=817147","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 63, 17-03-2023","fecha":"2023-02-28","leido":true},"estado":"V","notas":"EXTRA (población ~17.000, fuera del rango). HECHO: tramos 30/29/28/27 %; tabla legal con cláusula de actualización a la baja; reducción 50 % cinco años tras revisión catastral; bonificación 95 % vivienda habitual / 50 % resto."},{"ine":"30902","nombre":"Los Alcázares","ccaa":"Región de Murcia","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.borm.es/services/anuncio/ano/2022/numero/2399/pdf?id=804896","titulo":"Ordenanza fiscal reguladora del IIVTNU · BORM nº 111, 16-05-2022","fecha":"2022-05-16","leido":true},"estado":"V","notas":"EXTRA (población ~18.000, fuera del rango 20-50k; se incluye por estar verificado). HECHO: tipo 26 %; tabla legal 2022 con cláusula de actualización a la baja; sin bonificación mortis causa."},{"ine":"33037","nombre":"Mieres","ccaa":"Principado de Asturias","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"6 meses prorrogables hasta 1 año (art. 9)","articulo":"art. 5","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.mieres.es/wp-content/uploads/2025/01/ORDENANZA-FISCAL-No-1.05-REGULADORA-DEL-IMPUESTO-SOBRE-EL-INCREMENTO-DEL-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA.pdf","titulo":"Ordenanza fiscal nº 1.05 reguladora del IIVTNU (aprobada por el Pleno el 08/03/2022), web municipal (subida 01/2025)","fecha":"2022-03-08","leido":true},"estado":"V","notas":"Art. 7: tipo 30 %. Art. 6 bis.3: coeficientes = máximo actualizado vigente del art. 107.4 TRLRHL (null). Art. 5 (literal): 50 % en transmisiones mortis causa 'referidos a la vivienda habitual del causante' a favor de descendientes y adoptados, cónyuges y ascendientes y adoptantes; vivienda habitual = aquella en la que estuviera empadronado a la fecha del…"},{"ine":"35004","nombre":"Arrecife","ccaa":"Canarias","tipo":0.11,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":null,"empadronado":null,"mantener":null,"rogada":null,"plazo":null,"articulo":null},"fuente":{"url":"https://www.canarias7.es/canarias/lanzarote/arrecife-aumenta-bonificacion-20220308161930-nt.html","titulo":"Prensa (Canarias7, 08/03/2022): Arrecife aumenta la bonificación al impuesto de plusvalía (Pleno 07/03/2022)","fecha":"2022-03-08","leido":true},"estado":"P","notas":"Prensa: Pleno 07/03/2022 aprueba modificación: bonificación mortis causa del 75 % al 95 % para descendientes/adoptados, cónyuges y ascendientes/adoptantes, sin limitación a vivienda habitual; se fija además un coeficiente/reducción del 8 % sobre el valor del terreno (máx. legal 15 %). Anuncio de aprobación provisional leído: BOP Las Palmas nº 31,…","noLocalizado":false},{"ine":"35006","nombre":"Arucas","ccaa":"Canarias","tipo":0.24,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":null,"limiteValorCatastral":null,"condicion":"También locales afectos a la actividad económica del causante","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.arucas.org/modules.php?mod=portal&file=ver_gen&id=TnpZd01BPT0%3D","titulo":"Ayuntamiento de Arucas – noticia 'Arucas adapta su ordenanza referente al IIVTNU' (03/05/2022)","fecha":"2022-05-03","leido":false},"estado":"P","notas":"P: solo fuente municipal secundaria (nota de prensa); texto de la ordenanza no leído (publicado en Dropbox/sede, no accesible). Según la nota: aprobación provisional por unanimidad el 28/04/2022, tipo mantenido en el 24 %, coeficientes adaptados al RDL 26/2021, y bonificación del 95 % cuando el incremento se produce por causa de muerte en la transmisión…"},{"ine":"35017","nombre":"Puerto del Rosario","ccaa":"Canarias","tipo":0.27,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.puertodelrosario.org/download/ordenanza-reguladora-del-impuesto-sobre-el-incremento-del-valor-de-los-terrenos-de-naturaleza-urbana-plusvaliaspuertodelrosario-org/","titulo":"Ordenanza reguladora del IIVTNU","fecha":null,"leido":false},"estado":"P","notas":"HECHO: el único documento legible es un modelo de autoliquidación (web 2013) con tipo 27 % y porcentajes anuales antiguos (2,7/2,6/2,5/2,4 %), anterior al RDL 26/2021; sin bonificación mencionada. PENDIENTE: ordenanza adaptada 2022 (BOP Las Palmas)."},{"ine":"35019","nombre":"San Bartolomé de Tirajana","ccaa":"Canarias","tipo":0.24,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 12","condicion":"porcentaje que depende de la cuota del impuesto: hasta 1265,13 € 90 %; hasta 2794,71 € 80 %; hasta 4591,73 € 70 %; hasta 6653,2 € 60 %; hasta 8985,13 € 50 %; hasta 22.610,08 € 40 %; hasta 79.069,15 € 30 %; hasta 120.202,42 € 20 %; resto 0 %"},"fuente":{"url":"https://www.maspalomas.com/images/stories/documents/NormativaMunicipal/OrdenanzasFiscales/Impuestos/NM_OFI_20221005_IVTNU.pdf","titulo":"Ordenanza Fiscal Reguladora del Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana (Ayuntamiento de San Bartolomé de Tirajana; BOP Las Palmas nº 120, 05/10/2022)","fecha":"2022-10-05","leido":true},"estado":"V","notas":"Art. 11.1: «La cuota íntegra de este Impuesto será la resultante de aplicar a la base imponible el tipo de gravamen del 24%». Art. 6.6: tabla 0,14…0,45 con actualización automática por LPGE → máximos legales. Art. 12: «Se concederá una bonificación de la cuota del Impuesto, en las transmisiones de terrenos… a título lucrativo por causa de muerte a favor…","noLocalizado":false},{"ine":"35022","nombre":"Santa Lucía de Tirajana","ccaa":"Canarias","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":null,"articulo":"art. 9","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://transparencia.santaluciagc.com/wp-content/uploads/2022/07/ORDENANZA-IVTNU.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (BOP Las Palmas nº 81 de 06/07/2022), portal de transparencia municipal","fecha":"2022-07-06","leido":true},"estado":"V","notas":"Ahora legible (en la ronda anterior el PDF se leyó como imagen). Art. 8: 'tipo único del 28%'. Art. 7.4: tabla = máximos 2022 pero 'quedarán actualizados a los coeficientes que estuviesen en vigor en cada momento' → coeficientes = máximos vigentes (null). Art. 9: 95 % de la cuota íntegra en transmisiones mortis causa a descendientes y adoptados,…"},{"ine":"35024","nombre":"Teguise","ccaa":"Canarias","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 9.1"},"fuente":{"url":"https://redtributarialanzarote.es/wp-content/uploads/2023/04/ORDENANZA-IIVTNU-TEGUISE-RTL-8.8.22.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (gestión: Red Tributaria Lanzarote) · BOP Las Palmas nº 95, 08-08-2022","fecha":"2022-08-08","leido":true},"estado":"V","notas":"HECHO: tipo 20 % (art. 8.1); coeficiente = «máximo actualizado vigente» del art. 107.4 (art. 7); reducción 40 % cinco años (art. 7.5). Bonificación 95 % sin requisito de vivienda habitual ni empadronamiento según el resumen. Combinación muy favorable al heredero (tipo bajo + 95 %)."},{"ine":"36036","nombre":"Oia","ccaa":"Galicia","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 15"},"fuente":{"url":"https://www.concellodeoia.es/wp-content/uploads/2018/05/03.ORDENANZA-FISCAL-DO-IMPOSTO-SOBRE-O-INCREMENTO-DO-VALOR-DOS-TERREOS-DE-NATUREZA-URBANA.pdf","titulo":"Ordenanza fiscal do IIVTNU (Oia), BOP Pontevedra n.º 30 de 12-02-2008","fecha":"2008-02-12","leido":true},"estado":"P","notas":"Tipo 25 %. Art. 15: «Gozarán dunha bonificación do 95% nas cotas deste imposto que se devenguen nas transmisións de terreos ... realizada a título lucrativo por causa de morte a favor dos descendentes e adoptados, os cónxuxes e os ascendentes e adoptantes». Sen requisitos de vivenda habitual. P: texto de 2008, anterior ao RDL 26/2021. Municipio < 10.000 hab."},{"ine":"36039","nombre":"O Porriño","ccaa":"Galicia","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://oporrino.org/wp-content/uploads/2020/10/E-ORDENANZA-FISCAL-DO-IIVTNU.pdf","titulo":"Ordenanza fiscal do IIVTNU (O Porriño), aprobada 11-10-1989, última modificación 28-11-1995 (BOP 15-02-1996)","fecha":"1996-02-15","leido":true},"estado":"P","notas":"Art. 9: «o tipo de gravame do 20%». O texto non ten artigo de bonificacións (só exencións arts. 4 e 5) → bonif=null segundo este texto. P: texto de 1995, moi anterior ao RDL 26/2021 (aínda con porcentaxes anuais); a versión vixente adaptada non foi localizada, polo que a ausencia de bonificación NON está confirmada para 2026.","bonifDesconocida":true},{"ine":"36051","nombre":"Sanxenxo","ccaa":"Galicia","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":4,"rogada":null,"plazo":null,"articulo":"art. 4.1"},"fuente":{"url":"https://www.sanxenxo.es/attachments/article/507/ordenanza .pdf","titulo":"Ordenanza fiscal reguladora do IIVTNU (Sanxenxo), BOP Pontevedra n.º 87 de 06-05-2022","fecha":"2022-05-06","leido":true},"estado":"V","notas":"Art. 7.1: «o tipo de gravame do 26%». Art. 4.1: bonificación do 95 % da cota íntegra na transmisión mortis causa da vivenda habitual do causante a favor do cónxuxe, descendentes e ascendentes en liña recta; vivenda habitual = onde residía o causante (presunción: empadroamento nos 24 meses anteriores; non se perde se estaba en residencia de maiores);…"},{"ine":"37046","nombre":"Béjar","ccaa":"Castilla y León","tipo":0.2962,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"total","tramos":[[90151.82,0.95],[null,0]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":4,"rogada":true,"plazo":"al presentar la declaración (art. 12.2)","articulo":"art. 9.1"},"fuente":{"url":"https://www.aytobejar.com/wp-content/uploads/2022/11/ORDENANZAS-FISCALES-2022.pdf","titulo":"Ayuntamiento de Béjar, compendio Ordenanzas fiscales 2022 — Ordenanza n.º 3/2022 del IIVTNU","fecha":"2022-11-01","leido":true},"estado":"P","notas":"Tipo 29,62 %. Art. 9.1: «Se establece una bonificación del 95% de la cuota del impuesto, en la transmisión de la vivienda habitual del causante ... a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes». Requisitos (extracción): vivienda habitual del causante al menos 2 años; «el valor de la vivienda en la escritura debe…"},{"ine":"37294","nombre":"Santa Marta de Tormes","ccaa":"Castilla y León","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":true,"empadronado":false,"mantener":4,"rogada":true,"plazo":"al presentar la declaración de la transmisión","articulo":"art. 10"},"fuente":{"url":"https://www.santamartadetormes.es/pics/secciones/ord-fiscal-n-4-iivtnu-vigente-desde-25-mayo-2022.pdf","titulo":"Ordenanza fiscal n.º 4 reguladora del IIVTNU (Santa Marta de Tormes), BOP Salamanca n.º 98 de 24-05-2022, vigente desde 25-05-2022","fecha":"2022-05-24","leido":true},"estado":"V","notas":"Art. 9.2: tipo único 30 %. Art. 10: «Se establece una bonificación del 95 por 100 de la cuota íntegra del Impuesto, en las transmisiones de terrenos, realizadas a título lucrativo por causa de muerte a favor de los cónyuges, ascendientes de primer grado o adoptantes y descendientes de primer grado y adoptados, únicamente en el caso de que el inmueble…"},{"ine":"38006","nombre":"Arona","ccaa":"Canarias","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.arona.org/Portals/0/documentos/0_21695_1.pdf","titulo":"Ordenanza nº 1 Impuesto sobre el Incremento del Valor de los Terrenos de Naturaleza Urbana (Ayuntamiento de Arona)","fecha":null,"leido":false},"estado":"P","notas":"Ordenanza LOCALIZADA en arona.org (Ordenanza nº 1, IIVTNU) pero NO LEÍDA: robots.txt del sitio bloquea al agente; igual con el documento 20260423_90800_51431.pdf (posible anuncio 2026). Tipo 28 % = Hacienda 2026. bonif=null = DESCONOCIDO.","noLocalizado":false,"bonifDesconocida":true},{"ine":"38011","nombre":"Candelaria","ccaa":"Canarias","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":{"base":"total","tramos":[[15025.3,0.95],[30050.61,0.75],[60101.21,0.4],[null,0]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"articulo":"art. 7","condicion":"requisitos del heredero (renta o edad) que fija la ordenanza"},"fuente":{"url":"https://www.candelaria.es/wp-content/uploads/Aprobacion-provisional-de-la-modificacion-de-la-Ordenanza-Fiscal-Reguladora-del-Impuesto-sobre-el-Incremento-de-Valor-de-los-Terrenos-de-Naturaleza-Urbana-de-Candelaria.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU","fecha":"2022-03-31","leido":true},"estado":"V","notas":"HECHO: tipo 30 %; remite al «máximo actualizado vigente» del art. 107.4 con actualización automática. Bonificación escalonada por RENTA del adquirente (no por valor catastral), sobre vivienda habitual del causante con 2 años de empadronamiento. Documento leído: certificado de aprobación provisional del Pleno (31-03-2022). NO LOCALIZADO: BOP de aprobación…"},{"ine":"38023","nombre":"San Cristóbal de La Laguna","ccaa":"Canarias","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":5,"rogada":true,"plazo":"6 meses desde el fallecimiento, prorrogables hasta 1 año (art. 14.3.b)","articulo":"art. 11","condicion":"porcentaje que depende de la renta del heredero (base imponible del IRPF): hasta 15.000 € 95 %; hasta 30.000 € 75 %; hasta 60.000 € 40 %; resto 0 %","pctResto":0.95},"fuente":{"url":"https://www.aytolalaguna.es/CDN/files/ayuntamiento/.galleries/DOCUMENTOS-Normativa-Municipal/36-TEXTO-CONSOLIDADO-DE-LA-ORDENANZA-FISCAL-IIVTNU-para-el-ejercicio-2022.pdf","titulo":"Texto consolidado de la Ordenanza fiscal reguladora del IIVTNU para el ejercicio 2022 (Ayuntamiento de San Cristóbal de La Laguna; BOP S/C de Tenerife nº 50, 27/04/2022)","fecha":"2022-04-27","leido":true},"estado":"V","notas":"Art. 10.1: «El tipo de gravamen aplicable para el impuesto es del 30%». Art. 9.3: tabla 0,14…0,45 con cláusula de actualización automática → máximos legales. Art. 11 (bonificación mortis causa, ESTRUCTURA ATÍPICA): los tramos se definen por la base imponible del IRPF del ADQUIRENTE en el año anterior al fallecimiento. Descendiente de primer…","noLocalizado":false},{"ine":"38026","nombre":"La Orotava","ccaa":"Canarias","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 6.2","limiteValorCatastral":60000},"fuente":{"url":"http://www.laorotava.es/sites/default/files/documentos/1.5._impuesto_sobre_incremento_de_valor_de_los_terrenos_de_naturaleza_urbana_2023.pdf","titulo":"Ordenanza fiscal nº 1.5 reguladora del IIVTNU (texto 2023)","fecha":null,"leido":true},"estado":"V","notas":"HECHO: tipo 25 % (art. 6.1). Art. 5 bis.2 reproduce los máximos legales (versión 2023, 0,09-0,45) con actualización anual por LPGE → coefPropios = null. Bonificación 90 % limitada a valor catastral total ≤ 60.000 €; no exige vivienda habitual. La web municipal fecha el documento el 12-01-2024. NO LOCALIZADO: nº y fecha del BOP de la última modificación.…"},{"ine":"38031","nombre":"Los Realejos","ccaa":"Canarias","tipo":0.24,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 7"},"fuente":{"url":"https://losrealejos.es/descargar/1107/01-impuestos-municipales/53491/i-05-ordenanza-fiscal-reguladora-del-impuesto-sobre-el-incremento-de-valor-de-los-terrenos-de-naturaleza-urbana-bop-72-15-06-22.pdf","titulo":"Ordenanza fiscal I-05 reguladora del IIVTNU · BOP Santa Cruz de Tenerife nº 72, 15-06-2022","fecha":"2022-06-15","leido":true},"estado":"V","notas":"HECHO: tipo 24 % (art. 10.1); tabla legal 2022 con cláusula de modificación automática por LPGE → coefPropios = null; reducción 50 % cinco años tras revisión catastral (art. 9.3.f). Bonificación 95 % vivienda habitual del causante, más un 50 % para «un inmueble» adicional. DUDA: el resumen no precisa empadronamiento ni carácter rogado."},{"ine":"39008","nombre":"El Astillero","ccaa":"Cantabria","tipo":0.21,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":0.25,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"pctResto":null,"convivencia":false,"empadronado":false,"mantener":3,"rogada":true,"plazo":null,"articulo":"art. 13.1","limiteValorCatastral":null,"condicion":null,"viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://www.astillero.es/ckfinder/userfiles/files/ORDENANZAS%20%20FISCALES%20Y%20PRECIOS%20PUBLICOS%20TOMO%202023.pdf","titulo":"Ordenanzas fiscales y de precios públicos, tomo 2023 – Ordenanza del IIVTNU (aprobación definitiva BOC nº 128 de 04/07/2022)","fecha":"2022-07-04","leido":true},"estado":"P","notas":"P solo por los coeficientes: Art. 12: tipo 21 %. Art. 11.3: tabla de coeficientes 0,14…0,45 (= máximos legales de 2022; el lector solo dio rangos, tabla asumida idéntica a los máximos 2022 por coincidir extremos y tramos: verificar). Art. 13.1: 25 % de la cuota íntegra en transmisiones por fallecimiento de la vivienda habitual del causante a…"},{"ine":"39016","nombre":"Camargo","ccaa":"Cantabria","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://sede.aytocamargo.es/Documentos/anexo_calculo_plusvalias.pdf","titulo":"Ayuntamiento de Camargo, anexo de cálculo de plusvalías e impreso REN09 de la sede electrónica (no es la ordenanza)","fecha":null,"leido":true},"estado":"P","notas":"Los impresos municipales de la sede (anexo de cálculo y modelo REN09 de comunicación de datos) aplican un tipo de gravamen de 0,26 en el método de estimación directa y en el objetivo. La ordenanza no se ha podido leer (el BOC no respondió): la bonificación por herencia queda sin comprobar y el abogado puede indicarla a mano."},{"ine":"39020","nombre":"Castro-Urdiales","ccaa":"Cantabria","tipo":0.143,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.15,0.16,0.17,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.1,0.12,0.16,0.2,0.26,0.36,0.45],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":2,"rogada":true,"plazo":"6 meses desde el fallecimiento (prorrogable hasta 1 año si se solicita)","articulo":"art. 10"},"fuente":{"url":"https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=371946","titulo":"Ordenanza fiscal n.º 5 reguladora del IIVTNU de Castro Urdiales, BOC n.º 90 de 11-05-2022","fecha":"2022-05-11","leido":true},"estado":"P","notas":"Tipo 14,3 % (art. 9). Art. 8: tabla propia de 21 coeficientes = los máximos del RDL 26/2021 (2022), sin cláusula de actualización localizada; frente a la tabla legal 2026 (RDL 8/2023) unos periodos son inferiores y otros superiores (años 2-4 y 18-20): el motor debe aplicar min(ordenanza, máximo legal) por art. 107.4. Art. 10: 95 % en transmisiones…"},{"ine":"39035","nombre":"Laredo","ccaa":"Cantabria","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"antes de la liquidación","articulo":"art. 3.5"},"fuente":{"url":"https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=373082","titulo":"Ordenanza fiscal reguladora del IIVTNU de Laredo, BOC n.º 112 de 10-06-2022","fecha":"2022-06-10","leido":true},"estado":"V","notas":"Art. 3.5.1: «En las transmisiones de terrenos ... realizadas a título lucrativo por causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes y adoptantes, la cuota íntegra del impuesto se verá bonificada en un porcentaje del 95%». 3.5.2: se equipara al cónyuge la pareja inscrita en registro público con más de 3 años de…"},{"ine":"39052","nombre":"Piélagos","ccaa":"Cantabria","tipo":0.21,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.6,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"antes de la liquidación o en recurso de reposición","articulo":"art. 5.1 y 5.3"},"fuente":{"url":"https://boc.cantabria.es/boces/verAnuncioAction.do?idAnuBlob=415298","titulo":"Ordenanza fiscal reguladora del IIVTNU de Piélagos (texto íntegro), BOC n.º 18 de 28-01-2025","fecha":"2025-01-28","leido":true},"estado":"V","notas":"Art. 5.1: «Tendrán una bonificación del 60% de la cuota íntegra del impuesto las transmisiones de terrenos ... realizados a título lucrativo por causa de muerte a favor de los/as descendientes y adoptados/as, los/las cónyuges, y los/as ascendientes y adoptantes y parejas de hecho» (parejas inscritas más de 3 años en registro municipal o autonómico). No…"},{"ine":"41017","nombre":"Bormujos","ccaa":"Andalucía","tipo":0.285,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":true,"pctResto":null,"convivencia":true,"empadronado":true,"mantener":null,"rogada":false,"plazo":"declaración voluntaria dentro de los plazos del art. 13 (no tras requerimiento)","articulo":"art. 11","limiteValorCatastral":null,"condicion":"TOPE: «En ningún caso, la cuantía de la bonificación podrá ser superior a la cantidad de 1.200,00 euros por transmisión». Vivienda familiar = aquella en la que el heredero haya convivido con el causante los dos años anteriores al fallecimiento (certificado de empadronamiento).","viviendaHeredero":false},"bonifDesconocida":false,"fuente":{"url":"https://transparencia.bormujos.es/export/sites/bormujos/es/transparencia/.galleries/IND-83-/TEXTO-ORDENANZA-FISCAL-CON-ADAPTACION-LO-2-2022.pdf","titulo":"Ordenanza fiscal del IIVTNU de Bormujos adaptada al RDL 26/2021 y a la LO 2/2022 (firmada 28/03/2022; portal de transparencia)","fecha":"2022-03-28","leido":true},"estado":"V","notas":"Art. 10: «El tipo de gravamen del impuesto será el 28,50 por ciento». Art. 11.1: 95 % si adquiere «la vivienda familiar» un descendiente de primer grado o adoptado, el cónyuge o un ascendiente de primer grado. Art. 11.2: vivienda familiar = «aquella en la cual se hubiera convivido con el causante los dos años anteriores al fallecimiento»; certificado de…"},{"ine":"41021","nombre":"Camas","ccaa":"Andalucía","tipo":0.2937,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":4,"rogada":true,"plazo":"6 meses prorrogables hasta 1 año (plazo de autoliquidación)","articulo":"art. 8.1","viviendaHeredero":true},"fuente":{"url":"https://admbop.dipusevilla.es/export/sites/bop/.galleries/Documentos-Anuncios-en-PDF/firmado-1735516901850-final-2aaf00fc-1.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (Camas), aprobación definitiva de la modificación, texto íntegro (BOP Sevilla n.º 251 de 30/12/2024)","fecha":"2024-12-30","leido":true},"estado":"V","notas":"Texto íntegro BOP 251/2024 (sustituye al de BOP 105/2022, de contenido equivalente). Art. 7: «El tipo de gravamen será único, quedando fijado en un 29,37 %». Art. 8.1: 95 % de la cuota íntegra a descendientes y adoptados, cónyuges, ascendientes y adoptantes si: (1) el inmueble es aquel en que el sujeto pasivo (HEREDERO) estuviera empadronado en el…"},{"ine":"41034","nombre":"Coria del Río","ccaa":"Andalucía","tipo":0.2999,"tipoPorAnios":[[5,0.2999],[10,0.3],[15,0.291],[null,0.2687]],"coeficientes":null,"bonif":{"pct":0.4,"tramos":{"base":"total","tramos":[[15000,0.4],[null,0.2]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":3,"rogada":true,"articulo":"art. 8"},"fuente":{"url":"https://transparencia.coriadelrio.es/export/sites/coriadelrio/es/transparencia/.galleries/IND-83-/O.-F.-N-05-IMPUESTO-SOBRE-INCREMENTO-VALOR-TERRENOS-NATURALEZA-URBANA-desde-10.06.2022.pdf","titulo":"Ordenanza fiscal nº 05 reguladora del IIVTNU (vigente desde 10-06-2022) · BOP Sevilla nº 131, 09-06-2022","fecha":"2022-06-09","leido":true},"estado":"V","notas":"HECHO: tipos por tramos 29,99 / 30 / 29,10 / 26,87 %; coeficientes = máximos del art. 107.4 con actualización anual; reducción 40 % cinco años (art. 6.3). Bonificación baja (40 %/20 %) con mantenimiento de 3 años."},{"ine":"41039","nombre":"Écija","ccaa":"Andalucía","tipo":0.28,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://www.foro-ciudad.com/sevilla/ecija/documento-21575.html","titulo":"Ordenanza fiscal reguladora del IIVTNU","fecha":null,"leido":false},"estado":"P","notas":"HECHO (fuente secundaria foro-ciudad, datos del Ministerio de Hacienda hasta 2021): tipo 28 % constante 2000-2021. INFERENCIA: probablemente se mantiene, pero no verificado en texto oficial. NO LOCALIZADO: ordenanza vigente y bonificación mortis causa."},{"ine":"41047","nombre":"Gines","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://admbop.dipusevilla.es/export/sites/bop/.galleries/Documentos-Anuncios-en-PDF/firmado-1675468822104-final-905792245-1129.pdf","titulo":"Ordenanza fiscal n.º 4 reguladora del IIVTNU (Gines), aprobación definitiva de la modificación, texto íntegro (BOP Sevilla n.º 28 de 04/02/2023)","fecha":"2023-02-04","leido":true},"estado":"P","notas":"Texto 2023 leído: art. 11 «tipo del 30 %»; coeficientes máximos legales con actualización (art. 5.3); art. 12 solo bonificación por operaciones de fusión/escisión: SIN bonificación mortis causa. PERO hay una modificación posterior: BOP Sevilla n.º 243 de 17/12/2024 (CVE BOP-SE-2024-243014), cuyo PDF no ha podido extraerse (solo cabeceras; probablemente…"},{"ine":"41053","nombre":"Lebrija","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.lebrija.es/export/sites/lebrija/.galleries/documentos-temas/Galeria-de-descargas-BANDOS/BANDOS-Documentos-Bandos/2023-24-Ordenanzas-Fiscales.pdf","titulo":"Ordenanzas fiscales 2023-24 del Ayuntamiento de Lebrija, Ordenanza n.º 2 IIVTNU (recopilación municipal, 16/10/2023)","fecha":"2023-10-16","leido":true},"estado":"V","notas":"Art. 7.1: «tipo de gravamen del 30%». Art. 6.3: coeficientes del art. 107.4 TRLHL con actualización anual → null. Sin bonificación mortis causa: la única bonificación es hasta el 95 % por especial interés municipal declarado por el Pleno (art. 7). Recopilación municipal 2023-24 (no BOP); Lebrija delegó la gestión en el OPAEF en 2025: no verificado si…"},{"ine":"41059","nombre":"Mairena del Aljarafe","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://admbop.dipusevilla.es/export/sites/bop/.galleries/Documentos-Anuncios-en-PDF/firmado-1689548502645-final-791f0bfe-1.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (Mairena del Aljarafe), aprobación definitiva de la modificación, texto íntegro (BOP Sevilla n.º 163 de 17/07/2023)","fecha":"2023-07-17","leido":true},"estado":"V","notas":"Texto íntegro publicado (arts. 1-16). Art. 12: tipo 30 %. Art. 8.2: «aplicándose los coeficientes máximos establecidos por norma de rango legal vigentes en cada momento». Sin bonificación por herencia: la única mención es art. 12 «las bonificaciones que se establezcan en esta Ordenanza», y no se establece ninguna. La versión colgada en la web municipal…"},{"ine":"41065","nombre":"Morón de la Frontera","ccaa":"Andalucía","tipo":0.3,"tipoPorAnios":[[5,0.3],[10,0.2769],[null,0.2618]],"coeficientes":null,"bonif":null,"fuente":{"url":"https://ayto-moron.transparencialocal.gob.es/es_ES/media/30328","titulo":"Ordenanza fiscal del IIVTNU","fecha":null,"leido":false},"estado":"P","notas":"HECHO: texto de 2019 (anterior al RDL 26/2021): tipos 30 / 27,69 / 26,18 / 26,18 %, porcentajes anuales antiguos, sin bonificación mortis causa. PENDIENTE: versión adaptada 2022; los tipos y la ausencia de bonificación podrían haberse mantenido (INFERENCIA)."},{"ine":"41079","nombre":"La Puebla del Río","ccaa":"Andalucía","tipo":0.15,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"suelo","tramos":[[30000,0.95],[50000,0.5],[null,0.2]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"plazo":"plazo de la declaración","articulo":"art. 7.3"},"fuente":{"url":"https://admbop.dipusevilla.es/export/sites/bop/.galleries/Documentos-Anuncios-en-PDF/firmado-1739750457101-final-63eab082-1.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (La Puebla del Río), aprobación definitiva de la modificación, texto íntegro (BOP Sevilla de 17/02/2025, CVE BOP-SE-2025-032014; Pleno 21/11/2024)","fecha":"2025-02-17","leido":true},"estado":"P","notas":"Texto íntegro leído. Art. 7.1: «tipo de gravamen único del 15%» (muy bajo; contrastar). Art. 6: «Este municipio aplicará los coeficientes previstos en el art 107.4 del TRLHL conforme a la actualización anual» → null. Art. 7.3: bonificación por causa de muerte a descendientes y adoptados, cónyuges y ascendientes y adoptantes, tabla por VALOR CATASTRAL…"},{"ine":"41081","nombre":"La Rinconada","ccaa":"Andalucía","tipo":0.2851,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":true,"empadronado":true,"mantener":2,"rogada":true,"articulo":"art. 5"},"fuente":{"url":"https://transparencia.larinconada.es/export/sites/larinconada/es/transparencia/.galleries/IND-83-/publicacion-bop-aprobacion-definitiva-modif-ordenanzas-fiscales-2024.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU (modificación ordenanzas 2024) · BOP Sevilla nº 292, 20-12-2023","fecha":"2023-12-20","leido":true},"estado":"V","notas":"HECHO: tipo 28,51 % (art. 7.1); coeficientes los del art. 107.4 TRLRHL con actualización anual (art. 6.3). Bonificación 90 % limitada a parientes de primer grado, con convivencia 2 años y mantenimiento 2 años. Leído en el BOP de modificación para 2024 (texto parcial de la ordenanza)."},{"ine":"43014","nombre":"Amposta","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":[[10,0.3],[15,0.24],[null,0.22]],"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DACP","viviendaHabitual":true,"convivencia":true,"empadronado":true,"mantener":5,"rogada":true,"plazo":"6 meses desde el devengo, prorrogable a 1 año","articulo":"art. 9.1"},"fuente":{"url":"https://www.amposta.cat/documents/ordenanca-04-fiscal-impost-sobre-lincrement-del-valor-dels-terrenys-de-naturalesa-urbana-(iivtnu)-2026.pdf","titulo":"Ordenança fiscal 04 IIVTNU 2026 — Ajuntament d'Amposta (modificació 31-03-2025)","fecha":"2025-03-31","leido":true},"estado":"V","notas":"Art. 7: tipo 30 % hasta 10 años, 24 % de 11 a 15, 22 % de 16 a 20. Art. 9.1: 95 % si concurren todos: título mortis causa; vivienda habitual del causante 5 años ininterrumpidos (padrón); adquirentes descendientes, adoptados, cónyuge, pareja de hecho o ascendientes; convivencia del sujeto pasivo con el causante 2 años ininterrumpidos; mantener como…"},{"ine":"43037","nombre":"Calafell","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC1","viviendaHabitual":false,"pctResto":null,"convivencia":false,"empadronado":true,"mantener":5,"rogada":true,"plazo":"6 mesos prorrogables fins a 1 any","articulo":"art. 14.1","limiteValorCatastral":null,"condicion":"Fins al 95 % segons ingressos de la unitat familiar (en SMI) i valor cadastral del sòl (≤30.000 / 30.000-60.000 / >60.000 €): ≤2 SMI 95 %; >2-2,5 SMI 85/80/75 %; >2,5-3,5 SMI 60/55/50 %; >3,5-4 SMI 50/45/40 %; >4-4,5 SMI 40/35/30 %. Requereix que sigui l'habitatge habitual del subjecte passiu (adquirent) almenys els 2 anys anteriors","viviendaHeredero":true},"bonifDesconocida":false,"fuente":{"url":"https://calafell.cat/sites/default/files/2025-08/of1.4_impost-sobre-increment-valors-terrenys-modificat-2025.pdf","titulo":"Ordenança fiscal OF 1.4 IIVTNU (versió 'modificat 2025', web municipal de Calafell)","fecha":"2025-08-01","leido":true},"estado":"V","notas":"Art. 13: tipus 30 %. Art. 8: taula pròpia (rang coherent amb els màxims 2024) amb clàusula 8.6: si supera el nou màxim legal s'aplica aquest → coeficients=null (màxims). Art. 14.1: bonificació 'de fins el 95%' a descendents de primer grau i adoptats, cònjuges i ascendents de primer grau i adoptants (el resum esmenta també parella de fet inscrita: no…"},{"ine":"43123","nombre":"Reus","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://seu.reus.cat/seu/carpetaCiutadana/tramit/24614","titulo":"Seu electrònica Ajuntament de Reus: trámite de bonificación del IIVTNU por transmisión mortis causa (remite al art. 10 de la Ordenança fiscal núm. 6)","fecha":null,"leido":true},"estado":"P","notas":"Porcentaje de la bonificación no localizado o no modelable: se calcula sin ella y se puede indicar a mano. Ficha del trámite: bonificación «pregada» (rogada) en transmisiones lucrativas por causa de muerte a favor de descendientes, ascendientes, cónyuges y parejas de hecho, exigiendo que el terreno corresponda al domicilio habitual (padrón); plazo 6…","noLocalizado":false,"bonifDesconocida":true},{"ine":"43155","nombre":"Tortosa","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"articulo":"art. 9.1"},"fuente":{"url":"https://www.tortosa.cat/webajt/seuelectronica/OF/Impostos/I5.pdf","titulo":"Ordenança fiscal núm. I-5 reguladora de l'IIVTNU · BOP Tarragona, inserció 2022-03445","fecha":"2022-05-09","leido":true},"estado":"V","notas":"HECHO: tipo 30 % (art. 8.1); coeficiente «el màxim actualitzat vigent» del art. 107.4 con modificación automática (art. 7.6) → coefPropios = null. Bonificación 95 % vivienda habitual del causante (empadronamiento sin plazo), incluye descendientes de segundo grado (nietos). El resumen la califica de no rogada, pero no es literal (null). DUDA: texto de…"},{"ine":"43161","nombre":"Valls","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.15,0.15,0.14,0.14,0.16,0.18,0.19,0.2,0.19,0.15,0.12,0.1,0.09,0.09,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":null,"bonifDesconocida":false,"fuente":{"url":"https://seu.valls.cat/sites/default/files/4b.%20REGULADORA%20DE%20L%27IMPOST%20SOBRE%20L%27INCREMENT%20DE%20VALOR%20DELS%20TERRENYS%20DE%20NATURALESA%20URBANA%2028.01.2026.pdf","titulo":"Ordenança fiscal 4 reguladora de l'IIVTNU (text 28.01.2026; modificació aprovada definitivament, BOPT 10/12/2025)","fecha":"2026-01-28","leido":true},"estado":"V","notas":"Art. 13: tipus 30 %. Coeficients: taula B aplicable des del 28/01/2026 = màxims 2024 (taula A, de l'1 al 27/01/2026, diferent). bonif=null per a habitatges: l'art. 14 només bonifica (95 %) la transmissió mortis causa del LOCAL on el causant exercia de forma habitual, personal i directa activitats empresarials o professionals, a favor de descendents i…"},{"ine":"43171","nombre":"Vila-seca","ccaa":"Cataluña","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.4,"tramos":null,"parentesco":"DACP","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":true,"articulo":"art. 6"},"fuente":{"url":"https://vila-seca.cat/images/1.4.%20IIVTNU.pdf","titulo":"Ordenança fiscal 1.4 Impost sobre l'increment del valor dels terrenys de naturalesa urbana","fecha":"2021-12-23","leido":true},"estado":"V","notas":"HECHO: tipo único 30 % (art. 8.1); tabla legal con cláusula «en cas de variació serà d'aplicació directa el coeficient legal màxim» (art. 7.B.1) → coefPropios = null; reducción 30 % (art. 8.3). Bonificación dual: 40 % general (primer grado) y 95 % solo cónyuge/pareja de hecho sobre vivienda habitual; pct = 0,40 es el general (ver requisitos). DUDA: la…"},{"ine":"45161","nombre":"Seseña","ccaa":"Castilla-La Mancha","tipo":0.25,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"bonifDesconocida":true,"fuente":{"url":"https://ayto-sesena.org/documentos/ordenanzas/ordenanza_fiscal_reguladora_del_impuesto_sobre_el_incremento_de_valor_de_los_terrenos_de_naturaleza_urbana.pdf","titulo":"Ordenanza fiscal del IIVTNU de Seseña (texto antiguo, sin fecha; web municipal)","fecha":null,"leido":true},"estado":"P","notas":"El texto leído es ANTERIOR al RDL 26/2021 (porcentajes anuales 3,7/2,2/2,1/2 %; tipos por periodo 25 % de 1 a 5 años, 22 % hasta 10, 20 % hasta 15, 18 % hasta 20) y su art. 10 dice que «La cuota íntegra no tendrá más bonificaciones que la prevista de forma obligatoria». La página de ordenanzas municipales cita una versión de 2022 (posible…"},{"ine":"46017","nombre":"Alzira","ccaa":"Comunitat Valenciana","tipo":0.285,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.5,"tramos":null,"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":null,"rogada":null,"plazo":null,"articulo":"art. 14"},"fuente":{"url":"https://www.alzira.es/wp-content/uploads/ordenances-i-reglaments/ordenanza-fiscal-reguladora-del-impuesto-sobre-incremento-del-valor-de-los-terrenos-de-naturaleza-urbana.pdf","titulo":"Ordenanza fiscal reguladora del IIVTNU de Alzira (Pleno 23-02-2022; BOP Valencia nº 85, 05-05-2022)","fecha":"2022-05-05","leido":true},"estado":"V","notas":"Tipo 28,50 % (art. 13). Coeficientes: anexo I web = máximos RDL 8/2023 → null. Art. 14: «a título lucrativo a causa de muerte a favor de los descendientes y adoptados, los cónyuges y los ascendientes tendrán una bonificación del 50 % de la cuota íntegra»; sin vivienda habitual ni permanencia. Rogada: no consta."},{"ine":"46021","nombre":"Aldaia","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"total","tramos":[[75125,0.95],[90150,0.9],[105175,0.8],[120200,0.7],[135227,0.6],[150252,0.5],[null,0.4]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":4,"rogada":true,"plazo":"1 mes desde la notificación de la liquidación (por remisión; verificar)","articulo":"art. 6"},"fuente":{"url":"https://transparencia.aldaia.es/sites/default/files/documents/field_collection_item/1520/or_definitiva_iivt_24.pdf","titulo":"Ordenanza fiscal del IIVTNU de Aldaia (aprobación definitiva, BOP Valencia nº 2, 03-01-2024)","fecha":"2024-01-03","leido":true},"estado":"V","notas":"Tipo 30 % (art. 15.1). Art. 6: bonificación rogada a descendientes/adoptados, cónyuges y ascendientes/adoptantes (art. 6.3 limita a descendientes y ascendientes de segundo grado) por la vivienda habitual del causante (empadronado al fallecer), según el valor del bien transmitido: <75.125 € 95 %; hasta 90.150 € 90 %; 105.175 € 80 %; 120.200 € 70 %;…"},{"ine":"46078","nombre":"Burjassot","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":null,"fuente":{"url":"https://www.burjassot.org/wp-content/uploads/2019/01/C4-ORDENANZA-REGULADORA-DEL-IMPUESTO-SOBRE-EL-INCREMENTO-DE-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA.pdf","titulo":"Ordenanza C4 del IIVTNU de Burjassot (texto con última modif. 2014)","fecha":"2014-12-31","leido":true},"estado":"P","notas":"Único texto enlazado por la web municipal es anterior al RDL 26/2021 (porcentajes anuales). Tipo 30 % (art. 4.10). Sin bonificación mortis causa en ese texto. Falta versión adaptada; bonif null no confirmado para 2026."},{"ine":"46102","nombre":"Quart de Poblet","ccaa":"Comunitat Valenciana","tipo":0.26,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.6,"tramos":{"base":"suelo","tramos":[[20000,0.6],[30000,0.4],[null,0.2]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":4,"rogada":true,"articulo":"art. 6.I"},"fuente":{"url":"https://cdn.digitalvalue.es/quartdepoblet/assets2/67c6b4a115cdeed01ba305b8","titulo":"Ordenanza nº 3 reguladora del IIVTNU","fecha":"2025-02-04","leido":true},"estado":"V","notas":"HECHO: tipo 26 % (art. 13). Tabla de 21 coeficientes = tabla legal 2023 (0,15 … 0,40) con cláusula «el máximo actualizado vigente … se entenderán automáticamente modificados» (art. 8.3) → coefPropios = null. Bonificación escalonada por VC del suelo (60/40/20 %), 1 año de empadronamiento del causante, mantenimiento 4 años. Edicto firmado 04-02-2025…"},{"ine":"46169","nombre":"Mislata","ccaa":"Comunitat Valenciana","tipo":0.1956,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":null,"tramos":{"base":"total","tramos":[[40699,0.75],[81398,0.5],[122097,0.25],[null,0]]},"parentesco":"DAC","viviendaHabitual":false,"convivencia":false,"empadronado":false,"mantener":2,"rogada":null,"plazo":null,"articulo":"art. 7.1"},"fuente":{"url":"https://www.mislata.es/sites/default/files/2024-01/edit/ORDENANZA%20FISCAL%20IIVTNU-texto%20consolidado%20a%2016-01-24.pdf","titulo":"Ordenanza fiscal del IIVTNU de Mislata (texto consolidado a 16-01-2024; última modif. Pleno 31-01-2022, BOP 11-04-2022)","fecha":"2024-01-16","leido":true},"estado":"V","notas":"Tipo 19,56 % (art. 6). Coeficientes = tabla máxima vigente con remisión a la actualización legal → null. Art. 7.1: bonificación mortis causa a descendientes/adoptados, cónyuges, ascendientes/adoptantes SOLO para viviendas y plazas de aparcamiento, por valor catastral: viviendas ≤40.699 € 75 %, 40.700-81.398 € 50 %, 81.399-122.097 € 25 %, más: 0 %; plazas…"},{"ine":"46220","nombre":"Sagunt/Sagunto","ccaa":"Comunitat Valenciana","tipo":0.3,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":null,"tramos":{"base":"total","tramos":[[64000,0.95],[128000,0.75],[null,0.5]]},"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":null,"rogada":true,"plazo":"en la autoliquidación, dentro de su plazo","articulo":"art. 9"},"fuente":{"url":"https://aytosagunto.es/media/14ggwaha/ivtnu-2022b.pdf","titulo":"Ordenanza fiscal del IIVTNU de Sagunto (modif. 10-02-2022, BOP Valencia nº 72, 13-04-2022)","fecha":"2022-04-13","leido":true},"estado":"P","notas":"Tipo: el texto 2022 leído fija 22 % (art. 8.1), pero el Ayuntamiento aprobó en oct. 2023 subirlo al 30 % con efectos 01-01-2024 (noticia municipal https://aytosagunto.es/va/actualitat/el-ple-aprova-provisionalment-la-modificacio-de-quatre-ordenances-fiscals/) y Hacienda publica 30 % para 2026 → 0,30; texto consolidado posterior no leído. Art. 9 (texto…"},{"ine":"46244","nombre":"Torrent","ccaa":"Comunitat Valenciana","tipo":0.28,"tipoPorAnios":null,"coeficientes":[0.14,0.13,0.14,0.14,0.16,0.17,0.16,0.12,0.1,0.09,0.08,0.08,0.08,0.08,0.09,0.09,0.1,0.13,0.17,0.23,0.4],"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":true,"mantener":2,"rogada":true,"plazo":"antes de terminar el periodo voluntario de pago de la liquidación","articulo":"art. 4.5"},"fuente":{"url":"https://torrent.es/wp-content/uploads/2025/03/Ordenanza-Fiscal_C_2025_IIVTNU.pdf","titulo":"Ordenanza fiscal C del IIVTNU de Torrent (última modif. BOP Valencia nº 5, 09-01-2025)","fecha":"2025-01-09","leido":true},"estado":"V","notas":"Tipo 28 % (art. 6.1; coincide con Hacienda). Coeficientes propios art. 5.3 (21 valores leídos; inferiores al máximo en varios tramos). Art. 4.5: «Cuando el incremento de valor se manifieste por causa de muerte, respecto de la transmisión de la propiedad de la vivienda habitual del causante … a favor de los descendientes o ascendientes, por naturaleza o…"},{"ine":"47010","nombre":"Arroyo de la Encomienda","ccaa":"Castilla y León","tipo":0.2,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.95,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":2,"rogada":null,"plazo":null,"articulo":"art. 13"},"fuente":{"url":"https://www.aytoarroyo.es/sites/default/files/2024-02/I-4%20IMPUESTO%20SOBRE%20EL%20INCREMENTO%20DE%20VALOR%20DE%20LOS%20TERRENOS%20DE%20NATURALEZA%20URBANA%202024.pdf","titulo":"Ordenanza fiscal I-4 reguladora del IIVTNU (Arroyo de la Encomienda), texto 2024 (última modificación BOP Valladolid 30-12-2022)","fecha":"2022-12-30","leido":true},"estado":"V","notas":"Art. 12.a: tipo 20 %. Art. 13: «Se bonificará en un 95 % en las transmisiones 'mortis causa' referentes a la vivienda habitual del causante, cuando el obligado tributario del Impuesto, heredero o legatario, sea el cónyuge, ascendiente o adoptante o descendiente o adoptado»; 95 % también para terrenos afectos a actividad empresarial individual del…"},{"ine":"47076","nombre":"Laguna de Duero","ccaa":"Castilla y León","tipo":0.3,"tipoPorAnios":null,"coeficientes":null,"bonif":{"pct":0.9,"tramos":null,"parentesco":"DAC","viviendaHabitual":true,"convivencia":false,"empadronado":false,"mantener":null,"rogada":false,"plazo":"autoliquidación en 6 meses prorrogables a 1 año (art. 13.1.b)","articulo":"art. 10"},"fuente":{"url":"https://www.lagunadeduero.org/wp-content/uploads/2025/01/20250122_ORDENANZA-FISCAL-DEL-IMPUESTO-SOBRE-EL-INCREMENTO-DEL-VALOR-DE-LOS-TERRENOS-DE-NATURALEZA-URBANA-1.2.02-.pdf","titulo":"Ordenanza fiscal 1.2.02 del IIVTNU (Laguna de Duero), aprobada 22-02-2022, versión web 22-01-2025","fecha":"2025-01-22","leido":true},"estado":"V","notas":"Art. 9.1: tipo 30 %. Art. 10.1: «Gozarán de una bonificación del 90 % de la cuota íntegra del impuesto, los sujetos pasivos que sean cónyuges, ascendientes o adoptantes así como descendientes y adoptados, en los supuestos de ... transmisiones ... por causa de muerte para inmuebles que constituyan la vivienda habitual, incluido garaje y trastero en su…"}];
+// __ORD_DATOS_FIN__
+// Parentesco de la bonificación: DAC (descendientes, ascendientes y cónyuge), DACP (+ pareja de hecho inscrita), todos; y variantes reales
+// encontradas en ordenanzas: C (solo cónyuge), CP (cónyuge o pareja), CD (cónyuge y descendientes), CDP (cónyuge, descendientes y pareja),
+// DAC1 / DACP1 (solo primer grado: hijos y padres, más cónyuge y, en DACP1, pareja) y D1 (solo hijos).
+// Una ordenanza con porcentajes distintos según el parentesco se describe con una lista de bonificaciones (bonif: [ {...}, {...} ]): se aplica la
+// primera cuyo parentesco coincide con el del heredero (p. ej., Santa Coloma de Gramenet: cónyuge o pareja 75 %; hijos convivientes 50 %).
+const PAR_TXT = { DAC: "descendientes, ascendientes y cónyuge", DACP: "descendientes, ascendientes, cónyuge y pareja de hecho inscrita", todos: "cualquier heredero", C: "el cónyuge", CP: "el cónyuge o la pareja de hecho inscrita", CD: "el cónyuge y los descendientes", CDP: "el cónyuge, la pareja de hecho inscrita y los descendientes", DAC1: "hijos, padres y cónyuge (primer grado)", DACP1: "hijos, padres, cónyuge y pareja de hecho inscrita (primer grado)", D1: "los hijos (descendientes de primer grado)" };
+const alcanzaA = (cod) => ("a " + (PAR_TXT[cod] || PAR_TXT.DAC)).replace(/^a el /, "al ");
+function parentescoOk(cod, h) {
+  const l = linea(h), g = RELACIONES[h.relacion]?.grado;
+  switch (cod) {
+    case "todos": return true;
+    case "DACP": return DACP(h);
+    case "C": return l === "conyuge";
+    case "CP": return l === "conyuge" || l === "pareja";
+    case "CD": return l === "conyuge" || l === "desc";
+    case "CDP": return l === "conyuge" || l === "pareja" || l === "desc";
+    case "DAC1": return l === "conyuge" || ((l === "desc" || l === "asc") && g === 1);
+    case "DACP1": return l === "conyuge" || l === "pareja" || ((l === "desc" || l === "asc") && g === 1);
+    case "D1": return l === "desc" && g === 1;
+    default: return DAC(h);
+  }
+}
+export function ordenanzaDesdeDatos(d) {
+  const est = d.estado === "V" ? V : P;
+  const fuente = d.fuente && d.fuente.titulo ? d.fuente.titulo : "OF IIVTNU " + d.nombre;
+  const o = { nombre: d.nombre, ccaa: d.ccaa, ine: d.ine, tipo: Number(d.tipo), estadoTipo: est, datos: d };
+  if (Array.isArray(d.tipoPorAnios) && d.tipoPorAnios.length) o.tipoPorAnios = (a) => { for (const [hasta, t] of d.tipoPorAnios) if (hasta == null || a <= hasta) return Number(t); return Number(d.tipo); };
+  if (Array.isArray(d.coeficientes) && d.coeficientes.length === 21) o.coef = d.coeficientes.map(Number);
+  const lista = Array.isArray(d.bonif) ? d.bonif.filter(Boolean) : null;
+  // La bonificación no se puede aplicar sola (requisito que el programa no conoce —renta, edad, vivienda del heredero— o texto no localizado):
+  // se usa la que el abogado indique a mano en la ficha del inmueble; si no indica nada, 0 (cifra prudente) y se explica por qué.
+  o.manualBonif = !!(d.bonifDesconocida || (lista || [d.bonif]).some((B) => B && (B.condicion || B.viviendaHeredero)));
+  o.bonif = (c) => {
+    const h = c.heredero, pend = d.estado === "V" ? "" : " (texto pendiente de cotejo)";
+    const man = c.inmueble.bonifManual != null && c.inmueble.bonifManual !== "" && Number(c.inmueble.bonifManual) > 0 ? Math.min(0.95, Number(c.inmueble.bonifManual) / 100) : null;
+    if (d.bonifDesconocida) { const ref = fuente; return man != null && DACP(h) ? { pct: man, norma: `Bonificación introducida a mano (${ref}: no se ha podido comprobar la bonificación de la ordenanza)`, estado: P } : { pct: 0, norma: `${ref}: bonificación por herencia no comprobada; se calcula sin ella. Si la ordenanza la prevé, indícala a mano en la ficha del inmueble`, estado: P }; }
+    let B = d.bonif;
+    if (lista) {
+      B = lista.find((x) => parentescoOk(x.parentesco, h)) || null;
+      if (!B) { const arts = [...new Set(lista.map((x) => x.articulo).filter(Boolean))].join(", "); return { pct: 0, norma: `${arts ? arts + " " : ""}${fuente}: la bonificación solo alcanza ${lista.map((x) => alcanzaA(x.parentesco)).join("; ")}`, estado: est }; }
+    }
+    const ref = `${B && B.articulo ? B.articulo + " " : ""}${fuente}`;
+    if (!B) return { pct: 0, norma: `${ref}: sin bonificación por herencia${pend}`, estado: est };
+    if (!parentescoOk(B.parentesco, h)) return { pct: 0, norma: `${ref}: la bonificación solo alcanza ${alcanzaA(B.parentesco)}`, estado: est };
+    const esViv = !!c.inmueble.esViviendaHabitual;
+    let pct = Number(B.pct) || 0, nota = "";
+    if (B.viviendaHabitual && !esViv) { if (B.pctResto != null) { pct = Number(B.pctResto) || 0; nota = "otros inmuebles"; } else return { pct: 0, norma: `${ref}: solo la vivienda habitual del causante`, estado: est }; }
+    if (B.convivencia && h.convivio2anios !== true) return { pct: 0, norma: `${ref}: exige convivencia con el causante (dato no informado o no cumplido)`, estado: est };
+    if (B.empadronado && h.empadronadoMunicipio !== true && h.empadronadoMunicipio1anio !== true) return { pct: 0, norma: `${ref}: exige heredero empadronado en el municipio (dato no informado o no cumplido)`, estado: est };
+    if (B.limiteValorCatastral && Number(c.inmueble.valorCatastralTotal || 0) > Number(B.limiteValorCatastral)) return { pct: 0, norma: `${ref}: solo inmuebles con valor catastral hasta ${Number(B.limiteValorCatastral).toLocaleString("es-ES")} €`, estado: est };
+    if (B.tramos && Array.isArray(B.tramos.tramos) && !nota) { const v = B.tramos.base === "total" ? c.inmueble.valorCatastralTotal : c.inmueble.valorCatastralSuelo; pct = 0; for (const [lim, p] of B.tramos.tramos) if (lim == null || (v || 0) <= Number(lim)) { pct = Number(p) || 0; break; } }
+    if (B.condicion || B.viviendaHeredero) {
+      const req = [B.condicion, B.viviendaHeredero ? "que el inmueble sea la vivienda habitual del heredero" : ""].filter(Boolean).join("; ");
+      if (man != null) return { pct: Math.min(man, Math.max(pct, man)), norma: `${ref}: bonificación aplicada a mano porque exige ${req}`, estado: P };
+      return { pct: 0, norma: `${ref}: ${Math.round(pct * 100)} % si se cumple: ${req}. No se aplica de forma automática; si se cumple, indícalo a mano en la ficha del inmueble`, estado: est };
+    }
+    const cond = [nota, B.mantener ? `mantener ${B.mantener} años` : "", B.rogada ? "rogada" : "", B.plazo ? `plazo ${B.plazo}` : "", d.estado === "V" ? "" : "texto pendiente de cotejo"].filter(Boolean).join("; ");
+    return { pct: Math.min(0.95, Math.max(0, pct)), norma: `${ref}${cond ? " (" + cond + ")" : ""}`, estado: est };
+  };
+  return o;
+}
+for (const d of ORDENANZAS_DATOS) { if (!d || !d.ine || !d.nombre || d.noLocalizado) continue; const k = "D_" + d.ine; if (!ORDENANZAS[k]) ORDENANZAS[k] = ordenanzaDesdeDatos(d); }
+function aniosCompletos(a, b) { const x = new Date(a), y = new Date(b); let n = y.getFullYear() - x.getFullYear(); if (y.getMonth() < x.getMonth() || (y.getMonth() === x.getMonth() && y.getDate() < x.getDate())) n--; return Math.max(0, n); }
+function mesesCompletos(a, b) { const x = new Date(a), y = new Date(b); let m = (y.getFullYear() - x.getFullYear()) * 12 + (y.getMonth() - x.getMonth()); if (y.getDate() < x.getDate()) m--; return Math.max(0, m); }
+
+// ─────────── IIVTNU 2026 según los datos que los ayuntamientos comunican al Ministerio de Hacienda ───────────
+// Fuente: Ministerio de Hacienda, «Consulta de información impositiva municipal», ejercicio 2026, régimen común, datos a 01-09-2026:
+// 3C-IVTNU.pdf (48 capitales de provincia) y 3N-IVTNU.pdf (100 municipios no capitales de más de 50.000 habitantes).
+// https://serviciostelematicosext.hacienda.gob.es/SGFAL/ConsultaTipos/aspx/descargaPDF.aspx?URLPDF=2026/REGIMEN%20COMUN/3C-IVTNU.pdf (y …/3N-IVTNU.pdf)
+// t: tipo de gravamen en % (uno solo, o 21 valores por años de tenencia: <1, 1, …, 20); c: coeficientes de la ordenanza si difieren de los máximos
+// del art. 107.4 TRLRHL (se limitan siempre al máximo legal); red: reducción del valor catastral del art. 107.3 TRLRHL que declara el ayuntamiento
+// (no se aplica de forma automática: depende de la fecha de la valoración colectiva). Transcripción cotejada el 06-10-2026: los tipos de los
+// 48 municipios con ordenanza verificada en el BOP que figuran aquí coinciden todos, en los 21 tramos (test.mjs, sección 18). Hacienda no publica las bonificaciones: no están aquí.
+export const HACIENDA_IIVTNU_FUENTE = "Ministerio de Hacienda, Consulta de información impositiva municipal, IIVTNU 2026 (datos a 01-09-2026)";
+export const HACIENDA_IIVTNU_URL = "https://serviciostelematicosext.hacienda.gob.es/SGFAL/ConsultaTipos/html/portadaconsultasm.aspx";
+const HIC_0 = [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.1, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_1 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.18, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_2 = [0.14, 0.1, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.1, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_3 = [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.1, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.1, 0.12, 0.16, 0.22, 0.35];
+const HIC_4 = [0.05, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.2, 0.19, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_5 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.2, 0.19, 0.15, 0.12, 0.09, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_6 = [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.13, 0.1, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_7 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const HIC_8 = [0.14, 0.14, 0.13, 0.13, 0.15, 0.17, 0.18, 0.19, 0.18, 0.14, 0.11, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.12, 0.16, 0.21, 0.37];
+const HIC_9 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.2, 0.19, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.1, 0.12, 0.16, 0.22, 0.35];
+const HIC_10 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.12, 0.19, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_11 = [0.15, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.18, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.09, 0.1, 0.12, 0.16, 0.22, 0.35];
+const HIC_12 = [0.16, 0.15, 0.15, 0.15, 0.16, 0.18, 0.2, 0.22, 0.23, 0.21, 0.16, 0.13, 0.11, 0.1, 0.1, 0.1, 0.1, 0.12, 0.16, 0.22, 0.35];
+const HIC_13 = [0.15, 0.15, 0.14, 0.14, 0.14, 0.18, 0.19, 0.2, 0.19, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_14 = [0.14, 0.03, 0.06, 0.09, 0.12, 0.15, 0.16, 0.12, 0.15, 0.12, 0.1, 0.09, 0.09, 0.09, 0.09, 0.09, 0.1, 0.13, 0.17, 0.23, 0.4];
+const HIC_15 = [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.1, 0.15, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.1, 0.12, 0.16, 0.22, 0.35];
+const HIC_16 = [0.13, 0.13, 0.12, 0.12, 0.14, 0.16, 0.17, 0.18, 0.17, 0.13, 0.11, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.11, 0.15, 0.2, 0.35];
+export const HACIENDA_IIVTNU_2026 = {
+  "02003": { n: "Albacete", t: 27.44 },
+  "03009": { n: "Alcoy/Alcoi", t: 29 },
+  "03014": { n: "Alicante/Alacant", t: 30 },
+  "03031": { n: "Benidorm", t: 30, c: HIC_0 },
+  "03065": { n: "Elche/Elx", t: 30 },
+  "03066": { n: "Elda", t: 29, c: HIC_1 },
+  "03099": { n: "Orihuela", t: 28 },
+  "03122": { n: "San Vicente del Raspeig/Sant Vicent del Raspeig", t: 28 },
+  "03133": { n: "Torrevieja", t: 30, c: HIC_2 },
+  "04013": { n: "Almería", t: 27 },
+  "04079": { n: "Roquetas de Mar", t: 23 },
+  "04902": { n: "Ejido (El)", t: 29 },
+  "05019": { n: "Ávila", t: 20, c: HIC_1 },
+  "06015": { n: "Badajoz", t: 25.74 },
+  "06083": { n: "Mérida", t: 30 },
+  "07011": { n: "Calvià", t: 28 },
+  "07026": { n: "Eivissa", t: 30, c: HIC_3 },
+  "07040": { n: "Palma", t: 18 },
+  "08015": { n: "Badalona", t: 30 },
+  "08019": { n: "Barcelona", t: 30, c: HIC_4 },
+  "08056": { n: "Castelldefels", t: 30 },
+  "08073": { n: "Cornellà de Llobregat", t: 30 },
+  "08096": { n: "Granollers", t: 30 },
+  "08101": { n: "Hospitalet de Llobregat (L')", t: 30 },
+  "08113": { n: "Manresa", t: 30 },
+  "08121": { n: "Mataró", t: 30 },
+  "08124": { n: "Mollet del Vallès", t: 30 },
+  "08169": { n: "Prat de Llobregat (El)", t: 30 },
+  "08184": { n: "Rubí", t: 30 },
+  "08187": { n: "Sabadell", t: 30 },
+  "08200": { n: "Sant Boi de Llobregat", t: 29.6 },
+  "08205": { n: "Sant Cugat del Vallès", t: 30 },
+  "08245": { n: "Santa Coloma de Gramenet", t: 30 },
+  "08266": { n: "Cerdanyola del Vallès", t: 30, c: HIC_5 },
+  "08279": { n: "Terrassa", t: 30 },
+  "08298": { n: "Vic", t: 30 },
+  "08301": { n: "Viladecans", t: 30 },
+  "08307": { n: "Vilanova i la Geltrú", t: [20.65,20.6,20.6,20.6,20.6,20.6,21.65,30,30,30,30,30,30,30,30,30,30,30,30,29.42,24.78], c: HIC_6 },
+  "09059": { n: "Burgos", t: 21 },
+  "10037": { n: "Cáceres", t: 30, c: HIC_0 },
+  "11004": { n: "Algeciras", t: 30 },
+  "11012": { n: "Cádiz", t: 30 },
+  "11015": { n: "Chiclana de la Frontera", t: 30 },
+  "11020": { n: "Jerez de la Frontera", t: 30 },
+  "11022": { n: "Línea de la Concepción (La)", t: 30, c: HIC_0 },
+  "11027": { n: "Puerto de Santa María (El)", t: 30, c: HIC_0 },
+  "11031": { n: "San Fernando", t: 30 },
+  "11032": { n: "Sanlúcar de Barrameda", t: 30 },
+  "12040": { n: "Castelló de la Plana", t: [21,21,21,21,21,21,21,21,21,21,21,27,27,27,27,27,27,27,27,27,27], c: HIC_0 },
+  "12135": { n: "Vila-real", t: 30 },
+  "13034": { n: "Ciudad Real", t: [30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,29.94,29.94,29.94,29.94,29.94], c: HIC_0 },
+  "14021": { n: "Córdoba", t: 27.52, c: HIC_0 },
+  "15030": { n: "Coruña (A)", t: 25 },
+  "15036": { n: "Ferrol", t: [26,26,26,26,26,26,24,24,24,24,24,22,22,22,22,22,20,20,20,20,20] },
+  "15078": { n: "Santiago de Compostela", t: 22, c: HIC_1 },
+  "16078": { n: "Cuenca", t: 30 },
+  "17079": { n: "Girona", t: 30 },
+  "18087": { n: "Granada", t: 30 },
+  "18140": { n: "Motril", t: 25.5 },
+  "19130": { n: "Guadalajara", t: [30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,25,18], c: HIC_0 },
+  "21041": { n: "Huelva", t: 30 },
+  "22125": { n: "Huesca", t: 0, c: HIC_7 },
+  "23050": { n: "Jaén", t: 29 },
+  "23055": { n: "Linares", t: [29,29,29,29,29,29,28,28,28,28,28,27,27,27,27,27,27,27,27,27,27], c: HIC_3 },
+  "24089": { n: "León", t: 30, c: HIC_1 },
+  "24115": { n: "Ponferrada", t: 27, c: HIC_1 },
+  "25120": { n: "Lleida", t: 30 },
+  "26089": { n: "Logroño", t: 30, c: HIC_8 },
+  "27028": { n: "Lugo", t: [28,28,28,28,28,28,27,27,27,27,27,27,27,27,27,27,27,27,27,27,27], c: HIC_9 },
+  "28005": { n: "Alcalá de Henares", t: 24 },
+  "28006": { n: "Alcobendas", t: 29.5, c: HIC_0 },
+  "28007": { n: "Alcorcón", t: [30,30,30,30,30,30,29,29,29,29,29,28,28,28,28,28,27,27,27,27,27] },
+  "28013": { n: "Aranjuez", t: 11 },
+  "28014": { n: "Arganda del Rey", t: 25, c: HIC_1 },
+  "28022": { n: "Boadilla del Monte", t: 24, c: HIC_0 },
+  "28045": { n: "Colmenar Viejo", t: 13, red: 15 },
+  "28047": { n: "Collado Villalba", t: 30 },
+  "28049": { n: "Coslada", t: 13.35, c: HIC_0 },
+  "28058": { n: "Fuenlabrada", t: [30,30,30,30,30,30,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8,13.8], c: HIC_10 },
+  "28065": { n: "Getafe", t: [29,29,29,29,29,29,27,27,27,27,27,27,25,25,25,25,24,24,24,24,23] },
+  "28074": { n: "Leganés", t: [27,27,27,27,27,27,26,26,26,26,26,26,26,26,26,26,26,26,26,26,25], c: HIC_0 },
+  "28079": { n: "Madrid", t: 29 },
+  "28080": { n: "Majadahonda", t: 20, c: HIC_11 },
+  "28092": { n: "Móstoles", t: 25 },
+  "28106": { n: "Parla", t: 30, c: HIC_0 },
+  "28113": { n: "Pinto", t: 30, c: HIC_1 },
+  "28115": { n: "Pozuelo de Alarcón", t: 29 },
+  "28123": { n: "Rivas-Vaciamadrid", t: 30 },
+  "28127": { n: "Rozas de Madrid (Las)", t: 27 },
+  "28134": { n: "San Sebastián de los Reyes", t: 22.7 },
+  "28148": { n: "Torrejón de Ardoz", t: 30, c: HIC_1 },
+  "28161": { n: "Valdemoro", t: [30,30,30,30,30,30,29,29,29,29,29,28,28,28,28,28,28,28,28,28,28], red: 4 },
+  "28903": { n: "Tres Cantos", t: 17.5 },
+  "29025": { n: "Benalmádena", t: 27.5 },
+  "29051": { n: "Estepona", t: 20 },
+  "29054": { n: "Fuengirola", t: 25, c: HIC_0 },
+  "29067": { n: "Málaga", t: 29 },
+  "29069": { n: "Marbella", t: 29 },
+  "29070": { n: "Mijas", t: [30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,22] },
+  "29082": { n: "Rincón de la Victoria", t: 30 },
+  "29094": { n: "Vélez-Málaga", t: 29 },
+  "29901": { n: "Torremolinos", t: 28, c: HIC_12 },
+  "30016": { n: "Cartagena", t: 30 },
+  "30024": { n: "Lorca", t: 30, c: HIC_1 },
+  "30027": { n: "Molina de Segura", t: 30 },
+  "30030": { n: "Murcia", t: 30 },
+  "32054": { n: "Ourense", t: 26 },
+  "33004": { n: "Avilés", t: 22, red: 10 },
+  "33024": { n: "Gijón/Xixón", t: [25,25,25,25,25,25,22,22,22,22,22,22,22,22,22,22,22,22,22,22,18], c: HIC_0 },
+  "33044": { n: "Oviedo", t: 20, c: HIC_1 },
+  "33066": { n: "Siero", t: 30 },
+  "34120": { n: "Palencia", t: 29.8 },
+  "35004": { n: "Arrecife", t: 11, red: 8 },
+  "35016": { n: "Palmas de Gran Canaria (Las)", t: 30 },
+  "35019": { n: "San Bartolomé de Tirajana", t: 24 },
+  "35022": { n: "Santa Lucía de Tirajana", t: 28, c: HIC_1 },
+  "35026": { n: "Telde", t: 29, c: HIC_1 },
+  "36038": { n: "Pontevedra", t: 21 },
+  "36057": { n: "Vigo", t: 30 },
+  "37274": { n: "Salamanca", t: 30 },
+  "38001": { n: "Adeje", t: 30 },
+  "38006": { n: "Arona", t: 28 },
+  "38017": { n: "Granadilla de Abona", t: 28, red: 15 },
+  "38023": { n: "San Cristóbal de La Laguna", t: 30, c: HIC_13 },
+  "38038": { n: "Santa Cruz de Tenerife", t: 30 },
+  "39075": { n: "Santander", t: 21 },
+  "39087": { n: "Torrelavega", t: 30 },
+  "40194": { n: "Segovia", t: 15 },
+  "41004": { n: "Alcalá de Guadaíra", t: 30 },
+  "41038": { n: "Dos Hermanas", t: 26.4 },
+  "41091": { n: "Sevilla", t: 26.53 },
+  "41095": { n: "Utrera", t: 28 },
+  "42173": { n: "Soria", t: 18, c: HIC_14 },
+  "43123": { n: "Reus", t: 30 },
+  "43148": { n: "Tarragona", t: 30 },
+  "44216": { n: "Teruel", t: 30, c: HIC_15 },
+  "45165": { n: "Talavera de la Reina", t: 29, c: HIC_1 },
+  "45168": { n: "Toledo", t: [29.88,29.88,29.88,29.88,29.88,29.88,28.88,28.88,28.88,28.88,28.88,26.89,26.89,26.89,26.89,26.89,25.9,25.9,25.9,25.9,25.9] },
+  "46131": { n: "Gandia", t: 30 },
+  "46190": { n: "Paterna", t: 30 },
+  "46220": { n: "Sagunto/Sagunt", t: 30 },
+  "46244": { n: "Torrent", t: 28, c: HIC_0 },
+  "46250": { n: "València", t: 29.7 },
+  "47186": { n: "Valladolid", t: 21.76, c: HIC_16 },
+  "49275": { n: "Zamora", t: 30 },
+  "50297": { n: "Zaragoza", t: 28 },
+  "51001": { n: "Ceuta", t: 27, c: HIC_0 },
+  "52001": { n: "Melilla", t: 29, c: HIC_1 },
+};
+export function haciendaIIVTNU(ine) {
+  const h = ine && HACIENDA_IIVTNU_2026[String(ine)]; if (!h) return null;
+  const tipos = Array.isArray(h.t) ? h.t.map((x) => x / 100) : Array(21).fill(h.t / 100);
+  return { ine: String(ine), nombre: h.n, tipos, coef: h.c || null, red: h.red || 0 };
+}
+
+export function calcularPlusvalia({ inmueble, titulares, fecha, caudalTotal }) {
+  const ord = ORDENANZAS[inmueble.municipio] || ORDENANZAS.OTRO;
+  const alertas = [];
+  // Robustez (pruebas exhaustivas de 04-10-2026): datos fuera de rango no producen cuotas negativas, NaN ni tipos por encima del máximo legal
+  const fAdq = inmueble.adquisicion && inmueble.adquisicion.fecha;
+  const fAdqOk = typeof fAdq === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fAdq) && !Number.isNaN(Date.parse(fAdq + "T12:00:00Z")) && fAdq <= fecha;
+  if (!fAdqOk) alertas.push(`Fecha de adquisición del causante ${fAdq ? "no válida o posterior al fallecimiento (" + fAdq + ")" : "sin indicar"}: se aplica el coeficiente máximo de la tabla (cálculo prudente). Corrígela con el título de adquisición.`);
+  const anios = fAdqOk ? aniosCompletos(fAdq, fecha) : 20;
+  // Fuente del tipo, por este orden: el introducido a mano (municipio sin ordenanza incorporada), la ordenanza incorporada (cotejada con los datos
+  // de Hacienda 2026 si existen), los datos que el ayuntamiento comunica a Hacienda para 2026 y, sin nada de lo anterior, el máximo legal del 30 %.
+  const conOrd = inmueble.municipio !== "OTRO" && !!ORDENANZAS[inmueble.municipio];
+  // Régimen foral (Álava, Gipuzkoa, Navarra, Bizkaia): el de la ordenanza o, sin ordenanza, el de la provincia del código INE
+  const F = conOrd ? (ord.regimen ? PLUSVALIA_FORAL[ord.regimen] : ord.ine ? regimenPlusvalia(ord.ine) : null) : regimenPlusvalia(inmueble.ine);
+  const tipoMaxLegal = F ? F.tipoMax : 0.30, normaTipoMax = F ? F.normaTipo : "art. 108.1 TRLRHL";
+  const manual = !conOrd && inmueble.tipoManual != null && inmueble.tipoManual !== "";
+  const hac = fecha >= "2026-01-01" && !F ? haciendaIIVTNU(inmueble.ine) : null; // Hacienda solo publica el régimen común
+  const iA = Math.min(anios, 20), pc = (t) => (Math.round(t * 10000) / 100).toLocaleString("es-ES") + " %";
+  const tOrd = conOrd ? (ord.tipoFecha ? ord.tipoFecha(fecha, anios) : ord.tipoPorAnios ? ord.tipoPorAnios(anios) : ord.tipo) : F ? F.tipoMax : ord.tipo;
+  let tipoBruto = tOrd, fuenteTipo = conOrd ? "ordenanza" : "maximo", estadoTipo = !conOrd && F ? P : ord.estadoTipo;
+  if (manual) { tipoBruto = Number(inmueble.tipoManual) / 100; fuenteTipo = "manual"; }
+  else if (conOrd && hac && Math.abs(hac.tipos[iA] - tOrd) > 0.00005) {
+    const tH = hac.tipos[iA];
+    if (ord.estadoTipo !== V) { tipoBruto = tH; fuenteTipo = "hacienda"; estadoTipo = V; alertas.push(`Tipo de gravamen del ${pc(tH)}: es el que el Ayuntamiento de ${ord.nombre} comunica a Hacienda para 2026 (la ordenanza incorporada, pendiente de cotejo, indicaba ${pc(tOrd)}).`); }
+    else { tipoBruto = Math.max(tH, tOrd); alertas.push(`La ordenanza de ${ord.nombre} cotejada en el boletín fija un tipo del ${pc(tOrd)} y los datos comunicados a Hacienda para 2026, del ${pc(tH)}: se aplica el mayor (cálculo prudente). Comprueba la ordenanza vigente.`); }
+  } else if (!conOrd && hac) { tipoBruto = hac.tipos[iA]; fuenteTipo = "hacienda"; estadoTipo = V; }
+  if (!F && !conOrd && !manual && !hac && inmueble.ine && haciendaIIVTNU(inmueble.ine)) {
+    const r = haciendaIIVTNU(inmueble.ine);
+    alertas.push(`Para 2026, el Ayuntamiento de ${r.nombre} comunica a Hacienda un tipo del ${pc(r.tipos[iA])}. El fallecimiento es anterior a 2026 y la ordenanza pudo cambiar, así que no se aplica de forma automática: si el tipo era el mismo, introdúcelo.`);
+  }
+  const tipo = Number.isFinite(tipoBruto) ? clamp(tipoBruto, 0, tipoMaxLegal) : tipoMaxLegal;
+  if (tipo !== tipoBruto) alertas.push(`Tipo de gravamen ${Number.isFinite(tipoBruto) ? (Math.round(tipoBruto * 10000) / 100).toLocaleString("es-ES") + " %" : "no válido"}: se aplica ${(tipo * 100).toLocaleString("es-ES")} % (entre 0 y el máximo legal del ${(tipoMaxLegal * 100).toLocaleString("es-ES")} %, ${normaTipoMax}).`);
+  // Pareja de hecho no inscrita: a efectos de bonificaciones, como un extraño (igual que en el ISD). Auditoría 01-10-2026, C-5.
+  titulares = (titulares || []).map((t) => (t.heredero && t.heredero.relacion === "pareja_hecho" && !t.heredero.inscrita ? { ...t, heredero: { ...t.heredero, relacion: "pareja_no_inscrita" } } : t));
+  if (titulares.some((t) => t.heredero.relacion === "pareja_no_inscrita")) alertas.push("Pareja de hecho no inscrita: no se le aplican las bonificaciones por herencia previstas para cónyuges o parejas (se trata como un extraño). Si está inscrita en un registro oficial, márcalo.");
+  // Art. 107.4 TRLRHL: si un coeficiente de la ordenanza supera el máximo legal, se aplica el máximo.
+  // En los forales, la tabla foral de coeficientes máximos (envolvente prudente) sustituye a la del art. 107.4 TRLRHL.
+  const legal = F ? { tabla: F.coef, norma: F.normaCoef, estado: F.estadoCoef } : coefPlusvaliaLegal(fecha);
+  // Coeficientes: los de la ordenanza incorporada o, sin ella, los máximos legales (art. 107.4 TRLRHL). Los que el ayuntamiento comunica a Hacienda
+  // solo pueden SUBIR el coeficiente (se toma el mayor y se avisa), nunca bajarlo: en el cotejo de 06-10-2026 la base de Hacienda recoge para
+  // Fuenlabrada 0,12 a 7 años, cuando su ordenanza (art. 7.5, texto 2026) remite a los máximos vigentes (0,20). Si Hacienda indica un coeficiente
+  // menor, se avisa para que el abogado lo compruebe, pero el cálculo no baja: así la cifra nunca queda por debajo de la liquidación posible.
+  let co = conOrd ? ord.coef || null : null, fuenteCoef = co ? "ordenanza" : "legal";
+  const nomA = `${anios >= 20 ? "20 o más" : anios} año${anios === 1 ? "" : "s"}`, cf = (v) => String(v).replace(".", ",");
+  if (hac) {
+    const eH = (i) => Math.min(hac.coef ? hac.coef[i] : legal.tabla[i], legal.tabla[i]), eO = (i) => Math.min(co ? co[i] : legal.tabla[i], legal.tabla[i]);
+    const a = eO(iA), b = eH(iA);
+    if (b > a + 1e-9) { const base = co; co = legal.tabla.map((_, i) => Math.max(Math.min(base ? base[i] : legal.tabla[i], legal.tabla[i]), eH(i))); fuenteCoef = "hacienda"; alertas.push(`Coeficiente para ${nomA}: la ordenanza incorporada fija ${cf(a)} y los datos comunicados a Hacienda para 2026, ${cf(b)}. Se aplica el mayor (cálculo prudente); comprueba la ordenanza vigente.`); }
+    else if (b < a - 1e-9) alertas.push(`Coeficiente para ${nomA}: los datos comunicados a Hacienda para 2026 recogen ${cf(b)}, menos que el ${co ? "de la ordenanza incorporada" : "máximo legal"} (${cf(a)}), que es el que se aplica. Si la ordenanza vigente fija ${cf(b)}, la cuota será menor.`);
+    if (hac.red) alertas.push(`El Ayuntamiento declara a Hacienda una reducción del ${hac.red} % del valor catastral del suelo (art. 107.3 TRLRHL, durante los primeros años tras una valoración colectiva). No se aplica de forma automática: si rige para este inmueble, la cuota será menor.`);
+  }
+  const tabla = co ? co.map((v, i) => Math.min(v, legal.tabla[i])) : legal.tabla;
+  if (co && co[iA] > legal.tabla[iA]) alertas.push(`El coeficiente de la ordenanza de ${conOrd ? ord.nombre : hac ? hac.nombre : "el municipio"} para ${nomA} supera el máximo legal: se aplica el máximo (${F ? F.normaCoef : "art. 107.4 TRLRHL"}).`);
+  if (ord.alerta) alertas.push(ord.alerta(fecha));
+  if (F) {
+    alertas.push(`Régimen foral de ${F.nombre}: la plusvalía se rige por la ${F.norma}, no por el TRLRHL. Tipo máximo del ${pc(F.tipoMax)} (${F.normaTipo}); coeficientes máximos forales (${F.normaCoef})${F.estadoCoef === V ? "" : ", pendientes de cotejo en el boletín: cálculo orientativo"}.${F.exencion ? ` Exención legal: ${F.exencion.norma}.` : ` ${F.normaBonif}.`}`);
+    if (fecha < F.desdeCoef) alertas.push(`El fallecimiento es anterior a la tabla foral de coeficientes incorporada (vigente desde ${F.desdeCoef}): la tabla de esa fecha no se ha cotejado y se usa la incorporada. Revisa la liquidación.`);
+  }
+  if (!F && fecha >= "2026-01-01" && fecha <= "2026-01-28") alertas.push(fecha === "2026-01-28"
+    ? "Fallecimiento el 28-01-2026, día en que el BOE publicó la derogación del RDL 16/2025: es dudoso si rigen sus coeficientes o los de 2024. Se aplican los de 2024; revisar la liquidación con el ayuntamiento."
+    : `Fallecimiento entre el 1 y el 27 de enero de 2026: se aplican los coeficientes máximos del RDL 16/2025, vigente hasta su derogación (BOE de 28-01-2026), cuyos efectos se mantienen${ord.coef ? ", limitando los de la ordenanza" : ""}. Tabla tomada de dos fuentes profesionales concordantes; texto del BOE no cotejado. Comprobar que el ayuntamiento liquida con ellos.`);
+  if (!F && fecha >= "2025-01-01" && fecha <= "2025-01-23") alertas.push(`Fallecimiento entre el 1 y el ${fecha === "2025-01-23" ? "23" : "22"} de enero de 2025: estuvo vigente el RDL 9/2024, que actualizaba los coeficientes máximos para 2025 hasta su derogación (BOE de 23-01-2025)${fecha === "2025-01-23" ? "; el 23 es el día de publicación de la derogación y es dudoso qué tabla rige" : ""}. Su tabla no se ha localizado (PENDIENTE): el cálculo usa los coeficientes de 2024. Revisar la liquidación.`);
+  let coef = tabla[Math.min(anios, 20)], notaCoef = `${anios >= 20 ? "20 o más" : anios} años de tenencia`;
+  if (!fAdqOk) { coef = Math.max(...tabla); notaCoef = "fecha de adquisición no válida: coeficiente máximo de la tabla"; }
+  else if (anios === 0) { const m = mesesCompletos(fAdq, fecha); coef = Math.round(tabla[0] * m / 12 * 10000) / 10000; notaCoef = `${m} meses: coeficiente prorrateado`; }
+  const numPos = (v) => Math.max(0, Number(v) || 0);
+  const cuotaCaus = inmueble.cuota == null || inmueble.cuota === "" ? 1 : clamp(Number(inmueble.cuota) || 0, 0, 1);
+  const vcSuelo = numPos(inmueble.valorCatastralSuelo), vcTotal = numPos(inmueble.valorCatastralTotal);
+  if (vcSuelo !== Number(inmueble.valorCatastralSuelo || 0) || vcTotal !== Number(inmueble.valorCatastralTotal || 0)) alertas.push("Valor catastral negativo o no numérico: se ha tomado como 0. Revisa el recibo del IBI.");
+  if (vcTotal > 0 && vcSuelo > vcTotal) alertas.push("El valor catastral del suelo supera el valor catastral total: revisa el recibo del IBI. La proporción del suelo se limita al 100 %.");
+  const suelo = vcSuelo * cuotaCaus * (1 - clamp(Number(inmueble.reduccionVC) || 0, 0, 1));
+  const baseObj = r2(suelo * coef);
+  const prop = vcTotal > 0 ? Math.min(1, vcSuelo / vcTotal) : vcSuelo > 0 ? 1 : 0;
+  // Método real y no sujeción (art. 104.5 y 107.5 TRLRHL): solo se pueden comprobar con los DOS valores (transmisión y adquisición). Si falta alguno
+  // (p. ej. inmueble cargado desde documentos sin valor de mercado o sin escritura de compra), se aplica el método objetivo: es el prudente.
+  const artReal = F ? F.artReal : "arts. 104.5 y 107.5 TRLRHL";
+  const vTr = Number(inmueble.valorTransmision) || 0, vAd = Number(inmueble.adquisicion && inmueble.adquisicion.valor) || 0;
+  // M11 (control de calidad 07-10-2026): con una fecha de adquisición imposible (posterior al fallecimiento o no válida) tampoco son fiables el valor
+  // de adquisición ni la comparación de valores: no se aplican el método real ni la no sujeción (cálculo prudente) y se avisa.
+  const valoresConocidos = vTr > 0 && vAd > 0 && fAdqOk;
+  if (!fAdqOk && fAdq && vTr > 0 && vAd > 0) alertas.push("Con la fecha de adquisición sin corregir no se comprueban el método real ni la no sujeción por pérdida: se aplica el método objetivo con el coeficiente máximo (cuota máxima posible).");
+  const inc = (vTr - vAd) * cuotaCaus;
+  const baseReal = r2(Math.max(0, inc) * prop);
+  const noSujeto = valoresConocidos && inc <= 0;
+  const metodo = noSujeto ? "no sujeto" : valoresConocidos && baseReal < baseObj ? "real" : "objetivo";
+  const base = noSujeto ? 0 : metodo === "real" ? baseReal : baseObj;
+  if (!valoresConocidos && baseObj > 0) alertas.push(`Falta el ${vTr > 0 ? "valor de adquisición" : vAd > 0 ? "valor del inmueble en la herencia" : "valor del inmueble en la herencia y el de adquisición"}: se aplica el método objetivo. La no sujeción por pérdida y el método real (${artReal}) solo se pueden comprobar con los dos valores.`);
+  const cuota = r2(base * tipo);
+  if (metodo === "real") alertas.push(`Se aplica el método real (incremento efectivo) porque da menos cuota: solo procede a instancia del contribuyente, que debe declararlo y acreditar los valores de adquisición y transmisión con sus títulos (${artReal}).`);
+  const porTitular = titulares.map(({ heredero, fraccion }) => {
+    fraccion = clamp(Number(fraccion) || 0, 0, 1);
+    const cB = { inmueble, heredero, fecha, caudalTotal, base, fraccion, causanteEmpadronadoMunicipio: inmueble.causanteEmpadronado, sumaVCOtrosInmuebles: inmueble.sumaVCOtrosInmuebles };
+    // Foral: exención legal (Navarra, art. 173.1.b LF 2/1995) antes que cualquier bonificación; sin ordenanza, la bonificación potestativa
+    // del territorio se introduce a mano y se limita a su máximo (100 % en Bizkaia y Álava, 95 % en Gipuzkoa).
+    const exento = !!(F && F.exencion && F.exencion.aplica(heredero));
+    const b = exento ? { pct: 1, norma: F.exencion.norma, estado: F.exencion.estado }
+      : F && !conOrd ? ((F.beneficiario || DAC)(heredero) && Number(inmueble.bonifManual) > 0 ? { pct: Number(inmueble.bonifManual) / 100, norma: `Bonificación introducida a mano según la ordenanza municipal (${F.normaBonif})`, estado: "INTRODUCIDO" } : { pct: 0, norma: F.id === "NAV" ? `${F.normaBonif}${linea(heredero) === "pareja" ? ". La exención del art. 173.1.b cita a los cónyuges: la pareja estable no figura en el texto (PENDIENTE de comprobar su equiparación)" : ""}` : `Sin bonificación: la ordenanza no está incorporada (${F.normaBonif})`, estado: P })
+      : ord.bonif(cB);
+    // Bonificación entre 0 y 100 % (art. 108.4 TRLRHL: hasta el 95 % de la cuota; un porcentaje introducido a mano puede venir fuera de rango).
+    // Forales: hasta el máximo de su norma (la exención no es bonificación y no se limita).
+    const maxB = F && !exento ? F.bonifMax : 1;
+    const pct = clamp(Number(b.pct) || 0, 0, maxB);
+    if (pct !== (Number(b.pct) || 0)) alertas.push(`Bonificación de ${heredero.nombre} fuera de rango (${(Math.round((Number(b.pct) || 0) * 10000) / 100).toLocaleString("es-ES")} %): se limita a ${(pct * 100).toLocaleString("es-ES")} %${F && maxB < 1 ? ` (máximo de la ${F.norma.split(",")[0]})` : ""}.`);
+    const br = r2(cuota * fraccion), bo = r2(br * pct);
+    return { heredero: heredero.nombre, fraccion, cuota: br, bonificacionPct: pct, bonificacion: bo, aIngresar: r2(br - bo), norma: b.norma, estado: b.estado, ...(exento ? { exento: true } : {}), ...(b.bonifPendiente && br > 0 ? { bonifPendiente: true } : {}) };
+  });
+  return { municipio: !conOrd && hac ? hac.nombre : ord.nombre, regimen: F ? F.id : "comun", foral: F ? { id: F.id, nombre: F.nombre, norma: F.norma, tipoMax: F.tipoMax, normaTipo: F.normaTipo, normaCoef: F.normaCoef, estadoCoef: F.estadoCoef, exencion: F.exencion ? F.exencion.norma : null, normaBonif: F.normaBonif, bonifMax: F.bonifMax, url: F.url } : null, tipo, estadoTipo, fuenteTipo, fuenteCoef, hacienda: hac ? { ine: hac.ine, nombre: hac.nombre, red: hac.red, fuente: HACIENDA_IIVTNU_FUENTE } : null, coeficiente: coef, notaCoef, normaCoef: legal.norma, estadoCoef: legal.estado, baseObjetiva: baseObj, baseReal, metodo, base, cuota, noSujeto, porTitular, alertas, total: r2(porTitular.reduce((s, x) => s + x.aIngresar, 0)) };
+}
+
+// ─────────── Modelo 650 autonómico: estado del cotejo de casillas (fiscal r4, 08-10-2026) ───────────
+// Las casillas del 650 estatal (AEAT, Orden HAP/2488/2014) están verificadas en src/app/firma.js (VF_CAS). Para los formularios autonómicos solo se
+// numeran las casillas que se hayan leído en el formulario o en sus instrucciones oficiales vigentes. A 08-10-2026 ninguno se ha podido leer:
+// la herramienta de consulta no accede a juntadeandalucia.es, comunidad.madrid, gva.es, atc.gencat.cat ni atriga.gal salvo por enlaces que aparezcan
+// en resultados de búsqueda, y los resultados no traen el formulario. Se deja constancia de lo consultado para no repetir la búsqueda.
+export const MODELO650_AUT = {
+  AND: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni las instrucciones del 650 de la Agencia Tributaria de Andalucía (se genera en su programa de ayuda)",
+    consultado: ["https://www.juntadeandalucia.es/sites/default/files/2025-07/MT_12.01.16_ISD.pdf (memoria de la estadística del ISD: cita los modelos 650, 651 y 660, sin casillas)"] },
+  MAD: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni el programa de ayuda del 650 de la Comunidad de Madrid", consultado: [] },
+  GAL: { estado: "NO LOCALIZADO", motivo: "solo se ha localizado un 650 gallego en PDF con cuantías de reducción anteriores a 2011; no vale para numerar las casillas del formulario actual",
+    consultado: ["https://www.conselleriadefacenda.gal/documents/10433/43456/f650.pdf/b20f5497-3c38-4d1f-a2de-eba18a915aad (formulario antiguo: grupo II 15.956,87 €, discapacidad 108.200 €)"] },
+  VAL: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario del 650 de la Generalitat Valenciana", consultado: [] },
+  CAT: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario del 650 de la Agència Tributària de Catalunya", consultado: [] },
+};
+export const modelo650Aut = (ccaa) => MODELO650_AUT[ccaa] || { estado: "NO LOCALIZADO", motivo: "el formulario autonómico no se ha cotejado", consultado: [] };
+
+// ─────────────────────────── Plazos ───────────────────────────
+export function sumarMeses(f, n) { const d = new Date(f + "T12:00:00"); const dia = d.getDate(); d.setMonth(d.getMonth() + n); if (d.getDate() < dia) d.setDate(0); return d.toISOString().slice(0, 10); }
+export function sumarDias(f, n) { const d = new Date(f + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+// Días inhábiles en todo el territorio nacional (art. 30.2 Ley 39/2015), además de sábados y domingos. Fuentes:
+// 2025: Resolución de 16-12-2024 de la SE de Función Pública (BOE-A-2024-26935) · 2026: Resolución de 18-11-2025 (BOE-A-2025-23702) — VERIFICADO.
+// 2027: calendario aún no publicado a 01-10-2026; se usan las fiestas nacionales de fecha fija que caen en día laborable y el Viernes Santo (26-03-2027) — PENDIENTE.
+// Los días inhábiles autonómicos y locales (p. ej. 07-12-2026 en Andalucía y Madrid) NO se incluyen: PENDIENTE.
+export const INHABILES_NACIONALES = {
+  2025: ["2025-01-01", "2025-01-06", "2025-04-18", "2025-05-01", "2025-08-15", "2025-12-08", "2025-12-25"],
+  2026: ["2026-01-01", "2026-01-06", "2026-04-03", "2026-05-01", "2026-10-12", "2026-12-08", "2026-12-25"],
+  2027: ["2027-01-01", "2027-01-06", "2027-03-26", "2027-10-12", "2027-11-01", "2027-12-06", "2027-12-08"],
+};
+const INHABILES_ESTADO = { 2025: V, 2026: V, 2027: P };
+const esInhabil = (f) => { const w = new Date(f + "T12:00:00").getDay(); return w === 0 || w === 6 || (INHABILES_NACIONALES[f.slice(0, 4)] || []).includes(f); };
+// Art. 30.5 Ley 39/2015: si el último día del plazo es inhábil, se prorroga al primer día hábil siguiente
+export function aHabil(f) { let d = f; while (esInhabil(d)) d = sumarDias(d, 1); return d; }
+// Fin del plazo de presentación del ISD (6 meses; 12 con la prórroga concedida: art. 68 RD 1629/1991), ya trasladado al siguiente hábil.
+// Fuente única para calcularPlazos y para el catálogo de trámites (tramites.mjs), para que Diagnóstico, Trámites, Agenda y .ics coincidan.
+export function limiteISD(f, prorroga) { return aHabil(sumarMeses(f, prorroga ? 12 : 6)); }
+
+// ── Control de calidad 07-10-2026 (C2/M13): ¿se presenta en plazo? y recargo del art. 27 LGT ──
+// Plazo de presentación: 6 meses desde el fallecimiento (art. 67.1.a RD 1629/1991), prorrogables otros 6 si la prórroga se pide
+// dentro de los cinco primeros meses (art. 68 RD 1629/1991). Fuente única para el interruptor «Se presentará dentro de plazo».
+// o.hoy: fecha de referencia (la de presentación prevista; por defecto, hoy en la app) · o.prorroga: prórroga concedida.
+// Regla prudente: pasado el plazo de seis meses sin prórroga marcada, se calcula fuera de plazo (con aviso: si se concedió, márcala).
+export function plazoPresentacionISD(f, o = {}) {
+  if (!f || !/^\d{4}-\d{2}-\d{2}$/.test(f)) return null;
+  const hoy = o.hoy || f;
+  const limite6 = limiteISD(f, false), limite12 = limiteISD(f, true), limitePeticion = aHabil(sumarMeses(f, 5));
+  const limite = o.prorroga ? limite12 : limite6;
+  const fuera = hoy > limite;
+  const F = PLAZO_ISD_FORAL[o.ccaa];
+  return { limite6, limite12, limitePeticion, limite, prorroga: !!o.prorroga, fueraDePlazo: fuera, diasRetraso: fuera ? Math.round((new Date(hoy + "T12:00:00") - new Date(limite + "T12:00:00")) / 864e5) : 0,
+    prorrogaPosible: !o.prorroga && hoy <= limitePeticion, fueraIncluso12: hoy > limite12, norma: F ? F.norma : "arts. 67.1.a y 68 RD 1629/1991", estado: F ? F.estado : V, ...(F ? { foral: true, nota: F.nota } : {}) };
+}
+// Interés de demora 2026: 4,0625 % (LPGE 2023 prorrogada; investigación estrategia-fiscal.md, VERIFICADO con segunda fuente)
+export const INTERES_DEMORA = 0.040625;
+// ── Territorios forales: plazo de presentación del ISD y recargos (fiscal r4, 08-10-2026) ──
+// En Navarra, Álava, Bizkaia y Gipuzkoa el ISD lo gestiona la Hacienda foral con su propia norma del impuesto y su norma general tributaria.
+// Plazo: no se ha podido leer el artículo de plazos de ninguna de las cuatro normas forales (DFL 250/2002 Navarra, NF 11/2005 Álava, NF 4/2015 Bizkaia,
+// NF 2/2022 Gipuzkoa). Navarra tiene modelo propio de solicitud de prórroga (modelo 653, Orden Foral 130/2025, BON 13-01-2026), lo que confirma que hay
+// prórroga, pero no su duración. Se mantienen los 6 + 6 meses del régimen común y se avisa (PENDIENTE).
+const NOTA_PLAZO_FORAL = "Plazo foral sin cotejar: se usan seis meses desde el fallecimiento y seis más con prórroga, como en el régimen común. Confírmalo con la Hacienda foral";
+export const PLAZO_ISD_FORAL = {
+  NAV: { norma: "Hacienda Foral de Navarra (D. F. Leg. 250/2002; solicitud de prórroga con el modelo 653, Orden Foral 130/2025)", estado: P, nota: NOTA_PLAZO_FORAL },
+  ALA: { norma: "Diputación Foral de Álava (Norma Foral 11/2005)", estado: P, nota: NOTA_PLAZO_FORAL },
+  BIZ: { norma: "Diputación Foral de Bizkaia (Norma Foral 4/2015)", estado: P, nota: NOTA_PLAZO_FORAL },
+  GIP: { norma: "Diputación Foral de Gipuzkoa (Norma Foral 2/2022)", estado: P, nota: NOTA_PLAZO_FORAL },
+};
+// Recargo por presentación fuera de plazo sin requerimiento previo. El art. 27 LGT no rige en los territorios forales: cada uno tiene su norma general tributaria.
+// · Gipuzkoa: art. 27.2 NF 2/2005, General Tributaria, en la redacción de la NF 1/2024, de 10 de mayo (desde el 17-05-2024): 2 % dentro de los tres meses
+//   siguientes al fin del plazo; 5 % del cuarto al duodécimo mes; 10 % pasados doce meses. El recargo excluye las sanciones «pero no los intereses de demora»,
+//   que «se calcularán desde el término del plazo voluntario». Sin reducción por pronto pago. Fuente: texto consolidado del art. 27 (iberley.es/legislacion/
+//   articulo-27-general-tributaria-gipuzkoa), una sola fuente → PENDIENTE de cotejo en el BOG. Interés de demora 2026: 4,0625 % (DA 1.ª de la NF 6/2025,
+//   de presupuestos de Gipuzkoa para 2026, leída en fiscal-impuestos.com/sites/fiscal-impuestos.com/files/Gipuzkoa-Presupuestos.pdf).
+// · Navarra, Álava y Bizkaia: escala vigente NO LOCALIZADA. Una fuente doctrinal antigua (Zergak n.º 61) describe 5 % / 10 % con intereses en Álava y un 5 %
+//   único en Bizkaia; no se usa por no estar fechada. Se estima con la escala del art. 27 LGT (más alta pasados 12 meses) y se dice expresamente.
+const AVISO_FORAL = (t, n) => `Presentación fuera de plazo: si no ha habido requerimiento, hay recargo según ${n}, no el art. 27 LGT. ${t}`;
+export const RECARGO_FORAL = {
+  GIP: { tramos: [[3, 0.02], [12, 0.05], [Infinity, 0.10]], interesesDesdeFin: true, interes: 0.040625, estado: P,
+    norma: "art. 27.2 NF 2/2005, General Tributaria de Gipuzkoa (NF 1/2024): 2 % hasta 3 meses, 5 % del 4.º al 12.º, 10 % después, más intereses de demora desde el fin del plazo; sin reducción por pronto pago",
+    url: "https://www.iberley.es/legislacion/articulo-27-general-tributaria-gipuzkoa",
+    aviso: AVISO_FORAL("En Gipuzkoa: 2 % si se presenta dentro de los tres meses siguientes, 5 % del cuarto al duodécimo mes y 10 % después, siempre con intereses de demora desde el fin del plazo y sin reducción por pagar al presentar (PENDIENTE de cotejo en el BOG).", "la Norma Foral General Tributaria de Gipuzkoa (art. 27)") },
+  NAV: { estado: P, norma: "Ley Foral 13/2000, General Tributaria de Navarra: escala de recargos no cotejada; estimación con el art. 27 LGT",
+    aviso: AVISO_FORAL("La escala navarra no se ha cotejado: el importe es una estimación con la escala estatal (PENDIENTE).", "la Ley Foral General Tributaria de Navarra") },
+  ALA: { estado: P, norma: "Norma Foral 6/2005, General Tributaria de Álava: escala de recargos no cotejada; estimación con el art. 27 LGT",
+    aviso: AVISO_FORAL("La escala alavesa no se ha cotejado: el importe es una estimación con la escala estatal (PENDIENTE).", "la Norma Foral General Tributaria de Álava") },
+  BIZ: { estado: P, norma: "Norma Foral 2/2005, General Tributaria de Bizkaia: escala de recargos no cotejada; estimación con el art. 27 LGT",
+    aviso: AVISO_FORAL("La escala vizcaína no se ha cotejado: el importe es una estimación con la escala estatal (PENDIENTE).", "la Norma Foral General Tributaria de Bizkaia") },
+};
+function mesesEntre(a, b) { const A = new Date(a + "T12:00:00"), B = new Date(b + "T12:00:00"); let m = (B.getFullYear() - A.getFullYear()) * 12 + B.getMonth() - A.getMonth(); if (B.getDate() < A.getDate()) m--; return Math.max(0, m); }
+// Recargo por presentación fuera de plazo SIN requerimiento previo (art. 27.2 LGT, redacción de la Ley 11/2021): 1 % más otro 1 % por cada
+// mes completo de retraso si se presenta en los 12 meses siguientes al fin del plazo; después, 15 % más intereses de demora desde el día
+// siguiente a esos 12 meses. Art. 27.5 LGT: el recargo (no los intereses) se reduce un 25 % si se ingresa todo al presentar. VERIFICADO.
+// La etiqueta nunca dice «15 %» a secas cuando el importe lleva intereses (M13).
+export function recargoArt27(cuota, limite, fechaPresentacion, interes = INTERES_DEMORA) {
+  const c = Math.max(0, Number(cuota) || 0);
+  const vacio = { pct: 0, recargo: 0, intereses: 0, importe: 0, reducido: 0, meses: 0, diasIntereses: 0, etiqueta: "sin recargo", norma: "art. 27 LGT", estado: V };
+  if (!limite || !fechaPresentacion || fechaPresentacion <= limite) return vacio;
+  const m = mesesEntre(limite, fechaPresentacion);
+  if (m < 12) {
+    const pct = r2(0.01 + 0.01 * m), rec = r2(c * pct);
+    return { ...vacio, pct, recargo: rec, importe: rec, reducido: r2(rec * 0.75), meses: m, etiqueta: `${Math.round(pct * 100)} % (1 % + 1 % por ${m === 1 ? "1 mes completo" : m + " meses completos"} de retraso)`, norma: "art. 27.2 y 27.5 LGT" };
+  }
+  const desde = sumarMeses(limite, 12);
+  const dias = Math.max(0, Math.round((new Date(fechaPresentacion + "T12:00:00") - new Date(desde + "T12:00:00")) / 864e5));
+  const rec = r2(c * 0.15), int = r2(c * interes * dias / 365);
+  return { ...vacio, pct: 0.15, recargo: rec, intereses: int, importe: r2(rec + int), reducido: r2(rec * 0.75 + int), meses: m, diasIntereses: dias, etiqueta: `15 % + intereses de demora de ${dias} ${dias === 1 ? "día" : "días"}`, norma: "art. 27.2 y 27.5 LGT · interés de demora 4,0625 %" };
+}
+// Recargo según el territorio: Gipuzkoa con su escala; Navarra, Álava y Bizkaia, estimación con el art. 27 LGT marcada como foral pendiente; resto, art. 27 LGT.
+export function recargoPresentacion(ccaa, cuota, limite, fechaPresentacion, interes = INTERES_DEMORA) {
+  const F = RECARGO_FORAL[ccaa];
+  if (!F) return recargoArt27(cuota, limite, fechaPresentacion, interes);
+  if (!F.tramos) { const r = recargoArt27(cuota, limite, fechaPresentacion, interes); return r.importe > 0 ? { ...r, etiqueta: `${r.etiqueta}; estimación con la escala estatal`, norma: F.norma, estado: P, foral: true } : { ...r, foral: true }; }
+  const c = Math.max(0, Number(cuota) || 0);
+  const vacio = { pct: 0, recargo: 0, intereses: 0, importe: 0, reducido: 0, meses: 0, diasIntereses: 0, etiqueta: "sin recargo", norma: F.norma, estado: F.estado, foral: true };
+  if (!limite || !fechaPresentacion || fechaPresentacion <= limite) return vacio;
+  const m = mesesEntre(limite, fechaPresentacion);
+  const pct = F.tramos.find(([hasta]) => m < hasta)[1];
+  const dias = Math.max(0, Math.round((new Date(fechaPresentacion + "T12:00:00") - new Date(limite + "T12:00:00")) / 864e5));
+  const rec = r2(c * pct), int = r2(c * (F.interes || interes) * dias / 365);
+  return { ...vacio, pct, recargo: rec, intereses: int, importe: r2(rec + int), reducido: r2(rec + int), meses: m, diasIntereses: dias, etiqueta: `${Math.round(pct * 100)} % + intereses de demora de ${dias} ${dias === 1 ? "día" : "días"}` };
+}
+export function sumarHabiles(f, n) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d)) k++; } return d; }
+
+// o.prorrogaISD: prórroga del ISD concedida → el plazo de presentación y la prescripción se cuentan con los 12 meses
+export function calcularPlazos(f, o = {}) {
+  const anio = Number(f.slice(0, 4)) + 1;
+  // Plazos administrativos: cómputo de fecha a fecha y traslado al siguiente día hábil (art. 30.5 Ley 39/2015). Auditoría 01-10-2026, I-2.
+  const habil = (nat) => { const h = aHabil(nat); return { limite: h, limiteNatural: nat, trasladado: h !== nat, estadoCalendario: INHABILES_ESTADO[h.slice(0, 4)] || P }; };
+  const nTras = (x, txt) => (x.trasladado ? `${txt ? txt + ". " : ""}Vence en día inhábil (${x.limiteNatural}): pasa al siguiente hábil (art. 30.5 Ley 39/2015). Solo se descuentan los festivos nacionales; revisa los autonómicos y locales` : txt);
+  const FPZ = PLAZO_ISD_FORAL[o.ccaa]; // territorios forales: plazo no cotejado (fiscal r4)
+  const pro = habil(sumarMeses(f, 5)), isd = habil(sumarMeses(f, 6)), isd12 = habil(sumarMeses(f, 12)), plv = habil(sumarMeses(f, 6)), plv12 = habil(sumarMeses(f, 12));
+  // isd.limite === limiteISD(f, false) e isd12.limite === limiteISD(f, true): misma regla que el catálogo de trámites (tramites.mjs), comprobado en test.mjs
+  const p = [
+    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, 3)), estado: P, aplica: o.autonomo },
+    { id: "ultimas_voluntades", fase: 1, nombre: "Pedir el certificado de últimas voluntades", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V, nota: "Se descuentan los festivos nacionales; los autonómicos y locales, no" },
+    { id: "seguros_cert", fase: 1, nombre: "Pedir el certificado de seguros de fallecimiento", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V },
+    { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3)), recomendado: true, estado: P, aplica: o.hayConyuge },
+    { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", limite: aHabil(sumarDias(f, 90)), estado: P, aplica: o.hayVehiculos },
+    { id: "prorroga_isd", fase: 3, nombre: "Último día para pedir la prórroga del impuesto", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...pro, nota: [FPZ && FPZ.nota, nTras(pro, "")].filter(Boolean).join(". ") || undefined, estado: FPZ ? P : V },
+    { id: "isd", fase: 4, nombre: "Presentar y pagar el Impuesto sobre Sucesiones", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...(o.prorrogaISD ? isd12 : isd), nota: [FPZ && FPZ.nota, o.prorrogaISD ? nTras(isd12, "Prórroga concedida: doce meses (art. 68 RD 1629/1991)") : nTras(isd, "Con prórroga: " + isd12.limite)].filter(Boolean).join(". "), estado: FPZ ? P : V },
+    { id: "plusvalia", fase: 4, nombre: "Declarar la plusvalía de cada inmueble urbano", organismo: "Ayuntamiento", ...plv, nota: nTras(plv, "Prorrogable hasta " + plv12.limite), estado: V, aplica: o.hayInmuebles },
+    { id: "irpf", fase: 5, nombre: "Última declaración de la renta del fallecido", organismo: "AEAT", desde: `${anio}-04-01`, limite: `${anio}-06-30`, nota: "Fechas de campaña aproximadas", estado: P },
+    { id: "prescripcion", fase: 5, nombre: "Prescribe el derecho de Hacienda a liquidar el impuesto", organismo: "Hacienda autonómica", limite: sumarMeses((o.prorrogaISD ? isd12 : isd).limite, 48), nota: "4 años contados desde el día siguiente al fin del plazo de presentación (arts. 66-67 LGT). Si se concede la prórroga, se cuentan desde el fin del plazo prorrogado", estado: V, informativo: true },
+    { id: "seguro_vida", fase: 5, nombre: "Reclamar seguros de vida (prescripción)", organismo: "Aseguradora", limite: sumarMeses(f, 60), estado: P, informativo: true },
+  ];
+  return p.filter((x) => x.aplica !== false);
+}
