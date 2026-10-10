@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610101101">
+<meta name="hereda-version" content="202610101148">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F4F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1777,9 +1777,32 @@ button.rd-sg:hover{color:var(--label)}
 .vf-fsh{font:600 11.5px/1.3 var(--text);text-transform:uppercase;letter-spacing:.05em;color:var(--label-3);margin:0 0 8px}
 .vf-f2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vf-f3{display:grid;grid-template-columns:1.5fr 1.15fr .85fr;gap:8px}
+.vf-f4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 8px}
+/* G05 · declaración de herederos (abintestato.js): misma tarjeta de datos que «Listo para firmar» */
+.ab-card{margin-bottom:18px}
+.ab-card .ab-nota{margin:6px 0 0}
+.ab-card .ab-sep{height:10px}
+.ab-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px}
+/* G07 · defensa tributaria (defensa.js): actos notificados con sus plazos, simulador de tasación pericial y escritos */
+.df-card{padding:14px 18px}
+.df-proc{padding:4px 0 14px;margin-bottom:12px;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-h{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+.df-h .t,.df-pl .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.df-h .t small,.df-pl .t small{color:var(--label-2);font-size:12.5px}
+.df-pls{margin-top:10px;border-radius:10px;background:var(--fill-2);padding:4px 12px}
+.df-pl{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-pl:last-child{box-shadow:none}
+.df-pl .t b{font-size:14px;font-weight:600}
+.df-pl .chip{flex:none}
+.df-av{margin:8px 0 0}
+.df-sim{margin-top:10px;padding:10px 12px;border-radius:10px;box-shadow:inset 0 0 0 .5px var(--hair)}
+.df-sim .kv{margin:8px 0 6px}
+.df-sim .caption{margin:0}
+.df-docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media (max-width:600px){.df-card{padding:12px 14px}.df-h{flex-direction:column}.df-docs .btn{flex:1 1 auto}}
 .vf-fl{display:flex;flex-direction:column;gap:3px;min-width:0;margin-bottom:8px;border-radius:9px}
 .vf-f2 .vf-fl,.vf-f3 .vf-fl{margin-bottom:0}
-.vf-f2 + .vf-fl,.vf-f3 + .vf-fl{margin-top:8px}
+.vf-f2 + .vf-fl,.vf-f3 + .vf-fl,.vf-f2 + .vf-f2,.vf-f2 + .vf-f3,.vf-f3 + .vf-f2,.vf-f3 + .vf-f3{margin-top:8px}
 .vf-fs > .vf-fl:last-child{margin-bottom:0}
 .vf-fl > span{font-size:11.5px;color:var(--label-2)}
 .vf-fl input,.vf-fl select{width:100%;min-width:0;border:0;outline:none;border-radius:8px;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair);color:var(--label);font:14px/1.3 var(--text);padding:8px 10px;transition:box-shadow .15s,background .15s}
@@ -1867,6 +1890,7 @@ button.rd-sg:hover{color:var(--label)}
   .vf-acts{grid-column:2;justify-content:flex-start;max-width:none;margin-top:6px}
   .vf-oks > summary{padding-left:48px}
   .vf-f3{grid-template-columns:1fr 1fr}.vf-f3 .vf-fl:first-child{grid-column:1/-1}
+  .vf-f4{grid-template-columns:1fr 1fr}
   .vf-datos{padding:16px 14px 6px}
   .vf-ficha{padding:16px 14px 10px}
   .vf-l{grid-template-columns:28px minmax(0,1fr) auto auto;gap:8px}
@@ -1875,6 +1899,75 @@ button.rd-sg:hover{color:var(--label)}
   .vf-fl input,.vf-fl select{font-size:16px}
   .vf-cp span{display:none}.vf-cp{padding:0 8px}
   .vf-dl{grid-template-columns:1fr 1fr}
+}
+
+/* ───────── G02 · Modelos 650 y 660 casilla a casilla (modelos.js, prefijo m6-) ───────── */
+.m6-seg{margin:18px 0 0;display:inline-flex;flex-wrap:wrap;max-width:100%}
+.m6-seg button{padding:6px 16px}
+.m6{margin-top:16px;display:grid;gap:14px;min-width:0}
+.m6 > *{min-width:0}
+.m6-form{padding:16px 18px}
+.m6-fh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.m6-fh .k{font:600 12px/1.3 var(--text);color:var(--label-2)}
+.m6-fh h3{margin:2px 0 0;font:600 17px/1.25 var(--display);letter-spacing:-.015em}
+.m6-form p{margin:10px 0 0;font-size:13.5px;line-height:1.5;color:var(--label-2)}
+.m6-form p a{white-space:nowrap}
+.m6-badge{flex:none;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font:600 12px/1.2 var(--text);background:var(--fill-2);color:var(--label);box-shadow:inset 0 0 0 .5px var(--hair)}
+.m6-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--label-3)}
+.m6-badge.ok::before{background:var(--green)}.m6-badge.par::before{background:var(--orange,var(--c4))}.m6-badge.ori::before{background:var(--label-3)}.m6-badge.mal::before{background:var(--red)}
+.m6-src{margin-top:10px;font-size:12.5px;color:var(--label-2)}
+.m6-src summary{cursor:pointer;font-weight:550;color:var(--label-2)}
+.m6-src dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:8px 0 0}
+.m6-src dt{color:var(--label-3)}.m6-src dd{margin:0;overflow-wrap:anywhere}
+.m6-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:14px;background:var(--panel);border:1px solid var(--hair);box-shadow:var(--shadow-sm)}
+.m6-bar > span:first-child{display:grid;gap:2px;min-width:0;flex:1 1 260px}.m6-bar small{color:var(--label-2);font-size:13px}
+.m6-bar-b{display:flex;gap:8px;flex-wrap:wrap}
+.m6-chk{padding:14px 16px}
+.m6-chk-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.m6-chk-h b{font:600 14.5px/1.3 var(--text)}
+.m6-chk-h span{display:flex;gap:6px;flex-wrap:wrap}
+.m6-chk-h em{font:600 12px/1 var(--text);font-style:normal;padding:5px 9px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+.m6-chk-h em svg{width:12px;height:12px}
+.m6-eb{background:var(--red-t);color:var(--red)}.m6-ea{background:var(--orange-t,var(--fill-2));color:var(--orange,var(--label))}.m6-eo{background:var(--green-t);color:var(--green)}
+.m6-chk ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:2px}
+.m6-chk li{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:7px 0}
+.m6-chk li + li{box-shadow:inset 0 .5px 0 var(--hair-2)}
+.m6-chk li i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;margin-top:1px}
+.m6-chk li i svg{width:12px;height:12px}
+.m6-chk li.b i{background:var(--red-t);color:var(--red)}.m6-chk li.a i{background:var(--orange-t,var(--fill-2));color:var(--orange,var(--label-2))}
+.m6-chk li b{display:block;font-size:13.5px;font-weight:550}.m6-chk li small{display:block;font-size:12.5px;color:var(--label-2);margin-top:2px}
+.m6-chk li .link{font-size:13px;white-space:nowrap}
+.m6-chk details summary{cursor:pointer;font-size:13px;color:var(--label-2);padding:6px 0 0 30px}
+.m6-fichas.uno{grid-template-columns:minmax(0,1fr);max-width:820px}
+.m6-acts{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 10px}
+.m6-acts .btn svg{width:15px;height:15px}
+.m6-dh{font:600 11.5px/1.3 var(--text);text-transform:uppercase;letter-spacing:.05em;color:var(--label-3);margin:10px 0 4px}
+.m6-mal{margin:10px 0 0;padding:9px 12px;border-radius:10px;background:var(--red-t);color:var(--red);font-size:13px}
+.m6-660{display:grid;gap:14px}
+.m6-blq,.m6-tot,.m6-docs{padding:14px 16px}
+.m6-blq-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.m6-blq-h b{font:600 14.5px/1.3 var(--text)}.m6-blq-h .num{font-weight:650;white-space:nowrap}
+.m6-b{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;padding:9px 0}
+.m6-b + .m6-b{box-shadow:inset 0 .5px 0 var(--hair-2)}
+.m6-bt b{font-size:13.5px;font-weight:550}
+.m6-tags{display:inline-flex;flex-wrap:wrap;gap:4px;margin-left:6px;vertical-align:1px}
+.m6-tags em{font:500 11px/1 var(--text);font-style:normal;padding:3px 7px;border-radius:999px;background:var(--fill-2);color:var(--label-2)}
+.m6-refs{display:flex;flex-wrap:wrap;gap:4px 16px;margin:5px 0 0}
+.m6-refs div{min-width:0}
+.m6-refs dt{font-size:11px;color:var(--label-3)}
+.m6-refs dd{margin:0;font:500 12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;display:flex;align-items:center;gap:6px;overflow-wrap:anywhere}
+.m6-n{display:block;font-size:12px;color:var(--label-3);margin-top:3px}
+.m6-bv{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap;text-align:right}
+.m6-bv small{flex-basis:100%;font-size:11.5px;color:var(--label-3)}
+.m6-bv b.num{font-size:14px;font-weight:600;white-space:nowrap}
+.m6-tot .vf-l{grid-template-columns:minmax(0,1fr) auto auto}
+.m6-docs ol{margin:6px 0 0;padding-left:20px;display:grid;gap:6px}
+.m6-docs li b{display:block;font-size:13.5px;font-weight:500}.m6-docs li small{display:block;font-size:12px;color:var(--label-3)}
+@media (max-width:640px){
+  .m6-form,.m6-chk,.m6-blq,.m6-tot,.m6-docs{padding:14px}
+  .m6-bar{flex-direction:column;align-items:stretch}.m6-bar-b .btn{flex:1 1 auto;justify-content:center}
+  .m6-seg{display:flex}.m6-seg button{flex:1 1 auto;padding:6px 10px}
+  .m6-b{grid-template-columns:minmax(0,1fr)}.m6-bv{justify-content:flex-start;text-align:left}
 }
 
 /* ───────── Piloto 8 · Tiempos y rentabilidad (tiempos.js, prefijo tm-) ───────── */
@@ -3870,6 +3963,48 @@ td.sc-bad,.kv .sc-bad{color:var(--red);font-weight:600}
 .red-opt{width:100%;cursor:pointer}.red-opt b{overflow-wrap:anywhere}.red-opt:hover{border-color:var(--accent)}
 .red-opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (max-width:640px){.red-ch-o{grid-template-columns:1fr}}
+/* G09 · calendario de festivos contado en cada plazo (hoja del trámite) */
+.meta .cal-aviso{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:var(--label-2);font-weight:400}
+/* G06 · Impuestos › Presentaciones y notificaciones · G08 · Aplazamiento (fiscal.js) */
+.imp-sub{margin:0 0 16px;max-width:100%}
+.imp-sub button{white-space:normal}
+.imp-n{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--fill);color:var(--label);font-size:11.5px;line-height:18px;text-align:center}
+.fs-cal{align-items:flex-start}
+.fs-cal > span:last-child{flex:1;min-width:0}
+.fs-muni{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12.5px;color:var(--label-2)}
+.fs-muni select,.fs-estado,.ap-form select,.fs-form select{max-width:100%;height:34px;border-radius:var(--r-sm);border:0;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair);padding:0 10px;font-size:14px;color:var(--label)}
+.fs-muni select{width:100%;max-width:420px}
+.fs-grupo + .fs-grupo{margin-top:12px}
+.fs-gt{font-size:12.5px;color:var(--label-2);margin:0 2px 6px}
+.fs-ico{flex:none}
+.fs-ico svg{width:15px;height:15px}
+.fs-edit{padding:12px 16px}
+.fs-edit-h b{display:block;font-weight:600;font-size:15px}
+.fs-edit-h small{display:block;font-size:12.5px;color:var(--label-2);margin:2px 0 10px}
+.fs-form{padding:4px 0 12px;margin-top:12px}
+.fs-edit .fs-form{margin-top:0}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0}
+.fs-grid .field{border-bottom:.5px solid var(--hair-2)}
+.fs-form .field input,.ap-form .field input{border-bottom:0}
+.fs-acts{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px 0}
+.fs-proc{padding:14px 0 12px}
+.fs-proc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:0 16px 12px;flex-wrap:wrap}
+.fs-proc-h .k{font-size:12px;color:var(--label-2)}
+.fs-proc-h h3{font:600 16px/1.3 var(--text);margin:2px 0 3px}
+.fs-proc-h small{font-size:12.5px;color:var(--label-2)}
+.fs-proc .group{box-shadow:none;border-radius:0;border-top:.5px solid var(--hair-2)}
+.fs-proc .row .t small.fs-nota{color:var(--label-3);white-space:normal;margin-top:3px;line-height:1.45}
+.fs-proc .st-sp{width:22px;flex:none}
+.fs-proc.fs-cerrado{opacity:.72}
+.fs-avisos li{font-size:13px;color:var(--label-2)}
+.fs-t td small{max-width:none;white-space:normal}
+.ap-form{padding:4px 0 12px}
+.ap-reg{padding:10px 16px 0;margin:0;line-height:1.5}
+.ap-reg .tag{margin-right:4px}
+.ap-avisos{margin-top:12px;background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow-sm)}
+.ap-t td.num,.ap-t td.mono{color:var(--label)}
+.ap-t tr.ap-tot td{border-bottom:0;background:var(--panel-2)}
+@media (max-width:640px){.fs-proc-h .fs-estado{width:100%}.imp-sub{display:flex}.imp-sub button{padding:6px 10px}.imp-l{display:none}}
 
 /* ───────── Escáner de documentos con la cámara (escaner.js) ─────────
    Capa a pantalla completa, oscura en cualquier tema (como la cámara del sistema), con controles grandes para el pulgar. */
@@ -4131,6 +4266,9 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .chip.ok,.chip.warn,.chip.bad,.chip.info,.st-b.ok,.st-b.warn,.st-b.bad,.tag.V,.tag.P,.tag.bajo,.tag.medio,.tag.warn,.tag.alto,.tag.litigioso,.tag.gold,
 .status.ok,.status.warn,.status.bad,.mtag.ok,.mtag.rev,.lg-pill.ok,.lg-pill.bad,.tc-chip.warn,.tc-chip.ok,.tc-pill.est-enviada,.tc-pill.est-reclamada,.tc-pill.est-escalada,.tc-pill.est-recibida,
 .vf-gs em.vf-eb,.vf-gs em.vf-ea,.vf-gs em.vf-eo,.chip-r.warn{color:var(--ink-1)}
+/* Modelos 650 y 660 (modelos.js): cifras y píldoras en tinta neutra; solo la negativa en rojo (cine.js) */
+.m6-chk-h em,.m6-badge{color:var(--ink-1)}
+.vf-tot b,.vf-l.t2 b.num,.vf-jump button .num,.m6 b.num,.m6-blq-h .num{color:var(--ink-1)}
 
 /* Cifras negativas: el único color permitido (las marca la pequeña rutina «hereda-cine-js» o la propia app) */
 .money.neg,.sr.resta .sr-v{color:var(--hc-neg)}
@@ -4265,11 +4403,11 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610101101"], ["app", "nucleo/app.js?v=202610101101"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610101148"], ["app", "nucleo/app.js?v=202610101148"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610101101").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610101148").catch(() => {}));
 </script>
 </body>
 </html>
