@@ -1790,5 +1790,33 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   si("28 · soltero sin bienes comunes: sin régimen", RE({ estadoCivil: "soltero", herederos: [H("A", "hijo")] }) === null);
 }
 
+// ── 29. G04 · Partición con la liquidación conjunta (auditoría civil 10-10-2026, ficha 7.7.b; src/app/particion.js) ──
+{
+  const M = await import("./motor.mjs"), vm = await import("node:vm"), si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const leer = (f) => readFileSync(new URL("./app/" + f, import.meta.url), "utf8");
+  const numSrc = leer("logic.js").split("\n").filter((l) => /^const (num|numLeer|pctCausante) = /.test(l)).join("\n");
+  const ctx = vm.createContext({ console, Intl, ...M, grp: (n, d) => Number(n).toFixed(d), eur: (n) => Number(n).toFixed(2) + " €", eur0: (n) => Math.round(n) + " €", esc: (s) => String(s), TIPO_BIEN: { vivienda: ["Vivienda"], cuenta: ["Cuenta"], inmueble: ["Inmueble"] }, I: {} });
+  vm.runInContext(numSrc + "\nglobalThis.num = num; globalThis.pctCausante = pctCausante;\n" + leer("particion.js") + "\n" + leer("regimen.js") + "\nglobalThis.T = { cuadroParticion, cpCuaderno };", ctx);
+  const caso = (x) => ({ fechaFallecimiento: x.fecha, ccaa: x.ccaa, ajuar: "cero", reparto: "intestado", estadoCivil: x.civil, enPlazo: true, regimen: x.regimen, bienes: x.bienes.map((b) => ({ ...b, tipo: b.tipo === "vivienda" ? "inmueble" : b.tipo, esViviendaHabitual: b.tipo === "vivienda" })), deudas: x.deudas, gastos: x.gastos, herederos: x.personas });
+  const cuadro = (x) => ctx.T.cuadroParticion(x, { isd: M.calcularISD(caso(x)), plus: [] });
+  // P4: vivienda ganancial de 300.000 y cuenta ganancial de 100.000; viuda de 70 años y dos hijos; sin testamento
+  const P4 = (adj) => ({ id: "p4", fecha: "2026-06-01", ccaa: "AND", civil: "gananciales", testamento: "no", personas: [{ id: "V", nombre: "Viuda", relacion: "conyuge", edad: 70 }, { id: "A", nombre: "Ana", relacion: "hijo", edad: 45 }, { id: "B", nombre: "Blas", relacion: "hijo", edad: 41 }],
+    bienes: [{ id: "v", tipo: "vivienda", valor: 300000, titularidad: "ganancial", adjudicadoA: "V" }, { id: "c", tipo: "cuenta", valor: 100000, titularidad: "ganancial", ...(adj ? { adjudicadoA: adj } : {}) }], deudas: [], gastos: [] });
+  const c1 = cuadro(P4()), v1 = c1.H.find((h) => h.id === "V");
+  eq("29 · P4 · haber de la viuda: 200.000 de gananciales + 12.666,67 de usufructo", v1.haber, 212666.67, 0.01);
+  eq("29 · P4 · vivienda entera a la viuda: exceso inevitable 87.333,33 (no 137.333)", v1.inevitable, 87333.33, 0.01);
+  const c2 = cuadro(P4("A")), v2 = c2.H.find((h) => h.id === "V");
+  eq("29 · P4 · con la cuenta a un hijo: exceso total de la viuda 87.333,33", v2.exceso, 87333.33, 0.01);
+  eq("29 · P4 · compensaciones que recibe Blas = su haber", c2.compensaciones.filter((c) => c.a.id === "B").reduce((s, c) => s + c.importe, 0), 93666.67, 0.02);
+  si("29 · P4 · cuaderno: la liquidación y la partición se hacen juntas (arts. 1404 y 1406 CC)", /conjuntamente/.test(ctx.T.cpCuaderno(P4("A"), { isd: M.calcularISD(caso(P4("A"))), plus: [] }).gan));
+  // Sin adjudicaciones de bienes comunes: el cuadro de siempre (la viuda conserva su mitad fuera del reparto)
+  const P0 = P4(); delete P0.bienes[0].adjudicadoA; const c0 = cuadro(P0);
+  eq("29 · pro indiviso: haber hereditario de la viuda como hasta la 1.7 (12.666,67)", c0.H.find((h) => h.id === "V").haber, 12666.67, 0.01);
+  si("29 · pro indiviso: sin excesos", !c0.excesos.length);
+  // Con reintegro a la herencia, la vivienda vale para la viuda lo que dice la liquidación
+  const PR = P4(); PR.regimen = { reintegros: [{ sentido: "privCausante", importe: 50000, actualizado: 50000, justificado: true }] };
+  eq("29 · con reintegro de 50.000 a la herencia: haber de la viuda en la sociedad 175.000", cuadro(PR).PT.H.find((h) => h.p.id === "V").haberGan, 175000, 0.01);
+}
+
 console.log(`\n${ok} correctas · ${ko} fallidas`);
 process.exit(ko ? 1 : 0);

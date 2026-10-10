@@ -17,7 +17,7 @@ function elegibleVivienda(p) {
 }
 function plusDe(x, b, p, caudal) {
   if (!plusCompleto(b)) return null;
-  try { return calcularPlusvalia({ inmueble: datosPlus(x, b), titulares: [{ heredero: titularPlus(p), fraccion: 1 }], fecha: x.fecha, caudalTotal: caudal }).total; } catch { return null; }
+  try { return calcularPlusvalia({ inmueble: datosPlus(x, b, undefined, (calcular(x) || {}).isd), titulares: [{ heredero: titularPlus(p), fraccion: 1 }], fecha: x.fecha, caudalTotal: caudal }).total; } catch { return null; }
 }
 
 // ── Renuncia simulada: la parte del renunciante va a quien la recibe por ley ──

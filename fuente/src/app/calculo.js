@@ -98,7 +98,7 @@ function tablaHerederos(R, sel) {
 function formulaPlus(x, b, r) {
   const terr = x.ccaa;
   const suelo = r.coeficiente ? r.baseObjetiva / r.coeficiente : 0;
-  const cc = cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) });
+  const cc = cuotaBien(b, x); // G04
   const vt = Math.max(num(b.valor), num(b.valorReferencia)), va = num(b.valorAdq);
   const prop = num(b.valorCatastralSuelo) / (num(b.valorCatastralTotal) || 1);
   const fx = (k, v, s, cls = "") => `<div class="fx ${cls}"><span class="k">${k}</span><b class="num">${v}</b>${s ? `<small>${s}</small>` : ""}</div>`;
@@ -168,7 +168,7 @@ function simulador(x, R) {
 // ── Flujo del patrimonio (diagrama de Sankey) ──
 function flujo(x, R) {
   const m = R.isd.masa, pp = plusPorHeredero(R);
-  const B = (x.bienes || []).map((b) => { const v = Math.max(num(b.valor), num(b.valorReferencia)); const cc = cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }); return { b, v, her: v * cc, viu: b.titularidad === "ganancial" ? v * 0.5 : 0, cop: b.titularidad === "proindiviso" ? v * (1 - cc) : 0 }; }).filter((q) => q.v > 0).sort((a, b) => b.v - a.v);
+  const LQ = m.liquidacion && m.liquidacion.porBien; const B = (x.bienes || []).map((b) => { const lq = LQ && LQ[b.id]; /* G04 */ const v = lq ? lq.total : Math.max(num(b.valor), num(b.valorReferencia)); const cc = lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }); const cv = lq ? lq.cuotaConyuge : b.titularidad === "ganancial" ? 0.5 : 0; return { b, v, her: v * cc, viu: v * cv, cop: Math.max(0, v * (1 - cc - cv)) }; }).filter((q) => q.v > 0).sort((a, b) => b.v - a.v);
   if (!B.length) return "";
   const TOT = B.reduce((s, q) => s + q.v, 0), HER = B.reduce((s, q) => s + q.her, 0), VIU = B.reduce((s, q) => s + q.viu, 0), COP = B.reduce((s, q) => s + q.cop, 0);
   const DG = Math.min(HER, (m.deudas || 0) + (m.gastos || 0)), NETO = Math.max(0, HER - DG);

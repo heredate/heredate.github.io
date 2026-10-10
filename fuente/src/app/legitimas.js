@@ -12,8 +12,9 @@ function lgCaso(x, R) {
   const porId = Object.fromEntries((x.personas || []).map((p) => [p.id, p]));
   const legados = (x.bienes || []).filter((b) => b.legatarioId && porId[b.legatarioId]).map((b) => {
     const inm = b.tipo === "vivienda" || b.tipo === "inmueble";
-    const total = inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
-    return { legatarioId: b.legatarioId, valor: total * cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }) };
+    const lq = R && R.isd && R.isd.masa.liquidacion && R.isd.masa.liquidacion.porBien[b.id]; // G04: cuota y valor de la liquidación del régimen
+    const total = lq ? lq.total : inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
+    return { legatarioId: b.legatarioId, valor: total * (lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) })) };
   });
   return {
     ccaa: x.ccaa === "EST" && x.ccaaBienes ? x.ccaaBienes : x.ccaa, vecindadCivil: x.vecindadCivil, isla: x.isla,
