@@ -201,7 +201,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(44,90,146,.2),transparent 64%),var(--bg)}
 :root[data-theme="light"] .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(255,255,255,.8),transparent 64%),var(--bg)}
 .rn-prog i{background:var(--petrol);box-shadow:none}
-.rn-kick{color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+.rn-kick{color:var(--ink-3);letter-spacing:.12em;font-variant-caps:all-small-caps;font-weight:600}
 .rn-card,.rn-tile,.rn-pay,.rn-formula,.rn-steps li,.rn-scroll,.rn-link{box-shadow:var(--sh-1)}
 .rn-card-v,.rn-tile-v,.rn-formula>div b,.rn-pay-f span{font-family:var(--font-display);font-weight:600;letter-spacing:-.012em;font-feature-settings:"tnum" 1,"lnum" 1}
 .rn-card-v small,.rn-pay-f small{font-family:var(--font-sans)}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610101057">
+<meta name="hereda-version" content="202610101101">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F4F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4203,7 +4203,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(44,90,146,.2),transparent 64%),var(--bg)}
 :root[data-theme="light"] .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(255,255,255,.8),transparent 64%),var(--bg)}
 .rn-prog i{background:var(--petrol);box-shadow:none}
-.rn-kick{color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+.rn-kick{color:var(--ink-3);letter-spacing:.12em;font-variant-caps:all-small-caps;font-weight:600}
 .rn-card,.rn-tile,.rn-pay,.rn-formula,.rn-steps li,.rn-scroll,.rn-link{box-shadow:var(--sh-1)}
 .rn-card-v,.rn-tile-v,.rn-formula>div b,.rn-pay-f span{font-family:var(--font-display);font-weight:600;letter-spacing:-.012em;font-feature-settings:"tnum" 1,"lnum" 1}
 .rn-card-v small,.rn-pay-f small{font-family:var(--font-sans)}
@@ -4232,7 +4232,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
   var RE = /^[\u2212\u2013-]\s?(?:[€$]\s?)?\d[\d.,\u00a0\u202f ]*(?:\s?(?:€|%|‰|k€|M€))?$/;
   var DIG = /\d/;
   var pend = [], full = true, tick = false;
-  function own(el) { var t = "", c = el.firstChild; for (; c; c = c.nextSibling) { if (c.nodeType === 3) t += c.nodeValue; else if (c.nodeType === 1 && c.classList && c.classList.contains("cur")) t += c.textContent; else return null; } return t.replace(/\s+/g, " ").trim(); }
+  function own(el) { var t = "", c = el.firstChild; for (; c; c = c.nextSibling) { if (c.nodeType === 3) t += c.nodeValue; else if (c.nodeType === 1 && !c.firstElementChild) t += c.textContent; else if (c.nodeType === 1) return null; } return t.replace(/\s+/g, " ").trim(); }
   function mark(el) {
     if (!el || el.nodeType !== 1 || el.closest("script,style,textarea,input,select,option,svg,[contenteditable]")) return;
     var t = own(el), neg = !!(t && t.length < 32 && RE.test(t));
@@ -4240,7 +4240,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
   }
   function scanText(root) {
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), n, seen = new Set();
-    while ((n = w.nextNode())) { var p = n.parentElement; if (p && !seen.has(p) && DIG.test(n.nodeValue)) { seen.add(p); mark(p); } }
+    while ((n = w.nextNode())) { var p = n.parentElement; if (p && DIG.test(n.nodeValue)) { if (!seen.has(p)) { seen.add(p); mark(p); } var g = p.parentElement; if (g && !seen.has(g)) { seen.add(g); mark(g); } } }
   }
   function run() {
     tick = false;
@@ -4252,7 +4252,7 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
   new MutationObserver(function (ms) {
     for (var i = 0; i < ms.length; i++) {
       var m = ms[i];
-      if (m.type === "characterData") pend.push(m.target);
+      if (m.type === "characterData") { pend.push(m.target); if (m.target.parentElement) pend.push(m.target.parentElement); }
       else { if (m.target.nodeType === 1 && m.target.classList.contains("hc-neg")) pend.push(m.target); for (var j = 0; j < m.addedNodes.length; j++) pend.push(m.addedNodes[j]); }
     }
     if (pend.length > 4000) { full = true; pend = []; }
@@ -4265,11 +4265,11 @@ html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!importan
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610101057"], ["app", "nucleo/app.js?v=202610101057"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610101101"], ["app", "nucleo/app.js?v=202610101101"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610101057").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610101101").catch(() => {}));
 </script>
 </body>
 </html>
