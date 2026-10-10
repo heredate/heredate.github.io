@@ -2678,3 +2678,132 @@ export function calcularPlazos(f, o = {}) {
   ];
   return p.filter((x) => x.aplica !== false);
 }
+
+// ─────────────────────────── Después de presentar (G06) ───────────────────────────
+// Procedimientos que abre una notificación tributaria y sus plazos de respuesta, con el calendario de inhábiles del órgano (G09).
+// Meses de fecha a fecha desde el día siguiente a la notificación (art. 30.4 Ley 39/2015: vence el mismo ordinal; si no existe, el último día del mes)
+// y traslado al siguiente hábil (art. 30.5). Días: hábiles (art. 30.2). Supletoriedad de la Ley 39/2015 en materia tributaria: DA 1.ª y art. 7.2 LGT.
+// o: { cal, tributo: "ISD" | "IIVTNU" | "IRPF", dias (plazo que fija el acto, en días hábiles), importe }
+export const PROC_TIPOS = [
+  ["requerimiento", "Requerimiento de información o documentación"],
+  ["propuestaLiquidacion", "Propuesta de liquidación (y, en su caso, de valoración)"],
+  ["liquidacion", "Liquidación provisional"],
+  ["comprobacionValores", "Liquidación con comprobación de valores"],
+  ["sancion", "Acuerdo sancionador"],
+  ["providenciaApremio", "Providencia de apremio"],
+];
+const procNombre = (t) => (PROC_TIPOS.find(([k]) => k === t) || [, t])[1];
+// Pago en periodo voluntario de una liquidación notificada (art. 62.2 LGT): del 1 al 15, hasta el día 20 del mes siguiente; del 16 al último, hasta el 5 del segundo mes siguiente
+export function pagoLiquidacion(fNot, cal) {
+  const d = Number(fNot.slice(8, 10)), base = fNot.slice(0, 8) + "01";
+  return venceHabil(d <= 15 ? sumarMeses(base, 1).slice(0, 8) + "20" : sumarMeses(base, 2).slice(0, 8) + "05", cal);
+}
+// Pago tras la providencia de apremio (art. 62.5 LGT): del 1 al 15, hasta el 20 de ese mes; del 16 al último, hasta el 5 del mes siguiente
+export function pagoApremio(fNot, cal) {
+  const d = Number(fNot.slice(8, 10)), base = fNot.slice(0, 8) + "01";
+  return venceHabil(d <= 15 ? base.slice(0, 8) + "20" : sumarMeses(base, 1).slice(0, 8) + "05", cal);
+}
+// Un mes desde el día siguiente a la notificación (recurso de reposición, art. 223.1 LGT; reclamación económico-administrativa, art. 235.1 LGT)
+export function plazoMes(fNot, cal) { return venceHabil(sumarMeses(fNot, 1), cal); }
+export function plazosProcedimiento(tipo, fNot, o = {}) {
+  if (!fNot || !/^\d{4}-\d{2}-\d{2}$/.test(fNot)) return null;
+  const cal = o.cal || null, local = o.tributo === "IIVTNU", dias = Math.max(1, Math.round(Number(o.dias) || 10));
+  const pl = [], avisos = [];
+  const add = (id, nombre, v, norma, nota, extra = {}) => pl.push({ id, nombre, limite: v.limite, limiteNatural: v.limiteNatural, trasladado: v.trasladado, aviso: v.nota, posible: v.posible, norma, nota: nota || "", estado: V, ...extra });
+  const habiles = (n) => { const lim = sumarHabiles(fNot, n, cal); const v = venceHabil(lim, cal); return { ...v, limiteNatural: lim }; };
+  const recurso = (nombre) => {
+    const v = plazoMes(fNot, cal);
+    if (local) add("recurso", nombre || "Recurso de reposición ante el ayuntamiento (obligatorio antes del contencioso)", v, "art. 14.2 TRLRHL (RDLeg 2/2004)", "Un mes desde el día siguiente a la notificación. En los municipios de gran población (título X Ley 7/1985) cabe además reclamación ante su órgano económico-administrativo: compruébalo");
+    else add("recurso", nombre || "Recurso de reposición o reclamación económico-administrativa", v, "arts. 223.1 y 235.1 LGT", "Un mes desde el día siguiente a la notificación; son alternativos (no se pueden simultanear)");
+  };
+  if (tipo === "requerimiento") {
+    add("atender", "Atender el requerimiento", habiles(dias), "arts. 29.2.g y 136-140 LGT; art. 163 RD 1065/2007", `${dias} días hábiles desde el día siguiente a la notificación (los que fije el requerimiento; si no dice otro, diez)`);
+    avisos.push("Contestar en plazo evita la sanción por resistencia o excusa (art. 203 LGT). El requerimiento interrumpe la prescripción (art. 68.1.a LGT).");
+  } else if (tipo === "propuestaLiquidacion") {
+    add("alegaciones", "Alegaciones a la propuesta", habiles(dias), "art. 99.8 LGT; arts. 96 y 164.4 RD 1065/2007", `${dias} días hábiles desde el día siguiente a la notificación (el que fije la propuesta; normalmente diez)`);
+    avisos.push("Si la propuesta incluye una valoración distinta de la declarada, se alega también contra ella (art. 134.1 LGT). La tasación pericial contradictoria se pide después, contra la liquidación.");
+  } else if (tipo === "liquidacion" || tipo === "comprobacionValores") {
+    recurso();
+    if (tipo === "comprobacionValores" && !local) add("tpc", "Tasación pericial contradictoria (o reservarse el derecho en el recurso)", plazoMes(fNot, cal), "art. 135.1 LGT; arts. 161-162 RD 1065/2007", "Dentro del plazo del primer recurso o reclamación contra la liquidación; suspende la ejecución de la liquidación y el plazo para recurrirla. No cabe contra el valor de referencia del Catastro aplicado como base (se discute recurriendo la liquidación)");
+    add("pago", "Pagar la liquidación en periodo voluntario", pagoLiquidacion(fNot, cal), "art. 62.2 LGT", "Del 1 al 15: hasta el día 20 del mes siguiente; del 16 al último día: hasta el 5 del segundo mes siguiente. Recurrir no suspende el pago salvo que se pida la suspensión con garantía (art. 224 LGT)");
+  } else if (tipo === "sancion") {
+    recurso("Recurso de reposición o reclamación contra la sanción");
+    add("pago", "Pagar la sanción con la reducción del 25 %", pagoLiquidacion(fNot, cal), "arts. 62.2 y 188.3 LGT", "La reducción por pronto pago exige ingresar en este plazo y no recurrir la liquidación ni la sanción");
+    avisos.push("El recurso contra la sanción la suspende sin garantía hasta que sea firme en vía administrativa (art. 212.3 LGT).");
+  } else if (tipo === "providenciaApremio") {
+    add("pago", "Pagar con el recargo de apremio reducido (10 %)", pagoApremio(fNot, cal), "arts. 28.3 y 62.5 LGT", "Del 1 al 15: hasta el día 20 de ese mes; del 16 al último: hasta el 5 del mes siguiente. Después, recargo del 20 % e intereses de demora y embargo (art. 167.1 LGT)");
+    recurso(local ? "Recurso de reposición contra la providencia de apremio" : "Recurso o reclamación contra la providencia de apremio");
+    avisos.push("Contra la providencia solo caben los motivos del art. 167.3 LGT (pago, prescripción, aplazamiento solicitado en voluntaria, falta de notificación de la liquidación, anulación o error en la identificación).");
+  } else return null;
+  return { tipo, nombre: procNombre(tipo), fechaNotificacion: fNot, plazos: pl, avisos, calendario: infoCalendario(cal, fNot.slice(0, 4)).texto };
+}
+// Prescripción (arts. 66-68 LGT): cuatro años. Derecho a liquidar: desde el día siguiente al fin del plazo de presentación o, si se presentó después,
+// desde la presentación (art. 68.1.c); cada actuación notificada al obligado la interrumpe y el cómputo vuelve a empezar (art. 68.6).
+// Derecho a la devolución de ingresos indebidos y a pedir la rectificación: desde el día siguiente al ingreso o al fin del plazo si se ingresó
+// dentro de él (art. 67.1, párrafo tercero). La prescripción no se traslada al siguiente hábil (plazo sustantivo, no de procedimiento).
+// o: { finPlazo, presentacion, pago, interrupciones: [fechas de notificación] }
+export function prescripcionTributo(o = {}) {
+  const fecha = (f) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null);
+  const fin = fecha(o.finPlazo); if (!fin) return null;
+  const pres = fecha(o.presentacion), pago = fecha(o.pago);
+  const ints = (o.interrupciones || []).map(fecha).filter((f) => f && f > fin).sort();
+  let base = fin, motivo = "fin del plazo de presentación";
+  if (pres && pres > fin) { base = pres; motivo = "presentación fuera de plazo"; }
+  const ult = ints.filter((f) => f >= base).pop();
+  if (ult) { base = ult; motivo = "última actuación notificada"; }
+  const baseDev = pago && pago > fin ? pago : fin;
+  return { liquidar: { desde: base, hasta: sumarMeses(base, 48), motivo, norma: "arts. 66.a, 67.1 y 68 LGT" },
+    devolucion: { desde: baseDev, hasta: sumarMeses(baseDev, 48), motivo: pago && pago > fin ? "ingreso después del fin del plazo" : "fin del plazo de presentación", norma: "arts. 66.c, 67.1 y 120.3 LGT; art. 126 RD 1065/2007" } };
+}
+
+// ─────────────────────────── Aplazamiento y fraccionamiento del ISD (G08) ───────────────────────────
+// Régimen general: art. 65 LGT y arts. 44-54 RD 939/2005 (RGR). Especial del ISD: art. 38 Ley 29/1987 y arts. 79-86 RD 1629/1991.
+// STS 1297/2025, de 15 de octubre (rec. 5673/2023): en autoliquidación la solicitud cabe durante todo el plazo de presentación (seis meses),
+// no solo en los cinco primeros (prevalece el art. 38.1 LISD sobre el art. 90.2 RISD).
+// Intereses (art. 53 RGR): de demora, desde el día siguiente al fin del periodo voluntario hasta el vencimiento de cada plazo; cada fracción, por
+// separado. Interés legal del dinero si la deuda está garantizada en su totalidad con aval de entidad de crédito o SGR o seguro de caución (art. 26.6 LGT).
+// Garantía: no se exige si el conjunto de deudas pendientes del solicitante no supera 50.000 € (art. 82.2.a LGT; Orden HFP/311/2023 para la AEAT y
+// Orden HFP/583/2023 para los tributos cedidos que recaudan las comunidades autónomas). Si se exige, cubre la deuda, los intereses y un 25 % más (art. 48.3 RGR).
+export const INTERES_LEGAL = 0.0325; // 2026: LPGE 2023 prorrogada (VERIFICADO con dos fuentes, 10-10-2026)
+export const APLAZ_LIMITE_GARANTIA = 50000;
+export const APLAZ_GARANTIA = {
+  estado: V, norma: "art. 82.2.a LGT; Orden HFP/583/2023 (tributos cedidos) y Orden HFP/311/2023 (AEAT)",
+  nota: "Límite estatal aplicable a los tributos cedidos que recauda la comunidad. Una comunidad puede haber fijado otro por norma propia: no se ha cotejado ninguna (PENDIENTE)",
+  forales: "En Navarra y los territorios vascos rige su norma general tributaria y su reglamento de recaudación: límite no cotejado (PENDIENTE)",
+};
+// Supuestos especiales del ISD (opciones con su norma y su estado)
+export const APLAZ_REGIMENES = [
+  { id: "general", nombre: "Régimen general (falta de liquidez transitoria)", norma: "art. 65 LGT; arts. 44-54 RD 939/2005", estado: V, nota: "La Administración decide los plazos según la situación del deudor; la práctica habitual sin garantía es de hasta doce plazos mensuales para personas físicas" },
+  { id: "isd38", nombre: "ISD: hasta un año, si en el caudal relicto no hay dinero ni bienes de fácil realización suficientes", norma: "art. 38.1 Ley 29/1987; arts. 79-86 RD 1629/1991", estado: V, maxMeses: 12, nota: "Se pide antes de que termine el plazo de pago (en autoliquidación, los seis meses: STS 1297/2025). Devenga intereses de demora. Algunos tribunales lo limitan al sistema de declaración: con autoliquidación, se tramita también por el régimen general" },
+  { id: "isd38frac", nombre: "ISD: fraccionamiento hasta cinco años con garantía", norma: "art. 38 Ley 29/1987; RD 1629/1991 (texto no cotejado)", estado: P, maxMeses: 60, nota: "Con garantía que cubra la deuda, los intereses y un 25 % más. Requisitos y plazos pendientes de cotejo literal con el BOE y la norma autonómica" },
+  { id: "isdVivienda", nombre: "ISD: vivienda habitual del causante o empresa familiar (aplazamiento especial)", norma: "art. 38.2 Ley 29/1987 (texto no cotejado)", estado: P, maxMeses: 60, nota: "Aplazamiento especial de cinco años para la cuota que corresponde a la vivienda habitual o a la empresa: requisitos e intereses pendientes de cotejo literal (PENDIENTE)" },
+];
+// Simulador. o: { importe, finVoluntario (último día del periodo voluntario), regimen, modo: "aplazamiento" | "fraccionamiento",
+//   plazos, periodicidad (meses entre plazos), primerVencimiento, garantia: "dispensa" | "aval" | "otra", tipoDemora, tipoLegal, otrasDeudas }
+export function simularAplazamiento(o = {}) {
+  const importe = Math.max(0, r2(Number(o.importe) || 0)), fin = o.finVoluntario;
+  if (!importe || !fin || !/^\d{4}-\d{2}-\d{2}$/.test(fin)) return null;
+  const reg = APLAZ_REGIMENES.find((r) => r.id === o.regimen) || APLAZ_REGIMENES[0];
+  const frac = o.modo === "fraccionamiento", n = frac ? Math.max(2, Math.min(60, Math.round(Number(o.plazos) || 12))) : 1;
+  const per = Math.max(1, Math.min(12, Math.round(Number(o.periodicidad) || 1)));
+  const primero = o.primerVencimiento && o.primerVencimiento > fin ? o.primerVencimiento : sumarMeses(fin, frac ? per : Math.min(12, per)).slice(0, 8) + "20";
+  const deudaTotal = r2(importe + Math.max(0, Number(o.otrasDeudas) || 0));
+  const dispensa = deudaTotal <= APLAZ_LIMITE_GARANTIA;
+  const garantia = dispensa ? "dispensa" : o.garantia === "aval" ? "aval" : "otra";
+  const tipo = garantia === "aval" ? Number(o.tipoLegal) || INTERES_LEGAL : Number(o.tipoDemora) || INTERES_DEMORA;
+  const dias = (a, b) => Math.max(0, Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5));
+  const cuota = r2(importe / n), filas = [];
+  for (let i = 0; i < n; i++) {
+    const vto = i === 0 ? primero : sumarMeses(primero, per * i);
+    const principal = i === n - 1 ? r2(importe - cuota * (n - 1)) : cuota;
+    const d = dias(fin, vto), interes = r2(principal * tipo * d / 365);
+    filas.push({ n: i + 1, vencimiento: vto, principal, dias: d, interes, total: r2(principal + interes) });
+  }
+  const intereses = r2(filas.reduce((s, f) => s + f.interes, 0)), ultimo = filas[filas.length - 1].vencimiento;
+  const avisos = [];
+  if (reg.maxMeses && ultimo > sumarMeses(fin, reg.maxMeses)) avisos.push(`El último vencimiento (${ultimo}) supera el máximo de este régimen (${reg.maxMeses} meses desde el fin del periodo voluntario)`);
+  if (!dispensa) avisos.push(`La deuda (${deudaTotal.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €, con las demás pendientes) supera ${APLAZ_LIMITE_GARANTIA.toLocaleString("es-ES")} €: hay que ofrecer garantía (aval, hipoteca, prenda u otra) o pedir su dispensa justificada (art. 82.2.b LGT)`);
+  if (reg.estado !== V) avisos.push(`${reg.nombre}: ${reg.nota}`);
+  return { importe, finVoluntario: fin, regimen: reg, modo: frac ? "fraccionamiento" : "aplazamiento", periodicidad: per, filas, intereses, total: r2(importe + intereses), tipo, garantia, dispensa, deudaTotal,
+    importeGarantia: dispensa ? 0 : r2((importe + intereses) * 1.25), norma: `${reg.norma}; art. 53 RD 939/2005 (intereses)`, estado: reg.estado === V && APLAZ_GARANTIA.estado === V ? V : P, avisos };
+}

@@ -74,7 +74,7 @@ def modulo(nombre):
     return marca(re.sub(r"^import .*$", "", t, flags=re.M))
 shell = (root / "src/app/shell.html").read_text()
 # Módulos de producto (despacho, auditoría, búsqueda global, tareas y acciones masivas): van antes de ui.js; sus estilos, tras pro.css
-MODULOS_PRODUCTO = ("tareas.js", "auditoria.js", "socio.js", "buscar.js", "masivo.js", "red-motor.js", "red.js")  # red: despacho en red (carpeta compartida)
+MODULOS_PRODUCTO = ("tareas.js", "fiscal.js", "auditoria.js", "socio.js", "buscar.js", "masivo.js", "red-motor.js", "red.js")  # red: despacho en red (carpeta compartida)
 _enl = json.loads((root / "src/enlaces.json").read_text())["tramites"]
 _jsv = lambda v: json.dumps(v, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 ENLACES = "const ENLACES = " + json.dumps(_enl, ensure_ascii=False, separators=(",", ":")) + ";"

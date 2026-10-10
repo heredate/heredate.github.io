@@ -244,7 +244,7 @@ const nombreTerr = (id) => (TERRITORIOS.find((t) => t[0] === id) || [id, id])[1]
 const REV = (t) => `⟦REVISIÓN OBLIGATORIA POR ABOGADO: ${t}⟧`;
 function docTexto(x, R, tipo) {
   // Escritos de escritos.js (escritura, cuaderno, renuncia, 790, familia, Catastro, plusvalía); los demás, aquí. Los huecos «[dato]» pasan a «⟦dato⟧».
-  const ES = { escritura: esrEscritura, cuaderno: esrCuaderno, renuncia: esrRenuncia, solicitud790: esrSolicitud790, cartaFamilia: esrCartaFamilia, catastro: esrCatastro, plusvalia: esrPlusvalia }[tipo];
+  const ES = { escritura: esrEscritura, cuaderno: esrCuaderno, renuncia: esrRenuncia, solicitud790: esrSolicitud790, cartaFamilia: esrCartaFamilia, catastro: esrCatastro, plusvalia: esrPlusvalia, aplazamiento: typeof apEscrito === "function" ? apEscrito : null }[tipo];
   const t0 = esrHuecos(ES ? ES(x, R) : docTexto0(x, R, tipo));
   return x.testamento === "nose" && tipo !== "certificados" && t0 ? REV("aún no consta si hay testamento: este borrador se ha preparado como si no lo hubiera. Confírmalo con el certificado de últimas voluntades antes de usarlo.") + "\n\n" + t0 : t0;
 }
@@ -413,7 +413,7 @@ async function iaLeerDoc(file) {
   ui.leyendo = false; render();
 }
 
-const DOC_TIT = { escritura: "Borrador de escritura de herencia", solicitud790: "Solicitud de certificados (modelo 790)", cartaFamilia: "Carta a la familia: documentos pendientes", catastro: "Cambio de titular en el Catastro (modelo 900D)", plusvalia: "Declaración de plusvalía municipal", liquidacion: "Propuesta de liquidación", notaria: "Nota para la notaría", recibi: "Liquidación final y recibí", banco: "Carta al banco", prorroga: "Solicitud de prórroga", acuerdo: "Acuerdo entre herederos", certificados: "Guía de certificados", cuaderno: "Cuaderno particional", informe: "Informe para el cliente", unico: "Instancia de heredero único", renuncia: "Borrador de escritura de renuncia", encargo: "Hoja de encargo y presupuesto" };
+const DOC_TIT = { escritura: "Borrador de escritura de herencia", solicitud790: "Solicitud de certificados (modelo 790)", cartaFamilia: "Carta a la familia: documentos pendientes", catastro: "Cambio de titular en el Catastro (modelo 900D)", plusvalia: "Declaración de plusvalía municipal", liquidacion: "Propuesta de liquidación", notaria: "Nota para la notaría", recibi: "Liquidación final y recibí", banco: "Carta al banco", prorroga: "Solicitud de prórroga", aplazamiento: "Solicitud de aplazamiento o fraccionamiento", acuerdo: "Acuerdo entre herederos", certificados: "Guía de certificados", cuaderno: "Cuaderno particional", informe: "Informe para el cliente", unico: "Instancia de heredero único", renuncia: "Borrador de escritura de renuncia", encargo: "Hoja de encargo y presupuesto" };
 function informe(x) {
   const R = calcular(x); if (!R) return "";
   const L = [`{{MARCA}} · informe · motor ${VERSION}`, `${x.nombre || "Herencia"} · ${nombreTerr(x.ccaa)} · fallecimiento ${x.fecha}`, `Caudal del fallecido ${eur(R.isd.masa.bruto)} · neto ${eur(R.isd.masa.neto)} · ajuar ${eur(R.isd.masa.ajuar)}`, ""];

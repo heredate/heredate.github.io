@@ -63,7 +63,8 @@ function ctxTramites(x, R) {
 function tramitesExp(x, R) {
   if (!x.fecha) return [];
   const st = x.tramites || {};
-  return tramitesDe(ctxTramites(x, R)).map((t) => ({ ...t, st: st[t.id]?.estado || "pend", nota: st[t.id]?.nota || "", docsOk: st[t.id]?.docs || {} }));
+  const fs = typeof fsTramites === "function" ? fsTramites(x, R) : []; // G06: plazos de las notificaciones de Hacienda, pagos pendientes y devoluciones (fiscal.js)
+  return tramitesDe(ctxTramites(x, R)).concat(fs).map((t) => ({ ...t, st: st[t.id]?.estado || "pend", nota: st[t.id]?.nota || "", docsOk: st[t.id]?.docs || {} }));
 }
 const cerrado = (t) => t.st === "hecho" || t.st === "na";
 function vence(t) {
@@ -357,7 +358,16 @@ function tHerencia(x, R) {
     <div style="margin-top:16px"><button class="btn gray sm" data-act="editar">Revisar con el asistente</button></div>`;
 }
 
+// Impuestos: cálculo, presentaciones y notificaciones (G06) y aplazamiento (G08); la subpestaña se guarda en ui.sub
 function tImpuestos(x, R) {
+  const isub = ["presentaciones", "aplazamiento"].includes(ui.sub) && typeof fsPanelHTML === "function" ? ui.sub : "calculo";
+  const nAb = typeof fsProcs === "function" ? fsProcs(x).filter((q) => q.estado !== "cerrado").length : 0;
+  const seg = typeof fsPanelHTML === "function" ? `<div class="seg imp-sub" role="tablist" aria-label="Impuestos"><button role="tab" data-sub="calculo" aria-pressed="${isub === "calculo"}">Cálculo</button><button role="tab" data-sub="presentaciones" aria-pressed="${isub === "presentaciones"}">Presentaciones<span class="imp-l"> y notificaciones</span>${nAb ? ` <span class="imp-n num">${nAb}</span>` : ""}</button><button role="tab" data-sub="aplazamiento" aria-pressed="${isub === "aplazamiento"}">Aplazamiento</button></div>` : "";
+  if (isub === "presentaciones") return seg + fsPanelHTML(x, R);
+  if (isub === "aplazamiento") return seg + apPanelHTML(x, R);
+  return seg + tImpuestosCalculo(x, R);
+}
+function tImpuestosCalculo(x, R) {
   const E = estrategia(x), K = costeExpediente(x, R);
   const HH = R.isd.herederos; const hs = HH.find((h) => h.id === ui.hsel) || HH[0];
   return `${typeof bloqueoRepartoHTML === "function" ? bloqueoRepartoHTML(x, R) : ""}<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${kpi("Sucesiones", eur0(R.isd.total), R.isd.recargo && R.isd.recargo.importe ? `${esc(R.isd.territorio)} · más recargo ${eur0(R.isd.recargo.importe)}` : esc(R.isd.territorio), "suc")}${kpi("Plusvalía", eur0(R.totalPlus), plural(R.plus.length, "inmueble"), "plu")}${K && K.exceso ? kpi("Exceso de adjudicación", eur0(K.exceso), "AJD/TPO · ver Partición", "", 'data-sec="particion"') : ""}${kpi("Total", eur0(K ? K.total : R.isd.total + R.totalPlus), "coste fiscal de la herencia")}${E ? kpi("Ahorro fiscal hoy", eur0(E.seguro), "ver estrategia", "gold", 'data-sec="estrategia"') : ""}</div>
@@ -399,7 +409,7 @@ function tEstrategia(x, R) {
     <p class="foot-note">Cada palanca se calcula simulando el expediente con el cambio. «Probar como escenario» crea una copia con el cambio aplicado para compararla. Las propuestas no sustituyen el criterio del abogado.</p>`;
 }
 
-const DOCS = [["liquidacion", "Propuesta de liquidación", "Sucesiones, plusvalía, estrategia, adjudicación y plazos"], ["notaria", "Nota para la notaría", "Causante, título, herederos, inventario, adjudicación y documentación"], ["escritura", "Borrador de escritura de herencia", "Manifestación, aceptación y adjudicación, en estilo notarial"], ["cuaderno", "Cuaderno particional", "Inventario, avalúo, liquidación, lotes y adjudicaciones"], ["recibi", "Liquidación final y recibí", "Lo que recibe cada heredero, cuenta de fondos y recibí"], ["informe", "Informe para el cliente", "Qué hay, cuánto se paga, quién recibe qué y los próximos pasos"], ["cartaFamilia", "Carta a la familia", "Documentos que faltan, agrupados y con dónde se piden"], ["banco", "Carta al banco", "Comunica el fallecimiento y pide certificados sin aceptar la herencia"], ["solicitud790", "Solicitud de certificados (modelo 790)", "Últimas voluntades y seguros, con los datos del causante"], ["certificados", "Guía de certificados", "Últimas voluntades y seguros, paso a paso"], ["acuerdo", "Acuerdo entre herederos", "Quién coordina y cómo se reparten los gastos"], ["prorroga", "Solicitud de prórroga", "Seis meses más para el Impuesto sobre Sucesiones"], ["renuncia", "Escritura de renuncia", "Renuncia pura y simple ante notario (art. 1008 CC)"], ["unico", "Instancia de heredero único", "Inscribir inmuebles sin escritura (art. 14 LH)"], ["plusvalia", "Declaración de plusvalía", "Al ayuntamiento, con la liquidación de cada inmueble"], ["catastro", "Cambio de titular en el Catastro", "Modelo 900D, si no lo comunica el notario"], ["encargo", "Hoja de encargo y presupuesto", "Encargo profesional con honorarios y suplidos"]];
+const DOCS = [["liquidacion", "Propuesta de liquidación", "Sucesiones, plusvalía, estrategia, adjudicación y plazos"], ["notaria", "Nota para la notaría", "Causante, título, herederos, inventario, adjudicación y documentación"], ["escritura", "Borrador de escritura de herencia", "Manifestación, aceptación y adjudicación, en estilo notarial"], ["cuaderno", "Cuaderno particional", "Inventario, avalúo, liquidación, lotes y adjudicaciones"], ["recibi", "Liquidación final y recibí", "Lo que recibe cada heredero, cuenta de fondos y recibí"], ["informe", "Informe para el cliente", "Qué hay, cuánto se paga, quién recibe qué y los próximos pasos"], ["cartaFamilia", "Carta a la familia", "Documentos que faltan, agrupados y con dónde se piden"], ["banco", "Carta al banco", "Comunica el fallecimiento y pide certificados sin aceptar la herencia"], ["solicitud790", "Solicitud de certificados (modelo 790)", "Últimas voluntades y seguros, con los datos del causante"], ["certificados", "Guía de certificados", "Últimas voluntades y seguros, paso a paso"], ["acuerdo", "Acuerdo entre herederos", "Quién coordina y cómo se reparten los gastos"], ["aplazamiento", "Solicitud de aplazamiento o fraccionamiento", "Sucesiones: plazos, intereses y garantía (art. 65 LGT y art. 38 Ley 29/1987)"], ["prorroga", "Solicitud de prórroga", "Seis meses más para el Impuesto sobre Sucesiones"], ["renuncia", "Escritura de renuncia", "Renuncia pura y simple ante notario (art. 1008 CC)"], ["unico", "Instancia de heredero único", "Inscribir inmuebles sin escritura (art. 14 LH)"], ["plusvalia", "Declaración de plusvalía", "Al ayuntamiento, con la liquidación de cada inmueble"], ["catastro", "Cambio de titular en el Catastro", "Modelo 900D, si no lo comunica el notario"], ["encargo", "Hoja de encargo y presupuesto", "Encargo profesional con honorarios y suplidos"]];
 function docsDisponibles(x) {
   const vivos = (x.personas || []).filter((p) => !p.renuncia);
   const unico = (x.personas || []).length === 1 && vivos.length === 1 && num(vivos[0].edad) >= 18 && !(x.bienes || []).some((b) => b.titularidad === "ganancial");

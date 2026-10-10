@@ -100,3 +100,43 @@ td.sc-bad,.kv .sc-bad{color:var(--red);font-weight:600}
 @media (max-width:640px){.red-ch-o{grid-template-columns:1fr}}
 /* G09 · calendario de festivos contado en cada plazo (hoja del trámite) */
 .meta .cal-aviso{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:var(--label-2);font-weight:400}
+/* G06 · Impuestos › Presentaciones y notificaciones · G08 · Aplazamiento (fiscal.js) */
+.imp-sub{margin:0 0 16px;max-width:100%}
+.imp-sub button{white-space:normal}
+.imp-n{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--fill);color:var(--label);font-size:11.5px;line-height:18px;text-align:center}
+.fs-cal{align-items:flex-start}
+.fs-cal > span:last-child{flex:1;min-width:0}
+.fs-muni{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12.5px;color:var(--label-2)}
+.fs-muni select,.fs-estado,.ap-form select,.fs-form select{max-width:100%;height:34px;border-radius:var(--r-sm);border:0;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair);padding:0 10px;font-size:14px;color:var(--label)}
+.fs-muni select{width:100%;max-width:420px}
+.fs-grupo + .fs-grupo{margin-top:12px}
+.fs-gt{font-size:12.5px;color:var(--label-2);margin:0 2px 6px}
+.fs-ico{flex:none}
+.fs-ico svg{width:15px;height:15px}
+.fs-edit{padding:12px 16px}
+.fs-edit-h b{display:block;font-weight:600;font-size:15px}
+.fs-edit-h small{display:block;font-size:12.5px;color:var(--label-2);margin:2px 0 10px}
+.fs-form{padding:4px 0 12px;margin-top:12px}
+.fs-edit .fs-form{margin-top:0}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0}
+.fs-grid .field{border-bottom:.5px solid var(--hair-2)}
+.fs-form .field input,.ap-form .field input{border-bottom:0}
+.fs-acts{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px 0}
+.fs-proc{padding:14px 0 12px}
+.fs-proc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:0 16px 12px;flex-wrap:wrap}
+.fs-proc-h .k{font-size:12px;color:var(--label-2)}
+.fs-proc-h h3{font:600 16px/1.3 var(--text);margin:2px 0 3px}
+.fs-proc-h small{font-size:12.5px;color:var(--label-2)}
+.fs-proc .group{box-shadow:none;border-radius:0;border-top:.5px solid var(--hair-2)}
+.fs-proc .row .t small.fs-nota{color:var(--label-3);white-space:normal;margin-top:3px;line-height:1.45}
+.fs-proc .st-sp{width:22px;flex:none}
+.fs-proc.fs-cerrado{opacity:.72}
+.fs-avisos li{font-size:13px;color:var(--label-2)}
+.fs-t td small{max-width:none;white-space:normal}
+.ap-form{padding:4px 0 12px}
+.ap-reg{padding:10px 16px 0;margin:0;line-height:1.5}
+.ap-reg .tag{margin-right:4px}
+.ap-avisos{margin-top:12px;background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow-sm)}
+.ap-t td.num,.ap-t td.mono{color:var(--label)}
+.ap-t tr.ap-tot td{border-bottom:0;background:var(--panel-2)}
+@media (max-width:640px){.fs-proc-h .fs-estado{width:100%}.imp-sub{display:flex}.imp-sub button{padding:6px 10px}.imp-l{display:none}}
