@@ -28,6 +28,8 @@ function dmT(f, hh, mm) { const d = new Date(`${f}T${String(hh).padStart(2, "0")
 function dmRnd(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const DM_LET = "TRWAGMYFPDXBNJZSQVHLCKE";
 const dmNif = (n) => String(n).padStart(8, "0") + DM_LET[n % 23]; // 00000NNN + letra correcta: válido y claramente ficticio
+// Datos registrales ficticios (G01): Registro de Sevilla n.º 00, CRU de ceros con el número del caso y notario «ficticio»
+const dmReg = (n, descripcionRegistral) => ({ registro: "Sevilla n.º 00", fincaRegistral: String(n), cru: "000000000" + String(n).padStart(5, "0"), tomo: "1001", libro: String(n), folio: "12", inscripcion: "3.ª", descripcionRegistral, tituloAdq: "compraventa", tituloNotario: "D. Notario Ficticio de Sevilla", tituloFecha: "1987-10-05", tituloProtocolo: String(1000 + n) });
 const dmRC = (n) => `00${String(n).padStart(5, "0")}DEMO000${String(n % 10000).padStart(4, "0")}DM`.slice(0, 20);
 
 // ── Equipo del despacho de demostración ──
@@ -65,10 +67,11 @@ function dmCasos() {
       notas: [[150, "Primera reunión con la familia: testamento del uno para el otro; la viuda quiere seguir en la vivienda"], [70, "Estudiada la conmutación del usufructo: la familia prefiere mantenerlo"], [12, "Enviado a la familia el borrador de liquidación del impuesto"], [3, "Begoña confirma la firma de las autoliquidaciones el jueves"]] },
     { n: 3, ref: 27, causante: "Natalia Rengel Losada", cliente: "Matías Abellán Rengel", ccaa: "AND", civil: "viudo", test: "porcentajes", fecha: dmF(-146), fase: "firma", resp: "dm-a2", alta: 133, ult: 0, horas: 21,
       hon: { modo: "pct", pct: 1.2, min: 1500 }, listo: true, nifC: 855, domC: "Calle Pureza 00, 41010 Sevilla",
+      caus: { lugarFallecimiento: "Sevilla", rcDefuncion: "Sevilla", fechaNacimiento: "1947-06-14", lugarNacimiento: "Sevilla", padre: "Ramiro Rengel Osuna", madre: "Felisa Losada Prieto" },
       p: [["p1", "Matías Abellán Rengel", "hijo", 52, { pct: 40, nif: dmNif(522), domicilio: "Calle Betis 00, 41010 Sevilla", estadoCivil: "casado_gananciales" }],
         ["p2", "Herminia Abellán Rengel", "hijo", 49, { pct: 60, discapacidad: 65, nif: dmNif(955), domicilio: "Calle Pureza 00, 41010 Sevilla", estadoCivil: "soltero" }]],
-      b: [["b1", "vivienda", "Piso en Triana, Sevilla", 236000, { valorReferencia: 224000, titularidad: "privativo", refCatastral: dmRC(301), cargas: "Libre de cargas según nota simple", ...viv("SEVILLA", 98000, 41000, "1987-10-05", 52000) }],
-        ["b2", "inmueble", "Plaza de garaje en Triana, Sevilla", 18000, { valorReferencia: 16500, titularidad: "privativo", refCatastral: dmRC(302), cargas: "Libre de cargas según nota simple", ...viv("SEVILLA", 7200, 3100, "1987-10-05", 4500) }],
+      b: [["b1", "vivienda", "Piso en Triana, Sevilla", 236000, { valorReferencia: 224000, titularidad: "privativo", refCatastral: dmRC(301), cargas: "Libre de cargas según nota simple", ...dmReg(301, "Vivienda en planta tercera, letra A, de la casa número 00 de la calle Pureza, de Sevilla. Superficie construida de noventa y cuatro metros cuadrados. Linda: frente, rellano y patio; derecha entrando, vivienda letra B; izquierda, calle Pureza; fondo, patio de manzana. Cuota: 6,25 %"), ...viv("SEVILLA", 98000, 41000, "1987-10-05", 52000) }],
+        ["b2", "inmueble", "Plaza de garaje en Triana, Sevilla", 18000, { valorReferencia: 16500, titularidad: "privativo", refCatastral: dmRC(302), cargas: "Libre de cargas según nota simple", ...dmReg(302, "Plaza de aparcamiento número doce en la planta sótano de la casa número 00 de la calle Pureza, de Sevilla. Superficie útil de doce metros cuadrados. Linda: frente, zona de maniobra; derecha, plaza once; izquierda, plaza trece; fondo, muro. Cuota: 0,40 %"), ...viv("SEVILLA", 7200, 3100, "1987-10-05", 4500) }],
         ["b3", "cuenta", "Cuenta corriente en BBVA", 64300, { titularidad: "privativo" }], ["b4", "valores", "Fondos de inversión en Banco Santander", 41000, { titularidad: "privativo" }]],
       gastos: [["Funeral", 3900]], docs: 1, tr: { prorroga: "na" },
       sol: [{ tipo: "banco", nombre: "BBVA", bienes: ["b3"], env: 120, rec: 96, clave: "banco:ent:bbva" }, { tipo: "banco", nombre: "Banco Santander", bienes: ["b4"], env: 120, rec: 84, clave: "banco:ent:banco santander" }],
@@ -194,6 +197,7 @@ function dmConstruir(c, D) {
     tramites: {}, bitacora: [], tiempos: [], solicitudes: [], recordatorios: [],
   };
   if (c.nifC) { x.nifCausante = dmNif(c.nifC); x.domicilioCausante = c.domC || ""; }
+  if (c.caus) Object.assign(x, c.caus); // datos del causante para la escritura y el 790 (G01)
   const hon = c.hon || { modo: "fijo", fijo: 2000 };
   x.despacho = { cliente: c.cliente, ref: `EXP-${hoy().slice(0, 4)}-${String(c.ref).padStart(3, "0")}`, alta, honModo: hon.modo, honFijo: hon.fijo || 1800, honPct: hon.pct || 1, honMin: hon.min || 1200, provision: 0, notaria: c.test === "no" ? 1900 : 1500, registro: 280, otros: 120, docs: {}, movs: [], checks: { ident: true, encargo: true, conflicto: true, datos: true }, nif: dmNif(220 + c.n) };
   const ev = []; // [fechaISO, tipo, texto, autor]

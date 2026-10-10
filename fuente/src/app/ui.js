@@ -613,6 +613,21 @@ function zonaPeligro(clave, txt, pregunta, accion, si, attr) {
     : `<div class="zona-peligro"><p>${txt}</p><button class="btn sm danger" data-conf="${clave}">${I.trash}${accion}</button></div>`;
 }
 const fsecH = (t, s) => `<div class="fsec-h"><b>${t}</b>${s ? `<small>${s}</small>` : ""}</div>`;
+// Datos registrales de la finca (G01): los usan la escritura, el cuaderno, la instancia de heredero único y la nota para la notaría.
+// Los rellena el lector con la nota simple; aquí se completan o corrigen. Mismos campos que «Listo para firmar» (firma.js).
+const REG_CAMPOS = ["registro", "fincaRegistral", "seccion", "tomo", "libro", "folio", "inscripcion", "cru", "descripcionRegistral", "linderos", "superficieRegistral", "cuotaParticipacion", "tituloAdq", "tituloNotario", "tituloFecha", "tituloProtocolo"];
+function registroBienHTML(b) {
+  const n = REG_CAMPOS.filter((k) => String(b[k] || "").trim()).length, ok = typeof esrRegistral === "function" && esrRegistral(b).completo;
+  const f = (k, t, ph, o = {}) => `<div class="field"><label for="br-${k}">${t}</label>${o.area ? `<textarea id="br-${k}" data-bn="${k}" rows="3" placeholder="${esc(ph)}">${esc(b[k] || "")}</textarea>` : `<input id="br-${k}" data-bn="${k}" value="${esc(b[k] || "")}" placeholder="${esc(ph)}"${o.type ? ` type="${o.type}"` : ""}${o.num ? ' inputmode="numeric"' : ""}${o.mono ? ' class="mono-in" spellcheck="false"' : ""} autocomplete="off">`}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</div>`;
+  return `<details class="fopt" data-fopt="b-registro" ${(ui.fopt?.["b-registro"] ?? false) ? "open" : ""}><summary><span><b>Datos registrales y título</b><br>Registro, finca, tomo, libro, folio, CRU, descripción y título del causante. Los lee la nota simple.</span>${ok ? `<span class="chip info">Completos</span>` : n ? `<span class="chip">${n} de ${REG_CAMPOS.length}</span>` : ""}</summary>
+    <div class="group">
+      ${f("registro", "Registro de la Propiedad", "Ej.: Málaga n.º 2")}${f("fincaRegistral", "Finca registral n.º", "Número de finca", { num: 1 })}${f("seccion", "Sección", "Si el Registro la indica")}
+      ${f("tomo", "Tomo", "Tomo", { num: 1 })}${f("libro", "Libro", "Libro", { num: 1 })}${f("folio", "Folio", "Folio", { num: 1 })}${f("inscripcion", "Inscripción", "Ej.: 4.ª")}
+      ${f("cru", "CRU (IDUFIR)", "Código Registral Único, 14 dígitos", { mono: 1, num: 1, hint: "Con el CRU y el número de finca, la finca queda identificada aunque falten tomo, libro y folio (art. 9 LH)." })}
+      ${f("descripcionRegistral", "Descripción registral", "Tal como figura en la nota simple: situación, superficie, linderos y cuota", { area: 1 })}${f("superficieRegistral", "Superficie registral", "Ej.: 120 m² construidos")}${f("linderos", "Linderos", "Frente, derecha, izquierda y fondo")}${f("cuotaParticipacion", "Cuota de participación", "Ej.: 2,50 %")}
+      ${f("tituloAdq", "Título de adquisición del causante", "Compraventa, herencia, donación…")}${f("tituloNotario", "Notario que autorizó la escritura", "Nombre")}${f("tituloFecha", "Fecha de la escritura", "", { type: "date" })}${f("tituloProtocolo", "Número de protocolo", "Número", { num: 1 })}
+    </div></details>`;
+}
 function sheetHTML(titulo, body, accion = "Cerrar", extra = "") {
   return `<div class="scrim" data-act="cerrarSheet"></div><div class="sheet ${extra}" role="dialog" aria-modal="true" aria-label="${esc(titulo)}"><div class="grab"></div><header><span></span><h2>${esc(titulo)}</h2><button class="tbtn${accion === "Hecho" ? " sh-ok" : ""}" data-act="cerrarSheet">${accion}</button></header><div class="body">${body}</div></div>`;
 }
@@ -674,6 +689,7 @@ function vSheet() {
       ${inm ? `<div class="field"><label for="b-rc">Referencia catastral</label><input id="b-rc" data-bn="refCatastral" value="${esc(b.refCatastral)}" placeholder="20 caracteres" autocomplete="off" autocapitalize="characters" maxlength="24" spellcheck="false" data-valida="rc" class="mono-in"></div><div class="field"><label for="b-cg">Cargas</label><input id="b-cg" data-bn="cargas" value="${esc(b.cargas)}" placeholder="Hipoteca, embargo… o «Libre de cargas»"><span class="hint">Según la nota simple del Registro.</span></div>` : ""}
       ${inm ? `<div class="field"><label for="b-r">Valor de referencia del Catastro (€)</label><input id="b-r" inputmode="decimal" data-bn="valorReferencia" value="${numStr(b.valorReferencia)}" placeholder="Opcional"><span class="hint">Se declara el mayor de los dos. <a href="${SEDES.valorRef}" target="_blank" rel="noopener">Consultarlo en la sede del Catastro</a></span></div>` : ""}
     </div>
+    ${inm ? registroBienHTML(b) : ""}
     ${fsecH("Titularidad y reparto", x.civil === "gananciales" ? "En gananciales, la mitad de lo común es del viudo y no entra en la herencia." : "Qué parte era del causante y a quién se adjudica.")}
     <div class="group">
       <div class="field"><label>Titularidad</label><div class="seg"><button data-tit="privativo" aria-pressed="${(b.titularidad || "privativo") === "privativo"}">Privativo</button><button data-tit="ganancial" aria-pressed="${b.titularidad === "ganancial"}">Ganancial</button><button data-tit="proindiviso" aria-pressed="${b.titularidad === "proindiviso"}">Una parte</button></div></div>
