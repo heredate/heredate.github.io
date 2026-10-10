@@ -83,7 +83,7 @@ function anilloTipo(fs, fp, size = 112) {
 function panelHeredero(x, R, h) {
   const pp = plusPorHeredero(R)[h.nombre] || 0, terr = x.ccaa === "EST" ? x.ccaaBienes || "EST" : x.ccaa;
   const tot = h.aIngresar + pp, va = h.valorAdquirido || 0;
-  return `<div class="hpanel"><div class="hp-top"><div class="hp-id"><div class="kick">${esc(RELACIONES[h.relacion].label)} · grupo ${esc(h.grupo)}</div><h3>${esc(h.nombre)}</h3><p class="hp-nar">${narrativaISD(h, pp)}</p></div>
+  return `<div class="hpanel"><div class="hp-top"><div class="hp-id"><div class="kick">${esc(RELACIONES[h.relacion].label)} · grupo ${esc(h.grupo)}${h.territorio && h.territorio !== R.isd.territorio ? ` · ${esc(h.territorio)}` : ""}</div><h3>${esc(h.nombre)}</h3><p class="hp-nar">${narrativaISD(h, pp)}</p></div>
     <div class="hp-fig">${anilloTipo(va ? h.aIngresar / va : 0, va ? pp / va : 0)}<div class="kv sm"><span><i class="kd s"></i>Sucesiones</span><span>${eur(h.aIngresar)}</span><span><i class="kd p"></i>Plusvalía</span><span>${eur(pp)}</span><span class="b">Total</span><span class="b">${eur(tot)}</span></div></div></div>
     ${escaleraISD(h, terr)}</div>`;
 }
