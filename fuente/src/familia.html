@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F4F2EC">
+<title>Datos para la herencia · {{MARCA}}</title>
+<link rel="icon" href="/favicon.png">
+<style>
+/* Tipografía de la casa (autoalojada, OFL): Inter para el texto y Source Serif 4 para los títulos. Sin ellas (archivo abierto
+   sin conexión), la fuente del sistema. Azul notarial como acento, igual que la aplicación del despacho. */
+@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}
+@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}
+:root{
+  --text:"Hereda Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --display:"Hereda Serif","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --canvas:#F4F2EC; --panel:#FFFEFB; --field:#FAF9F5;
+  --label:#121C2A; --label-2:#434C59; --label-3:#5C6470; --label-4:#B1B5BC;
+  --line:#E0DCD2; --line-2:#EAE7DF;
+  --accent:#0F2B4C; --accent-2:#0A1F38; --accent-t:#E8ECF1; --accent-t2:#D3DBE5;
+  --green:#1F6E6B; --green-t:#E5EFEC; --petrol:#1F6E6B; --red:#9E3B2B; --red-t:#F6E8E3;
+  --shadow:0 0 0 1px rgba(18,28,42,.05),0 1px 2px rgba(18,28,42,.04),0 4px 14px -6px rgba(18,28,42,.06);
+  --r:16px;
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--canvas);scroll-padding:24px 0 120px}
+body{margin:0;background:var(--canvas);color:var(--label);font:16px/1.5 var(--text);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+svg{display:block;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+h1:focus{outline:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Estructura */
+.shell{max-width:620px;margin:0 auto}
+.side{display:none}
+.wrap{padding:0 16px calc(118px + env(safe-area-inset-bottom))}
+
+/* Cabecera del despacho */
+.top{display:flex;align-items:center;gap:12px;padding:20px 0 18px}
+.mono{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:600;font-size:15px;letter-spacing:.04em;flex:none}
+.firm{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.firm b{font-size:15.5px;font-weight:600;overflow-wrap:anywhere}
+.firm small{font-size:13px;color:var(--label-2)}
+
+/* Progreso */
+.prog{margin:2px 0 26px}
+.seg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.seg i{height:4px;border-radius:4px;background:var(--line-2)}
+.seg i.on{background:var(--petrol)}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13.5px;color:var(--label-2)}
+.saved{display:inline-flex;align-items:center;gap:5px;color:var(--label-3)}
+.saved svg{color:var(--green)}
+
+/* Texto */
+h1{text-wrap:balance;font-family:var(--display);font-size:30px;line-height:1.15;letter-spacing:-.018em;margin:0 0 10px;font-weight:600}
+.lead{color:var(--label-2);margin:0 0 26px;font-size:16.5px;line-height:1.55}
+.qt{font-size:15px;font-weight:600;margin:30px 2px 12px;color:var(--label)}
+.hint{font-size:13.5px;color:var(--label-3);margin:6px 2px 0;line-height:1.4}
+
+/* Tarjetas y campos */
+.card{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 18px;margin-bottom:14px}
+.card.flush{padding:4px 18px}
+.field{margin-bottom:18px}
+.field:last-child{margin-bottom:0}
+label.l{display:block;font-size:14px;font-weight:500;color:var(--label-2);margin:0 2px 7px}
+input[type=text],input[type=tel],input[type=email],input[type=date],input:not([type]),select,textarea{width:100%;min-height:50px;border:1px solid var(--line);background:var(--field);border-radius:12px;padding:12px 14px;font-size:16.5px;outline:none;transition:border-color .15s,box-shadow .15s,background-color .15s}
+input::placeholder,textarea::placeholder{color:#848A93}
+input:hover,select:hover,textarea:hover{border-color:#CBC5B8}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-t2)}
+input[type=date]{appearance:none;-webkit-appearance:none;display:flex;align-items:center}
+select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%2355555A' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:40px;cursor:pointer}
+textarea{resize:vertical;min-height:104px;line-height:1.45}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.eur,.pct{position:relative}.eur input,.pct input{padding-right:36px}
+.pct::after,.eur::after{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--label-3);font-size:16px;pointer-events:none}
+.pct::after{content:"%"}.eur::after{content:"€"}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row-age{display:grid;grid-template-columns:1fr 104px;gap:12px}
+@media (max-width:479px){.row2.stack{grid-template-columns:1fr;gap:18px}}
+
+/* Opciones */
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;min-height:58px;text-align:left;background:var(--panel);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);transition:box-shadow .15s,background-color .15s}
+.opt:hover{background:#FBFAF7}
+.opt .dot{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--label-4);flex:none;transition:box-shadow .15s}
+.opt[aria-pressed=true]{background:var(--accent-t);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.opt[aria-pressed=true] .dot{box-shadow:inset 0 0 0 7px var(--accent)}
+.opt .t{display:flex;flex-direction:column;gap:1px;font-size:16px}
+.opt small{color:var(--label-2);font-size:13.5px;line-height:1.35}
+
+/* Interruptor */
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:50px;margin:0 0 18px;cursor:pointer;font-size:16px}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch span{position:absolute;inset:0;background:#D3CEC3;border-radius:31px;transition:background-color .2s}
+.switch span::after{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(18,28,42,.2);transition:transform .2s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:3px}
+
+/* Elementos de lista (familia y bienes) */
+.item{padding:0 18px 20px}
+.item-h{display:flex;align-items:center;gap:12px;padding:14px 0;margin-bottom:18px;border-bottom:1px solid var(--line-2)}
+.av{width:40px;height:40px;border-radius:50%;background:var(--accent-t);color:var(--accent);display:grid;place-items:center;font-size:14px;font-weight:600;letter-spacing:.03em;flex:none}
+.av.sq{border-radius:12px}
+.item-h .tt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.item-h .tt b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item-h .tt b.ph{color:var(--label-2)}
+.item-h .tt small{font-size:13px;color:var(--label-3)}
+.del{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 10px;margin-right:-10px;border-radius:10px;color:var(--label-2);font-size:14.5px;font-weight:500;transition:color .15s,background-color .15s}
+.del:hover{color:var(--red);background:var(--red-t)}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;border:1.5px dashed var(--line);border-radius:var(--r);padding:28px 20px;margin-bottom:6px;color:var(--label-2)}
+.empty .av{width:48px;height:48px;background:#ECE9E2;color:var(--label-3);margin-bottom:6px}
+.empty b{color:var(--label);font-weight:600;font-size:16px}
+.empty span{font-size:14.5px;max-width:320px}
+.addh{font-size:14px;font-weight:600;color:var(--label-2);margin:24px 2px 10px}
+.add{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.add button{display:flex;align-items:center;gap:10px;min-height:52px;padding:10px 14px;background:var(--panel);border-radius:14px;box-shadow:var(--shadow);font-size:15px;font-weight:500;text-align:left;line-height:1.25;transition:background-color .15s,box-shadow .15s}
+.add button:hover{background:var(--accent-t);box-shadow:inset 0 0 0 1px var(--accent-t2)}
+.add button .ic{width:30px;height:30px;border-radius:9px;background:var(--accent-t);color:var(--accent);display:grid;place-items:center;flex:none}
+.add button:hover .ic{background:#fff}
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 4px 0;font-size:15px;color:var(--label-2)}
+.total b{color:var(--label);font-weight:600;font-variant-numeric:tabular-nums;font-size:16.5px}
+
+/* Casillas */
+.check{display:flex;align-items:flex-start;gap:14px;padding:15px 0;border-bottom:1px solid var(--line-2);cursor:pointer;position:relative}
+.check:last-child{border-bottom:0}
+.check input{position:absolute;opacity:0;width:1px;height:1px}
+.check .box{width:24px;height:24px;border-radius:7px;box-shadow:inset 0 0 0 1.5px var(--label-4);flex:none;display:grid;place-items:center;margin-top:0;transition:background-color .15s,box-shadow .15s}
+.check input:checked+.box{background:var(--accent);box-shadow:none}
+.check input:checked+.box::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.2px 2.2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.check input:focus-visible+.box{outline:2px solid var(--accent);outline-offset:2px}
+.check .t{display:flex;flex-direction:column;gap:2px;font-size:16px;line-height:1.4}
+.check small{color:var(--label-3);font-size:13.5px}
+.cardh{display:flex;justify-content:space-between;align-items:center;padding:14px 0 6px;font-size:13.5px;color:var(--label-3);border-bottom:1px solid var(--line-2)}
+.cardh b{color:var(--label-2);font-weight:600}
+
+/* Bienvenida */
+.how{list-style:none;margin:0;padding:0}
+.how li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2)}
+.how li:first-child{padding-top:2px}.how li:last-child{border-bottom:0;padding-bottom:2px}
+.how .av{width:38px;height:38px}
+.how b{display:block;font-weight:600;font-size:16px;line-height:1.35}
+.how div > span{display:block;margin-top:2px;font-size:14.5px;color:var(--label-2);line-height:1.45}
+.need{list-style:none;margin:0;padding:0}
+.need li{display:flex;align-items:center;gap:12px;padding:7px 0;line-height:1.4;font-size:15.5px;color:var(--label)}
+.need li svg{color:var(--label-3)}
+.cardt{font-weight:600;font-size:15px;margin:0 0 8px}
+.cardt small{font-weight:400;color:var(--label-3);font-size:14px}
+.note{display:flex;gap:12px;align-items:flex-start;background:var(--accent-t);border-radius:14px;padding:14px 16px;font-size:14.5px;color:#1E3352;margin:0 0 14px;line-height:1.45}
+.note svg{margin-top:1px;color:var(--accent)}
+
+/* Resumen */
+.sum .r{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line-2)}
+.sum .r:last-child{border-bottom:0}
+.sum .rt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.sum .rk{font-size:13.5px;color:var(--label-3)}
+.sum .rv{font-size:16px;font-weight:500;font-variant-numeric:tabular-nums}
+.sum .rs{font-size:14px;color:var(--label-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.link{min-height:44px;padding:0 12px;margin-right:-12px;border-radius:10px;color:var(--accent);font-weight:500;font-size:15px}
+.link:hover{background:var(--accent-t)}
+
+/* Hecho */
+.done{text-align:center;padding:28px 8px 6px}
+.done .ok{width:72px;height:72px;border-radius:50%;background:var(--green-t);color:var(--green);display:grid;place-items:center;margin:0 auto 20px}
+.done .lead{margin:0 auto 26px;max-width:440px}
+.file{display:flex;align-items:center;gap:12px;padding:4px 0 18px;margin-bottom:6px;border-bottom:1px solid var(--line-2)}
+.file .t{min-width:0;display:flex;flex-direction:column;line-height:1.35}
+.file b{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.file small{color:var(--label-3);font-size:13.5px}
+.nx{list-style:none;margin:0;padding:0;counter-reset:n}
+.nx li{counter-increment:n;display:flex;gap:14px;padding:12px 0;font-size:15.5px;line-height:1.45}
+.nx li::before{content:counter(n);flex:none;width:28px;height:28px;border-radius:50%;background:var(--accent-t);color:var(--accent);display:grid;place-items:center;font-size:14px;font-weight:600}
+
+.foot{font-size:13px;color:var(--label-3);text-align:center;margin:34px 0 0}
+
+/* Barra de acciones */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:rgba(244,242,236,.9);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid rgba(18,28,42,.06)}
+.bar .in{max-width:620px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
+.btn{flex:1;min-height:54px;border-radius:14px;background:var(--accent);color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 20px;transition:background-color .15s,opacity .15s}
+.btn:hover{background:var(--accent-2)}
+.btn[disabled]{background:#9FAABA;cursor:not-allowed}
+.btn.sec{flex:0 0 auto;padding:0 18px 0 12px;background:var(--panel);color:var(--label);box-shadow:var(--shadow)}
+.btn.sec:hover{background:#FAF9F5}
+.btn:focus-visible{outline-offset:3px;border-radius:14px}
+
+/* Aviso deshacer */
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translate(-50%,8px);z-index:6;width:calc(100% - 32px);max-width:560px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#26262A;color:#fff;border-radius:14px;padding:6px 6px 6px 18px;font-size:15px;box-shadow:0 10px 30px -10px rgba(18,28,42,.35);opacity:0;visibility:hidden;transition:opacity .2s,transform .2s,visibility 0s .2s}
+.toast.on{opacity:1;visibility:visible;transform:translate(-50%,0);transition:opacity .2s,transform .2s}
+.toast button{min-height:44px;padding:0 14px;border-radius:10px;color:#9DBCE6;font-weight:600}
+.toast button:hover{background:rgba(255,255,255,.08)}
+.toast button:focus-visible{outline-color:#9DBCE6}
+
+/* Transición entre pasos */
+.stage.enter{animation:enter .28s cubic-bezier(.2,.7,.2,1) both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+
+/* Sugerencias de municipio, avisos suaves y envío (Piloto 10) */
+.ac{position:relative}
+.sug{list-style:none;margin:6px 0 0;padding:4px;background:var(--panel);border-radius:12px;box-shadow:0 0 0 1px var(--line),0 8px 24px -10px rgba(18,28,42,.18)}
+.sug[hidden]{display:none}
+.sug button{display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:44px;padding:8px 12px;border-radius:9px;text-align:left;font-size:15.5px;line-height:1.3}
+.sug button:hover,.sug button:focus-visible{background:var(--accent-t)}
+.sug small{font-size:13px;color:var(--label-3)}
+.soft{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:13.5px;color:#875A1A;margin:7px 2px 0;line-height:1.4}
+.soft[hidden]{display:none}
+.soft button{color:var(--accent);font-weight:600;font-size:13.5px;min-height:32px}
+.firmcard{display:flex;align-items:center;gap:14px}
+.firmcard .t{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.firmcard b{font-weight:600}
+.firmcard a{color:var(--accent);text-decoration:none;font-size:15px}
+.sendopts{display:grid;gap:10px;margin:4px 0 14px}
+.sendopts .btn{flex:none;width:100%}
+.btn.wa{background:#1E7A47}.btn.wa:hover{background:#17633A}
+.btn.ghost{background:var(--panel);color:var(--label);box-shadow:var(--shadow);font-weight:500;font-size:16px}
+.btn.ghost:hover{background:#FAF9F5}
+.steps2{margin:0;padding:0 0 0 20px;font-size:15px;line-height:1.5;color:var(--label-2)}
+.steps2 li{margin:4px 0}
+.steps2 b{color:var(--label)}
+.or{font-size:13.5px;color:var(--label-3);margin:14px 2px 8px}
+
+/* Escritorio */
+@media (min-width:960px){
+  body{font-size:16px}
+  .shell{max-width:1060px;display:grid;grid-template-columns:260px minmax(0,640px);gap:72px;justify-content:center;padding:0 40px}
+  .side{display:block;position:sticky;top:0;align-self:start;padding:56px 0 40px;min-height:100vh}
+  .side .top{padding:0 0 32px;margin-bottom:28px;border-bottom:1px solid var(--line)}
+  .side .mono{width:48px;height:48px;font-size:16px}
+  .steps{list-style:none;margin:0;padding:0;position:relative}
+  .steps li{position:relative;padding:0 0 6px}
+  .steps li:not(:last-child)::before{content:"";position:absolute;left:13px;top:34px;bottom:-2px;width:1.5px;background:var(--line)}
+  .steps li.ok:not(:last-child)::before{background:var(--petrol)}
+  .st{display:flex;align-items:center;gap:14px;width:100%;min-height:44px;padding:4px 8px 4px 0;border-radius:10px;font-size:15px;color:var(--label-3);text-align:left}
+  .st i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:600;box-shadow:inset 0 0 0 1.5px var(--line);background:var(--canvas);flex:none}
+  li.ok .st{color:var(--label-2)}
+  li.ok .st i{background:var(--petrol);color:#fff;box-shadow:none}
+  button.st:hover{color:var(--label)}
+  li.cur .st{color:var(--label);font-weight:600}
+  li.cur .st i{box-shadow:inset 0 0 0 2px var(--accent);color:var(--accent);background:#fff}
+  .side .sidenote{display:flex;gap:10px;margin-top:32px;font-size:13.5px;color:var(--label-3);line-height:1.45}
+  .side .sidenote svg{color:var(--label-3);margin-top:1px}
+  .main{min-width:0}
+  .wrap{padding:56px 0 24px}
+  .wrap > .top{display:none}
+  .prog .seg{display:none}
+  .prog{margin:0 0 14px}
+  .meta{margin-top:0}
+  h1{font-size:34px;margin-bottom:12px}
+  .lead{font-size:17px;margin-bottom:32px}
+  .card{padding:24px}
+  .card.flush,.item{padding-left:24px;padding-right:24px}
+  .item{padding-bottom:24px}
+  .add{grid-template-columns:repeat(3,1fr)}
+  .add.p5{grid-template-columns:repeat(3,1fr)}
+  .bar{position:sticky;bottom:0;background:linear-gradient(to bottom,rgba(244,242,236,0),var(--canvas) 22px);-webkit-backdrop-filter:none;backdrop-filter:none;border-top:0}
+  .bar .in{max-width:none;padding:30px 0 32px;justify-content:space-between}
+  .bar .btn{flex:0 0 auto;min-width:220px}
+  .bar .btn.sec{min-width:0}
+  .bar .in.one{justify-content:flex-end}
+  .toast{bottom:32px}
+  .foot{text-align:left;margin-top:40px}
+  .done{text-align:left;padding-top:8px}
+  .done .ok{margin:0 0 22px}
+  .done .lead{margin-left:0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Despacho y pasos"></aside>
+  <main class="main">
+    <div class="wrap" id="app"></div>
+    <div class="bar"><div class="in" id="bar"></div></div>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+/*__FAM_DATA__*/
+const REL = [["hijo","Hijo o hija"],["conyuge","Esposo o esposa"],["pareja_hecho","Pareja de hecho inscrita"],["pareja_no_inscrita","Pareja no inscrita"],["nieto","Nieto o nieta"],["padre","Padre o madre"],["abuelo","Abuelo o abuela"],["hermano","Hermano o hermana"],["sobrino","Sobrino o sobrina"],["tio","Tío o tía"],["primo","Primo o prima"],["extrano","Otra persona"]];
+const BIEN = [["vivienda","Vivienda donde vivía"],["inmueble","Otra vivienda, local, garaje o terreno"],["cuenta","Cuenta o depósito"],["valores","Acciones o fondos"],["vehiculo","Vehículo"],["otro","Otro bien"]];
+const DOCS = [["defuncion","Certificado de defunción",""],["ultimas","Certificado de últimas voluntades","Dice si hizo testamento"],["testamento","Copia del testamento",""],["seguros","Certificado de seguros de fallecimiento",""],["libro","Libro de familia",""],["dni","DNI de los herederos",""],["escrituras","Escrituras de las viviendas o terrenos",""],["ibi","Último recibo del IBI","Trae el valor catastral"],["bancos","Extractos o certificados de los bancos",""],["renta","Última declaración de la renta",""]];
+const CIVIL = [["gananciales","Casado o casada","En gananciales, lo habitual en casi toda España"],["separacion","Casado o casada en separación de bienes","Habitual en Cataluña y Baleares"],["pareja","Pareja de hecho",""],["viudo","Viudo o viuda",""],["soltero","Soltero, soltera o divorciado",""]];
+const TEST = [["si","Sí, hizo testamento"],["no","No hizo testamento"],["nose","No lo sabemos"]];
+const H = Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
+/*__PRESET__*/
+const KEY = "hereda-familia-" + (H.r || "borrador");
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const num = (v) => { if (typeof v === "number") return isFinite(v) ? v : 0; const n = Number(String(v ?? "").replace(/\./g, "").replace(",", ".").replace(/[^\d.-]/g, "")); return isFinite(n) ? n : 0; };
+const grp = (n, d) => { const [i, f] = Math.abs(n).toFixed(d).split("."); return (n < 0 ? "−" : "") + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (f ? "," + f : ""); };
+const fmt = (v) => { const n = num(v); return n ? grp(n, Math.abs(n % 1) > 0.0001 ? 2 : 0) : ""; };
+// Nombres: «manuel lopez ortiz» → «Manuel Lopez Ortiz» (solo si está todo en minúsculas o todo en mayúsculas)
+const nombrePropio = (s) => { const t = String(s || "").replace(/\s+/g, " ").trim(); if (!t || (t !== t.toLocaleLowerCase("es") && t !== t.toLocaleUpperCase("es"))) return t; return t.toLocaleLowerCase("es").split(" ").map((w, i) => (i > 0 && /^(de|del|la|las|los|y|e|i|da|das|do|dos)$/.test(w) ? w : w.split("-").map((q) => q.charAt(0).toLocaleUpperCase("es") + q.slice(1)).join("-"))).join(" "); };
+// Municipios: búsqueda tolerante a acentos y erratas («sevila» → Sevilla)
+const nrm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9ñ]+/g, " ").trim();
+let MIDX = null;
+const midx = () => MIDX || (MIDX = (typeof MUNIS !== "undefined" ? MUNIS : []).map((m) => { const k = /^(.*?) \(([^()]*)\)$/.exec(m) || [, m, ""]; return { m, n: k[1], p: k[2], q: nrm(k[1]), alt: k[1].split("/").map(nrm), qp: nrm(k[2]) }; }));
+function dist(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j), pp = null;
+  for (let i = 1; i <= a.length; i++) { const cur = [i]; let mn = i; for (let j = 1; j <= b.length; j++) { let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (pp && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, pp[j - 2] + 1); cur.push(v); if (v < mn) mn = v; } if (mn > max) return max + 1; pp = prev; prev = cur; }
+  return prev[b.length];
+}
+function buscarMuni(q, max = 6) {
+  const t = nrm(q).replace(/ (de |del )?(la |las |los |el )?$/, ""); if (t.length < 2) return [];
+  const [qn, qp] = (() => { const m = /^(.*?)\s*[,(]\s*([^()]*)\)?$/.exec(q); return m ? [nrm(m[1]), nrm(m[2])] : [t, ""]; })();
+  const tol = qn.length >= 7 ? 2 : qn.length >= 4 ? 1 : 0, out = [];
+  for (const m of midx()) {
+    if (qp && !m.qp.startsWith(qp)) continue;
+    let sc = m.alt.includes(qn) ? 0 : m.alt.some((a) => a.startsWith(qn)) ? 1 : (" " + m.q).includes(" " + qn) ? 2 : m.q.includes(qn) && qn.length > 2 ? 3 : 9;
+    if (sc === 9 && tol) { const d = Math.min(...m.alt.map((a) => Math.min(dist(qn, a, tol), dist(qn, a.slice(0, qn.length), tol)))); if (d <= tol) sc = 4 + d; }
+    if (sc < 9) out.push([sc - (m.q === m.qp || m.qp.startsWith(m.q + " ") ? 0.5 : 0), m]); // capitales de provincia, primero
+  }
+  return out.sort((a, b) => a[0] - b[0] || a[1].n.length - b[1].n.length || a[1].n.localeCompare(b[1].n, "es")).slice(0, max).map((o) => o[1]);
+}
+const esMuni = (v) => { const t = String(v || "").trim(); return !!t && midx().some((m) => m.m === t); };
+// Avisos suaves de contacto: teléfono incompleto y erratas típicas del correo
+const telCifras = (t) => String(t || "").replace(/[^\d]/g, "");
+const telAviso = (t) => { const v = String(t || "").trim(); if (!v) return ""; const d = telCifras(v); if (/^\+|^00/.test(v.replace(/\s/g, ""))) return d.length >= 9 ? "" : "Revisa el teléfono: parece incompleto."; return /^[6789]\d{8}$/.test(d) ? "" : d.length < 9 ? "Revisa el teléfono: parece incompleto (en España son 9 cifras)." : "Revisa el teléfono: tiene más cifras de las habituales."; };
+const DOMS = { "gmial.com": "gmail.com", "gmai.com": "gmail.com", "gmal.com": "gmail.com", "gamil.com": "gmail.com", "gmail.co": "gmail.com", "gmail.es": "gmail.com", "gmial": "gmail.com", "gmail": "gmail.com", "gmai": "gmail.com", "hotmial.com": "hotmail.com", "hotmal.com": "hotmail.com", "hotmail": "hotmail.com", "hotmail.co": "hotmail.com", "yahho.es": "yahoo.es", "yaho.es": "yahoo.es", "yahoo": "yahoo.es", "outlok.com": "outlook.com", "outlook": "outlook.com", "outlok.es": "outlook.es", "icloud": "icloud.com", "telefonica": "telefonica.net" };
+function mailAviso(e) {
+  const v = String(e || "").trim().toLowerCase(); if (!v) return null;
+  const m = /^([^\s@]+)@([^\s@]+)$/.exec(v); if (!m) return { txt: "Revisa el correo: falta la arroba (@) o tiene espacios." };
+  const dom = m[2], fix = DOMS[dom]; if (fix) return { txt: `¿Querías decir ${m[1]}@${fix}?`, sug: `${m[1]}@${fix}` };
+  if (!/\.[a-z]{2,}$/.test(dom)) return { txt: "Revisa el correo: le falta el final (por ejemplo, .com o .es)." };
+  return null;
+}
+// DNI o NIE: aviso si la letra no cuadra (no bloquea)
+const dniAviso = (v) => { const t = String(v || "").toUpperCase().replace(/[^0-9A-Z]/g, ""); if (!t) return ""; const m = /^([XYZ]?)(\d{7,8})([A-Z])$/.exec(t); if (!m) return "Revisa el DNI o NIE: 8 cifras y una letra (o X, Y, Z, 7 cifras y una letra)."; const n = Number((m[1] ? { X: "0", Y: "1", Z: "2" }[m[1]] : "") + m[2]); return "TRWAGMYFPDXBNJZSQVHLCKE"[n % 23] === m[3] ? "" : "Revisa el DNI o NIE: la letra no coincide con el número."; };
+let S; try { S = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { S = null; }
+if (!S) S = { paso: 0, causante: { nombre: H.c || "" }, personas: [], bienes: [], deudas: {}, docs: {}, contacto: {}, obs: "", ok: false };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const PASOS = ["Inicio", "La persona fallecida", "La familia", "Los bienes", "Deudas y gastos", "Documentos", "Revisar y enviar"];
+const sv = (d, w = 20, sw = 1.7) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  info: sv('<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.01"/>', 19),
+  lock: sv('<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>', 19),
+  tick: sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 34, 2.2),
+  ok: sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 14, 2.4),
+  share: sv('<path d="M12 15V3.5M7.5 8 12 3.5 16.5 8"/><path d="M5 12.5v6A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5v-6"/>', 19, 2),
+  left: sv('<path d="M14.5 5.5 8 12l6.5 6.5"/>', 20, 2),
+  right: sv('<path d="M9.5 5.5 16 12l-6.5 6.5"/>', 20, 2),
+  plus: sv('<path d="M12 5.5v13M5.5 12h13"/>', 18, 2),
+  trash: sv('<path d="M4.5 7h15M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7M6.5 7l.8 11.6a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/>', 18),
+  person: sv('<circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5"/>'),
+  people: sv('<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.9-3 3-4.6 5.5-4.6s4.6 1.6 5.5 4.6"/><path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14.6c1.5.6 2.5 2 3 4.4"/>', 24),
+  clock: sv('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  pencil: sv('<path d="M4.5 19.5h4l10-10-4-4-10 10z"/><path d="M13 7l4 4"/>'),
+  send: sv('<path d="M20 4 10.5 13.5"/><path d="M20 4l-6 16-3.5-6.5L4 10z"/>'),
+  id: sv('<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 15.5c.6-1.2 1.7-2 3-2s2.4.8 3 2M14.5 10h3M14.5 13h3"/>'),
+  doc: sv('<path d="M13.5 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8.5z"/><path d="M13.5 3.5v5h5M9 13h6M9 16.5h4"/>'),
+  coins: sv('<ellipse cx="12" cy="6.5" rx="6.5" ry="2.5"/><path d="M5.5 6.5v5c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-5M5.5 11.5v5c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-5"/>'),
+  file: sv('<path d="M13.5 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8.5z"/><path d="M13.5 3.5v5h5"/>', 22),
+};
+const BI = {
+  vivienda: '<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/>',
+  inmueble: '<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M9 8h1.5M13.5 8H15M9 12h1.5M13.5 12H15M10.5 20.5v-4h3v4"/>',
+  cuenta: '<path d="M3.5 9.5 12 4.5l8.5 5"/><path d="M6 10.5v6.5M10 10.5v6.5M14 10.5v6.5M18 10.5v6.5M3.5 19.5h17"/>',
+  valores: '<path d="M4 19.5h16"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/>',
+  vehiculo: '<path d="M4.5 13.5 6.3 8.4A1.5 1.5 0 0 1 7.7 7.5h8.6a1.5 1.5 0 0 1 1.4.9l1.8 5.1"/><rect x="3.5" y="13.5" width="17" height="4.5" rx="1.5"/><path d="M6.5 18v1.5M17.5 18v1.5"/>',
+  otro: '<path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>',
+};
+const bIcon = (t, w = 20) => sv(BI[t] || BI.otro, w);
+const STOP = /^(despacho|bufete|abogados?|asesores|asociados|y|e|de|del|la|las|los|el|&|s\.?l\.?p?\.?|s\.?a\.?)$/i;
+const ini = (s, firm) => { const w = String(s || "").trim().split(/\s+/).filter(Boolean); const k = firm ? w.filter((x) => !STOP.test(x)) : w.filter((x) => !/^(de|del|la|las|los|y)$/i.test(x)); const u = (k.length ? k : w).slice(0, 2).map((x) => x[0]).join(""); return u.toLocaleUpperCase("es"); };
+const relT = (k) => (REL.find(([r]) => r === k) || [, "Persona"])[1];
+const bienT = (k) => (BIEN.find(([r]) => r === k) || [, "Bien"])[1];
+const fid = (path) => "f-" + String(path).replace(/[^\w-]/g, "-");
+const opt = (grp, val, cur, t, s) => `<button type="button" class="opt" data-o="${grp}" data-v="${val}" aria-pressed="${cur === val}"><span class="dot" aria-hidden="true"></span><span class="t"><span>${esc(t)}</span>${s ? `<small>${esc(s)}</small>` : ""}</span></button>`;
+const sel = (path, list, cur, ph) => `<select id="${fid(path)}" data-k="${path}">${ph ? `<option value="">${esc(ph)}</option>` : ""}${list.map(([k, t]) => `<option value="${esc(k)}" ${cur === k ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+const inp = (path, v, attrs = "") => `<input id="${fid(path)}" data-k="${path}" value="${esc(v ?? "")}" ${attrs}>`;
+const eurI = (path, v) => `<div class="eur"><input id="${fid(path)}" data-k="${path}" data-eur="1" class="num" inputmode="decimal" value="${esc(fmt(v))}" placeholder="0"></div>`;
+const fld = (label, path, ctrl, hint) => `<div class="field"><label class="l" for="${fid(path)}">${label}</label>${ctrl}${hint ? `<p class="hint">${hint}</p>` : ""}</div>`;
+const muniList = "";
+// Campo de municipio con sugerencias propias (sustituye al datalist: tolera acentos y erratas)
+const muniI = (path, v, ph) => `<div class="ac">${inp(path, v, `data-muni="1" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sug-${fid(path)}" placeholder="${ph || "Escribe para buscar"}"`)}<ul class="sug" id="sug-${fid(path)}" role="listbox" hidden></ul>${softMuni(path, v)}</div>`;
+function softMuni(path, v) { const t = String(v || "").trim(); if (!t || esMuni(t) || !(typeof MUNIS !== "undefined" && MUNIS.length)) return `<p class="soft" data-soft="${path}" hidden></p>`; const L = buscarMuni(t, 1); return `<p class="soft" data-soft="${path}">${L.length ? `¿Querías decir <button type="button" data-usar="${path}" data-val="${esc(L[0].m)}">${esc(L[0].m)}</button>?` : "No encontramos ese municipio. Déjalo así si estás seguro."}</p>`; }
+const softTxt = (path, txt, sug) => `<p class="soft" data-soft="${path}" ${txt ? "" : "hidden"}>${txt ? esc(txt) : ""}${sug ? ` <button type="button" data-usar="${path}" data-val="${esc(sug)}">Usar ${esc(sug)}</button>` : ""}</p>`;
+const softDe = (path, v) => { if (/\.tel$/.test(path)) return softTxt(path, telAviso(v)); if (/\.email$/.test(path)) { const a = mailAviso(v); return a && a.sug ? `<p class="soft" data-soft="${path}">¿Querías decir <button type="button" data-usar="${path}" data-val="${esc(a.sug)}">${esc(a.sug)}</button>?</p>` : softTxt(path, a ? a.txt : ""); } if (/\.dni$/.test(path)) return softTxt(path, dniAviso(v)); return ""; };
+const totBienes = () => S.bienes.reduce((s, b) => s + num(b.valor), 0);
+const nDocs = () => Object.values(S.docs).filter(Boolean).length;
+const avP = (q) => (q.nombre || "").trim() ? esc(ini(q.nombre)) : I.person;
+let ultimoPaso = null, deshacer = null, tToast;
+
+function lateral(p) {
+  const firm = `<div class="top"><span class="mono" aria-hidden="true">${esc(H.d ? ini(H.d, true) : "H+")}</span><span class="firm"><b>${esc(H.d || "{{MARCA}}")}</b><small>${H.r ? "Expediente " + esc(H.r) : "Datos para la herencia"}</small></span></div>`;
+  const steps = PASOS.slice(1).map((t, j) => { const i = j + 1, ok = i < p, cur = i === p;
+    const inner = `<i aria-hidden="true">${ok ? I.ok : i}</i><span>${t}</span>`;
+    return `<li class="${ok ? "ok" : ""}${cur ? " cur" : ""}">${ok && p < 7 ? `<button type="button" class="st" data-go="${i}"><span class="sr">Volver a </span>${inner}</button>` : `<span class="st"${cur ? ' aria-current="step"' : ""}>${inner}</span>`}</li>`; }).join("");
+  document.getElementById("side").innerHTML = `${firm}<nav aria-label="Pasos del cuestionario"><ol class="steps">${steps}</ol></nav>
+    <p class="sidenote">${I.lock}<span>Tus respuestas se guardan solo en este dispositivo hasta que las envíes.</span></p>`;
+  return firm;
+}
+
+function vista() {
+  const p = S.paso, c = S.causante;
+  const anim = ultimoPaso !== null && ultimoPaso !== p; ultimoPaso = p;
+  const a = document.activeElement, ds = a && a.dataset;
+  const refoco = !anim && ds ? (ds.k ? `[data-k="${ds.k}"]` : ds.o ? `[data-o="${ds.o}"][data-v="${ds.v}"]` : null) : null;
+  let h = "";
+  if (p === 0) {
+    const hay = S.personas.length || S.bienes.length || c.fecha || c.ccaa;
+    h = `<h1 tabindex="-1">Datos para la herencia${c.nombre ? ` de ${esc(c.nombre)}` : ""}</h1>
+    <p class="lead">Lamentamos mucho vuestra pérdida. ${H.d ? esc(H.d) + " te pide" : "El despacho te pide"} estos datos para empezar a tramitar la herencia.</p>
+    <div class="card"><ul class="how">
+      <li><span class="av" aria-hidden="true">${I.clock}</span><div><b>Unos diez minutos</b><span>Seis pasos cortos. Puedes parar y seguir en otro momento${hay ? "; ya tienes una parte hecha" : ""}.</span></div></li>
+      <li><span class="av" aria-hidden="true">${I.pencil}</span><div><b>Si no sabes algo, déjalo en blanco</b><span>El abogado lo completará contigo más adelante.</span></div></li>
+      <li><span class="av" aria-hidden="true">${I.send}</span><div><b>Tú decides cuándo enviarlo</b><span>Al final se prepara un archivo para mandarlo al despacho por WhatsApp o por correo.</span></div></li>
+    </ul></div>
+    <div class="card"><p class="cardt">Ten a mano, si puedes</p><ul class="need">
+      <li>${I.id}<span>El DNI de la persona fallecida y de los herederos</span></li>
+      <li>${I.doc}<span>Las escrituras o el recibo del IBI de las viviendas</span></li>
+      <li>${I.coins}<span>Una idea del dinero en bancos y de las deudas</span></li>
+    </ul></div>
+    <div class="note">${I.lock}<span>Lo que escribas se guarda solo en este dispositivo hasta que lo envíes tú. No pasa por ningún servidor.</span></div>`;
+  }
+  if (p === 1) {
+    h = `<h1 tabindex="-1">La persona fallecida</h1><p class="lead">Sus datos básicos. Si no estás seguro de alguno, déjalo en blanco.</p>${muniList}
+    <div class="card">${fld("Nombre y apellidos", "causante.nombre", inp("causante.nombre", c.nombre, 'autocomplete="off" autocapitalize="words" data-nombre="1"'))}
+    ${fld("DNI o NIE <span style=\"font-weight:400;color:var(--label-3)\">(opcional)</span>", "causante.dni", inp("causante.dni", c.dni, 'autocomplete="off" autocapitalize="characters" placeholder="Si lo tienes a mano"') + softDe("causante.dni", c.dni))}
+    ${fld("Fecha del fallecimiento", "causante.fecha", inp("causante.fecha", c.fecha, 'type="date"'))}
+    ${fld("Comunidad autónoma donde vivía", "causante.ccaa", sel("causante.ccaa", (typeof TERR !== "undefined" ? TERR : []), c.ccaa, "Elegir"))}
+    ${fld("Municipio donde vivía", "causante.municipio", muniI("causante.municipio", c.municipio))}</div>
+    <h2 class="qt" id="q-civil">Estado civil</h2><div class="opts" role="group" aria-labelledby="q-civil">${CIVIL.map(([k, t, s]) => opt("civil", k, c.civil, t, s)).join("")}</div>
+    <h2 class="qt" id="q-test">¿Hizo testamento?</h2><div class="opts" role="group" aria-labelledby="q-test">${TEST.map(([k, t]) => opt("test", k, c.testamento, t)).join("")}</div>`;
+  }
+  if (p === 2) {
+    h = `<h1 tabindex="-1">La familia</h1><p class="lead">Cónyuge o pareja, hijos y, si alguno falleció antes, sus hijos. Si no había hijos, los padres; y si tampoco, los hermanos.</p>
+    ${S.personas.length ? S.personas.map((q, i) => `<section class="card item" aria-label="${esc(q.nombre || relT(q.relacion))}"><div class="item-h"><span class="av" data-av="${q.id}" aria-hidden="true">${avP(q)}</span><span class="tt"><b data-tt="${q.id}" class="${q.nombre ? "" : "ph"}">${esc(q.nombre || relT(q.relacion))}</b><small data-sub="${q.id}">${q.nombre ? esc(relT(q.relacion)) : "Persona " + (i + 1)}</small></span><button type="button" class="del" data-delp="${q.id}" aria-label="Quitar a ${esc(q.nombre || "esta persona")}">${I.trash}<span>Quitar</span></button></div>
+      ${fld("Nombre y apellidos", `p.${q.id}.nombre`, inp(`p.${q.id}.nombre`, q.nombre, 'autocomplete="off" autocapitalize="words" data-nombre="1"'))}
+      ${fld("DNI o NIE <span style=\"font-weight:400;color:var(--label-3)\">(opcional)</span>", `p.${q.id}.dni`, inp(`p.${q.id}.dni`, q.dni, 'autocomplete="off" autocapitalize="characters"') + softDe(`p.${q.id}.dni`, q.dni))}
+      <div class="field row-age"><div><label class="l" for="${fid(`p.${q.id}.relacion`)}">Parentesco</label>${sel(`p.${q.id}.relacion`, REL, q.relacion)}</div><div><label class="l" for="${fid(`p.${q.id}.edad`)}">Edad</label>${inp(`p.${q.id}.edad`, q.edad, 'inputmode="numeric" class="num"')}</div></div>
+      <label class="toggle"><span>Vivía con la persona fallecida</span><span class="switch"><input type="checkbox" role="switch" data-k="p.${q.id}.convivia" ${q.convivia ? "checked" : ""}><span aria-hidden="true"></span></span></label>
+      ${fld("Discapacidad reconocida", `p.${q.id}.disc`, sel(`p.${q.id}.disc`, [["", "No"], ["33", "Del 33 % o más"], ["65", "Del 65 % o más"]], q.disc || ""))}</section>`).join("")
+      : `<div class="empty"><span class="av" aria-hidden="true">${I.people}</span><b>Todavía no hay nadie en la lista</b><span>Empieza por el cónyuge o los hijos con los botones de abajo.</span></div>`}
+    <h2 class="addh">Añadir ${S.personas.length ? "otra persona" : "a la lista"}</h2>
+    <div class="add">${[["hijo", "Hijo o hija"], ["conyuge", "Esposo o esposa"], ["padre", "Padre o madre"], ["hermano", "Hermano o hermana"], ["extrano", "Otra persona"]].map(([k, t]) => `<button type="button" data-addp="${k}"><span class="ic" aria-hidden="true">${I.plus}</span><span>${t}</span></button>`).join("")}</div>`;
+  }
+  if (p === 3) {
+    const tot = totBienes();
+    h = `<h1 tabindex="-1">Los bienes</h1><p class="lead">Lo que tenía: viviendas, cuentas, coches… Con un valor aproximado basta.</p>${muniList}
+    ${S.bienes.length ? S.bienes.map((b) => { const inm = b.tipo === "vivienda" || b.tipo === "inmueble"; return `<section class="card item" aria-label="${esc(bienT(b.tipo))}"><div class="item-h"><span class="av sq" aria-hidden="true">${bIcon(b.tipo)}</span><span class="tt"><b>${esc(bienT(b.tipo))}</b></span><button type="button" class="del" data-delb="${b.id}" aria-label="Quitar ${esc(bienT(b.tipo).toLowerCase())}">${I.trash}<span>Quitar</span></button></div>
+      ${fld(inm ? "Dirección o descripción" : b.tipo === "cuenta" ? "Banco" : "Descripción", `b.${b.id}.descripcion`, inp(`b.${b.id}.descripcion`, b.descripcion, 'autocomplete="off"'))}
+      ${inm ? fld("Municipio", `b.${b.id}.municipio`, muniI(`b.${b.id}.municipio`, b.municipio)) : ""}
+      ${fld(b.tipo === "cuenta" ? "Saldo aproximado" : "Valor aproximado", `b.${b.id}.valor`, eurI(`b.${b.id}.valor`, b.valor))}
+      ${fld("¿De quién era?", `b.${b.id}.titularidad`, sel(`b.${b.id}.titularidad`, [["privativo", "Solo suyo"], ["ganancial", "De la pareja (gananciales)"], ["proindiviso", "Compartido con otras personas"]], b.titularidad || "privativo"))}
+      ${b.titularidad === "proindiviso" ? fld("Porcentaje que era suyo", `b.${b.id}.porcentaje`, `<div class="pct">${inp(`b.${b.id}.porcentaje`, b.porcentaje, 'inputmode="decimal" class="num" placeholder="50"')}</div>`) : ""}</section>`; }).join("")
+      + `<div class="total"><span>Valor total aproximado</span><b id="tot">${tot ? fmt(tot) + " €" : "—"}</b></div>`
+      : `<div class="empty"><span class="av" aria-hidden="true">${bIcon("vivienda", 24)}</span><b>Todavía no has añadido ningún bien</b><span>Elige abajo el tipo de bien. Puedes añadir tantos como haga falta.</span></div>`}
+    <h2 class="addh">Añadir ${S.bienes.length ? "otro bien" : "un bien"}</h2>
+    <div class="add">${BIEN.map(([k, t]) => `<button type="button" data-addb="${k}"><span class="ic" aria-hidden="true">${bIcon(k, 18)}</span><span>${esc(t.split(",")[0])}</span></button>`).join("")}</div>`;
+  }
+  if (p === 4) {
+    const d = S.deudas;
+    h = `<h1 tabindex="-1">Deudas y gastos</h1><p class="lead">Lo que quedó pendiente de pagar y lo que costó el funeral. Si no hay, déjalo en blanco.</p>
+    <div class="card">${fld("Hipoteca pendiente", "d.hipoteca", eurI("d.hipoteca", d.hipoteca))}
+    ${fld("Otras deudas (préstamos, tarjetas…)", "d.otras", eurI("d.otras", d.otras))}
+    ${fld("Gastos del funeral y entierro", "d.funeral", eurI("d.funeral", d.funeral))}</div>
+    <div class="card">${fld("¿Había seguros de vida o de decesos?", "d.seguros", `<textarea id="${fid("d.seguros")}" data-k="d.seguros" placeholder="Compañía y beneficiarios, si los conoces">${esc(d.seguros || "")}</textarea>`)}</div>`;
+  }
+  if (p === 5) {
+    h = `<h1 tabindex="-1">Documentos que ya tenéis</h1><p class="lead">Marca los que ya estén en vuestro poder. Los demás los pediremos nosotros o te diremos cómo conseguirlos.</p>
+    <div class="card flush"><div class="cardh"><span>Marcados</span><b id="ndocs">${nDocs()} de ${DOCS.length}</b></div>${DOCS.map(([k, t, s]) => `<label class="check"><input type="checkbox" data-k="docs.${k}" ${S.docs[k] ? "checked" : ""}><span class="box" aria-hidden="true"></span><span class="t"><span>${esc(t)}</span>${s ? `<small>${esc(s)}</small>` : ""}</span></label>`).join("")}</div>`;
+  }
+  if (p === 6) {
+    const k = S.contacto, tot = totBienes(), deu = num(S.deudas.hipoteca) + num(S.deudas.otras) + num(S.deudas.funeral);
+    const nombres = S.personas.map((q) => q.nombre || relT(q.relacion)).join(", ");
+    const fila = (paso, tit, val, sub) => `<div class="r"><div class="rt"><span class="rk">${tit}</span><span class="rv">${val}</span>${sub ? `<span class="rs">${sub}</span>` : ""}</div><button type="button" class="link" data-go="${paso}" aria-label="Cambiar: ${tit}">Cambiar</button></div>`;
+    h = `<h1 tabindex="-1">Revisar y enviar</h1><p class="lead">Comprueba el resumen y dinos cómo contactar contigo.</p>
+    <div class="card flush sum">
+      ${fila(1, "Persona fallecida", esc(c.nombre || "Sin indicar"), esc([c.municipio, c.fecha ? new Date(c.fecha + "T12:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : ""].filter(Boolean).join(" · ")))}
+      ${fila(2, "Familia", S.personas.length ? `${S.personas.length} ${S.personas.length === 1 ? "persona" : "personas"}` : "Nadie añadido", esc(nombres))}
+      ${fila(3, "Bienes", S.bienes.length ? `${S.bienes.length} ${S.bienes.length === 1 ? "bien" : "bienes"}${tot ? " · " + fmt(tot) + " €" : ""}` : "Ninguno añadido")}
+      ${fila(4, "Deudas y gastos", deu ? fmt(deu) + " €" : "Ninguno indicado")}
+      ${fila(5, "Documentos que tenéis", `${nDocs()} de ${DOCS.length}`)}
+    </div>
+    <h2 class="qt">Tus datos de contacto</h2>
+    <div class="card">${fld("Tu nombre", "k.nombre", inp("k.nombre", k.nombre, 'autocomplete="name" autocapitalize="words" data-nombre="1"'))}
+    ${fld("Relación con la persona fallecida", "k.relacion", inp("k.relacion", k.relacion, 'placeholder="Ej.: hija"'))}
+    <div class="field row2 stack"><div><label class="l" for="${fid("k.tel")}">Teléfono</label>${inp("k.tel", k.tel, 'type="tel" autocomplete="tel" inputmode="tel"')}${softDe("k.tel", k.tel)}</div><div><label class="l" for="${fid("k.email")}">Correo</label>${inp("k.email", k.email, 'type="email" autocomplete="email" autocapitalize="off"')}${softDe("k.email", k.email)}</div></div></div>
+    <div class="card">${fld("Algo más que debamos saber <span style=\"font-weight:400;color:var(--label-3)\">(opcional)</span>", "obs", `<textarea id="${fid("obs")}" data-k="obs" placeholder="Ej.: uno de los hermanos vive fuera, hay un préstamo familiar, queremos vender la casa…">${esc(S.obs)}</textarea>`)}</div>
+    <div class="card flush"><label class="check"><input type="checkbox" data-k="ok" aria-describedby="ok-d" ${S.ok ? "checked" : ""}><span class="box" aria-hidden="true"></span><span class="t"><span>Autorizo al despacho a usar estos datos para tramitar la herencia.</span><small id="ok-d">Los datos los trata solo el despacho, como responsable, según el Reglamento General de Protección de Datos.</small></span></label></div>
+    ${S.ok ? "" : `<p class="hint" id="ok-h">Marca la autorización para poder enviarlo.</p>`}`;
+  }
+  if (p === 7) {
+    const share = puedeCompartir(), nom = H.d || "el despacho", tel = String(H.t || "").trim(), mail = String(H.e || "").trim();
+    const contacto = tel || mail ? `<div class="card firmcard"><span class="av" aria-hidden="true">${esc(H.d ? ini(H.d, true) : "H+")}</span><span class="t"><b>${esc(H.d || "El despacho")}</b>${tel ? `<a href="tel:${esc(tel.replace(/[^\d+]/g, ""))}">${esc(tel)}</a>` : ""}${mail ? `<a href="mailto:${esc(mail)}">${esc(mail)}</a>` : ""}</span></div>` : "";
+    const guia = S.envio === "wa" ? `<ol class="steps2"><li>${share ? "Se ha abierto la lista para compartir: elige <b>WhatsApp</b> y el chat del despacho." : `Se ha guardado el archivo <b>${esc(nombreArchivo())}</b> en Descargas y se ha abierto WhatsApp${tel ? " con el chat del despacho" : ""}.`}</li>${share ? "" : "<li>En el chat, pulsa el <b>clip</b> (o el <b>+</b>), elige <b>Documento</b> y busca el archivo en <b>Descargas</b>.</li>"}<li>Pulsa enviar.</li></ol>`
+      : S.envio === "mail" ? `<ol class="steps2"><li>${share ? "Se ha abierto la lista para compartir: elige <b>Correo</b> (o Gmail)." : `Se ha guardado el archivo <b>${esc(nombreArchivo())}</b> en Descargas y se ha abierto tu correo${mail ? " dirigido al despacho" : ""}.`}</li>${share ? (mail ? `<li>Escribe la dirección del despacho: <b>${esc(mail)}</b>.</li>` : "") : "<li>Pulsa <b>Adjuntar</b> (el clip) y elige el archivo de <b>Descargas</b>.</li>"}<li>Pulsa enviar.</li></ol>`
+      : S.envio === "share" ? `<ol class="steps2"><li>En la lista, elige <b>WhatsApp</b> o <b>Correo</b> y, después, ${esc(nom)}.</li><li>Pulsa enviar.</li></ol>`
+      : S.envio === "file" ? `<ol class="steps2"><li>El archivo <b>${esc(nombreArchivo())}</b> está en la carpeta <b>Descargas</b>.</li><li>Envíalo a ${esc(nom)} como archivo adjunto${tel || mail ? ` (${[tel, mail].filter(Boolean).map(esc).join(" · ")})` : ""}.</li></ol>` : "";
+    h = `<div class="done"><div class="ok" aria-hidden="true">${I.tick}</div><h1 tabindex="-1">Envía tus respuestas a ${esc(nom)}</h1><p class="lead">Todo está en un archivo. Elige cómo hacérselo llegar: ${share ? "con un toque se abre la lista para compartir." : "se guarda en tu equipo y se abre el mensaje ya escrito."}</p></div>
+    ${contacto}
+    <div class="sendopts">
+      ${share ? `<button type="button" class="btn" data-act="env" data-c="share">${I.share}Enviar el archivo</button>` : ""}
+      <button type="button" class="btn ${share ? "ghost" : "wa"}" data-act="env" data-c="wa">${I.send}${tel ? "Enviar por WhatsApp al despacho" : "Enviar por WhatsApp"}</button>
+      <button type="button" class="btn ${share ? "ghost" : "sec"}" data-act="env" data-c="mail">${I.send}${mail ? "Enviar por correo al despacho" : "Enviar por correo"}</button>
+      <button type="button" class="btn ghost" data-act="env" data-c="file">${I.file}Solo guardar el archivo</button>
+    </div>
+    ${guia ? `<div class="card" role="status">${guia}</div>` : ""}
+    <div class="note">${I.lock}<span>El archivo solo sale de este dispositivo cuando tú lo envías. Si luego quieres añadir algo, vuelve a esta página: tus respuestas siguen guardadas aquí.</span></div>`;
+  }
+  const firm = lateral(p);
+  document.getElementById("app").innerHTML = `${firm}
+    ${p > 0 && p < 7 ? `<div class="prog"><div class="seg" aria-hidden="true">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= p ? "on" : ""}"></i>`).join("")}</div><div class="meta"><span>Paso ${p} de 6</span><span class="saved">${I.ok}Guardado</span></div></div>` : ""}
+    <div class="stage${anim ? " enter" : ""}">${h}</div>
+    <p class="foot">Hecho con {{MARCA}}, el programa de herencias de tu despacho.</p>`;
+  const bar = document.getElementById("bar"); bar.classList.toggle("one", p === 0);
+  const atras = (n, t = "Atrás") => `<button type="button" class="btn sec" data-go="${n}">${I.left}<span>${t}</span></button>`;
+  if (p === 0) bar.innerHTML = `<button type="button" class="btn" data-go="1">${S.personas.length || S.bienes.length || c.fecha ? "Continuar" : "Empezar"}${I.right}</button>`;
+  else if (p < 6) bar.innerHTML = `${atras(p - 1)}<button type="button" class="btn" data-go="${p + 1}">${p === 5 ? "Revisar" : "Siguiente"}${I.right}</button>`;
+  else if (p === 6) bar.innerHTML = `${atras(5)}<button type="button" class="btn" data-act="enviar" ${S.ok ? "" : 'disabled aria-describedby="ok-h"'}>Preparar el envío${I.right}</button>`;
+  else bar.innerHTML = `${atras(6, "Volver")}`;
+  if (refoco) document.querySelector(refoco)?.focus({ preventScroll: true });
+}
+function set(path, val) {
+  const [a, b, c] = path.split(".");
+  if (a === "causante") S.causante[b] = val;
+  else if (a === "p") { const q = S.personas.find((x) => x.id === b); if (q) q[c] = val; }
+  else if (a === "b") { const q = S.bienes.find((x) => x.id === b); if (q) q[c] = val; }
+  else if (a === "d") S.deudas[b] = val;
+  else if (a === "docs") S.docs[b] = val;
+  else if (a === "k") S.contacto[b] = val;
+  else if (a === "obs") S.obs = val;
+  else if (a === "ok") S.ok = val;
+  save();
+}
+function nombreArchivo() { return `Herencia ${(S.causante.nombre || "").trim() || "datos"} - datos de la familia.hereda.json`.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "").replace(/[\\/:*?"<>|]/g, ""); }
+function salida() {
+  const c = S.causante;
+  return { app: "hereda+", tipo: "familia", version: 1, ref: H.r || "", despacho: H.d || "", enviado: new Date().toISOString(),
+    causante: { nombre: nombrePropio(c.nombre), dni: String(c.dni || "").toUpperCase().replace(/[^0-9A-Z]/g, ""), fecha: c.fecha || "", ccaa: c.ccaa || "", municipio: c.municipio || "", civil: c.civil || "", testamento: c.testamento || "" },
+    personas: S.personas.map((q) => ({ nombre: nombrePropio(q.nombre), dni: String(q.dni || "").toUpperCase().replace(/[^0-9A-Z]/g, ""), relacion: q.relacion || "extrano", edad: q.edad === "" || q.edad == null ? "" : num(q.edad), convivia: !!q.convivia, discapacidad: num(q.disc) })),
+    bienes: S.bienes.map((b) => ({ tipo: b.tipo, descripcion: b.descripcion || "", municipio: b.municipio || "", valor: num(b.valor), titularidad: b.titularidad || "privativo", porcentaje: b.titularidad === "proindiviso" ? num(b.porcentaje) : "" })),
+    deudas: { hipoteca: num(S.deudas.hipoteca), otras: num(S.deudas.otras), funeral: num(S.deudas.funeral), seguros: S.deudas.seguros || "" },
+    documentos: Object.keys(S.docs).filter((k) => S.docs[k]), contacto: { ...S.contacto, nombre: nombrePropio(S.contacto.nombre) }, observaciones: S.obs || "", consentimiento: !!S.ok };
+}
+// ── Envío (H07): hoja de compartir con el archivo donde se puede (iPhone, Android); si no, se guarda y se abre WhatsApp o el correo
+const archivo = () => new File([JSON.stringify(salida(), null, 1)], nombreArchivo(), { type: "application/json" });
+function puedeCompartir() { try { return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [new File(["{}"], "a.json", { type: "application/json" })] })) && /Android|iPhone|iPad|Macintosh/i.test(navigator.userAgent) && "ontouchend" in document; } catch (e) { return false; } }
+const msgCorto = () => `Hola${H.d ? ", " + H.d : ""}. Soy ${(S.contacto.nombre || "").trim() || "un familiar"}. Os envío los datos para la herencia${S.causante.nombre ? " de " + S.causante.nombre : ""}${H.r ? " (expediente " + H.r + ")" : ""}. Os adjunto el archivo «${nombreArchivo()}».`;
+const telWa = (t) => { let d = String(t || "").replace(/[^\d+]/g, ""); if (d.startsWith("+")) d = d.slice(1); else if (d.startsWith("00")) d = d.slice(2); else if (/^[6789]\d{8}$/.test(d)) d = "34" + d; return /^\d{8,15}$/.test(d) ? d : ""; };
+function guardarArchivo(f) { const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+function abrir(url) { const a = document.createElement("a"); a.href = url; if (!/^mailto:/.test(url)) { a.target = "_blank"; a.rel = "noopener"; } document.body.appendChild(a); a.click(); a.remove(); }
+async function compartir(f) {
+  try { await navigator.share({ files: [f], title: "Datos para la herencia", text: msgCorto() }); return "ok"; }
+  catch (e) { return e && e.name === "AbortError" ? "cancelado" : "error"; }
+}
+async function enviarPor(canal) {
+  const f = archivo();
+  if (canal !== "file" && puedeCompartir()) { const r = await compartir(f); if (r === "cancelado") return; if (r === "ok") { S.envio = canal; S.enviado = new Date().toISOString(); save(); vista(); return; } }
+  guardarArchivo(f);
+  if (canal === "wa") abrir(`https://wa.me/${telWa(H.t)}?text=${encodeURIComponent(msgCorto())}`);
+  if (canal === "mail" || canal === "share") abrir(`mailto:${/^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/.test(String(H.e || "").trim()) ? String(H.e).trim() : ""}?subject=${encodeURIComponent("Datos para la herencia" + (H.r ? " · " + H.r : ""))}&body=${encodeURIComponent(msgCorto() + "\n\nEl archivo se ha guardado en la carpeta Descargas: adjúntalo a este correo antes de enviarlo.")}`);
+  S.envio = canal === "share" ? "mail" : canal; save(); vista();
+}
+function enviar() { irA(7); }
+function aviso(msg) {
+  const el = document.getElementById("toast");
+  el.innerHTML = `<span>${esc(msg)}</span><button type="button" data-act="deshacer">Deshacer</button>`;
+  el.classList.add("on"); clearTimeout(tToast); tToast = setTimeout(cerrarAviso, 8000);
+}
+function cerrarAviso() { clearTimeout(tToast); document.getElementById("toast").classList.remove("on"); deshacer = null; }
+function irA(n) { cerrarAviso(); S.paso = n; save(); vista(); window.scrollTo(0, 0); document.querySelector("#app h1")?.focus({ preventScroll: true }); }
+function quitar(lista, id, texto) {
+  const i = S[lista].findIndex((x) => x.id === id); if (i < 0) return;
+  const [q] = S[lista].splice(i, 1); deshacer = { lista, i, q }; save(); vista();
+  document.querySelector(lista === "personas" ? "[data-addp]" : "[data-addb]")?.focus({ preventScroll: true });
+  aviso(texto(q));
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-o],[data-addp],[data-addb],[data-delp],[data-delb],[data-act],[data-usar],[data-msel]"); if (!t) return;
+  const d = t.dataset;
+  if (d.usar || d.msel) { const path = d.usar || d.msel, inp = document.querySelector(`[data-k="${path}"]`); set(path, d.val); if (inp) { inp.value = d.val; inp.focus({ preventScroll: true }); } cerrarSug(path); refrescarSoft(path, d.val); return; }
+  if (d.go != null) { irA(Number(d.go)); return; }
+  if (d.o) { if (d.o === "civil") S.causante.civil = d.v; if (d.o === "test") S.causante.testamento = d.v; save(); vista(); return; }
+  if (d.addp) { cerrarAviso(); S.personas.push({ id: uid(), nombre: "", relacion: d.addp, edad: "", convivia: false }); save(); vista(); const L = document.querySelectorAll('[data-k$=".nombre"]'); L[L.length - 1]?.focus(); return; }
+  if (d.addb) { cerrarAviso(); S.bienes.push({ id: uid(), tipo: d.addb, descripcion: "", valor: "", titularidad: S.causante.civil === "gananciales" && ["vivienda", "cuenta"].includes(d.addb) ? "ganancial" : "privativo" }); save(); vista(); const L = document.querySelectorAll('[data-k$=".descripcion"]'); L[L.length - 1]?.focus(); return; }
+  if (d.delp) { quitar("personas", d.delp, (q) => q.nombre ? `Has quitado a ${q.nombre}.` : "Has quitado a una persona."); return; }
+  if (d.delb) { quitar("bienes", d.delb, (b) => `Has quitado: ${bienT(b.tipo).split(",")[0].toLowerCase()}.`); return; }
+  if (d.act === "deshacer") { const u = deshacer; cerrarAviso(); if (u) { S[u.lista].splice(u.i, 0, u.q); save(); vista(); document.querySelector(`[data-delp="${u.q.id}"],[data-delb="${u.q.id}"]`)?.closest("section")?.querySelector("input")?.focus(); } return; }
+  if (d.act === "enviar") enviar();
+  if (d.act === "env") enviarPor(d.c);
+});
+function cabP(id) {
+  const i = S.personas.findIndex((x) => x.id === id), q = S.personas[i]; if (!q) return;
+  const tt = document.querySelector(`[data-tt="${id}"]`), sub = document.querySelector(`[data-sub="${id}"]`), av = document.querySelector(`[data-av="${id}"]`);
+  if (tt) { tt.textContent = q.nombre || relT(q.relacion); tt.classList.toggle("ph", !q.nombre); }
+  if (sub) sub.textContent = q.nombre ? relT(q.relacion) : "Persona " + (i + 1);
+  if (av) av.innerHTML = avP(q);
+}
+function cerrarSug(path) { const ul = document.getElementById("sug-" + fid(path)), i = document.querySelector(`[data-k="${path}"]`); if (ul) { ul.hidden = true; ul.innerHTML = ""; } if (i) i.setAttribute("aria-expanded", "false"); }
+function sugerir(t) {
+  const path = t.dataset.k, ul = document.getElementById("sug-" + fid(path)); if (!ul) return;
+  const L = esMuni(t.value) ? [] : buscarMuni(t.value);
+  ul.innerHTML = L.map((m) => `<li role="option"><button type="button" data-msel="${path}" data-val="${esc(m.m)}"><span>${esc(m.n)}</span><small>${esc(m.p)}</small></button></li>`).join("");
+  ul.hidden = !L.length; t.setAttribute("aria-expanded", L.length ? "true" : "false");
+}
+function refrescarSoft(path, v) { const el = document.querySelector(`[data-soft="${path}"]`); if (!el) return; const tmp = document.createElement("div"); tmp.innerHTML = /municipio$/.test(path) ? softMuni(path, v) : softDe(path, v); if (tmp.firstElementChild) el.replaceWith(tmp.firstElementChild); }
+document.addEventListener("input", (e) => {
+  const t = e.target; if (!t.dataset.k) return;
+  set(t.dataset.k, t.type === "checkbox" ? t.checked : t.value);
+  if (t.dataset.muni) { sugerir(t); const el = document.querySelector(`[data-soft="${t.dataset.k}"]`); if (el) el.hidden = true; }
+  const m = /^p\.(\w+)\.nombre$/.exec(t.dataset.k); if (m) cabP(m[1]);
+});
+document.addEventListener("focusout", (e) => { const t = e.target; if (t && t.dataset && t.dataset.muni) setTimeout(() => { if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest(".ac")) { cerrarSug(t.dataset.k); refrescarSoft(t.dataset.k, t.value); } }, 150); });
+document.addEventListener("keydown", (e) => {
+  const t = e.target; if (!t || !t.dataset) return;
+  if (t.dataset.muni && e.key === "ArrowDown") { const b = document.querySelector(`#sug-${fid(t.dataset.k)} button`); if (b) { e.preventDefault(); b.focus(); } }
+  if (t.dataset.muni && e.key === "Enter") { const b = document.querySelector(`#sug-${fid(t.dataset.k)}:not([hidden]) button`); if (b) { e.preventDefault(); b.click(); } }
+  if (t.dataset.msel && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); const li = t.closest("li"), n = e.key === "ArrowDown" ? li.nextElementSibling : li.previousElementSibling; (n ? n.querySelector("button") : document.querySelector(`[data-k="${t.dataset.msel}"]`))?.focus(); }
+  if (t.dataset.msel && e.key === "Escape") { e.preventDefault(); const i = document.querySelector(`[data-k="${t.dataset.msel}"]`); cerrarSug(t.dataset.msel); i?.focus(); }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target; if (!t.dataset.k) return;
+  if (t.dataset.nombre) { const v = nombrePropio(t.value); if (v !== t.value) { t.value = v; set(t.dataset.k, v); const m = /^p\.(\w+)\.nombre$/.exec(t.dataset.k); if (m) cabP(m[1]); } }
+  if (/\.(tel|email|dni)$/.test(t.dataset.k)) { if (/\.dni$/.test(t.dataset.k)) { t.value = t.value.toUpperCase().replace(/[\s.-]/g, ""); set(t.dataset.k, t.value); } if (/\.email$/.test(t.dataset.k)) { t.value = t.value.trim(); set(t.dataset.k, t.value); } refrescarSoft(t.dataset.k, t.value); }
+  if (t.dataset.eur) { t.value = fmt(t.value); const tot = document.getElementById("tot"); if (tot && /^b\./.test(t.dataset.k)) { const v = totBienes(); tot.textContent = v ? fmt(v) + " €" : "—"; } }
+  if (t.type === "checkbox" || t.tagName === "SELECT") {
+    set(t.dataset.k, t.type === "checkbox" ? t.checked : t.value);
+    if (t.dataset.k === "ok" || /titularidad$/.test(t.dataset.k)) vista();
+    else if (/\.relacion$/.test(t.dataset.k)) cabP(t.dataset.k.split(".")[1]);
+    else if (/^docs\./.test(t.dataset.k)) { const n = document.getElementById("ndocs"); if (n) n.textContent = `${nDocs()} de ${DOCS.length}`; }
+  }
+});
+vista();
+</script>
+</body>
+</html>

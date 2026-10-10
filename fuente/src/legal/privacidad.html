@@ -1,0 +1,305 @@
+<!doctype html>
+<!-- Borrador pendiente de revisión: texto preparado para su revisión por el titular antes de publicarse. No es la versión definitiva. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Política de privacidad · Hereda+</title>
+<!--FONTS-->
+<meta name="description" content="Cómo trata Hereda+ los datos personales del sitio web y de la relación de licencia. Hereda+ no recibe los datos de los expedientes.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+/* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
+:root{--bg:#F4F2EC;--bg-2:#EBE9E2;--surface:#FFFEFB;--surface-2:#FAF9F5;--border:#E0DCD2;--border-2:#CBC5B8;
+  --ink-1:#121C2A;--ink-2:#434C59;--ink-3:#5C6470;--brand:#0F2B4C;--brand-tint:rgba(15,43,76,.07);--on-brand:#FFFFFF;
+  --success:#1F6E6B;--warning:#875A1A;--warning-bg:#F5EDDD;--danger:#9E3B2B;--btn:#0F2B4C;--on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
+  --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink-1);font:16px/1.6 var(--font-sans);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:100;background:var(--btn);color:var(--on-btn);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+@media (max-width:520px){.wrap{padding:0 16px}}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;color:var(--ink-1)}
+.brand:hover{text-decoration:none}
+.logo{width:26px;height:26px;display:block;flex:none}
+.links{display:flex;gap:26px;font-size:14px}
+.links a{color:var(--ink-2)}
+.links a:hover,.links a[aria-current]{color:var(--ink-1);text-decoration:none}
+.links a[aria-current]{font-weight:650}
+@media (max-width:860px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:999px;font:600 15px/1 var(--font-sans);border:0;cursor:pointer;transition:opacity .2s,background-color .2s}
+.btn:hover{text-decoration:none}
+.btn.pri{background:var(--btn);color:var(--on-btn)}
+.btn.pri:hover{opacity:.86}
+.btn.sec{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.btn.sec:hover{background:var(--surface)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:14px}
+.btn.big{min-height:48px;padding:0 24px;font-size:16px}
+.head{padding:clamp(48px,7vw,88px) 0 12px}
+.eyebrow{display:inline-block;font-size:14px;font-weight:650;color:var(--brand);margin-bottom:14px}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.04;margin:0;max-width:16em}
+.lead{font-size:clamp(17px,1.7vw,19px);color:var(--ink-2);max-width:42em;margin:18px 0 0}
+.meta{font-size:14px;color:var(--ink-3);margin-top:14px}
+section{padding:clamp(48px,6vw,72px) 0;border-top:1px solid var(--border);scroll-margin-top:60px}
+h2{font-size:clamp(26px,3.2vw,36px);line-height:1.12;margin:0 0 14px;max-width:22em}
+.grid3{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--surface);border-radius:18px;padding:26px;box-shadow:var(--sh-1)}
+.card h3,.card h4{margin:0 0 8px;font-size:16.5px;font-weight:650;font-family:var(--font-sans);letter-spacing:-.01em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+p a,li a,td a,dd a,.lead a,label a,details a{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.card p{margin:0;color:var(--ink-2);font-size:15px}
+.card .k{font-size:13px;font-weight:650;color:var(--brand);margin-bottom:12px}
+.plans{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:640px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:18px;padding:28px 26px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.plan .n{font-size:16px;font-weight:650}
+.plan .p{font:600 46px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan .p small{font:500 15px/1 var(--font-sans);color:var(--ink-2);letter-spacing:0}
+.plan .iva{font-size:14px;color:var(--ink-3)}
+.plan ul{list-style:none;padding:0;margin:8px 0 16px;display:flex;flex-direction:column;gap:9px;font-size:15px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--success);margin-right:8px;font-weight:700}
+.plan .btn{margin-top:auto}
+.fine{font-size:14px;color:var(--ink-3);margin-top:18px}
+footer{padding:36px 0 56px;color:var(--ink-3);font-size:13.5px;border-top:1px solid var(--border)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+footer a{color:var(--ink-2)}
+/* Documento legal */
+.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:80px}
+@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,740px);justify-content:start;gap:72px}}
+.toc{font-size:14px}
+.toc b{display:block;font-size:13px;font-weight:650;color:var(--ink-3);margin-bottom:10px}
+.toc ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.toc a,.toc li a{color:var(--ink-2);text-decoration:none}
+.toc li a:hover{color:var(--ink-1);text-decoration:underline}
+@media (min-width:1000px){.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+@media (max-width:999px){.toc{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1)}}
+.prose{min-width:0}
+.prose h2{font-size:clamp(22px,2.4vw,26px);margin:48px 0 12px;scroll-margin-top:80px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:17px;margin:26px 0 6px}
+.prose p,.prose li{color:var(--ink-1);overflow-wrap:anywhere}
+.prose p{margin:0 0 12px}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:0 0 6px}
+.prose .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:6px}
+.box{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1);margin:0 0 18px}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.box.note{background:var(--brand-tint);box-shadow:none}
+.ph{background:var(--warning-bg);color:var(--warning);border-radius:4px;padding:0 3px;font-weight:650}
+.tbl{width:100%;overflow-x:auto;margin:0 0 18px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--border)}
+thead th{font-size:13px;color:var(--ink-3);font-weight:650;background:var(--surface)}
+tbody th{font-weight:600}
+table.cmp{table-layout:fixed;min-width:620px}
+table.cmp td,table.cmp th{text-align:center}
+table.cmp thead th:first-child{width:30%}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left}
+table.cmp .hi{background:var(--brand-tint)}
+dl.id{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
+dl.id dt{color:var(--ink-3)}
+dl.id dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){dl.id{grid-template-columns:1fr;gap:2px}dl.id dd{margin-bottom:8px}}
+/* Pasos y formulario */
+.steps{counter-reset:s;display:grid;grid-template-columns:1fr;gap:14px;list-style:none;padding:0;margin:0}
+@media (min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.steps li{counter-increment:s}
+.steps li .k::before{content:"Paso " counter(s)}
+.form{display:grid;grid-template-columns:1fr;gap:16px;max-width:760px}
+@media (min-width:700px){.form{grid-template-columns:1fr 1fr}.form .full{grid-column:1/-1}}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.form label span.opt{font-weight:400;color:var(--ink-3)}
+.form input,.form select,.form textarea{font:15px/1.4 var(--font-sans);color:var(--ink-1);background:var(--surface);border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.form textarea{min-height:96px;resize:vertical}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.form .check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}
+.form .check input{width:18px;min-height:18px;height:18px;margin:3px 0 0;flex:none}
+.form .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-size:14px;color:var(--ink-2)}
+.msg.err{color:var(--danger)}
+.oferta{display:flex;gap:18px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:26px 28px;border-radius:18px;background:var(--brand);color:var(--on-brand)}
+.oferta h3{margin:4px 0 6px;font:600 24px/1.2 var(--font-display)}.oferta p{margin:0;opacity:.9;max-width:640px}.oferta .k{font-size:13px;font-weight:650;opacity:.85}
+.oferta .btn.pri{background:var(--on-brand);color:var(--brand)}
+.pagoinfo{font-size:14px;color:var(--ink-2);background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-1)}
+.sinmail{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--warning-bg);color:var(--warning);font-size:14.5px}
+details.faq{border-bottom:1px solid var(--border);padding:16px 0}
+details.faq summary{cursor:pointer;font-weight:600;font-size:16.5px}
+details.faq p{color:var(--ink-2);margin:10px 0 0}
+@media print{.nav,.toc,footer nav,.skip{display:none}.doc{display:block;padding:0}body{font-size:11pt;background:#fff;color:#000}section{border:0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="/"><img class="logo" src="icons/hereda-marca.svg" alt="" width="26" height="26">Hereda+</a>
+  <nav class="links" aria-label="Información legal"><a href="condiciones.html">Condiciones</a><a href="privacidad.html" aria-current="page">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Planes y contratación</a></nav>
+  <a class="btn pri sm" href="contratar.html">Contratar</a>
+</div></header>
+<main id="contenido">
+<div class="head"><div class="wrap">
+  <span class="eyebrow">Protección de datos</span>
+  <h1>Política de privacidad</h1>
+  <p class="lead">Qué datos personales tratamos en este sitio web y en la relación de licencia, y cuáles no: los datos de los expedientes se quedan en el equipo del despacho y no los recibimos.</p>
+  <p class="meta">Versión 1.1 · Actualizada el <span class="ph">[FECHA DE PUBLICACIÓN]</span></p>
+</div></div>
+
+<div class="wrap doc">
+<nav class="toc" aria-label="Índice">
+  <b>Índice</b>
+  <ol>
+    <li><a href="#p0">Resumen</a></li>
+    <li><a href="#p1">1. Responsable</a></li>
+    <li><a href="#p2">2. Datos que no tratamos</a></li>
+    <li><a href="#p3">3. Datos que tratamos</a></li>
+    <li><a href="#p4">4. Destinatarios</a></li>
+    <li><a href="#p5">5. Transferencias internacionales</a></li>
+    <li><a href="#p6">6. Plazos de conservación</a></li>
+    <li><a href="#p7">7. Sus derechos</a></li>
+    <li><a href="#p8">8. Cookies y almacenamiento local</a></li>
+    <li><a href="#p9">9. Seguridad</a></li>
+    <li><a href="#p10">10. Cambios</a></li>
+  </ol>
+</nav>
+
+<article class="prose">
+<h2 id="p0">Resumen</h2>
+<div class="tbl" tabindex="0" role="region" aria-label="Resumen de la política de privacidad"><table>
+  <tbody>
+    <tr><th>Responsable</th><td><span class="ph">[RAZÓN SOCIAL]</span> · <span class="ph">[NIF]</span> · <span class="ph">[EMAIL DE CONTACTO]</span></td></tr>
+    <tr><th>Qué no recibimos</th><td>Expedientes, documentos (tampoco los que la aplicación lee), cálculos, registro de cambios ni respuestas del cuestionario para familias. Se guardan y se procesan solo en el navegador de quien usa la aplicación.</td></tr>
+    <tr><th>Qué tratamos</th><td>Registros técnicos de las visitas al sitio web, las solicitudes y consultas que nos envían, y los datos de contacto y facturación de los despachos que contratan.</td></tr>
+    <tr><th>Para qué</th><td>Servir el sitio web de forma segura, responder, gestionar la licencia, facturar, dar soporte e informar a los clientes sobre el producto.</td></tr>
+    <tr><th>Cookies</th><td>El sitio no usa cookies, analítica, publicidad ni recursos de terceros.</td></tr>
+    <tr><th>Sus derechos</th><td>Acceso, rectificación, supresión, oposición, limitación y portabilidad, escribiendo a <span class="ph">[EMAIL DE CONTACTO]</span>. Puede reclamar ante la Agencia Española de Protección de Datos.</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="p1">1. Responsable del tratamiento</h2>
+<dl class="id box">
+  <dt>Titular</dt><dd><span class="ph">[RAZÓN SOCIAL]</span></dd>
+  <dt>NIF</dt><dd><span class="ph">[NIF]</span></dd>
+  <dt>Domicilio</dt><dd><span class="ph">[DOMICILIO]</span></dd>
+  <dt>Correo electrónico</dt><dd><span class="ph">[EMAIL DE CONTACTO]</span></dd>
+</dl>
+<p>No hemos designado delegado de protección de datos porque nuestra actividad no está entre los supuestos en que es obligatorio (artículo 37 del RGPD y artículo 34 de la Ley Orgánica 3/2018). Para cualquier cuestión de privacidad, escriba a la dirección anterior.</p>
+
+<h2 id="p2">2. Datos que no tratamos: los de los expedientes</h2>
+<p>La aplicación Hereda+ guarda los expedientes, documentos, cálculos y escritos <b>solo en el navegador del dispositivo del despacho</b> (almacenamiento local e IndexedDB). No se envían a nuestros servidores ni a los de terceros, y no tenemos acceso a ellos. Lo mismo ocurre si la aplicación se usa como archivo HTML abierto en el equipo.</p>
+<p>La <b>lectura de documentos</b> (certificados, escrituras, notas simples, DNI y demás documentos que el despacho carga) se hace en el propio navegador, sin inteligencia artificial y sin enviar los documentos a ningún servidor. Para leer escaneos e imágenes, la aplicación descarga de este sitio, una sola vez, el componente de reconocimiento de texto; esa descarga no envía ningún documento.</p>
+<p>El <b>registro de cambios</b> (quién cambió qué dato y cuándo), los perfiles del equipo y los tiempos anotados también se guardan solo en el dispositivo del despacho. No los recibimos.</p>
+<p>El <b>cuestionario para familias</b> funciona igual: las respuestas se guardan en el navegador de la persona que lo rellena y se convierten en un archivo que esa persona envía directamente al despacho. No recibimos ese archivo ni su contenido.</p>
+<p>El despacho que usa Hereda+ es el <b>responsable del tratamiento</b> de los datos de sus clientes y de las familias. Si es usted cliente o familiar de un despacho, para ejercer sus derechos sobre esos datos diríjase al despacho.</p>
+<p>Si en el futuro ofrecemos funciones en la nube y un despacho las activa, trataremos sus datos como encargado del tratamiento, con un contrato conforme al artículo 28 del RGPD, y actualizaremos esta política antes.</p>
+
+<h2 id="p3">3. Datos que tratamos</h2>
+<h3>3.1 Visitas al sitio web</h3>
+<ul>
+  <li><b>Datos</b>: dirección IP, fecha y hora, página solicitada, navegador y sistema operativo, que el servidor de alojamiento registra de forma automática.</li>
+  <li><b>Finalidad</b>: servir el sitio, mantener su seguridad y detectar abusos.</li>
+  <li><b>Base jurídica</b>: interés legítimo en prestar un sitio seguro y operativo (artículo 6.1.f del RGPD).</li>
+  <li>No usamos estos datos para identificar a los visitantes ni para elaborar perfiles.</li>
+</ul>
+<h3>3.2 Solicitudes y consultas</h3>
+<ul>
+  <li><b>Datos</b>: los que nos envíe por correo electrónico o desde el formulario de contratación, que abre su propio programa de correo (el formulario no envía nada a ningún servidor): nombre, despacho, cargo, correo, teléfono, datos fiscales y el contenido del mensaje.</li>
+  <li><b>Finalidad</b>: responder y, si la pide, preparar una propuesta.</li>
+  <li><b>Base jurídica</b>: aplicación de medidas precontractuales a petición del interesado (artículo 6.1.b del RGPD) y, para los datos de contacto de profesionales que actúan por un despacho, el interés legítimo previsto en el artículo 19 de la Ley Orgánica 3/2018.</li>
+</ul>
+<h3>3.3 Relación de licencia</h3>
+<ul>
+  <li><b>Datos</b>: identificación y datos fiscales del despacho, nombre y datos de contacto de la persona de contacto y de los usuarios autorizados si nos los comunica, código de licencia, plan, facturas y los datos de las transferencias recibidas (ordenante, cuenta de origen e importe).</li>
+  <li><b>Finalidad</b>: gestionar la licencia, facturar, cobrar y cumplir obligaciones fiscales y contables.</li>
+  <li><b>Base jurídica</b>: ejecución del contrato (artículo 6.1.b del RGPD) y cumplimiento de obligaciones legales (artículo 6.1.c del RGPD), en particular la normativa tributaria y mercantil.</li>
+</ul>
+<h3>3.4 Soporte</h3>
+<ul>
+  <li><b>Datos</b>: el contenido de las incidencias y de las conversaciones de soporte.</li>
+  <li><b>Finalidad</b>: resolver incidencias y mejorar el software.</li>
+  <li><b>Base jurídica</b>: ejecución del contrato (artículo 6.1.b del RGPD).</li>
+  <li>Le pedimos que no nos envíe datos reales de expedientes. Si nos llegan, los usamos solo para la incidencia y los borramos al cerrarla.</li>
+</ul>
+<h3>3.5 Información a clientes</h3>
+<ul>
+  <li><b>Datos</b>: correo electrónico de la persona de contacto del despacho cliente.</li>
+  <li><b>Finalidad</b>: avisar de cambios normativos incorporados, novedades del software y productos similares a los contratados.</li>
+  <li><b>Base jurídica</b>: interés legítimo y artículo 21.2 de la Ley 34/2002 (relación contractual previa). Puede oponerse en cualquier momento con el enlace de cada comunicación o escribiendo a <span class="ph">[EMAIL DE CONTACTO]</span>. Los avisos necesarios para el servicio (renovaciones, incidencias, cambios de condiciones) no son comunicaciones comerciales.</li>
+</ul>
+<p>No tomamos decisiones automatizadas con efectos jurídicos sobre usted ni elaboramos perfiles.</p>
+
+<h2 id="p4">4. Destinatarios</h2>
+<p>No vendemos ni cedemos datos. Solo acceden a ellos los proveedores que necesitamos para prestar el servicio, con contrato de encargo del tratamiento cuando procede, y las administraciones cuando lo exige la ley:</p>
+<div class="tbl" tabindex="0" role="region" aria-label="Destinatarios de los datos"><table>
+  <thead><tr><th>Destinatario</th><th>Función</th><th>Ubicación</th></tr></thead>
+  <tbody>
+    <tr><td>GitHub, Inc.</td><td>Alojamiento del sitio web (registros técnicos de visitas)</td><td>Estados Unidos, con garantías del apartado 5</td></tr>
+    <tr><td><span class="ph">[PROVEEDOR DE CORREO ELECTRÓNICO]</span></td><td>Correo electrónico</td><td><span class="ph">[UBICACIÓN]</span></td></tr>
+    <tr><td><span class="ph">[PROGRAMA DE FACTURACIÓN]</span></td><td>Emisión y archivo de facturas</td><td><span class="ph">[UBICACIÓN]</span></td></tr>
+    <tr><td><span class="ph">[ENTIDAD BANCARIA]</span></td><td>Cobro de las licencias por transferencia bancaria. No usamos plataformas de pago con tarjeta ni domiciliaciones</td><td>España</td></tr>
+    <!--ASESORIA--><tr><td><span class="ph">[ASESORÍA FISCAL Y CONTABLE]</span></td><td>Contabilidad y obligaciones fiscales</td><td>España</td></tr><!--/ASESORIA-->
+    <tr><td>Agencia Estatal de Administración Tributaria y otras administraciones</td><td>Obligaciones legales</td><td>España</td></tr>
+  </tbody>
+</table></div>
+
+<h2 id="p5">5. Transferencias internacionales</h2>
+<p>El sitio web y la aplicación se publican con GitHub Pages, un servicio de GitHub, Inc., establecida en Estados Unidos. GitHub declara en su <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">declaración de privacidad</a> (versión de 27 de abril de 2026, consultada el 6 de octubre de 2026) que ha certificado ante el Departamento de Comercio de EE. UU. su adhesión a los principios del Marco de Privacidad de Datos UE-EE. UU. (Data Privacy Framework), reconocido por la Decisión de Ejecución (UE) 2023/1795 de la Comisión, de 10 de julio de 2023, como garantía de un nivel de protección adecuado. Puede comprobar la certificación vigente en <a href="https://www.dataprivacyframework.gov/list" rel="noopener">dataprivacyframework.gov</a>. Los demás destinatarios del apartado 4 tratan los datos en la ubicación que allí se indica.</p>
+
+<h2 id="p6">6. Plazos de conservación</h2>
+<ul>
+  <li>Registros técnicos de visitas: los conserva el proveedor de alojamiento (GitHub) durante el plazo que fija según la naturaleza de los datos y sus obligaciones legales; su política no publica un plazo concreto. Nosotros no los descargamos ni los usamos.</li>
+  <li>Solicitudes y consultas que no terminan en contrato: 12 meses desde el último contacto.</li>
+  <li>Datos de la relación de licencia: mientras dure el contrato y, después, bloqueados durante los plazos legales: seis años para la documentación contable y facturas (artículo 30 del Código de Comercio) y el plazo de prescripción de las obligaciones tributarias (artículo 66 de la Ley 58/2003, General Tributaria).</li>
+  <li>Soporte: 24 meses desde el cierre de la incidencia; los datos de expedientes que se hubieran recibido, se borran al cerrarla.</li>
+  <li>Comunicaciones a clientes: hasta que se oponga o termine la relación.</li>
+</ul>
+
+<h2 id="p7">7. Sus derechos</h2>
+<p>Puede pedir el acceso a sus datos, su rectificación o supresión, la limitación del tratamiento, la portabilidad y oponerse al tratamiento, escribiendo a <span class="ph">[EMAIL DE CONTACTO]</span> e indicando qué derecho ejerce. Responderemos en el plazo de un mes (artículo 12 del RGPD). Si tenemos dudas razonables sobre su identidad, podremos pedirle información adicional para confirmarla.</p>
+<p>Si considera que no hemos atendido bien su solicitud, puede reclamar ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es" rel="noopener">www.aepd.es</a>).</p>
+
+<h2 id="p8">8. Cookies y almacenamiento local</h2>
+<p>Este sitio web <b>no instala cookies</b>, no usa herramientas de analítica ni de publicidad y no carga fuentes, scripts ni otros recursos de terceros. Por eso no mostramos un aviso de cookies.</p>
+<p>La aplicación Hereda+ y el cuestionario para familias usan el <b>almacenamiento local del navegador</b> (localStorage e IndexedDB) solo para guardar, en el propio dispositivo, los datos que el usuario introduce y sus preferencias de uso. Esa información no se envía a nuestros servidores. Es un almacenamiento estrictamente necesario para prestar el servicio que el usuario pide expresamente, por lo que no requiere consentimiento (artículo 22.2 de la Ley 34/2002). El usuario puede borrarlo desde la configuración de su navegador; si lo hace, perderá los datos que no haya exportado.</p>
+<p>Algunas funciones de la aplicación abren enlaces a sitios externos (sedes electrónicas oficiales o servicios de mensajería para compartir). Al abrirlos, se aplican las políticas de privacidad de esos sitios.</p>
+
+<h2 id="p9">9. Seguridad</h2>
+<p>Aplicamos medidas técnicas y organizativas adecuadas al riesgo: el sitio se sirve solo por conexión cifrada (HTTPS), con cabeceras de seguridad; el acceso a nuestras cuentas de correo y facturación está protegido con doble factor; y minimizamos los datos que pedimos. La seguridad de los datos guardados en los dispositivos del despacho depende de las medidas que el despacho aplique en ellos.</p>
+
+<h2 id="p10">10. Cambios en esta política</h2>
+<p>Cambios de la versión 1.1: se explica que la lectura de documentos y el registro de cambios funcionan solo en el dispositivo del despacho (apartado 2). No cambia ningún tratamiento que hagamos nosotros.</p>
+<p>Si cambiamos esta política de forma relevante, lo indicaremos en esta página con la nueva fecha y, a los clientes, se lo comunicaremos por correo electrónico.</p>
+</article>
+</div>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 Hereda+ · <span class="ph">[RAZÓN SOCIAL]</span> · <span class="ph">[NIF]</span></span>
+  <nav aria-label="Enlaces legales"><a href="condiciones.html">Condiciones de licencia</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Contratar</a></nav>
+</div></footer>
+</body>
+</html>

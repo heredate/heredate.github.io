@@ -1,0 +1,221 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   v12 · «Corporativo» (10-10-2026) — sustituye a la capa «Cine»
+   Registro de software jurídico-financiero: noche naval y marfil, tinta neutra, un único acento petróleo
+   (foco, pestaña activa, marca) y una sola regla para las cifras: todas en tinta neutra; solo las negativas, en un rojo.
+   El estado se cuenta con puntos, píldoras, filetes o etiquetas, nunca coloreando la cifra.
+   Solo capa visual: nada cambia de tamaño ni de sitio. Todo bajo @media screen (la impresión queda como estaba)
+   y el único movimiento propio se apaga con «reducir movimiento». Mismos tokens que la portada y el vídeo.
+   ══════════════════════════════════════════════════════════════════════════════ */
+@media screen{
+/* ── Tokens · grafito «noche naval» ── */
+:root{
+  --bg:#0B1220; --surface:#111A29; --surface-2:#152033; --sunken:#09101B; --elevated:#172336;
+  --border:rgba(168,190,222,.12); --border-2:rgba(168,190,222,.2); --border-soft:rgba(168,190,222,.07);
+  --ink-1:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#8F9AAA; --ink-title:#E8ECF2;
+  --petrol:#6CC2B8; --petrol-hover:#84CEC5; --petrol-tint:rgba(108,194,184,.12);
+  --success:#6CC2B8; --success-bg:rgba(108,194,184,.12);
+  --danger:#E58A7C; --danger-bg:rgba(229,138,124,.13);
+  --warning:#D9A964; --warning-bg:rgba(217,169,100,.13);
+  --scrim:rgba(3,7,14,.62);
+  --side-bg:#070D17;
+  --hc-neg:#E58A7C;                           /* el único color permitido en una cifra: la negativa */
+  --hc-edge:rgba(214,228,250,.045);           /* canto de luz superior de las superficies */
+  --sh-1:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge),0 1px 2px rgba(2,6,14,.28),0 10px 24px -18px rgba(2,6,14,.7);
+  --sh-2:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.06),0 2px 4px rgba(2,6,14,.24),0 16px 36px -14px rgba(2,6,14,.7);
+  --sh-3:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.07),0 10px 24px -8px rgba(2,6,14,.45),0 40px 90px -24px rgba(2,6,14,.85);
+}
+/* ── Tokens · claro «marfil notarial» ── */
+:root[data-theme="light"]{
+  --bg:#F4F2EC; --surface:#FFFEFB; --surface-2:#FAF9F5; --sunken:#EBE9E2; --elevated:#FFFEFB;
+  --border:#E0DCD2; --border-2:#CBC5B8; --border-soft:#EAE7DF;
+  --ink-1:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-title:#0F2B4C;
+  --petrol:#1F6E6B; --petrol-hover:#185A57; --petrol-tint:#E5EFEC;
+  --success:#1F6E6B; --success-bg:#E5EFEC;
+  --danger:#9E3B2B; --danger-bg:#F6E8E3;
+  --warning:#875A1A; --warning-bg:#F5EDDD;
+  --scrim:rgba(14,24,38,.32);
+  --side-bg:#0F2B4C;
+  --hc-neg:#9E3B2B;
+  --hc-edge:rgba(255,255,255,.9);
+  --sh-1:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge),0 1px 2px rgba(18,28,42,.04),0 8px 22px -16px rgba(18,28,42,.14);
+  --sh-2:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge),0 2px 4px rgba(18,28,42,.04),0 14px 30px -14px rgba(18,28,42,.18);
+  --sh-3:0 0 0 1px rgba(18,28,42,.08),inset 0 1px 0 #fff,0 10px 24px -10px rgba(18,28,42,.14),0 36px 80px -22px rgba(18,28,42,.28);
+}
+
+/* ── Fondo: una sola luz naval muy tenue desde arriba (pintada una vez, fija) ── */
+body{background:transparent}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(1200px 560px at 72% -14%,rgba(44,90,146,.17),transparent 64%),var(--bg)}
+:root[data-theme="light"] body::before{background:radial-gradient(1200px 560px at 72% -14%,rgba(255,255,255,.75),transparent 64%),var(--bg)}
+:root{scrollbar-color:rgba(157,188,230,.2) transparent}
+:root[data-theme="light"]{scrollbar-color:rgba(18,28,42,.2) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(157,188,230,.18);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(157,188,230,.3)}
+:root[data-theme="light"] ::-webkit-scrollbar-thumb{background-color:rgba(18,28,42,.18)}
+::selection{background:rgba(108,194,184,.24)}
+:root[data-theme="light"] ::selection{background:rgba(31,110,107,.14)}
+
+/* ── Barra lateral: azul noche liso, activo con velo neutro y filete petróleo (sin halo) ── */
+@media (min-width:1024px){
+  .side{background:linear-gradient(180deg,rgba(157,188,230,.035),transparent 260px),var(--side-bg);box-shadow:inset -1px 0 0 rgba(214,228,250,.05)}
+  :root[data-theme="light"] .side{background:linear-gradient(180deg,#11314F 0%,#0F2B4C 40%,#0D2643 100%);box-shadow:inset -1px 0 0 rgba(255,255,255,.07)}
+}
+.side .sitem[aria-current="true"],:root[data-theme="light"] .side .sitem[aria-current="true"]{background:rgba(168,190,222,.085);box-shadow:inset 0 0 0 1px rgba(214,228,250,.05)}
+:root[data-theme="light"] .side .sitem[aria-current="true"]{background:rgba(255,255,255,.1)}
+.side .sitem{transition:background-color var(--dur-1) var(--ease),color var(--dur-1) var(--ease)}
+
+/* ── Barra superior y pestañas pegajosas: cristal fino ── */
+.topbar{background:color-mix(in srgb,var(--bg) 74%,transparent);-webkit-backdrop-filter:saturate(140%) blur(18px);backdrop-filter:saturate(140%) blur(18px)}
+@media (min-width:1024px){
+  .topbar.scrolled{box-shadow:0 1px 0 var(--border-soft),0 10px 26px -22px rgba(var(--shadow-rgb),.6)}
+  .sn-wrap{background:color-mix(in srgb,var(--bg) 80%,transparent);-webkit-backdrop-filter:saturate(140%) blur(16px);backdrop-filter:saturate(140%) blur(16px)}
+}
+
+/* ── Títulos: serifa en tinta lisa; el filete petróleo bajo el título, sin brillo ── */
+.ltitle,.detail-h h3{color:var(--ink-title)}
+.ltitle em{color:var(--ink-3)}
+
+/* ── Superficies: canto de luz de 1 px y sombra en capas; sin velos de color ── */
+@media (hover:hover) and (pointer:fine){
+  button.card,.doccard,.ej,.bcard,.gu-item,.fcard,button.kpi,.rd-kpi{transition:box-shadow 160ms var(--ease-out),background-color 120ms var(--ease-out)}
+  button.card:hover,.doccard:hover,.ej:hover,.bcard:hover,.gu-item:hover,.fcard:hover,button.kpi:hover,button.altpath:hover,.ask:hover,.personal:hover,.hpills button:hover{transform:none;box-shadow:var(--sh-2)}
+}
+
+/* ══ Cifras: tinta neutra siempre. Serifa tabular en las cifras grandes; Inter tabular en listas y tablas ══ */
+.kpi b,.rd-kpi b,.sc-kpis .kpi b,.next .days,.sc-ns-n b,.cmp div b,.hero-save b,.tc-k b,.vf-big b{font-family:var(--font-display);font-weight:600;font-feature-settings:"tnum" 1,"lnum" 1;font-variant-numeric:lining-nums tabular-nums}
+.kpi b,.rd-kpi b{letter-spacing:-.014em}
+.kpi b .cur,.rd-kpi b .cur{font-family:var(--font-sans);color:var(--ink-3)}
+.kpi b,.kpi.gold b,.kpi.warn b,.kpi.bad b,.kpi.ok b,.kpi.suc b,.kpi.plu b,
+.rd-kpi b,.rd-kpi.zero b,.rd-days b,.rd-days.bad b,.rd-days.warn b,.rd-days.info b,.rd-days.mute b,
+.rd-sg b,.rd-sg.bad b,.rd-sg.warn b,.rd-sg.info b,.rd-sg.mute b,.rd-eur,
+.next .days,.next .days.warn,.next .days.bad,
+.sc-ns .sc-ns-n b,.sc-ns.ok .sc-ns-n b,.sc-ns.warn .sc-ns-n b,.sc-ns.bad .sc-ns-n b,td.sc-bad,.kv .sc-bad,.kv .sc-warn,
+.cmp div b,.cmp div.best b,.hero-save b,.hero-save .g b,.tc-k b,.pl-n b,.fm-h .num b,.formula .fx.hi b,.formula .fx.hi.plu b,
+.lever.si .sv,.lever.si .lx,.sim-d.up b,.sim-d.down b,.sim-h .dl.up,.sim-h .dl.down,.dg-meta .dg-eur.dg-op,
+.tm-eh,.tm-eh.ok,.tm-eh.warn,.tm-eh.bad,.tc-d,.tc-d.warn,.tc-d.bad,.tc-md.warn,.tc-md.bad,
+.sh-bv small.down,.sh-bv small.up,.sh-t td.down,.sh-t td.up,.sh-t tbody tr.on td:first-child b,.sh-it.warn b,
+.cal .d.t .dn,.ptable .ok,.ptable .exc,.ptable .def,.sg-opt b em{color:var(--ink-1)}
+.rd-kpi.zero b{color:var(--ink-3)}
+.rd-days.mute b,.rd-sg b{color:var(--ink-2)}
+.rd-sg.bad b,.rd-sg.warn b,.rd-sg.info b,.rd-sg.mute b{color:var(--ink-1)}
+.vf-big,.vf-hero.vf-no .vf-big{color:var(--ink-1)}
+.vf-big svg{color:var(--petrol)}
+.vf-hero.vf-no .vf-big svg{color:var(--danger)}
+.tnode .s,.tnode .s.tax,.tnode.cau .s.tax{fill:var(--ink-2)}
+.ring text{font-family:var(--font-display);fill:var(--ink-1)}
+.cal .d.t .dn{font-weight:650;text-decoration:underline 2px var(--petrol);text-underline-offset:3px;text-decoration-skip-ink:none}
+
+/* Estado sin colorear la cifra: punto de 6 px junto a la etiqueta */
+.kpi.warn .k::before,.kpi.bad .k::before,.kpi.ok .k::before,
+.due.warn::before,.due.bad::before,.tc-d.warn::before,.tc-d.bad::before,.tm-eh.warn::before,.tm-eh.bad::before,
+td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.rd-sg.warn::before,
+.stepper button.on.blk span small::before,.stepper button.on.venc span small::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning);flex:none}
+.kpi.bad .k::before,.due.bad::before,.tc-d.bad::before,.tm-eh.bad::before,td.sc-bad::before,.kv .sc-bad::before,.rd-sg.bad::before,.stepper button.on.venc span small::before{background:var(--danger)}
+.kpi.ok .k::before{background:var(--success)}
+.sc-ns.warn .sc-ns-n .k::before,.sc-ns.bad .sc-ns-n .k::before,.sc-ns.ok .sc-ns-n .k::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:.1em;background:var(--warning)}
+.sc-ns.bad .sc-ns-n .k::before{background:var(--danger)}.sc-ns.ok .sc-ns-n .k::before{background:var(--success)}
+/* Diagnóstico: el anillo cuenta el nivel; el titular, en tinta y sin halo de color */
+.dg-hero::before{content:none}
+.dg-hero-t h2{color:var(--ink-1)}
+.due.warn,.due.bad{color:var(--ink-2)}
+.exp-next .due.warn,.exp-next .due.bad{color:var(--ink-1)}
+.stepper button.on.blk span small,.stepper button.on.venc span small{color:var(--ink-2)}
+.kpi.bad::after{opacity:.9}
+
+/* Píldoras de estado: el fondo matizado cuenta el estado; el texto, en tinta */
+.chip.ok,.chip.warn,.chip.bad,.chip.info,.st-b.ok,.st-b.warn,.st-b.bad,.tag.V,.tag.P,.tag.bajo,.tag.medio,.tag.warn,.tag.alto,.tag.litigioso,.tag.gold,
+.status.ok,.status.warn,.status.bad,.mtag.ok,.mtag.rev,.lg-pill.ok,.lg-pill.bad,.tc-chip.warn,.tc-chip.ok,.tc-pill.est-enviada,.tc-pill.est-reclamada,.tc-pill.est-escalada,.tc-pill.est-recibida,
+.vf-gs em.vf-eb,.vf-gs em.vf-ea,.vf-gs em.vf-eo,.chip-r.warn{color:var(--ink-1)}
+
+/* Cifras negativas: el único color permitido (las marca la pequeña rutina «hereda-cine-js» o la propia app) */
+.money.neg,.sr.resta .sr-v{color:var(--hc-neg)}
+.sr.resta.cero .sr-v{color:var(--ink-3)}
+/* cifras que la app colorea con estilo en línea (ahorro, saldo adelantado, diferencias del reparto, movimientos) */
+b[style*="color:var(--gold)"],b.money[style*="color:var(--red)"],td.n[style*="color:"]{color:var(--ink-1)!important}
+html body .hc-neg.hc-neg,html body .hc-neg.hc-neg *{color:var(--hc-neg)!important;-webkit-text-fill-color:currentColor!important}
+.hc-neg .cur{opacity:.85}
+
+/* ── Botón principal: navy liso; canto de luz de 1 px, sombra breve y sin brillos ── */
+.btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger),.sheet header .tbtn.sh-ok,.bv-pri,.gu-b.gu-pri{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0) 70%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 2px rgba(var(--shadow-rgb),.3),0 4px 12px -8px rgba(var(--shadow-rgb),.6)}
+:root[data-theme="light"] .btn:not(.gray):not(.ghost):not(.tint):not(.gold):not(.danger),:root[data-theme="light"] .sheet header .tbtn.sh-ok,:root[data-theme="light"] .bv-pri,:root[data-theme="light"] .gu-b.gu-pri{background-image:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 1px 2px rgba(18,28,42,.18)}
+.side .newbtn .btn{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 1px 2px rgba(2,6,14,.35)}
+:root[data-theme="light"] .side .newbtn .btn{background-image:none;box-shadow:0 1px 2px rgba(2,6,14,.3)}
+
+/* ── Foco: anillo petróleo nítido, sin halo ── */
+:focus-visible{outline-color:var(--petrol)}
+.search:focus-within,.search:has(input:focus-visible){box-shadow:inset 0 0 0 1px var(--petrol),0 0 0 3px color-mix(in srgb,var(--petrol) 16%,transparent)}
+.side .search:focus-within{box-shadow:inset 0 0 0 1px var(--side-accent),0 0 0 3px rgba(108,194,184,.18)}
+
+/* ── Fases del encargo: filete superior y disco en tinta; el estado lo dicen el filete y la etiqueta ── */
+.stepper button.on i,:root[data-theme="light"] .stepper button.on i,.stepper button.on.venc i{background:var(--ink-1);color:var(--bg);box-shadow:none}
+.stepper button.done i,:root[data-theme="light"] .stepper button.done i{background:transparent;color:var(--petrol);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--petrol) 45%,transparent)}
+.stepper button.on,:root[data-theme="light"] .stepper button.on{box-shadow:inset 0 3px 0 var(--ink-1)}
+.stepper button.on.blk,:root[data-theme="light"] .stepper button.on.blk{box-shadow:inset 0 3px 0 var(--warning)}
+.stepper button.on.venc,:root[data-theme="light"] .stepper button.on.venc{box-shadow:inset 0 3px 0 var(--danger)}
+.pnav button.ok i,.wiz-steps li.done i,.ftrack .ok i{color:var(--petrol)}
+.wiz-steps li.on i,.pnav button.on i,.ftrack .on i,.phases7 .pn.on{background:var(--ink-1);color:var(--bg);box-shadow:none}
+.pnav button.on{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border-2)}
+
+/* ── Pestañas del expediente: marca petróleo lisa ── */
+@media (min-width:1024px){
+  .secnav .sn-ind,.secnav button[aria-current="page"]::after{background:var(--petrol);box-shadow:none}
+}
+
+/* ── Segmentado: la opción activa flota con su canto de luz ── */
+.seg button[aria-pressed="true"],:root[data-theme="light"] .seg button[aria-pressed="true"]{box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge),0 1px 3px -1px rgba(var(--shadow-rgb),.3)}
+
+/* ── Barras de avance: petróleo liso ── */
+.mbar i,.wiz .progress i,.gu-bar i{background:var(--petrol);box-shadow:none}
+.ring .fg{filter:none}
+
+/* ── Tablas: cabecera sobria; la fila bajo el puntero, con un velo neutro ── */
+@media (hover:hover) and (pointer:fine){.grid-t tbody tr:hover{background:var(--hover)}}
+
+/* ── Hojas y ventanas: canto de luz y sombra profunda; el fondo se aparta con un desenfoque leve ── */
+.sheet,:root[data-theme="light"] .sheet{box-shadow:var(--sh-3)}
+@media (min-width:1024px){.scrim,:root[data-theme="light"] .scrim{-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}}
+.sg-modal,.sn-menu{box-shadow:var(--sh-3)}
+.toast,:root[data-theme="light"] .toast{box-shadow:inset 0 1px 0 rgba(255,255,255,.1),var(--sh-3)}
+.tm-pill{box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge),0 10px 26px -12px rgba(var(--shadow-rgb),.5)}
+.tabbar{background:color-mix(in srgb,var(--bg) 80%,transparent);box-shadow:inset 0 1px 0 var(--border-soft)}
+
+/* ── Paleta de comandos (Ctrl K): cristal sobrio; la selección, velo neutro con filete petróleo ── */
+.pk-panel{background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:saturate(140%) blur(24px);backdrop-filter:saturate(140%) blur(24px);
+  box-shadow:0 0 0 1px var(--border-2),inset 0 1px 0 rgba(214,228,250,.07),0 24px 60px -18px rgba(2,6,14,.8)}
+:root[data-theme="light"] .pk-panel{background:color-mix(in srgb,var(--surface) 94%,transparent);box-shadow:0 0 0 1px rgba(18,28,42,.1),inset 0 1px 0 #fff,0 24px 60px -18px rgba(18,28,42,.3)}
+.pk-head{border-bottom:1px solid var(--border-soft)}
+.pk-in{caret-color:var(--petrol)}
+.pk-row{position:relative}
+.pk-row.on{background:var(--press);box-shadow:inset 2px 0 0 var(--petrol)}
+.pk-row.on .pk-ic{color:var(--ink-1)}
+.pk-m{color:var(--ink-1);text-decoration:underline 1px var(--petrol);text-underline-offset:2px}
+.pk-foot{border-top:1px solid var(--border-soft)}
+@media (max-width:640px){.pk-panel{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:var(--surface)}}
+
+/* ── Modo reunión con la familia: sala sobria, una luz naval desde arriba ── */
+.rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(44,90,146,.2),transparent 64%),var(--bg)}
+:root[data-theme="light"] .rn-over{background:radial-gradient(1200px 640px at 50% -18%,rgba(255,255,255,.8),transparent 64%),var(--bg)}
+.rn-prog i{background:var(--petrol);box-shadow:none}
+.rn-kick{color:var(--ink-3);letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+.rn-card,.rn-tile,.rn-pay,.rn-formula,.rn-steps li,.rn-scroll,.rn-link{box-shadow:var(--sh-1)}
+.rn-card-v,.rn-tile-v,.rn-formula>div b,.rn-pay-f span{font-family:var(--font-display);font-weight:600;letter-spacing:-.012em;font-feature-settings:"tnum" 1,"lnum" 1}
+.rn-card-v small,.rn-pay-f small{font-family:var(--font-sans)}
+.rn-formula>div.tot b,.rn-tbl tfoot td,.rn-pay-f .g,.rn-pay-f .a,.rn-pay-f .p,.rn-pay-f .x,.rn-step-c.soon,.rn-step-c.late{color:var(--ink-1);text-shadow:none}
+.rn-step-n{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.rn-btn,.rn-nav{box-shadow:0 0 0 1px var(--border),inset 0 1px 0 var(--hc-edge)}
+
+/* ── Entrada de vistas: un fundido corto (solo al cambiar de vista) ── */
+@media (prefers-reduced-motion:no-preference){
+  html.mo.mo-nav .view{animation:hc-entra 200ms var(--ease-out) both}
+}
+@keyframes hc-entra{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+@media (forced-colors:active){body::before{display:none}.hc-neg,.hc-neg *{-webkit-text-fill-color:currentColor!important}}
+}
+@media (prefers-reduced-motion:reduce){
+  button.card,.doccard,.ej,.bcard,.gu-item,.fcard,button.kpi,.rd-kpi{transition:none}
+}

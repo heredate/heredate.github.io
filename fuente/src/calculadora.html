@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Calculadora de herencias</title>
+<meta name="description" content="Calcula de forma orientativa lo que pagaría cada heredero por el Impuesto sobre Sucesiones, con la normativa de cada comunidad autónoma.">
+<link rel="icon" id="fav" href="data:,">
+<style>
+/* {{MARCA}} · Calculadora de herencias para la web del despacho. Un solo archivo, sin conexiones: el motor de cálculo va dentro. */
+:root{
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:ui-serif,"New York","Iowan Old Style",Georgia,"Times New Roman",serif;
+  --ac:#0F2B4C; --on-ac:#FFFFFF; --ac-ink:var(--ac);
+  --bg:#F4F2EC; --panel:#FFFEFB; --field:#FAF9F5;
+  --ink:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-4:#B1B5BC;
+  --line:#E0DCD2; --line-2:#EAE7DF;
+  --keep:#1F6E6B; --tax:#875A1A; --warn:#9E3B2B;
+  --ac-t:color-mix(in srgb,var(--ac) 8%,var(--panel)); --ac-t2:color-mix(in srgb,var(--ac) 22%,var(--panel));
+  --keep-t:color-mix(in srgb,var(--keep) 11%,var(--panel)); --tax-t:color-mix(in srgb,var(--tax) 14%,var(--panel)); --warn-t:color-mix(in srgb,var(--warn) 9%,var(--panel));
+  --shadow:0 0 0 1px rgba(18,28,42,.05),0 1px 2px rgba(18,28,42,.04),0 8px 22px -12px rgba(18,28,42,.14);
+  --r:18px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0F1621; --panel:#151E2A; --field:#121A25;
+    --ink:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF; --ink-4:#4C5767;
+    --line:#2A3647; --line-2:#1F2A38;
+    --keep:#63B8AF; --tax:#E0AE68; --warn:#EE8E80;
+    --ac-ink:color-mix(in oklab,var(--ac) 58%,white);
+    --ac-t:color-mix(in srgb,var(--ac) 18%,var(--panel)); --ac-t2:color-mix(in srgb,var(--ac) 34%,var(--panel));
+    --keep-t:color-mix(in srgb,var(--keep) 15%,var(--panel)); --tax-t:color-mix(in srgb,var(--tax) 16%,var(--panel)); --warn-t:color-mix(in srgb,var(--warn) 14%,var(--panel));
+    --shadow:0 0 0 1px rgba(168,190,222,.07),0 10px 26px -14px rgba(2,6,14,.6);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;background:var(--bg);scroll-padding:24px 0 120px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;min-height:100vh}
+html.emb body{min-height:0}
+button,input,select,textarea{font:inherit;color:inherit;letter-spacing:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+a{color:var(--ac-ink)}
+svg{display:block;flex:none}
+:focus-visible{outline:2px solid var(--ac-ink);outline-offset:2px;border-radius:10px}
+h1:focus,h2:focus{outline:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Estructura */
+.shell{max-width:640px;margin:0 auto}
+.side{display:none}
+.wrap{padding:0 16px 4px}
+.pie{padding:0 16px calc(118px + env(safe-area-inset-bottom))}
+html.emb .pie{padding-bottom:16px}
+
+/* Despacho */
+.top{display:flex;align-items:center;gap:12px;padding:18px 0 16px}
+.mono{width:44px;height:44px;border-radius:50%;background:var(--ac);color:var(--on-ac);display:grid;place-items:center;font-weight:650;font-size:15px;letter-spacing:.04em;flex:none}
+.firm{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.firm b{font-size:15.5px;font-weight:620;overflow-wrap:anywhere}
+.firm small{font-size:13px;color:var(--ink-2)}
+
+/* Progreso */
+.prog{margin:2px 0 24px}
+.segs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.segs i{height:4px;border-radius:4px;background:var(--line-2);transition:background-color .3s}
+.segs i.on{background:var(--ac)}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13.5px;color:var(--ink-2)}
+
+/* Texto */
+.kick{font-size:13.5px;font-weight:600;color:var(--ac-ink);margin:0 0 8px;letter-spacing:.01em}
+h1{font-family:var(--serif);text-wrap:balance;font-size:30px;line-height:1.16;letter-spacing:-.018em;margin:0 0 10px;font-weight:600}
+.lead{color:var(--ink-2);margin:0 0 24px;font-size:16.5px;line-height:1.55;text-wrap:pretty}
+.qt{font-size:15.5px;font-weight:620;margin:28px 2px 12px}
+.hint{font-size:13.5px;color:var(--ink-3);margin:8px 2px 0;line-height:1.45}
+.need{font-size:14px;color:var(--ink-3);margin:14px 2px 0}
+
+/* Tarjetas y campos */
+.card{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:20px 18px;margin-bottom:14px}
+.field{margin-bottom:18px}.field:last-child{margin-bottom:0}
+.l{display:block;font-size:14px;font-weight:550;color:var(--ink-2);margin:0 2px 8px}
+input[type=text],input[type=tel],input[type=email],input[type=date],input[type=search],input:not([type]),select,textarea{width:100%;min-height:52px;border:1px solid var(--line);background:var(--field);border-radius:13px;padding:12px 14px;font-size:17px;outline:none;transition:border-color .15s,box-shadow .15s,background-color .15s}
+input::placeholder,textarea::placeholder{color:var(--ink-3);opacity:.8}
+input:focus,select:focus,textarea:focus{border-color:var(--ac-ink);background:var(--panel);box-shadow:0 0 0 3px var(--ac-t2)}
+input[type=date]{appearance:none;-webkit-appearance:none;display:flex;align-items:center}
+select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none' stroke='%23888' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:42px;cursor:pointer}
+textarea{resize:vertical;min-height:92px;line-height:1.45}
+.eur{position:relative}.eur input{padding-right:38px;text-align:right;font-variant-numeric:tabular-nums}
+.eur::after{content:"€";position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:17px;pointer-events:none}
+
+/* Opciones */
+.opts{display:grid;gap:10px}
+.opts.three{grid-template-columns:1fr}
+.opt{display:flex;align-items:center;gap:14px;width:100%;min-height:60px;text-align:left;background:var(--panel);border-radius:15px;padding:14px 16px;box-shadow:var(--shadow);transition:box-shadow .15s,background-color .15s}
+.opt:hover{background:color-mix(in srgb,var(--panel) 92%,var(--ac))}
+.opt .dot{width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--ink-4);flex:none;transition:box-shadow .15s}
+.opt[aria-pressed=true]{background:var(--ac-t);box-shadow:inset 0 0 0 1.5px var(--ac-ink)}
+.opt[aria-pressed=true] .dot{box-shadow:inset 0 0 0 7px var(--ac-ink)}
+.opt .t{display:flex;flex-direction:column;gap:1px;font-size:16.5px}
+.opt small{color:var(--ink-2);font-size:13.5px;line-height:1.35}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:999px;background:var(--panel);box-shadow:var(--shadow);font-size:15px;font-weight:500}
+.chip[aria-pressed=true]{background:var(--ac-t);box-shadow:inset 0 0 0 1.5px var(--ac-ink);color:var(--ac-ink)}
+
+/* Buscador de municipios */
+.found{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:13px;background:var(--ac-t);margin-top:10px}
+.found .t{flex:1;min-width:0;line-height:1.3}.found b{display:block;font-weight:600}.found small{color:var(--ink-2);font-size:13.5px}
+.found svg{color:var(--ac-ink)}
+.sug{list-style:none;margin:8px 0 0;padding:4px;border-radius:14px;background:var(--panel);box-shadow:var(--shadow)}
+.sug button{display:flex;justify-content:space-between;gap:12px;width:100%;min-height:48px;padding:10px 12px;border-radius:10px;text-align:left;font-size:16px}
+.sug button small{color:var(--ink-3);font-size:13.5px;white-space:nowrap}
+.sug button:hover,.sug button:focus-visible{background:var(--ac-t)}
+.or{display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:13.5px;margin:22px 2px 14px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line-2)}
+.link{min-height:44px;padding:0 12px;border-radius:10px;color:var(--ac-ink);font-weight:550;font-size:15px}
+.link:hover{background:var(--ac-t)}
+
+/* Contadores */
+.who{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2)}
+.who:first-child{padding-top:2px}.who:last-child{border-bottom:0;padding-bottom:2px}
+.who .t{flex:1;min-width:0;line-height:1.35}
+.who .t b{display:block;font-weight:600;font-size:16.5px}
+.who .t small{display:block;color:var(--ink-3);font-size:13.5px}
+.av{width:40px;height:40px;border-radius:50%;background:var(--ac-t);color:var(--ac-ink);display:grid;place-items:center;flex:none}
+.step{display:flex;align-items:center;gap:4px;flex:none}
+.step button{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--field);box-shadow:inset 0 0 0 1px var(--line);color:var(--ink);transition:background-color .15s}
+.step button:hover:not([disabled]){background:var(--ac-t);color:var(--ac-ink)}
+.step button[disabled]{opacity:.35;cursor:default}
+.step output{min-width:44px;text-align:center;font-size:19px;font-weight:620;font-variant-numeric:tabular-nums}
+.step.wide output{min-width:92px;font-size:15.5px;font-weight:600}
+.kids{margin:2px 0 0;padding:0;list-style:none}
+@media (min-width:480px){.kids{margin-left:54px}}
+.kids li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px dashed var(--line-2);font-size:15px;color:var(--ink-2)}
+.seg2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.seg2 button{min-height:46px;border-radius:12px;background:var(--field);box-shadow:inset 0 0 0 1px var(--line);font-size:15px;font-weight:500}
+.seg2 button[aria-pressed=true]{background:var(--ac-t);box-shadow:inset 0 0 0 1.5px var(--ac-ink);color:var(--ac-ink)}
+
+/* Bienes */
+.asset{padding:16px 0;border-bottom:1px solid var(--line-2)}
+.asset:first-child{padding-top:2px}.asset:last-child{border-bottom:0;padding-bottom:4px}
+.asset-h{display:grid;grid-template-columns:40px minmax(0,1fr) 138px;gap:12px;align-items:center}
+@media (min-width:480px){.asset-h{grid-template-columns:40px minmax(0,1fr) 180px}}
+.asset-h .t{line-height:1.3;min-width:0}.asset-h b{display:block;font-weight:600;font-size:15.5px}.asset-h small{color:var(--ink-3);font-size:13px}
+.asset-h .av{border-radius:12px}
+.asset .eur input{min-height:48px;font-size:16.5px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;margin:10px 0 0;cursor:pointer;--p:0%}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(var(--ac),var(--ac)) 0/var(--p) 100% no-repeat,var(--line-2)}
+input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:var(--line-2)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:6px;background:var(--ac)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;margin-top:-10px;box-shadow:0 0 0 1px rgba(18,28,42,.08),0 2px 6px rgba(18,28,42,.22)}
+input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(18,28,42,.08),0 2px 6px rgba(18,28,42,.22)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]{touch-action:pan-y}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--ac-t2),0 2px 6px rgba(18,28,42,.22)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:50px;cursor:pointer;font-size:16px}
+.toggle .t{line-height:1.35}.toggle small{display:block;color:var(--ink-3);font-size:13.5px}
+.switch{position:relative;width:51px;height:31px;flex:none}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch span{position:absolute;inset:0;background:var(--ink-4);border-radius:31px;transition:background-color .2s}
+.switch span::after{content:"";position:absolute;width:27px;height:27px;left:2px;top:2px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(18,28,42,.2);transition:transform .2s}
+.switch input:checked+span{background:var(--ac)}
+.switch input:checked+span::after{transform:translateX(20px)}
+.switch input:focus-visible+span{outline:2px solid var(--ac-ink);outline-offset:3px}
+details.more{margin-top:4px}
+details.more summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:52px;cursor:pointer;font-weight:600;color:var(--ac-ink);padding:0 4px}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary svg{transition:transform .2s}
+details.more[open] summary svg{transform:rotate(90deg)}
+.totals{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 4px 0;font-size:15px;color:var(--ink-2)}
+.totals b{color:var(--ink);font-weight:650;font-variant-numeric:tabular-nums;font-size:18px}
+
+/* Resultado */
+.hero{background:var(--panel);border-radius:22px;box-shadow:var(--shadow);padding:22px 20px;margin-bottom:14px}
+.hero .lbl{font-size:14px;color:var(--ink-2)}
+.hero .big{font-family:var(--serif);font-size:42px;line-height:1.1;font-weight:600;letter-spacing:-.02em;font-variant-numeric:lining-nums tabular-nums;margin:6px 0 6px;color:var(--ink)}
+.hero .sub{font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.hero .zero{display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:8px 12px;border-radius:999px;background:var(--keep-t);color:var(--keep);font-weight:600;font-size:14px}
+.heir{background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:12px}
+.heir-h{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.heir-h .t{flex:1;min-width:0;line-height:1.3}
+.heir-h b{display:block;font-size:17px;font-weight:650}
+.heir-h small{display:block;color:var(--ink-3);font-size:13.5px;margin-top:2px}
+.heir-h .pay{text-align:right;flex:none}
+.heir-h .pay span{display:block;font-size:12.5px;color:var(--ink-3)}
+.heir-h .pay strong{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--tax)}
+.heir-h .pay strong.z{color:var(--keep)}
+.bar2{display:flex;height:12px;border-radius:12px;overflow:hidden;background:var(--line-2);gap:2px}
+.bar2 i{display:block;height:100%}
+.bar2 .k{background:var(--keep)}.bar2 .p{background:var(--tax);min-width:4px}
+.legend{display:flex;justify-content:space-between;gap:12px;margin-top:10px;font-size:14px;color:var(--ink-2);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.legend b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.heir .note{margin-top:12px;font-size:13.5px;color:var(--ink-2);line-height:1.45;padding-top:12px;border-top:1px solid var(--line-2)}
+.heir.out{box-shadow:none;background:transparent;border:1.5px dashed var(--line);padding:14px 16px}
+.heir.out .heir-h{margin:0}
+.info{display:flex;gap:14px;align-items:flex-start}
+.info .av{width:38px;height:38px;border-radius:12px}
+.info .t{flex:1;min-width:0;line-height:1.45;font-size:15px;color:var(--ink-2)}
+.info .t b{display:block;color:var(--ink);font-size:16px;font-weight:620;margin-bottom:2px}
+.info .t .when{display:block;font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);margin:2px 0 4px;letter-spacing:-.01em}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:600;background:var(--ac-t);color:var(--ac-ink)}
+.pill.bad{background:var(--warn-t);color:var(--warn)}
+.tips{list-style:none;margin:0;padding:0}
+.tips li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2);line-height:1.5;font-size:15px}
+.tips li:first-child{padding-top:2px}.tips li:last-child{border-bottom:0;padding-bottom:2px}
+.tips .n{width:28px;height:28px;border-radius:50%;background:var(--ac-t);color:var(--ac-ink);display:grid;place-items:center;font-size:13.5px;font-weight:650;flex:none;margin-top:1px}
+.tips small{display:block;color:var(--ink-3);font-size:12.5px;margin-top:3px}
+.sect{font-size:13.5px;font-weight:650;color:var(--ink-2);margin:26px 4px 10px;letter-spacing:.01em}
+.disc{border-radius:var(--r);background:var(--warn-t);padding:18px;margin:14px 0}
+.disc b{display:flex;align-items:center;gap:10px;font-size:16px;margin-bottom:6px;color:var(--ink)}
+.disc b svg{color:var(--warn)}
+.disc p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.disc ul{margin:10px 0 0;padding-left:18px;font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.disc li{margin:3px 0}
+.cta{background:var(--ac);color:var(--on-ac);border-radius:22px;padding:22px 20px;margin:18px 0 6px}
+.cta h2{font-family:var(--serif);font-size:23px;line-height:1.2;margin:0 0 8px;font-weight:600;letter-spacing:-.01em}
+.cta p{margin:0 0 16px;font-size:15px;line-height:1.5;opacity:.92}
+.cta .btn{background:var(--on-ac);color:var(--ac);width:100%}
+.cta .btn:hover{opacity:.92;background:var(--on-ac)}
+.again{display:flex;justify-content:center;margin-top:8px}
+
+/* Contacto */
+.consent{display:flex;align-items:flex-start;gap:14px;cursor:pointer;position:relative;font-size:15px;line-height:1.45}
+.consent input{position:absolute;opacity:0;width:1px;height:1px}
+.consent .box{width:26px;height:26px;border-radius:8px;box-shadow:inset 0 0 0 1.5px var(--ink-4);flex:none;display:grid;place-items:center;transition:background-color .15s}
+.consent input:checked+.box{background:var(--ac);box-shadow:none}
+.consent input:checked+.box::after{content:"";width:6px;height:12px;border:solid var(--on-ac);border-width:0 2.4px 2.4px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.consent input:focus-visible+.box{outline:2px solid var(--ac-ink);outline-offset:2px}
+.consent small{display:block;color:var(--ink-3);font-size:13px;margin-top:6px}
+.row2{display:grid;grid-template-columns:1fr;gap:18px}
+.send{display:grid;gap:10px;margin-top:6px}
+.err{color:var(--warn);font-size:13.5px;margin:8px 2px 0}
+
+/* Hecho */
+.done{text-align:center;padding:26px 8px 4px}
+.done .ok{width:74px;height:74px;border-radius:50%;background:var(--keep-t);color:var(--keep);display:grid;place-items:center;margin:0 auto 20px}
+.done .lead{margin:0 auto 24px;max-width:440px}
+.nx{list-style:none;margin:0;padding:0;counter-reset:n}
+.nx li{counter-increment:n;display:flex;gap:14px;padding:12px 0;font-size:15.5px;line-height:1.45}
+.nx li::before{content:counter(n);flex:none;width:28px;height:28px;border-radius:50%;background:var(--ac-t);color:var(--ac-ink);display:grid;place-items:center;font-size:14px;font-weight:650}
+
+/* Botones */
+.btn{min-height:56px;border-radius:15px;background:var(--ac);color:var(--on-ac);font-size:17px;font-weight:620;display:flex;align-items:center;justify-content:center;gap:9px;padding:0 20px;text-decoration:none;transition:filter .15s,opacity .15s,background-color .15s}
+.btn:hover{filter:brightness(1.07)}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.42;cursor:not-allowed;filter:none}
+.btn.sec{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+.btn.wa{background:#1E7A47;color:#fff}
+.btn.ghost{background:transparent;color:var(--ac-ink);box-shadow:inset 0 0 0 1.5px var(--ac-t2)}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-top:1px solid var(--line-2)}
+.bar .in{max-width:640px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
+.bar .btn{flex:1}
+.bar .btn.sec{flex:0 0 auto;padding:0 18px 0 12px}
+.bar:empty,.bar .in:empty{display:none}
+html.emb .bar{position:static;background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;border-top:0}
+html.emb .bar .in{padding:16px 16px 20px}
+
+/* Pie */
+.foot{font-size:13px;color:var(--ink-3);text-align:center;margin:30px 0 0;line-height:1.6}
+.foot a{color:var(--ink-2);text-decoration:none;font-weight:550}
+.foot a:hover{text-decoration:underline}
+@media print{
+  html,body{background:#fff!important}
+  .bar,.side,#pie .pro,.cta .btn,.again,.pro,.barras,.need{display:none!important}
+  .cta{background:none!important;color:#000!important;border:1px solid #ccc;break-inside:avoid}
+  .card,.heir,.hero{box-shadow:none!important;border:1px solid #ddd;break-inside:avoid}
+  .wrap{padding:0!important}
+  .shell{display:block!important;max-width:none!important;padding:0!important}
+}
+.pro{display:flex;align-items:center;gap:12px;margin:22px 0 0;padding:14px 16px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--line);font-size:14px;color:var(--ink-2);text-decoration:none;line-height:1.4}
+.pro b{color:var(--ink);font-weight:600}
+.pro svg{color:var(--ac-ink);margin-left:auto}
+
+/* Intro */
+.how{list-style:none;margin:0;padding:0}
+.how li{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-2)}
+.how li:first-child{padding-top:2px}.how li:last-child{border-bottom:0;padding-bottom:2px}
+.how b{display:block;font-weight:620;font-size:16px;line-height:1.35}
+.how span.d{display:block;margin-top:2px;font-size:14.5px;color:var(--ink-2);line-height:1.45}
+
+.stage.enter{animation:enter .3s cubic-bezier(.2,.7,.2,1) both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media (min-width:480px){.row2{grid-template-columns:1fr 1fr}.opts.three{grid-template-columns:repeat(3,1fr)}.send{grid-template-columns:1fr 1fr}.send.one{grid-template-columns:1fr}}
+
+/* Escritorio */
+@media (min-width:960px){
+  .shell{max-width:1060px;display:grid;grid-template-columns:270px minmax(0,640px);gap:72px;justify-content:center;padding:0 40px}
+  .side{display:block;position:sticky;top:0;align-self:start;padding:56px 0 40px}
+  .side .top{padding:0 0 26px;margin-bottom:26px;border-bottom:1px solid var(--line)}
+  .side .mono{width:50px;height:50px;font-size:16px}
+  .steps{list-style:none;margin:0;padding:0}
+  .steps li{position:relative;padding:0 0 6px}
+  .steps li:not(:last-child)::before{content:"";position:absolute;left:13px;top:34px;bottom:-2px;width:1.5px;background:var(--line)}
+  .steps li.ok:not(:last-child)::before{background:var(--ac)}
+  .st{display:flex;align-items:center;gap:14px;width:100%;min-height:44px;padding:4px 8px 4px 0;border-radius:10px;font-size:15px;color:var(--ink-3);text-align:left}
+  .st i{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:13px;font-weight:650;box-shadow:inset 0 0 0 1.5px var(--line);background:var(--bg);flex:none}
+  li.ok .st{color:var(--ink-2)}
+  li.ok .st i{background:var(--ac);color:var(--on-ac);box-shadow:none}
+  button.st:hover{color:var(--ink)}
+  li.cur .st{color:var(--ink);font-weight:620}
+  li.cur .st i{box-shadow:inset 0 0 0 2px var(--ac-ink);color:var(--ac-ink);background:var(--panel)}
+  .trust{list-style:none;margin:30px 0 0;padding:22px 0 0;border-top:1px solid var(--line)}
+  .trust li{display:flex;gap:10px;font-size:13.5px;color:var(--ink-2);line-height:1.45;margin-bottom:12px}
+  .trust svg{color:var(--ac-ink);margin-top:1px}
+  .wrap{padding:56px 0 0}
+  .pie{padding:0 0 40px}
+  html.emb .pie{padding:0 16px 16px}
+  .wrap > .top{display:none}
+  .prog .segs{display:none}
+  .prog{margin:0 0 14px}
+  .meta{margin-top:0}
+  h1{font-size:38px;margin-bottom:12px}
+  .lead{font-size:17.5px;margin-bottom:30px}
+  .card,.heir{padding:24px}
+  .hero{padding:28px}
+  .hero .big{font-size:52px}
+  .bar{position:sticky;bottom:0;background:linear-gradient(to bottom,transparent,var(--bg) 24px);-webkit-backdrop-filter:none;backdrop-filter:none;border-top:0}
+  .bar .in{max-width:none;padding:30px 0 32px;justify-content:space-between}
+  .bar .btn{flex:0 0 auto;min-width:230px}
+  .bar .btn.sec{min-width:0}
+  .bar .in.one{justify-content:flex-end}
+  .foot{text-align:left}
+  .done{text-align:left;padding-top:8px}
+  .done .ok{margin:0 0 22px}
+  .done .lead{margin-left:0}
+}
+html.emb .shell{display:block;max-width:640px;padding:0}
+html.emb .side{display:none}
+html.emb .wrap > .top{display:flex}
+html.emb .prog .segs{display:grid}
+html.emb .wrap{padding-top:0}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Despacho y pasos"></aside>
+  <main class="main">
+    <div class="wrap" id="app"><noscript><p style="padding:24px 0">Esta calculadora necesita JavaScript activado.</p></noscript></div>
+    <div class="bar"><div class="in" id="bar"></div></div>
+    <div class="pie" id="pie"></div>
+  </main>
+</div>
+<script>/*__MOTOR__*/</script>
+<script>
+(() => {
+"use strict";
+let PRESET = null;
+/*__PRESET__*/
+const MUNIS = /*__MUNIS__*/{};
+
+// ───────── Despacho (preset inyectado al generar la calculadora) ─────────
+const P = PRESET && PRESET.despacho ? PRESET.despacho : null;
+const GENERICA = !P;
+const CONTACTO_GENERICO = "[EMAIL DE CONTACTO]";
+const D = {
+  nombre: (P && P.nombre || "").trim(), colegio: (P && P.colegio || "").trim(), localidad: (P && P.localidad || "").trim(),
+  tel: (P && P.tel || "").trim(), email: (P && P.email || "").trim() || (GENERICA ? CONTACTO_GENERICO : ""),
+  web: (P && P.web || "").trim(), privacidad: (P && P.privacidad || "").trim() || (GENERICA ? "/privacidad.html" : ""),
+  color: /^#[0-9a-f]{6}$/i.test(P && P.color || "") ? P.color : "#0F2B4C",
+};
+const HEREDA_URL = PRESET && typeof PRESET.hereda === "string" && /^https?:\/\//.test(PRESET.hereda) ? PRESET.hereda : GENERICA ? "/" : "";
+const NOMBRE = D.nombre || (GENERICA ? "{{MARCA}}" : "el despacho");
+const STOP = /^(despacho|bufete|abogados?|asesores|asociados|y|e|de|del|la|las|los|el|&|s\.?l\.?p?\.?|s\.?a\.?)$/i;
+const iniciales = (s) => { const w = String(s || "").trim().split(/\s+/).filter(Boolean); const k = w.filter((x) => !STOP.test(x)); return (k.length ? k : w).slice(0, 2).map((x) => x[0]).join("").toLocaleUpperCase("es"); };
+const INI = String(P && P.logoIniciales || "").trim().slice(0, 3).toLocaleUpperCase("es") || (D.nombre ? iniciales(D.nombre) : "H+");
+const EMB = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+if (EMB) document.documentElement.classList.add("emb");
+(function tema() {
+  const h = D.color.slice(1), r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  const de = document.documentElement.style; de.setProperty("--ac", D.color); de.setProperty("--on-ac", (1.05) / (L + 0.05) >= 4.5 ? "#FFFFFF" : "#121C2A");
+  if ((1.05) / (L + 0.05) < 3) de.setProperty("--ac-ink", "color-mix(in oklab," + D.color + " 45%,black)");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="${D.color}"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="${INI.length > 2 ? 20 : 25}" font-weight="700" text-anchor="middle" fill="${(1.05) / (L + 0.05) >= 4.5 ? "#fff" : "#121C2A"}">${INI.replace(/[<&>"]/g, "")}</text></svg>`;
+  const f = document.getElementById("fav"); if (f) f.href = "data:image/svg+xml," + encodeURIComponent(svg);
+  if (D.nombre) document.title = "Calculadora de herencias · " + D.nombre;
+})();
+
+// ───────── Utilidades (las mismas que la aplicación: logic.js) ─────────
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const grp = (n, d = 2) => { const neg = n < 0; const [i, f] = Math.abs(n || 0).toFixed(d).split("."); return (neg ? "−" : "") + i.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (f ? "," + f : ""); };
+const eur = (n) => grp(n, 2) + " €"; const eur0 = (n) => grp(n, 0) + " €";
+const num = (v) => { if (typeof v === "number") return isFinite(v) ? v : 0; if (v === "" || v == null) return 0; if (/^\s*-?\d+\.\d{1,2}\s*$/.test(String(v))) return Number(v); const n = Number(String(v).replace(/\./g, "").replace(",", ".")); return isNaN(n) ? 0 : n; };
+const numIn = (v) => num(String(v ?? "").replace(/[^\d.,-]/g, ""));
+const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }; // fecha local (no UTC)
+const fechaLarga = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "—";
+const fechaCorta = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "numeric", year: "numeric" }) : "—";
+const dias = (a, b) => Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5);
+const haceUnMes = () => { const d = new Date(); d.setHours(12, 0, 0, 0); const dia = d.getDate(); d.setMonth(d.getMonth() - 1); if (d.getDate() !== dia) d.setDate(0); return d.toISOString().slice(0, 10); };
+const plural = (n, s, p) => `${n} ${n === 1 ? s : p || s + "s"}`;
+const pctTxt = (f) => grp(f * 100, Math.abs(f * 100 - Math.round(f * 100)) < 0.005 ? 0 : 2) + " %";
+const sv = (d, w = 20, sw = 1.8) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const I = {
+  left: sv('<path d="M14.5 5.5 8 12l6.5 6.5"/>', 20, 2), right: sv('<path d="M9.5 5.5 16 12l-6.5 6.5"/>', 20, 2), chev: sv('<path d="M9.5 6 15.5 12l-6 6"/>', 18, 2),
+  plus: sv('<path d="M12 5.5v13M5.5 12h13"/>', 20, 2.2), minus: sv('<path d="M5.5 12h13"/>', 20, 2.2),
+  pin: sv('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>'),
+  cal: sv('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>'),
+  clock: sv('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  lock: sv('<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>', 18),
+  law: sv('<path d="M12 4v16M7 20h10M5 7h14M7 7l-3 6a3 3 0 0 0 6 0zM17 7l-3 6a3 3 0 0 0 6 0z"/>'),
+  person: sv('<circle cx="12" cy="8.5" r="3.6"/><path d="M5 19.5c1.2-3.3 3.9-5 7-5s5.8 1.7 7 5"/>'),
+  ring: sv('<circle cx="9" cy="14" r="5"/><circle cx="15" cy="10" r="5"/>'),
+  kids: sv('<circle cx="8" cy="8" r="2.8"/><circle cx="16.5" cy="9.5" r="2.3"/><path d="M3.5 19c.7-3 2.4-4.6 4.5-4.6s3.8 1.6 4.5 4.6M13 18.5c.5-2.2 1.8-3.4 3.5-3.4s3 1.2 3.5 3.4"/>'),
+  people: sv('<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.9-3 3-4.6 5.5-4.6s4.6 1.6 5.5 4.6"/><path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14.6c1.5.6 2.5 2 3 4.4"/>'),
+  house: sv('<path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z"/>'),
+  building: sv('<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M9 8h1.5M13.5 8H15M9 12h1.5M13.5 12H15M10.5 20.5v-4h3v4"/>'),
+  bank: sv('<path d="M3.5 9.5 12 4.5l8.5 5"/><path d="M6 10.5v6.5M10 10.5v6.5M14 10.5v6.5M18 10.5v6.5M3.5 19.5h17"/>'),
+  chart: sv('<path d="M4 19.5h16"/><path d="M5 15.5l4.5-4.5 3.5 3 6-6.5"/><path d="M15 7.5h4v4"/>'),
+  box: sv('<path d="M4 8 12 4l8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/>'),
+  debt: sv('<rect x="3.5" y="6" width="17" height="12.5" rx="2.5"/><path d="M3.5 10h17M7 15h4"/>'),
+  tick: sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 34, 2.2), ok: sv('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 14, 2.6),
+  warn: sv('<path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5M12 17v.01"/>', 20, 1.9),
+  bulb: sv('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2v.6h5v-.6c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>'),
+  send: sv('<path d="M20 4 10.5 13.5"/><path d="M20 4l-6 16-3.5-6.5L4 10z"/>', 19), mail: sv('<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4 7 8 6 8-6"/>', 19),
+  wa: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5a9.4 9.4 0 0 0-8.1 14.2L2.6 21.5l4.9-1.3A9.4 9.4 0 1 0 12 2.5zm0 17.1c-1.5 0-2.9-.4-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A7.7 7.7 0 1 1 12 19.6zm4.3-5.8c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.7-.3-1.4-.7-2-1.3-.5-.5-.9-1-1.2-1.6-.1-.2 0-.4.1-.5l.4-.5.2-.4v-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1-.1-.1-.2-.2-.4-.3z"/></svg>',
+  file: sv('<path d="M13.5 3.5H7A1.5 1.5 0 0 0 5.5 5v14A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V8.5z"/><path d="M13.5 3.5v5h5"/>', 20),
+  ext: sv('<path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/>', 17),
+};
+
+// ───────── Estado ─────────
+const KEY = "hereda-calculadora-v1" + (D.nombre ? "-" + iniciales(D.nombre) : "");
+const TERR = (typeof TERRITORIOS !== "undefined" ? TERRITORIOS : []).filter(([k]) => k !== "EST");
+const terrNombre = (k) => (TERR.find(([t]) => t === k) || [k, ""])[1];
+// Plusvalía: aquí no se calcula (hace falta el valor catastral del suelo). Se dice qué ordenanza rige y su límite legal, sin inventar cifras.
+function calcPlusTxt() {
+  const nom = String(S.municipio || "").replace(/\s*\(.*$/, "").trim();
+  const nn = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const ord = nom && typeof ORDENANZAS === "object" ? Object.entries(ORDENANZAS).find(([k, o]) => k !== "OTRO" && nn(o.nombre) === nn(nom)) : null;
+  const base = "Depende del valor catastral del suelo y de la ordenanza del ayuntamiento donde está el inmueble; tu abogado la calcula. Se declara en el mismo plazo de seis meses.";
+  if (!nom) return base + " El tipo no puede superar el 30 % (art. 108.1 TRLRHL) y muchos ayuntamientos bonifican la herencia entre familiares.";
+  if (ord) return `${base} Si el inmueble está en ${esc(nom)}, su ordenanza está incorporada en el programa del despacho, con su tipo y sus bonificaciones.`;
+  return `${base} Si el inmueble está en ${esc(nom)}: su ordenanza aún no está incorporada y, hasta consultarla, el abogado estima con el tipo máximo legal (30 %, art. 108.1 TRLRHL) y sin bonificación, así que la cifra real será igual o menor.`;
+}
+const nuevo = () => ({ paso: 0, ccaa: TERR.some(([k]) => k === (PRESET && PRESET.ccaaDefecto)) ? PRESET.ccaaDefecto : "", municipio: "", fecha: "", testamento: "", civil: "", conyEdad: 70, parejaInscrita: "", hijos: [], padres: 0, hermanos: 0, sobrinos: 0, otros: 0,
+  bienes: { vivienda: 0, inmueble: 0, cuenta: 0, valores: 0, otro: 0 }, ganancial: true, deudaGan: true, barras: false, deudas: { hipoteca: 0, otras: 0, funeral: 0 }, contacto: { nombre: "", tel: "", email: "", hora: "", obs: "" }, ok: false, canal: "" });
+let S; try { S = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) { S = null; }
+if (!S || typeof S !== "object" || !S.bienes) S = nuevo(); else S = Object.assign(nuevo(), S, { paso: Math.min(S.paso || 0, 6) });
+if (GENERICA && S.paso > 6) S.paso = 6;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+// ───────── Del formulario a un expediente de {{MARCA}} ─────────
+const ORD = ["Primer", "Segundo", "Tercer", "Cuarto", "Quinto", "Sexto", "Séptimo", "Octavo", "Noveno", "Décimo"];
+const ORDF = ["Primera", "Segunda", "Tercera", "Cuarta", "Quinta", "Sexta", "Séptima", "Octava", "Novena", "Décima"];
+const casado = () => S.civil === "gananciales" || S.civil === "separacion";
+const conPareja = () => S.civil === "pareja";
+const nHerederos = () => (casado() || conPareja() ? 1 : 0) + S.hijos.length + (S.hijos.length ? 0 : S.padres + (S.padres ? 0 : S.hermanos + S.sobrinos)) + (S.testamento === "si" ? S.otros : 0);
+function personas() {
+  const L = [];
+  const add = (id, nombre, relacion, edad, extra) => L.push(Object.assign({ id, nombre, relacion, edad, convivio2anios: false }, extra || {}));
+  if (casado()) add("conyuge", "Cónyuge", "conyuge", S.conyEdad, { convivio2anios: true });
+  if (conPareja()) add("pareja", "Pareja de hecho", S.parejaInscrita === "si" ? "pareja_hecho" : "pareja_no_inscrita", S.conyEdad, { inscrita: S.parejaInscrita === "si", convivio2anios: true });
+  const serie = (n, base, rel, edadFn, extra, fem) => { for (let i = 0; i < n; i++) add(rel + (i + 1), n === 1 ? base[0] : `${(fem ? ORDF : ORD)[i] || i + 1 + "."} ${base[1]}`, rel, edadFn(i), extra); };
+  serie(S.hijos.length, ["Hijo o hija", "hijo"], "hijo", (i) => (S.hijos[i] >= 21 ? "" : S.hijos[i]));
+  if (!S.hijos.length) {
+    if (S.padres === 2) { add("padre1", "Padre", "padre", ""); add("padre2", "Madre", "padre", ""); }
+    else if (S.padres === 1) add("padre1", "Padre o madre", "padre", "");
+    else {
+      serie(S.hermanos, ["Hermano o hermana", "hermano"], "hermano", () => "");
+      serie(S.sobrinos, ["Sobrino o sobrina", "sobrino"], "sobrino", () => "", S.hermanos ? { estirpe: "Hermano fallecido" } : null);
+    }
+  }
+  if (S.testamento === "si") serie(S.otros, ["Otra persona", "persona"], "extrano", () => "", null, true);
+  return L;
+}
+function reparto(L) {
+  if (S.testamento !== "si") return S.testamento === "nose" ? "nose" : "no";
+  const pareja = L.some((p) => ["conyuge", "pareja_hecho", "pareja_no_inscrita"].includes(p.relacion)), desc = L.some((p) => p.relacion === "hijo");
+  return pareja && desc ? "usufructo" : "porcentajes";
+}
+const BIENES = [
+  ["vivienda", "vivienda", "La casa donde vivía", "Vivienda habitual", I.house, 1500000, 5000],
+  ["inmueble", "inmueble", "Otras viviendas, locales o terrenos", "Valor de todos juntos", I.building, 2000000, 5000],
+  ["cuenta", "cuenta", "Dinero en cuentas y depósitos", "Saldo aproximado", I.bank, 1000000, 1000],
+  ["valores", "valores", "Fondos y acciones", "Valor aproximado", I.chart, 1000000, 1000],
+  ["otro", "otro", "Otros bienes", "Coche, joyas, objetos de valor", I.box, 200000, 500],
+];
+const DEUDAS = [["hipoteca", "Hipoteca pendiente", 500000, 1000], ["otras", "Otras deudas", 200000, 500], ["funeral", "Gastos del funeral", 20000, 100]];
+const DESC_BIEN = { vivienda: "Vivienda habitual", inmueble: "Otros inmuebles (valor conjunto)", cuenta: "Dinero en cuentas y depósitos", valores: "Fondos y acciones", otro: "Otros bienes" };
+const totalBienes = () => BIENES.reduce((s, [k]) => s + num(S.bienes[k]), 0);
+const totalDeudas = () => num(S.deudas.hipoteca) + num(S.deudas.otras) + num(S.deudas.funeral);
+function expediente() {
+  const L = personas(), t = reparto(L);
+  if (t === "porcentajes") L.forEach((p) => { p.pct = 100 / L.length; });
+  const gan = S.civil === "gananciales" && S.ganancial, dgan = S.civil === "gananciales" && S.deudaGan !== false;
+  return {
+    fecha: S.fecha, ccaa: S.ccaa, civil: S.civil, testamento: t, ajuar: "sts", enPlazo: true,
+    personas: L,
+    bienes: BIENES.filter(([k]) => num(S.bienes[k]) > 0).map(([k, tipo]) => ({ id: k, tipo, descripcion: DESC_BIEN[k], valor: num(S.bienes[k]), titularidad: gan ? "ganancial" : "privativo" })),
+    deudas: [{ concepto: "Hipoteca", importe: num(S.deudas.hipoteca), ganancial: dgan }, { concepto: "Otras deudas", importe: num(S.deudas.otras), ganancial: dgan }].filter((d) => d.importe > 0),
+    gastos: num(S.deudas.funeral) > 0 ? [{ concepto: "Funeral", importe: num(S.deudas.funeral) }] : [],
+  };
+}
+// Copia literal de casoMotor (src/app/logic.js): el mismo expediente da el mismo cálculo aquí y en la aplicación.
+function casoMotor(x) {
+  const reparto = x.testamento === "usufructo" ? "usufructoUniversal" : x.testamento === "porcentajes" ? "porcentajes" : "intestado";
+  const viv = (x.bienes || []).find((b) => b.tipo === "vivienda");
+  const casado = x.civil === "gananciales" || x.civil === "separacion";
+  return {
+    fechaFallecimiento: x.fecha, ccaa: x.ccaa === "EST" && x.ccaaBienes ? x.ccaaBienes : x.ccaa, criterioVivienda: x.criterioVivienda || "DGT", viviendaA: x.viviendaA, noAplicarVivienda: !!x.noAplicarVivienda, ajuar: x.ajuar || "sts", enPlazo: x.enPlazo !== false, aplicarEmpresa: !!x.aplicarEmpresa, reparto,
+    conyugeViviendaCatastral: casado && viv ? num(viv.valorCatastralTotal) : 0,
+    bienes: (x.bienes || []).map((b) => ({ id: b.id, tipo: b.tipo === "vivienda" ? "inmueble" : b.tipo, esViviendaHabitual: b.tipo === "vivienda", valor: num(b.valor), valorReferencia: num(b.valorReferencia), titularidad: b.titularidad || "privativo", porcentaje: num(b.porcentaje) || 100, legatarioId: b.legatarioId || undefined, descripcion: b.descripcion })),
+    deudas: (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial })),
+    gastos: (x.gastos || []).map((g) => ({ importe: num(g.importe) })),
+    seguros: (x.personas || []).filter((p) => num(p.seguro) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.seguro) })),
+    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: p.edad === "" || p.edad == null ? null : num(p.edad), inscrita: !!p.inscrita, medio: !!p.medio, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones) })),
+  };
+}
+let cache = { k: "", R: null };
+function resultado() {
+  const k = JSON.stringify([S.fecha, S.ccaa, S.civil, S.testamento, S.conyEdad, S.parejaInscrita, S.hijos, S.padres, S.hermanos, S.sobrinos, S.otros, S.bienes, S.ganancial, S.deudaGan, S.deudas]);
+  if (cache.k === k) return cache.R;
+  let R = null;
+  try { const x = expediente(); R = { x, isd: calcularISD(casoMotor(x)), plazos: calcularPlazos(S.fecha, { hayInmuebles: num(S.bienes.vivienda) + num(S.bienes.inmueble) > 0, hayConyuge: casado() }) }; } catch (e) { R = { error: String(e && e.message || e) }; }
+  cache = { k, R }; return R;
+}
+
+// ───────── Municipios (opcional) ─────────
+const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9ñ]+/g, " ").trim();
+let IDX = null;
+function idx() {
+  if (IDX) return IDX; IDX = [];
+  for (const [cod, v] of Object.entries(MUNIS || {})) { if (!Array.isArray(v)) continue; const [pn, ccaa, lista] = v; for (const n of String(lista || "").split("|")) if (n) { const alt = n.split("/").map(norm); IDX.push({ n, pn, ccaa, q: norm(n), alt }); } }
+  return IDX;
+}
+const hayMunis = () => MUNIS && Object.keys(MUNIS).length > 0;
+function buscar(q) {
+  const s = norm(q); if (s.length < 2) return [];
+  const A = [], B = [];
+  for (const m of idx()) { if (m.q.startsWith(s) || m.alt.some((a) => a.startsWith(s))) A.push(m); else if (s.length > 2 && m.q.includes(s)) B.push(m); }
+  B.sort((a, b) => a.n.length - b.n.length || a.n.localeCompare(b.n, "es"));
+  A.sort((a, b) => (a.q === s ? -1 : 0) - (b.q === s ? -1 : 0) || a.n.length - b.n.length || a.n.localeCompare(b.n, "es") || a.pn.localeCompare(b.pn, "es"));
+  return A.concat(B).slice(0, 6);
+}
+
+// ───────── Textos y piezas ─────────
+const PASOS = ["Inicio", "Dónde vivía", "Fecha", "Testamento", "Quién hereda", "Qué dejó", "Resultado"];
+const TEST = [["si", "Sí", "Hizo testamento"], ["no", "No", "Murió sin testamento"], ["nose", "No lo sé", "Lo dirá el certificado de últimas voluntades"]];
+const CIVIL = [["gananciales", "Casado o casada", "En gananciales, lo habitual en casi toda España"], ["separacion", "Casado o casada en separación de bienes", "Lo habitual en Cataluña y Baleares"], ["pareja", "Pareja de hecho", ""], ["viudo", "Viudo o viuda", ""], ["soltero", "Soltero, soltera o divorciado", ""]];
+const HORAS = [["manana", "Por la mañana"], ["mediodia", "A mediodía"], ["tarde", "Por la tarde"], ["cualquiera", "A cualquier hora"]];
+const opt = (grp_, val, cur, t, s) => `<button type="button" class="opt" data-o="${grp_}" data-v="${val}" aria-pressed="${cur === val}"><span class="dot" aria-hidden="true"></span><span class="t"><span>${esc(t)}</span>${s ? `<small>${esc(s)}</small>` : ""}</span></button>`;
+const stepper = (key, val, min, max, label, txt, wide) => `<div class="step${wide ? " wide" : ""}" role="group" aria-label="${esc(label)}"><button type="button" data-st="${key}" data-d="-1" aria-label="Menos: ${esc(label)}" ${val <= min ? "disabled" : ""}>${I.minus}</button><output aria-live="polite">${esc(txt != null ? txt : val)}</output><button type="button" data-st="${key}" data-d="1" aria-label="Más: ${esc(label)}" ${val >= max ? "disabled" : ""}>${I.plus}</button></div>`;
+const who = (ico, t, s, ctrl) => `<div class="who"><span class="av" aria-hidden="true">${ico}</span><span class="t"><b>${t}</b>${s ? `<small>${s}</small>` : ""}</span>${ctrl}</div>`;
+const edadTxt = (e) => (e >= 21 ? "21 o más" : e + (e === 1 ? " año" : " años"));
+const fmtIn = (v) => { const n = num(v); return n ? grp(n, n % 1 ? 2 : 0) : ""; };
+const curva = (max) => ({ a: (v) => Math.round(Math.sqrt(Math.min(1, Math.max(0, v / max))) * 1000), b: (t, step) => Math.round((Math.pow(t / 1000, 2) * max) / step) * step });
+const TACTIL = (() => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } })();
+const conBarras = () => !TACTIL || !!S.barras;
+const slider = (path, v, max, step, label) => { if (!conBarras()) return ""; const t = curva(max).a(num(v)); return `<input type="range" min="0" max="1000" step="1" value="${t}" data-r="${path}" data-max="${max}" data-step="${step}" aria-label="${esc(label)}" aria-valuetext="${esc(eur0(num(v)))}" style="--p:${t / 10}%">`; };
+const fid = (p) => "f-" + p.replace(/[^\w-]/g, "-");
+
+function valido(p) {
+  if (p === 1) return S.ccaa ? "" : "Elige la comunidad autónoma.";
+  if (p === 2) return !S.fecha ? "Indica la fecha." : S.fecha > hoy() ? "La fecha no puede ser posterior a hoy." : S.fecha < "1990-01-01" ? "Revisa la fecha." : "";
+  if (p === 3) return S.testamento && S.civil ? "" : "Elige una opción en cada pregunta.";
+  if (p === 4) return nHerederos() ? (conPareja() && !S.parejaInscrita ? "Indica si la pareja está inscrita." : "") : "Indica al menos un heredero.";
+  if (p === 5) return totalBienes() > 0 ? "" : "Indica el valor de al menos un bien.";
+  if (p === 7) return !S.contacto.nombre.trim() ? "Escribe tu nombre." : !(telOk(S.contacto.tel) || mailOk(S.contacto.email)) ? "Deja un teléfono o un correo para que te contesten." : !S.ok ? "Marca la casilla de privacidad para continuar." : "";
+  return "";
+}
+const telOk = (t) => String(t || "").replace(/\D/g, "").length >= 9;
+const mailOk = (m) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(m || "").trim());
+
+// ───────── Consejos («¿Sabías que…?»): salen del propio cálculo ─────────
+function consejos(R) {
+  const T = [], isd = R.isd, H = isd.herederos, tr = (re) => { for (const h of H) { const t = h.traza.find((q) => re.test(q.paso) && q.valor); if (t) return { h, t }; } return null; };
+  const foral = ["NAV", "ALA", "BIZ", "GIP"].includes(S.ccaa);
+  const L = R.x.personas, ids = new Set(H.map((h) => h.id));
+  const parejaFuera = L.find((p) => /^pareja/.test(p.relacion) && !ids.has(p.id));
+  if (conPareja() && parejaFuera && R.x.testamento !== "usufructo" && R.x.testamento !== "porcentajes") T.push(["Sin testamento, la pareja de hecho no hereda según el Código Civil.", "Algunos derechos civiles autonómicos sí le reconocen derechos. Por eso conviene hacer testamento. Arts. 943-944 CC."]);
+  else if (conPareja() && S.parejaInscrita !== "si") T.push(["Si la pareja de hecho está inscrita en un registro oficial, paga mucho menos.", `Sin inscribir tributa como un extraño (grupo IV); inscrita, se equipara al cónyuge en ${terrNombre(S.ccaa)}.`]);
+  const viv = tr(/^Reducción por vivienda habitual/);
+  if (viv) { const per = (isd.alertas.find((a) => a.startsWith(viv.h.nombre + ": la reducción por vivienda habitual exige")) || "").match(/(\d+) años/); T.push([`La casa donde vivía tiene una reducción del ${(viv.t.paso.match(/\((\d+) %\)/) || [, "95"])[1]} % para el cónyuge, los hijos o los padres.`, `${per ? `A cambio, hay que conservarla ${per[1]} años. ` : ""}${viv.t.norma}.`]); }
+  if (isd.masa.gananciales > 0) T.push([`La mitad de lo que era de los dos (${eur0(isd.masa.mitadViudo)}) ya es del viudo o la viuda.`, "No forma parte de la herencia ni paga impuesto por ella. Arts. 1344 y 1392 CC."]);
+  const bon = tr(/^Bonificación (9\d|100)/);
+  if (bon) T.push([`En ${isd.territorio} hay una bonificación del ${bon.t.paso.match(/(\d+(?:,\d+)?) %/)[1]} % de la cuota para ${["conyuge", "hijo", "padre", "pareja_hecho"].includes(bon.h.relacion) ? "la familia directa" : "este parentesco"}.`, `${bon.t.norma}.`]);
+  const par = tr(/^Reducción por parentesco/);
+  if (par) { const g = (par.t.paso.match(/grupo (\w+)/) || [])[1]; if (g === "III" || g === "IV") T.push([`Hermanos, sobrinos y otros parientes lejanos tienen una reducción pequeña (${eur0(-par.t.valor)} en ${isd.territorio}).`, `Por eso pagan bastante más que los hijos o el cónyuge. ${par.t.norma}.`]); else { const Q = { conyuge: "el viudo o la viuda", pareja_hecho: "la pareja inscrita", hijo: "cada hijo", padre: "cada padre o madre" }, G = H.map((h) => [h, h.traza.find((q) => /^Reducción por parentesco/.test(q.paso))]).filter(([h, q]) => q && -q.valor >= 100000 && Q[h.relacion]);
+      const quien = [...new Set(G.map(([h]) => Q[h.relacion]))], max = Math.max(0, ...G.map(([, q]) => -q.valor));
+      if (quien.length) T.push([`En ${isd.territorio}, ${quien.join(" y ")} ${quien.length > 1 ? "pueden" : "puede"} restar hasta ${eur0(max)} antes de calcular el impuesto.`, `${par.t.norma}.`]); } }
+  if (S.testamento === "nose") { const u = R.plazos.find((p) => p.id === "ultimas_voluntades"); if (u) T.push([`El certificado de últimas voluntades dice si hizo testamento y ante qué notario.`, `Se puede pedir al Ministerio de Justicia a partir del ${fechaLarga(u.desde)} (15 días hábiles después del fallecimiento).`]); }
+  if (["CAT", "ARA", "NAV", "ALA", "BIZ", "GIP", "GAL", "BAL"].includes(S.ccaa) && S.testamento !== "si") T.push([`${terrNombre(S.ccaa)} tiene derecho civil propio.`, "Quién hereda sin testamento puede ser distinto del Código Civil. El abogado confirma la vecindad civil del fallecido."]);
+  if (S.hijos.some((e) => e < 18)) T.push(["Con hijos menores de edad, el reparto puede necesitar un defensor judicial.", "Es un trámite habitual que gestiona el abogado. Art. 163 CC."]);
+  if (!foral) { const pr = R.plazos.find((p) => p.id === "prorroga_isd"), isdP = R.plazos.find((p) => p.id === "isd"); if (pr && pr.limite >= hoy()) T.push([`Si no os da tiempo, se puede pedir una prórroga de seis meses.`, `Hay que pedirla antes del ${fechaLarga(pr.limite)}. ${isdP && isdP.nota ? "El plazo pasaría al " + fechaLarga(isdP.nota.replace(/^.*?(\d{4}-\d{2}-\d{2}).*$/, "$1")) + "." : ""} Art. 68 RD 1629/1991.`]); }
+  T.push(["Los seguros de vida no se reparten con la herencia, pero sí se declaran en este impuesto.", "Si había alguno, díselo al abogado: puede tener su propia reducción. Art. 9.1.c Ley 29/1987."]);
+  return T.slice(0, 3);
+}
+
+// ───────── Vistas ─────────
+let ultimo = null;
+function cabecera() { return `<div class="top"><span class="mono" aria-hidden="true">${esc(INI)}</span><span class="firm"><b>${esc(GENERICA ? "{{MARCA}}" : NOMBRE)}</b><small>${esc(GENERICA ? "Calculadora de herencias" : [D.localidad, "Abogados"].filter(Boolean).join(" · "))}</small></span></div>`; }
+function lateral(p) {
+  const st = PASOS.slice(1).map((t, j) => { const i = j + 1, ok = i < p || p > 6, cur = i === p;
+    const inner = `<i aria-hidden="true">${ok ? I.ok : i}</i><span>${t}</span>`;
+    return `<li class="${ok ? "ok" : ""}${cur ? " cur" : ""}">${ok && i < 6 ? `<button type="button" class="st" data-go="${i}"><span class="sr">Volver a </span>${inner}</button>` : `<span class="st"${cur ? ' aria-current="step"' : ""}>${inner}</span>`}</li>`; }).join("");
+  document.getElementById("side").innerHTML = `${cabecera()}<nav aria-label="Pasos"><ol class="steps">${st}</ol></nav>
+    <ul class="trust"><li>${I.lock}<span>Lo que escribas se queda en este dispositivo hasta que decidas enviarlo.</span></li><li>${I.law}<span>Calculado con la normativa del impuesto de cada comunidad autónoma.</span></li><li>${I.person}<span>${GENERICA ? "Un abogado puede revisarlo contigo." : esc(NOMBRE) + " puede revisarlo contigo, sin compromiso."}</span></li></ul>`;
+}
+function pie() {
+  const marca = HEREDA_URL ? `<a href="${esc(HEREDA_URL)}" target="_blank" rel="noopener">{{MARCA}}</a>` : "{{MARCA}}";
+  return `${GENERICA ? `<a class="pro" href="${esc(HEREDA_URL || "/")}" target="_blank" rel="noopener"><span><b>¿Eres abogado?</b> Pon esta calculadora en la web de tu despacho, con tu nombre y tus colores: las consultas te llegan a ti.</span>${I.chev}</a>` : ""}
+    <p class="foot">Estimación orientativa: no sustituye el consejo de un abogado.<br>Con tecnología de ${marca}</p>`;
+}
+
+function vista() {
+  const p = S.paso; const anim = ultimo !== null && ultimo !== p; ultimo = p;
+  const a = document.activeElement, ds = a && a.dataset;
+  const refoco = !anim && ds ? (ds.k ? `[data-k="${ds.k}"]` : ds.st ? `[data-st="${ds.st}"][data-d="${ds.d}"]` : ds.o ? `[data-o="${ds.o}"][data-v="${ds.v}"]` : ds.h ? `[data-h="${ds.h}"]` : null) : null;
+  let h = "";
+  if (p === 0) {
+    h = `<p class="kick">Calculadora de herencias</p><h1 tabindex="-1">¿Cuánto costaría heredar?</h1>
+    <p class="lead">Sentimos mucho vuestra pérdida. En dos minutos sabrás lo que pagaría cada heredero por el Impuesto sobre Sucesiones${GENERICA ? "" : `, y si quieres, ${esc(NOMBRE)} lo revisará contigo`}.</p>
+    <div class="card"><ul class="how">
+      <li><span class="av" aria-hidden="true">${I.clock}</span><div><b>Cinco preguntas sencillas</b><span class="d">Dónde vivía, cuándo falleció, si hizo testamento, quién hereda y qué dejó.</span></div></li>
+      <li><span class="av" aria-hidden="true">${I.law}</span><div><b>Con las normas de cada comunidad</b><span class="d">Reducciones y bonificaciones de la comunidad donde vivía, paso a paso.</span></div></li>
+      <li><span class="av" aria-hidden="true">${I.lock}</span><div><b>Sin dar tu nombre</b><span class="d">Nada sale de este dispositivo. Solo si quieres, al final se lo envías al despacho.</span></div></li>
+    </ul></div>`;
+  }
+  if (p === 1) {
+    const M = S.municipio;
+    h = `<h1 tabindex="-1">¿Dónde vivía?</h1><p class="lead">El impuesto depende de la comunidad autónoma donde tenía su residencia.</p>
+    ${hayMunis() ? `<div class="field"><label class="l" for="f-muni">Municipio <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><input type="search" id="f-muni" data-h="muni" placeholder="Escribe el pueblo o la ciudad" autocomplete="off" role="combobox" aria-controls="sug" aria-expanded="false" aria-autocomplete="list" value=""><ul class="sug" id="sug" role="listbox" hidden></ul>
+      ${M ? `<div class="found">${I.pin}<span class="t"><b>${esc(M)}</b><small>${esc(terrNombre(S.ccaa))}</small></span><button type="button" class="link" data-act="sinmuni">Quitar</button></div>` : ""}</div><div class="or">o elige la comunidad</div>` : ""}
+    <div class="field"><label class="l" for="f-ccaa">Comunidad autónoma</label><select id="f-ccaa" data-k="ccaa"><option value="">Elegir</option>${TERR.map(([k, n]) => `<option value="${k}" ${S.ccaa === k ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>`;
+  }
+  if (p === 2) {
+    const pl = S.fecha && S.fecha <= hoy() ? calcularPlazos(S.fecha, {}).find((q) => q.id === "isd") : null;
+    h = `<h1 tabindex="-1">¿Cuándo falleció?</h1><p class="lead">Desde esa fecha empiezan a contar los plazos. Si no recuerdas el día exacto, pon uno aproximado.</p>
+    <div class="card"><div class="field"><label class="l" for="f-fecha">Fecha del fallecimiento</label><input type="date" id="f-fecha" data-k="fecha" value="${esc(S.fecha)}" max="${hoy()}" aria-describedby="need plz"></div>
+    <p class="hint" id="plz">${pl ? `Plazo para el Impuesto sobre Sucesiones: hasta el <b>${fechaLarga(pl.limite)}</b>.` : S.fecha ? "" : "Pulsa el campo y elige el día en el calendario."}</p></div>`;
+  }
+  if (p === 3) {
+    h = `<h1 tabindex="-1">¿Hizo testamento?</h1><p class="lead">Si no lo sabes, no pasa nada: calculamos como si no lo hubiera.</p>
+    <div class="opts three" role="group" aria-label="¿Hizo testamento?">${TEST.map(([k, t, s]) => opt("test", k, S.testamento, t, s)).join("")}</div>
+    <h2 class="qt" id="q-civil">Su estado civil</h2><div class="opts" role="group" aria-labelledby="q-civil">${CIVIL.map(([k, t, s]) => opt("civil", k, S.civil, t, s)).join("")}</div>`;
+  }
+  if (p === 4) {
+    const filas = [];
+    if (casado()) filas.push(who(I.ring, "Viudo o viuda", "Su edad sirve para valorar el usufructo", stepper("cony", S.conyEdad, 18, 105, "Edad del viudo o la viuda", S.conyEdad + " años", true)));
+    if (conPareja()) filas.push(`<div class="who" style="flex-wrap:wrap"><span class="av" aria-hidden="true">${I.ring}</span><span class="t"><b>Pareja de hecho</b><small>Edad</small></span>${stepper("cony", S.conyEdad, 18, 105, "Edad de la pareja", S.conyEdad + " años", true)}<div style="width:100%"><p class="hint" style="margin:12px 0 0">¿Está inscrita en un registro oficial de parejas?</p><div class="seg2" role="group" aria-label="¿Inscrita?">${[["si", "Sí"], ["no", "No"], ["nose", "No lo sé"]].map(([k, t]) => `<button type="button" data-o="inscrita" data-v="${k}" aria-pressed="${S.parejaInscrita === k}">${t}</button>`).join("")}</div></div></div>`);
+    filas.push(who(I.kids, "Hijos e hijas", "Los que viven", stepper("hijos", S.hijos.length, 0, 10, "Número de hijos")) + (S.hijos.length ? `<ul class="kids">${S.hijos.map((e, i) => `<li><span>${S.hijos.length === 1 ? "Su edad" : (ORD[i] || i + 1 + ".") + " hijo"}</span>${stepper("hijo:" + i, e, 0, 21, "Edad del hijo " + (i + 1), edadTxt(e), true)}</li>`).join("")}</ul>` : ""));
+    if (!S.hijos.length) {
+      filas.push(who(I.people, "Padre y madre", "Los que viven", stepper("padres", S.padres, 0, 2, "Padres que viven")));
+      if (!S.padres) {
+        filas.push(who(I.people, "Hermanos y hermanas", "Que viven", stepper("hermanos", S.hermanos, 0, 10, "Hermanos")));
+        filas.push(who(I.people, "Sobrinos y sobrinas", "Hijos de un hermano ya fallecido", stepper("sobrinos", S.sobrinos, 0, 10, "Sobrinos")));
+      }
+    }
+    if (S.testamento === "si") filas.push(who(I.person, "Otras personas", "Que nombra el testamento", stepper("otros", S.otros, 0, 6, "Otras personas")));
+    h = `<h1 tabindex="-1">¿Quién hereda?</h1><p class="lead">${casado() ? "El viudo o la viuda y los hijos. Si no hay hijos, los padres." : conPareja() ? "La pareja y los hijos. Si no hay hijos, los padres." : "Primero los hijos; si no hay, los padres; y si tampoco, los hermanos y sobrinos."}</p>
+    <div class="card">${filas.join("")}</div>
+    <p class="hint">${S.hijos.length ? "Si algún hijo falleció antes dejando hijos, sus hijos heredan su parte: coméntalo al abogado." : "Si no hay nadie de la familia cercana, el abogado te dirá quién hereda."}</p>`;
+  }
+  if (p === 5) {
+    const tot = totalBienes(), deu = totalDeudas();
+    h = `<h1 tabindex="-1">¿Qué dejó?</h1><p class="lead">Con un valor aproximado basta. Si algo no lo había, déjalo a cero.</p>
+    ${S.civil === "gananciales" ? `<div class="card"><label class="toggle"><span class="t">Eran bienes de la pareja (gananciales)<small>Pon el valor total: la mitad ya es del viudo o la viuda.</small></span><span class="switch"><input type="checkbox" role="switch" data-k="ganancial" ${S.ganancial ? "checked" : ""}><span aria-hidden="true"></span></span></label></div>` : ""}
+    ${TACTIL ? `<p class="hint barras"><button type="button" class="link" data-act="barras">${S.barras ? "Quitar las barras para ajustar" : "Ajustar los importes con una barra"}</button></p>` : ""}
+    <div class="card">${BIENES.map(([k, , t, s, ico, max, step]) => `<div class="asset"><div class="asset-h"><span class="av" aria-hidden="true">${ico}</span><label class="t" for="${fid("b." + k)}"><b>${t}</b><small>${s}</small></label><div class="eur"><input id="${fid("b." + k)}" data-k="b.${k}" data-eur="1" inputmode="numeric" value="${esc(fmtIn(S.bienes[k]))}" placeholder="0"></div></div>${slider("b." + k, S.bienes[k], max, step, t)}</div>`).join("")}</div>
+    <div class="totals"><span>Total aproximado</span><b id="tot">${eur0(tot)}</b></div>
+    <details class="more" ${deu ? "open" : ""}><summary>${I.chev}Deudas y gastos del funeral</summary><div class="card" style="margin-top:6px">${DEUDAS.map(([k, t, max, step]) => `<div class="asset"><div class="asset-h"><span class="av" aria-hidden="true">${I.debt}</span><label class="t" for="${fid("d." + k)}" id="${fid("d." + k)}-l"><b>${t}</b></label><div class="eur"><input id="${fid("d." + k)}" data-k="d.${k}" data-eur="1" inputmode="numeric" aria-labelledby="${fid("d." + k)}-l" value="${esc(fmtIn(S.deudas[k]))}" placeholder="0"></div></div>${slider("d." + k, S.deudas[k], max, step, t)}</div>`).join("")}
+      ${S.civil === "gananciales" ? `<label class="toggle" style="margin-top:14px"><span class="t">Las deudas eran de la pareja<small>Una hipoteca o un préstamo de los dos solo cuenta por la mitad: la otra mitad la debe el viudo o la viuda (art. 1362 CC).</small></span><span class="switch"><input type="checkbox" role="switch" data-k="deudaGan" ${S.deudaGan !== false ? "checked" : ""}><span aria-hidden="true"></span></span></label>` : ""}</div></details>
+    <p class="hint">Para una casa o un terreno, Hacienda toma el mayor entre su valor real y el valor de referencia del Catastro (art. 9.3 Ley 29/1987). Si lo sabes, usa ese.</p>`;
+  }
+  if (p === 6) h = vResultado();
+  if (p === 7) h = vContacto();
+  if (p === 8) h = vHecho();
+  lateral(p);
+  const err = p >= 1 && p <= 5 ? valido(p) : "";
+  document.getElementById("app").innerHTML = `${cabecera()}
+    ${p >= 1 && p <= 5 ? `<div class="prog"><div class="segs" aria-hidden="true">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= p ? "on" : ""}"></i>`).join("")}</div><div class="meta"><span>Paso ${p} de 5</span><span>${esc(PASOS[p])}</span></div></div>` : ""}
+    <div class="stage${anim ? " enter" : ""}">${h}${p >= 1 && p <= 5 ? `<p class="need" id="need" aria-live="polite">${err && touched[p] ? esc(err) : ""}</p>` : ""}</div>`;
+  document.getElementById("pie").innerHTML = pie();
+  barra(p, err);
+  if (refoco) { const el = document.querySelector(refoco); if (el && !el.disabled) el.focus({ preventScroll: true }); }
+  altura();
+}
+const touched = {};
+function barra(p, err) {
+  const bar = document.getElementById("bar"); bar.classList.toggle("one", p === 0);
+  const atras = (n, t = "Atrás") => `<button type="button" class="btn sec" data-go="${n}">${I.left}<span>${t}</span></button>`;
+  if (p === 0) bar.innerHTML = `<button type="button" class="btn" data-go="1">Empezar${I.right}</button>`;
+  else if (p < 5) bar.innerHTML = `${atras(p - 1)}<button type="button" class="btn" data-next="${p}" ${err ? 'aria-disabled="true"' : ""}>Siguiente${I.right}</button>`;
+  else if (p === 5) bar.innerHTML = `${atras(4)}<button type="button" class="btn" data-next="5" ${err ? 'aria-disabled="true"' : ""}>Ver el resultado${I.right}</button>`;
+  else if (p === 6) bar.innerHTML = `${atras(5, "Cambiar datos")}${GENERICA ? `<button type="button" class="btn" data-act="imprimir">Guardar en PDF</button>` : `<button type="button" class="btn" data-go="7">Pedir revisión</button>`}`;
+  else if (p === 7) bar.innerHTML = `${atras(6, "Volver")}`;
+  else bar.innerHTML = `${atras(6, "Ver el resultado")}`;
+}
+
+const relTxt = (r) => ({ conyuge: "Viudo o viuda", pareja_hecho: "Pareja de hecho inscrita", pareja_no_inscrita: "Pareja de hecho", hijo: "Hijo o hija", padre: "Padre o madre", hermano: "Hermano o hermana", sobrino: "Sobrino o sobrina", extrano: "Otra persona" }[r] || "Heredero");
+const derTxt = (L) => (L || []).map((d) => `${d.tipo === "pleno" ? "propiedad" : d.tipo === "usufructo" ? "usufructo" : "nuda propiedad"} de ${d.tipo === "usufructo" && d.fraccion === 1 ? "todo" : pctTxt(d.fraccion)}`).join(" y ");
+function supuestos(R) {
+  const L = [], t = R.x.testamento;
+  if (t === "usufructo") L.push("Testamento: hemos supuesto el más habitual, con el usufructo de todo para el cónyuge y la propiedad para los hijos a partes iguales. El reparto real lo dice el testamento.");
+  else if (t === "porcentajes") L.push("Testamento: hemos supuesto que reparte a partes iguales entre las personas indicadas. El reparto real lo dice el testamento.");
+  else L.push(`${S.testamento === "nose" ? "Como no sabes si hay testamento, se calcula como si no lo hubiera: " : "Sin testamento: "}${R.isd && R.isd.leyReparto && R.isd.regimenReparto !== "comun" ? `reparto según el ${R.isd.leyReparto.charAt(0).toLowerCase()}${R.isd.leyReparto.slice(1)}, el de la residencia que has indicado` : "reparto del Código Civil"}${["ARA", "NAV", "ALA", "BIZ", "GIP"].includes(S.ccaa) && !S.hijos.length ? ". Sin hijos, los bienes que el fallecido recibió de su familia (troncales) pueden corresponder a otros parientes: el despacho lo revisa" : ""}. La ley aplicable depende de la vecindad civil del fallecido, que el despacho confirma.`);
+  if (S.hijos.some((e) => e >= 21)) L.push("Los hijos de 21 años o más se calculan como mayores de esa edad.");
+  if (S.sobrinos && S.hermanos && !S.hijos.length && !S.padres) L.push("Sobrinos: hemos supuesto que son hijos de un mismo hermano ya fallecido.");
+  L.push("Valores aproximados que has indicado, presentación en plazo, sin donaciones previas, seguros de vida ni discapacidad.");
+  L.push("Ajuar doméstico: 3 % solo de los bienes de uso personal, con el criterio del Tribunal Supremo (sentencias de 2020).");
+  return L;
+}
+function vResultado() {
+  const R = resultado();
+  if (!R || R.error) return `<h1 tabindex="-1">No se ha podido calcular</h1><p class="lead">Revisa los datos de los pasos anteriores. ${R && R.error ? esc(R.error) : ""}</p>`;
+  // Control de calidad 07-10-2026 (I6): con derecho civil propio no modelado, no se reparte con el Código Civil
+  if (R.isd && R.isd.bloqueo) return `<h1 tabindex="-1">Este caso necesita un estudio del despacho</h1><p class="lead">${esc(R.isd.bloqueo.motivo)} Sin testamento, el reparto depende de ese derecho civil propio: consulta con el despacho para calcular la herencia.</p>`;
+  const isd = R.isd, H = isd.herederos, porId = Object.fromEntries(H.map((h) => [h.id, h]));
+  const pl = R.plazos.find((q) => q.id === "isd"), q = dias(hoy(), pl.limite), foral = ["NAV", "ALA", "BIZ", "GIP"].includes(S.ccaa);
+  const base = isd.masa.neto, pctEf = base ? isd.total / base : 0;
+  const cards = R.x.personas.map((p) => {
+    const h = porId[p.id];
+    if (!h) { const al = isd.alertas.find((a) => a.startsWith(p.nombre + " (")); return `<div class="heir out"><div class="heir-h"><span class="av" aria-hidden="true">${I.person}</span><span class="t"><b>${esc(p.nombre)}</b><small>${al ? (isd.regimenReparto && isd.regimenReparto !== "comun" ? "No hereda sin testamento" : "No hereda sin testamento en el Código Civil") : "No recibe nada en este supuesto"}</small></span></div></div>`; }
+    const queda = Math.max(0, h.valorAdquirido - h.aIngresar), tot = h.valorAdquirido || 1, wk = (queda / tot) * 100, wp = (h.aIngresar / tot) * 100;
+    const gan = p.relacion === "conyuge" && isd.masa.mitadViudo > 0;
+    return `<div class="heir"><div class="heir-h"><span class="av" aria-hidden="true">${p.relacion === "conyuge" || /^pareja/.test(p.relacion) ? I.ring : I.person}</span><span class="t"><b>${esc(h.nombre)}</b><small>Recibe ${derTxt(h.derechos)}</small></span><span class="pay"><span>Pagaría</span><strong class="${h.aIngresar ? "" : "z"}">${eur(h.aIngresar)}</strong></span></div>
+      <div class="bar2" role="img" aria-label="${esc(`Le queda ${eur(queda)} y paga ${eur(h.aIngresar)}`)}"><i class="k" style="width:${wk}%"></i>${h.aIngresar > 0 ? `<i class="p" style="width:${wp}%"></i>` : ""}</div>
+      <div class="legend"><span><i style="background:var(--keep)"></i>${h.derechos.length && h.derechos.every((d) => d.tipo === "usufructo") ? `Valor fiscal de su usufructo <b>${eur(h.valorAdquirido)}</b>` : `Le queda <b>${eur(queda)}</b>`}</span><span><i style="background:var(--tax)"></i>Paga <b>${eur(h.aIngresar)}</b></span></div>
+      ${gan || h.derechos.some((d) => d.tipo !== "pleno") ? `<p class="note">${gan ? `Además, ya es suya la mitad de los bienes gananciales: <b>${eur(isd.masa.mitadViudo)}</b>, que no paga impuesto. ` : ""}${h.derechos.some((d) => d.tipo !== "pleno") ? `El usufructo y la nuda propiedad se valoran según la edad del usufructuario (art. 26 Ley 29/1987).` : ""}</p>` : ""}</div>`;
+  }).join("");
+  const T = consejos(R);
+  const inm = num(S.bienes.vivienda) + num(S.bienes.inmueble) > 0;
+  return `<p class="kick">Estimación orientativa · ${esc(isd.territorio)}</p><h1 tabindex="-1">Lo que pagaría cada heredero por el Impuesto sobre Sucesiones</h1>
+    <div class="hero" aria-live="polite"><div class="lbl">Entre todos los herederos</div><div class="big">${eur(isd.total)}</div>
+      <div class="sub">Sobre una herencia de ${eur0(isd.masa.bruto)}${isd.masa.deudas + isd.masa.gastos ? `, ${eur0(isd.masa.neto)} después de deudas y gastos` : ""}${isd.masa.gananciales ? ` (la parte del fallecido en los bienes de la pareja)` : ""}.${isd.total ? ` Es el ${grp(pctEf * 100, 2)} % de lo que se hereda.` : ""}</div>
+      ${isd.total ? "" : `<span class="zero">${I.ok}Con estos datos, nadie pagaría el impuesto</span>`}</div>
+    ${cards}
+    <div class="sect">Plazos</div>
+    <div class="card"><div class="info"><span class="av" aria-hidden="true">${I.cal}</span><span class="t"><b>Para presentar y pagar el impuesto</b><span class="when">${fechaLarga(pl.limite)}</span>${q >= 0 ? `Seis meses desde el fallecimiento. <span class="pill">${q === 0 ? "Vence hoy" : `Quedan ${plural(q, "día")}`}</span>` : `<span class="pill bad">El plazo terminó hace ${plural(-q, "día")}</span> Aún se puede presentar, con recargo (art. 27 Ley General Tributaria). Conviene hacerlo cuanto antes.`}${!foral && q >= 0 ? `<br>Con prórroga, hasta el ${fechaLarga(pl.nota.replace(/^.*?(\d{4}-\d{2}-\d{2}).*$/, "$1"))}.` : ""}</span></div></div>
+    ${inm ? `<div class="card"><div class="info"><span class="av" aria-hidden="true">${I.house}</span><span class="t"><b>Plusvalía municipal</b>${calcPlusTxt()}</span></div></div>` : ""}
+    <div class="sect">¿Sabías que…?</div>
+    <div class="card"><ul class="tips">${T.map(([t, s], i) => `<li><span class="n" aria-hidden="true">${i + 1}</span><span>${esc(t)}<small>${esc(s.charAt(0).toUpperCase() + s.slice(1))}</small></span></li>`).join("")}</ul></div>
+    <div class="disc"><b>${I.warn}Es una estimación orientativa</b><p>No es asesoramiento ni una liquidación. ${GENERICA ? "Un abogado" : esc(NOMBRE)} la revisa con los datos y documentos reales antes de presentar nada.</p>
+      <ul>${supuestos(R).map((s) => `<li>${esc(s)}</li>`).join("")}<li>Normativa aplicada: ${esc(isd.norma)}${isd.estadoGlobal === "PENDIENTE" ? " (en revisión)" : ""}. Motor de cálculo {{MARCA}} ${esc(typeof VERSION !== "undefined" ? VERSION : "")}.</li></ul></div>
+    ${GENERICA ? `<div class="cta"><h2>Pide a tu abogado que lo revise</h2><p>Guarda este resumen en PDF o imprímelo y llévaselo: con los datos y documentos reales comprobará el cálculo, los plazos y las reducciones que podéis aplicar. Esta calculadora no envía tu consulta a nadie.</p><button type="button" class="btn" data-act="imprimir">${I.file}Guardar en PDF o imprimir</button></div>
+`
+    : `<div class="cta"><h2>¿Quieres que ${esc(NOMBRE)} lo revise contigo?</h2><p>Un abogado revisa el cálculo con los datos reales, os explica los plazos y los documentos y os dice qué reducciones podéis aplicar. Sin compromiso.</p><button type="button" class="btn" data-go="7">Quiero que ${esc(NOMBRE)} lo revise</button></div>`}
+    <div class="again"><button type="button" class="link" data-act="reiniciar">Empezar de nuevo</button></div>`;
+}
+function vContacto() {
+  const k = S.contacto, err = valido(7), wa = urlWa(), ml = urlMail();
+  const priv = D.privacidad ? `<a href="${esc(D.privacidad)}" target="_blank" rel="noopener">política de privacidad</a>` : "política de privacidad";
+  return `<h1 tabindex="-1">${GENERICA ? "Que un abogado revise tu caso" : `Que ${esc(NOMBRE)} revise tu caso`}</h1><p class="lead">Déjanos un nombre y cómo contactarte. Se prepara un mensaje con el resumen del cálculo y tú decides si lo envías.</p>
+    <div class="card"><div class="field"><label class="l" for="f-k-nombre">Tu nombre</label><input id="f-k-nombre" data-k="k.nombre" autocomplete="name" value="${esc(k.nombre)}"></div>
+    <div class="field row2"><div><label class="l" for="f-k-tel">Teléfono</label><input id="f-k-tel" type="tel" data-k="k.tel" autocomplete="tel" inputmode="tel" value="${esc(k.tel)}"></div><div><label class="l" for="f-k-email">Correo</label><input id="f-k-email" type="email" data-k="k.email" autocomplete="email" value="${esc(k.email)}"></div></div>
+    <div class="field"><span class="l" id="q-hora">Mejor hora para llamarte</span><div class="chips" role="group" aria-labelledby="q-hora">${HORAS.map(([v, t]) => `<button type="button" class="chip" data-o="hora" data-v="${v}" aria-pressed="${k.hora === v}">${t}</button>`).join("")}</div></div>
+    <div class="field"><label class="l" for="f-k-obs">¿Algo más? <span style="font-weight:400;color:var(--ink-3)">(opcional)</span></label><textarea id="f-k-obs" data-k="k.obs" placeholder="Ej.: queremos vender la casa, uno de los hermanos vive fuera…">${esc(k.obs)}</textarea></div></div>
+    <div class="card"><label class="consent"><input type="checkbox" data-k="ok" ${S.ok ? "checked" : ""}><span class="box" aria-hidden="true"></span><span>He leído la ${priv} y acepto que ${esc(GENERICA ? "{{MARCA}}" : NOMBRE)} use estos datos para contestar a mi consulta.<small>Responsable: ${esc(GENERICA ? "{{MARCA}}" : NOMBRE)}. Finalidad: responder a esta consulta. No se envía nada hasta que pulses enviar en WhatsApp o en tu correo.</small></span></label></div>
+    <p class="err" id="err" aria-live="polite">${touched[7] && err ? esc(err) : ""}</p>
+    <div class="send${wa && ml ? "" : " one"}" id="send">${wa ? `<a class="btn wa" data-send="wa" href="${esc(err ? "#" : wa)}" target="_blank" rel="noopener" ${err ? 'aria-disabled="true"' : ""}>${I.wa}Enviar por WhatsApp</a>` : ""}${ml ? `<a class="btn${wa ? " sec" : ""}" data-send="mail" href="${esc(err ? "#" : ml)}" ${err ? 'aria-disabled="true"' : ""}>${I.mail}Enviar por correo</a>` : ""}</div>
+    <p class="hint">Se abrirá ${wa && ml ? "WhatsApp o tu correo" : wa ? "WhatsApp" : "tu correo"} con el mensaje ya escrito. Solo tienes que pulsar enviar.</p>`;
+}
+function vHecho() {
+  return `<div class="done"><div class="ok" aria-hidden="true">${I.tick}</div><h1 tabindex="-1">Mensaje preparado</h1><p class="lead">Gracias, ${esc(S.contacto.nombre.split(" ")[0] || "")}. Envíalo desde ${S.canal === "wa" ? "WhatsApp" : "tu correo"} y ${GENERICA ? "te contestarán" : esc(NOMBRE) + " te contestará"} lo antes posible.</p></div>
+    <div class="card"><ol class="nx"><li><span>Si no se abrió ${S.canal === "wa" ? "WhatsApp" : "el correo"}, vuelve a pulsar:<br><a class="link" style="display:inline-flex;align-items:center;gap:8px;padding:0;margin-top:4px" data-send="${S.canal || "mail"}" href="${esc(S.canal === "wa" ? urlWa() : urlMail())}" ${S.canal === "wa" ? 'target="_blank" rel="noopener"' : ""}>${S.canal === "wa" ? I.wa : I.mail}Abrir de nuevo el mensaje</a></span></li>
+    <li><span>Si quieres, envía también el archivo con los datos: ${GENERICA ? "el despacho" : esc(NOMBRE)} lo carga en su programa y no tendrás que repetir nada.<br><button type="button" class="btn ghost" style="margin-top:10px;min-height:48px;font-size:15.5px" data-act="archivo">${I.file}Guardar el archivo</button></span></li></ol></div>`;
+}
+
+// ───────── Mensajes y archivo para el despacho ─────────
+const telWa = (t) => { let d = String(t || "").replace(/[^\d+]/g, ""); if (d.startsWith("+")) d = d.slice(1); else if (d.startsWith("00")) d = d.slice(2); else if (/^[6789]\d{8}$/.test(d)) d = "34" + d; return /^\d{8,15}$/.test(d) ? d : ""; };
+const horaTxt = () => (HORAS.find(([v]) => v === S.contacto.hora) || [, ""])[1];
+function herederosTxt() {
+  const n = (c, s, p) => (c ? plural(c, s, p) : ""), L = [];
+  if (casado()) L.push("viudo o viuda"); if (conPareja()) L.push(S.parejaInscrita === "si" ? "pareja de hecho inscrita" : "pareja de hecho");
+  L.push(n(S.hijos.length, "hijo", "hijos")); if (!S.hijos.length) { if (S.padres) L.push(S.padres === 2 ? "padre y madre" : "padre o madre"); else { L.push(n(S.hermanos, "hermano", "hermanos")); L.push(n(S.sobrinos, "sobrino", "sobrinos")); } }
+  if (S.testamento === "si") L.push(n(S.otros, "otra persona", "otras personas"));
+  return L.filter(Boolean).join(", ");
+}
+function urlWa() { const t = telWa(D.tel); if (!t) return ""; return `https://wa.me/${t}?text=${encodeURIComponent(textoCorto())}`; }
+function urlMail() { const to = mailOk(D.email) ? D.email : ""; if (!to && !GENERICA && telWa(D.tel)) return ""; return `mailto:${to}?subject=${encodeURIComponent(asunto())}&body=${encodeURIComponent(textoLargo())}`; }
+const asunto = () => `Consulta de herencia desde la calculadora${S.contacto.nombre ? " · " + S.contacto.nombre.trim() : ""}`;
+function textoCorto() {
+  const R = resultado(), k = S.contacto, tot = R && R.isd ? R.isd.total : 0;
+  return [`Hola${GENERICA ? "" : ", " + NOMBRE}. Soy ${k.nombre.trim()}. He hecho el cálculo de una herencia en la calculadora de vuestra web y me gustaría que lo revisarais.`,
+    `· ${S.municipio ? S.municipio + ", " : ""}${terrNombre(S.ccaa)}. Fallecimiento el ${fechaCorta(S.fecha)}`,
+    `· ${S.testamento === "si" ? "Con testamento" : S.testamento === "no" ? "Sin testamento" : "No sabemos si hay testamento"}. Herederos: ${herederosTxt()}`,
+    `· Bienes: ${eur0(totalBienes())}${totalDeudas() ? " · Deudas y gastos: " + eur0(totalDeudas()) : ""}`,
+    `· Impuesto estimado: ${eur(tot)}`,
+    [telOk(k.tel) ? "Mi teléfono: " + k.tel.trim() : "", mailOk(k.email) ? "Correo: " + k.email.trim() : "", horaTxt() ? "Mejor hora: " + horaTxt().toLowerCase() : ""].filter(Boolean).join(" · ")].join("\n");
+}
+function textoLargo() {
+  const R = resultado(), k = S.contacto; const isd = R && R.isd;
+  const pl = R && R.plazos ? R.plazos.find((q) => q.id === "isd") : null;
+  return [`Hola${GENERICA ? "" : ", " + NOMBRE}:`, "", "He usado la calculadora de herencias de vuestra web y me gustaría que revisarais el caso.", "",
+    "CONTACTO", `Nombre: ${k.nombre.trim()}`, telOk(k.tel) ? `Teléfono: ${k.tel.trim()}` : "", mailOk(k.email) ? `Correo: ${k.email.trim()}` : "", horaTxt() ? `Mejor hora: ${horaTxt().toLowerCase()}` : "", "",
+    "DATOS DEL CASO", `Residencia: ${terrNombre(S.ccaa)}${S.municipio ? " · " + S.municipio : ""}`, `Fecha del fallecimiento: ${fechaLarga(S.fecha)}`, `Testamento: ${({ si: "sí", no: "no", nose: "no lo sabemos" })[S.testamento] || "-"}`, `Estado civil: ${({ gananciales: "casado o casada en gananciales", separacion: "casado o casada en separación de bienes", pareja: "pareja de hecho", viudo: "viudo o viuda", soltero: "soltero, soltera o divorciado" })[S.civil] || "-"}`, `Herederos: ${herederosTxt()}`,
+    `Bienes: ${BIENES.filter(([b]) => num(S.bienes[b]) > 0).map(([b]) => `${DESC_BIEN[b].toLowerCase()} ${eur0(num(S.bienes[b]))}`).join("; ")}${S.civil === "gananciales" ? (S.ganancial ? " (gananciales)" : " (privativos)") : ""}`,
+    totalDeudas() ? `Deudas y gastos: ${DEUDAS.filter(([d]) => num(S.deudas[d]) > 0).map(([d, t]) => `${t.toLowerCase()} ${eur0(num(S.deudas[d]))}`).join("; ")}` : "", "",
+    isd ? "ESTIMACIÓN DEL IMPUESTO SOBRE SUCESIONES" : "", ...(isd ? isd.herederos.map((h) => `${h.nombre}: recibe ${eur(h.valorAdquirido)} y pagaría ${eur(h.aIngresar)}`) : []), isd ? `Total: ${eur(isd.total)} (${isd.territorio})` : "", pl ? `Plazo: ${fechaLarga(pl.limite)}` : "", "",
+    k.obs.trim() ? "COMENTARIOS\n" + k.obs.trim() + "\n" : "",
+    `He aceptado la política de privacidad el ${new Date().toLocaleString("es-ES")}.`, "Si os sirve, os envío también el archivo con los datos (.hereda.json) para cargarlo en {{MARCA}}."].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+}
+function salida() {
+  const R = resultado(), x = R.x, k = S.contacto, isd = R.isd;
+  return {
+    app: "hereda+", tipo: "familia", origen: "calculadora", version: 1, ref: "", despacho: D.nombre || "", enviado: new Date().toISOString(),
+    causante: { nombre: "", fecha: S.fecha, ccaa: S.ccaa, municipio: S.municipio || "", civil: S.civil, testamento: S.testamento },
+    personas: x.personas.map((p) => ({ nombre: p.nombre, relacion: p.relacion, edad: p.edad === "" || p.edad == null ? "" : num(p.edad), convivia: !!p.convivio2anios, discapacidad: 0, inscrita: !!p.inscrita })),
+    bienes: x.bienes.map((b) => ({ tipo: b.tipo, descripcion: b.descripcion, municipio: b.tipo === "vivienda" ? S.municipio || "" : "", valor: b.valor, titularidad: b.titularidad, porcentaje: "" })),
+    deudas: { hipoteca: num(S.deudas.hipoteca), otras: num(S.deudas.otras), funeral: num(S.deudas.funeral), seguros: "" },
+    documentos: [], contacto: { nombre: k.nombre.trim(), relacion: "", tel: k.tel.trim(), email: k.email.trim(), hora: horaTxt() },
+    observaciones: [`Consulta recibida desde la calculadora de la web el ${fechaLarga(hoy())}.`, horaTxt() ? `Mejor hora para llamar: ${horaTxt().toLowerCase()}.` : "", k.obs.trim(), "Supuestos del cálculo: " + supuestos(R).join(" "), S.testamento === "si" ? `Dicen que hay testamento; la calculadora supuso ${x.testamento === "usufructo" ? "usufructo universal para el cónyuge y nuda propiedad para los hijos" : "reparto a partes iguales"}.` : "", conPareja() ? `Pareja de hecho ${S.parejaInscrita === "si" ? "inscrita" : S.parejaInscrita === "no" ? "no inscrita" : "(no saben si está inscrita)"}.` : "", `Estimación de la calculadora: ${isd.herederos.map((h) => `${h.nombre} ${eur(h.aIngresar)}`).join("; ")}. Total ${eur(isd.total)}.`].filter(Boolean).join("\n"),
+    consentimiento: !!S.ok,
+    calculadora: { motor: typeof VERSION !== "undefined" ? VERSION : "", territorio: isd.territorio, reparto: x.testamento, total: isd.total, herederos: isd.herederos.map((h) => ({ nombre: h.nombre, relacion: h.relacion, valorAdquirido: h.valorAdquirido, aIngresar: h.aIngresar })) },
+  };
+}
+const nombreArchivo = () => `Herencia ${(S.contacto.nombre || "").trim() || "consulta"} - datos de la familia.hereda.json`.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\x20-\x7E]/g, "").replace(/[\\/:*?"<>|]/g, "");
+async function guardarArchivo() {
+  const f = new File([JSON.stringify(salida(), null, 1)], nombreArchivo(), { type: "application/json" });
+  try { if (navigator.canShare && navigator.canShare({ files: [f] }) && /Android|iPhone|iPad/i.test(navigator.userAgent)) { await navigator.share({ files: [f], title: "Datos de la herencia" }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+// ───────── Navegación y eventos ─────────
+function irA(n) { S.paso = n; save(); vista(); if (!EMB) window.scrollTo(0, 0); else avisar({ hereda: "arriba" }); document.querySelector("#app h1")?.focus({ preventScroll: true }); }
+function avisar(m) { try { if (EMB) window.parent.postMessage(m, "*"); } catch (e) {} }
+let hAnt = 0;
+function altura() { if (!EMB) return; requestAnimationFrame(() => { const h = Math.ceil(document.body.getBoundingClientRect().height); if (Math.abs(h - hAnt) > 2) { hAnt = h; avisar({ hereda: "altura", h }); } }); }
+if (EMB && "ResizeObserver" in window) new ResizeObserver(altura).observe(document.body);
+function set(path, val) {
+  const [a, b] = path.split(".");
+  if (a === "b") S.bienes[b] = numIn(val); else if (a === "d") S.deudas[b] = numIn(val); else if (a === "k") S.contacto[b] = val; else S[a] = val;
+  save();
+}
+function refrescarNecesario(p) { const n = document.getElementById("need"), err = valido(p), btn = document.querySelector("[data-next]"); if (btn) { if (err) btn.setAttribute("aria-disabled", "true"); else btn.removeAttribute("aria-disabled"); } if (n && (!err || touched[p])) n.textContent = touched[p] ? err : ""; }
+function refrescarEnvio() {
+  const err = valido(7), e = document.getElementById("err"); if (e) e.textContent = touched[7] && err ? err : "";
+  document.querySelectorAll("#send [data-send]").forEach((el) => { const u = el.dataset.send === "wa" ? urlWa() : urlMail(); if (err) { el.setAttribute("aria-disabled", "true"); el.setAttribute("href", "#"); } else { el.removeAttribute("aria-disabled"); el.setAttribute("href", u); } });
+}
+function totales() { const t = document.getElementById("tot"); if (t) t.textContent = eur0(totalBienes()); refrescarNecesario(5); }
+function sugerencias(q) {
+  const ul = document.getElementById("sug"), inp = document.getElementById("f-muni"); if (!ul) return;
+  const L = buscar(q); ul.hidden = !L.length; inp.setAttribute("aria-expanded", L.length ? "true" : "false");
+  ul.innerHTML = L.map((m, i) => `<li role="option"><button type="button" data-muni="${i}" data-n="${esc(m.n)}" data-p="${esc(m.pn)}" data-c="${esc(m.ccaa)}"><span>${esc(m.n)}</span><small>${esc(m.pn)} · ${esc(terrNombre(m.ccaa))}</small></button></li>`).join("");
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-next],[data-o],[data-st],[data-act],[data-muni],[data-send]"); if (!t) return;
+  const d = t.dataset;
+  if (d.send != null) {
+    if (t.getAttribute("aria-disabled") === "true") { e.preventDefault(); touched[7] = true; refrescarEnvio(); return; }
+    S.canal = d.send; save(); if (S.paso !== 8) setTimeout(() => irA(8), 60); return;
+  }
+  if (d.go != null) { if (GENERICA && Number(d.go) > 6) return; irA(Number(d.go)); return; }
+  if (d.next != null) { const p = Number(d.next), err = valido(p); if (err) { touched[p] = true; refrescarNecesario(p); return; } irA(p + 1); return; }
+  if (d.o) {
+    if (d.o === "test") S.testamento = d.v; else if (d.o === "civil") { S.civil = d.v; if (d.v === "separacion" || d.v === "gananciales") S.ganancial = d.v === "gananciales"; }
+    else if (d.o === "inscrita") S.parejaInscrita = d.v; else if (d.o === "hora") S.contacto.hora = d.v;
+    save(); if (S.paso === 7) { document.querySelectorAll('[data-o="hora"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === d.v))); refrescarEnvio(); } else vista(); return;
+  }
+  if (d.st) {
+    const dl = Number(d.d), k = d.st;
+    if (k === "cony") S.conyEdad = Math.min(105, Math.max(18, S.conyEdad + dl));
+    else if (k === "hijos") { if (dl > 0 && S.hijos.length < 10) S.hijos.push(21); if (dl < 0) S.hijos.pop(); }
+    else if (k.startsWith("hijo:")) { const i = Number(k.slice(5)); S.hijos[i] = Math.min(21, Math.max(0, S.hijos[i] + dl)); }
+    else { const max = k === "padres" ? 2 : k === "otros" ? 6 : 10; S[k] = Math.min(max, Math.max(0, (S[k] || 0) + dl)); }
+    save(); vista(); return;
+  }
+  if (d.muni != null) { S.municipio = `${d.n} (${d.p})`; S.ccaa = d.c; S.muniCcaa = d.c; save(); vista(); document.getElementById("f-ccaa")?.focus({ preventScroll: true }); return; }
+  if (d.act === "sinmuni") { S.municipio = ""; save(); vista(); document.getElementById("f-muni")?.focus(); return; }
+  if (d.act === "reiniciar") { const c = S.contacto; S = nuevo(); S.contacto = c; cache.k = ""; irA(1); return; }
+  if (d.act === "archivo") { guardarArchivo(); return; }
+  if (d.act === "barras") { S.barras = !S.barras; save(); vista(); return; }
+  if (d.act === "imprimir") { try { window.print(); } catch (er) {} return; }
+});
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.dataset.h === "muni") { sugerencias(t.value); return; }
+  if (t.dataset.r) { const c = curva(Number(t.dataset.max)), v = c.b(Number(t.value), Number(t.dataset.step)); t.style.setProperty("--p", t.value / 10 + "%"); t.setAttribute("aria-valuetext", eur0(v)); set(t.dataset.r, v); const inp = document.querySelector(`[data-k="${t.dataset.r}"]`); if (inp) inp.value = fmtIn(v); totales(); return; }
+  if (!t.dataset.k) return;
+  const val = t.type === "checkbox" ? t.checked : t.value;
+  set(t.dataset.k, val);
+  if (t.dataset.eur) { const r = document.querySelector(`[data-r="${t.dataset.k}"]`); if (r) { const m = Number(r.dataset.max), tv = curva(m).a(numIn(t.value)); r.value = tv; r.style.setProperty("--p", tv / 10 + "%"); } totales(); return; }
+  if (t.dataset.k === "fecha") { if (S.fecha) touched[2] = true; const pl = document.getElementById("plz"); if (pl) pl.innerHTML = S.fecha && S.fecha <= hoy() && S.fecha >= "1990-01-01" ? `Plazo para el Impuesto sobre Sucesiones: hasta el <b>${fechaLarga(calcularPlazos(S.fecha, {}).find((q) => q.id === "isd").limite)}</b>.` : ""; refrescarNecesario(2); return; }
+  if (S.paso === 7) refrescarEnvio();
+});
+document.addEventListener("change", (e) => {
+  const t = e.target; if (!t.dataset.k) return;
+  if (t.dataset.eur) t.value = fmtIn(t.value);
+  if (t.dataset.k === "ccaa") { set("ccaa", t.value); if (S.municipio && S.muniCcaa !== t.value) { S.municipio = ""; save(); vista(); document.getElementById("f-ccaa")?.focus({ preventScroll: true }); } refrescarNecesario(1); return; }
+  if (t.dataset.k === "ganancial") { set("ganancial", t.checked); return; }
+  if (t.dataset.k === "deudaGan") { set("deudaGan", t.checked); return; }
+  if (t.dataset.k === "ok") { set("ok", t.checked); refrescarEnvio(); }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.target.dataset && e.target.dataset.h === "muni" && e.key === "Enter") { e.preventDefault(); document.querySelector("#sug button")?.click(); }
+  if (e.target.dataset && e.target.dataset.h === "muni" && e.key === "ArrowDown") { e.preventDefault(); document.querySelector("#sug button")?.focus(); }
+});
+window.HeredaCalc = { estado: () => S, expediente, caso: () => casoMotor(expediente()), resultado, salida, urlWa, urlMail, irA, despacho: D };
+vista();
+})();
+</script>
+</body>
+</html>

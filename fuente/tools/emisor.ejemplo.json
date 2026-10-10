@@ -1,0 +1,15 @@
+{
+  "_instrucciones": "Copia este archivo como tools/emisor.json y sustituye los corchetes. emisor.json no se sube a GitHub.",
+  "nombre": "[NOMBRE Y APELLIDOS (autónomo) o RAZÓN SOCIAL (sociedad)]",
+  "nif": "[NIF]",
+  "domicilio": "[CALLE Y NÚMERO, CÓDIGO POSTAL, LOCALIDAD (PROVINCIA)]",
+  "email": "[EMAIL DE CONTACTO]",
+  "web": "",
+  "iban": "[IBAN DE LA CUENTA DE COBRO]",
+  "titularCuenta": "",
+  "registroMercantil": "",
+  "condiciones": "Condiciones generales de licencia y uso de Hereda+, versión 1.0",
+  "serie": "H",
+  "serieRectificativa": "R",
+  "vencimientoDias": 15
+}

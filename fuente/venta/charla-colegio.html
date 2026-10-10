@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La herencia en 20 minutos · Charla en el Colegio</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="venta.css">
+<style>
+/* 12 diapositivas 16:9 (1280 × 720). En pantalla: una debajo de otra, con la nota del ponente debajo de cada una.
+   Para proyectar: pantalla completa del navegador y avanzar con la rueda o las flechas (salta de diapositiva en diapositiva).
+   Para imprimir o exportar: node venta/pdf.mjs charla-colegio (o Archivo › Imprimir › Guardar como PDF; las notas no se imprimen). Letra de la marca: venta.css */
+@page{size:1280px 720px;margin:0}
+:root{--bg:#F5F5F2;--surface:#FFFFFF;--border:#E3E2DD;--ink-1:#18191C;--ink-2:#4B4D53;--ink-3:#5F6167;--brand:#1F3A5F;--brand-tint:rgba(31,58,95,.08);--warning:#8A5A12;--danger:#AF3A2E;--success:#2D6A4F;
+  --font-sans:"Hereda Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-display:"Hereda Serif","Iowan Old Style","Palatino Linotype",Georgia,serif}
+*{box-sizing:border-box}
+html{background:#2A2B2F;scroll-snap-type:y mandatory}
+body{margin:0;font-family:var(--font-sans);color:var(--ink-1);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.s{width:1280px;height:720px;margin:28px auto 0;background:var(--bg);position:relative;overflow:hidden;padding:72px 96px 64px;display:flex;flex-direction:column;scroll-snap-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.nota{width:1280px;margin:10px auto 0;color:#C9CACE;font:15px/1.5 var(--font-sans);padding:0 4px}
+.nota b{color:#fff}
+@media print{html{background:none}.s{margin:0;box-shadow:none;page-break-after:always;break-after:page}.nota{display:none}}
+.k{font-size:20px;font-weight:650;color:var(--brand);margin:0 0 18px;letter-spacing:.01em}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;margin:0}
+h1{font-size:104px;line-height:.98;max-width:9em}
+h2{font-size:58px;line-height:1.04;max-width:16em}
+.lead{font-size:28px;line-height:1.4;color:var(--ink-2);margin:28px 0 0;max-width:30em}
+.pie{position:absolute;left:96px;right:96px;bottom:32px;display:flex;justify-content:space-between;font-size:15px;color:var(--ink-3)}
+.pie b{font-weight:650;color:var(--ink-2)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:22px 40px;margin-top:40px}
+.c{background:var(--surface);border-radius:20px;padding:28px 30px;box-shadow:0 0 0 1px var(--border)}
+.c .big{font:600 64px/1 var(--font-display);letter-spacing:-.02em;color:var(--brand)}
+.c b{display:block;font-size:24px;margin:12px 0 8px}
+.c p{margin:0;font-size:19px;line-height:1.45;color:var(--ink-2)}
+.c small{display:block;margin-top:12px;font-size:15px;color:var(--ink-3)}
+ul.l{list-style:none;margin:36px 0 0;padding:0;display:grid;gap:16px;font-size:25px;line-height:1.35}
+ul.l li{display:flex;gap:16px}
+ul.l li::before{content:"";flex:none;width:9px;height:9px;border-radius:50%;background:var(--brand);margin-top:13px}
+ul.l small{color:var(--ink-3);font-size:18px}
+table{border-collapse:collapse;width:100%;margin-top:26px;font-size:18.5px}
+td,th{text-align:left;padding:8px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:16px;color:var(--ink-3);font-weight:650}
+td:first-child{font-weight:650;white-space:nowrap}
+td small{color:var(--ink-3);font-size:16px}
+.err{display:grid;grid-template-columns:64px 1fr;gap:18px 18px;margin-top:34px;align-items:start}
+.err .n{width:52px;height:52px;border-radius:50%;background:var(--brand-tint);color:var(--brand);display:grid;place-items:center;font:700 22px/1 var(--font-sans)}
+.err b{font-size:25px;display:block}
+.err span{font-size:19px;color:var(--ink-2)}
+.flujo{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:44px}
+.flujo div{background:var(--surface);border-radius:16px;padding:22px 20px;box-shadow:0 0 0 1px var(--border);position:relative}
+.flujo i{font-style:normal;font-size:15px;font-weight:700;color:var(--brand)}
+.flujo b{display:block;font-size:21px;margin:8px 0 6px}
+.flujo span{font-size:16.5px;color:var(--ink-2);line-height:1.4;display:block}
+.shot{border-radius:14px;overflow:hidden;max-height:420px;box-shadow:0 0 0 1px var(--border),0 24px 60px -20px rgba(24,25,28,.35)}
+.shot img{display:block;width:100%}
+.oscuro{background:var(--brand);color:#fff}
+.oscuro .k{color:rgba(255,255,255,.75)}.oscuro .lead{color:rgba(255,255,255,.85)}.oscuro .pie,.oscuro .pie b{color:rgba(255,255,255,.7)}
+.fuente{font-size:15px;color:var(--ink-3);margin-top:auto}
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="s oscuro" aria-label="Diapositiva 1">
+  <p class="k">Jornada práctica de sucesiones</p>
+  <h1 style="margin-top:auto">La herencia en 20 minutos.</h1>
+  <p class="lead">Un método para pasar del montón de papeles a un expediente calculado y un plan con plazos.</p>
+  <div class="pie" style="position:static;margin-top:56px"><span><b>Ponente</b> · Colegio de Abogados · fecha</span><span>1 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Presentarse en una frase. Pregunta a la sala: «¿Cuánto tardáis desde que la familia trae la carpeta hasta que tenéis claro cuánto pagan y qué hay que hacer?». Dejar que respondan; las cifras que salgan son el punto de partida. Esta charla es un método; la herramienta aparece al final y solo cinco minutos.</p>
+
+<!-- 2 -->
+<section class="s" aria-label="Diapositiva 2">
+  <p class="k">Antes de empezar</p>
+  <h2>Toda herencia lleva tres relojes en marcha desde el fallecimiento.</h2>
+  <div class="g3">
+    <div class="c"><div class="big">6 meses</div><b>Sucesiones</b><p>Autoliquidación en seis meses. Prórroga de otros seis si se pide en los cinco primeros.</p><small>Régimen común · RD 1629/1991, arts. 67 y 68</small></div>
+    <div class="c"><div class="big">6 meses</div><b>Plusvalía municipal</b><p>Seis meses, prorrogables hasta un año a solicitud del contribuyente.</p><small>TRLRHL, art. 110.2.b</small></div>
+    <div class="c"><div class="big">Campaña</div><b>Renta del causante</b><p>La del año del fallecimiento la presentan los herederos en la campaña del año siguiente.</p><small>LIRPF, periodo impositivo inferior al año</small></div>
+  </div>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>2 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Insistir en que los tres corren aunque no se haya firmado nada. Los territorios forales tienen sus propios plazos: comprobar la norma foral si el caso es de Navarra o del País Vasco (Hereda+ 1.5 ya calcula sus impuestos con la norma foral de cada territorio).</p>
+
+<!-- 3 -->
+<section class="s" aria-label="Diapositiva 3">
+  <p class="k">Minutos 0 a 5 · Reunir</p>
+  <h2>Con siete documentos se arma el expediente.</h2>
+  <table>
+    <thead><tr><th>Documento</th><th>Para qué</th><th>Dónde</th></tr></thead>
+    <tbody>
+      <tr><td>Certificado de defunción</td><td>Fecha del devengo y lugar</td><td>Registro Civil</td></tr>
+      <tr><td>Últimas voluntades</td><td>Si hay testamento y ante qué notario <small>(desde 15 días hábiles tras el fallecimiento)</small></td><td>Ministerio de Justicia</td></tr>
+      <tr><td>Testamento o declaración de herederos</td><td>Quién hereda y en qué proporción</td><td>Notaría</td></tr>
+      <tr><td>Seguros de fallecimiento</td><td>Pólizas y beneficiarios</td><td>Ministerio de Justicia</td></tr>
+      <tr><td>Notas simples</td><td>Titularidad y cargas</td><td>Registro de la Propiedad</td></tr>
+      <tr><td>Catastro y valor de referencia</td><td>Valor del inmueble y del suelo</td><td>Sede del Catastro</td></tr>
+      <tr><td>Certificados bancarios</td><td>Saldos a la fecha del fallecimiento</td><td>Cada entidad</td></tr>
+    </tbody>
+  </table>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>3 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Consejo práctico: pedir a los bancos el certificado a la fecha del fallecimiento, no el extracto a 31 de diciembre.</p>
+
+<!-- 4 -->
+<section class="s" aria-label="Diapositiva 4">
+  <p class="k">Minutos 5 a 10 · Valorar</p>
+  <h2>El inventario se valora a la fecha del fallecimiento.</h2>
+  <ul class="l">
+    <li><span><b>Inmuebles:</b> el valor de referencia del Catastro es la base, salvo que se declare uno mayor. <small>Ley 29/1987, art. 9, desde 2022</small></span></li>
+    <li><span><b>Cuentas y valores:</b> saldo y cotización del día del fallecimiento, no del 31 de diciembre.</span></li>
+    <li><span><b>Régimen económico:</b> en gananciales, primero se liquida la sociedad; solo la mitad entra en la herencia.</span></li>
+    <li><span><b>Ajuar doméstico:</b> presunción del 3 %, con el alcance que le ha dado el Tribunal Supremo desde 2020. <small>Ley 29/1987, art. 15</small></span></li>
+    <li><span><b>Deudas y gastos:</b> deudas acreditadas, última enfermedad, entierro y funeral. <small>Ley 29/1987, arts. 13 y 14</small></span></li>
+  </ul>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>4 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Si la sala pregunta por el ajuar: el Supremo excluye del cálculo bienes que no son de uso personal o doméstico (dinero, valores, inmuebles salvo matices). Remitir al criterio de cada comunidad para su aplicación concreta.</p>
+
+<!-- 5 -->
+<section class="s" aria-label="Diapositiva 5">
+  <p class="k">Minutos 10 a 15 · Sucesiones</p>
+  <h2>Primero, qué comunidad. Después, el cálculo.</h2>
+  <div class="g2">
+    <div class="c"><b>La comunidad competente</b><p>La de residencia habitual del causante: donde haya pasado más días de los últimos cinco años. Si residía fuera de España, la norma estatal con las reglas de conexión que correspondan.</p><small>Ley 22/2009, art. 28</small></div>
+    <div class="c"><b>El cálculo, por heredero</b><p>Base imponible → reducciones estatales y autonómicas → base liquidable → tarifa → coeficiente por patrimonio y parentesco → bonificaciones de la comunidad.</p><small>Ley 29/1987 y la ley de cada comunidad</small></div>
+  </div>
+  <p class="lead" style="font-size:24px">El mismo caso puede pagar cero en una comunidad y una cantidad importante en otra. Por eso la residencia se documenta (padrón) antes de calcular.</p>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>5 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Pedir el certificado histórico de empadronamiento cuando haya dudas sobre la residencia de los últimos cinco años. En los territorios forales se aplica su propia norma.</p>
+
+<!-- 6 -->
+<section class="s" aria-label="Diapositiva 6">
+  <p class="k">Minutos 10 a 15 · Plusvalía</p>
+  <h2>La plusvalía se calcula dos veces y se paga la menor.</h2>
+  <div class="g2">
+    <div class="c"><b>Método objetivo</b><p>Valor catastral del suelo × coeficiente por años de tenencia × tipo de la ordenanza.</p><small>TRLRHL, art. 107</small></div>
+    <div class="c"><b>Método real</b><p>Diferencia entre el valor de transmisión y el de adquisición, en la proporción del suelo. Si no hay incremento, no hay impuesto.</p><small>TRLRHL, arts. 104.5 y 107.5</small></div>
+  </div>
+  <ul class="l" style="margin-top:30px;font-size:22px">
+    <li><span>La <b>bonificación por herencia</b> (hasta el 95 %) depende de la ordenanza de cada ayuntamiento y de sus requisitos. <small>TRLRHL, art. 108.4</small></span></li>
+    <li><span>La finca rústica no está sujeta: comprobar la clase de suelo en el Catastro.</span></li>
+  </ul>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>6 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Recordar que muchas ordenanzas exigen pedir la bonificación dentro del plazo de la autoliquidación. Leer siempre la ordenanza del año del fallecimiento.</p>
+
+<!-- 7 -->
+<section class="s" aria-label="Diapositiva 7">
+  <p class="k">Minutos 15 a 20 · El plan</p>
+  <h2>Cinco pasos, cada uno con su responsable y su fecha.</h2>
+  <div class="flujo">
+    <div><i>1</i><b>Certificados</b><span>Defunción, últimas voluntades, seguros, bancos.</span></div>
+    <div><i>2</i><b>Inventario</b><span>Valores a la fecha del fallecimiento.</span></div>
+    <div><i>3</i><b>Impuestos</b><span>Sucesiones y plusvalía, o la prórroga a tiempo.</span></div>
+    <div><i>4</i><b>Escritura</b><span>Aceptación y adjudicación en la notaría.</span></div>
+    <div><i>5</i><b>Inscripción</b><span>Registro, Catastro, bancos y tráfico.</span></div>
+  </div>
+  <p class="lead" style="font-size:24px">Buena parte del tiempo de una herencia es esperar a terceros. Apuntad a quién se le pidió qué y cuándo: eso es lo que permite reclamar.</p>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>7 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Ejemplo de reclamación: servicio de atención al cliente del banco y, después, el Banco de España.</p>
+
+<!-- 8 -->
+<section class="s" aria-label="Diapositiva 8">
+  <p class="k">Lo que sale caro</p>
+  <h2>Cinco errores frecuentes.</h2>
+  <div class="err">
+    <span class="n">1</span><div><b>Cuentas valoradas a 31 de diciembre</b><span>El valor es el del día del fallecimiento.</span></div>
+    <span class="n">2</span><div><b>La plusvalía olvidada hasta la escritura</b><span>Su plazo corre desde el fallecimiento, haya escritura o no.</span></div>
+    <span class="n">3</span><div><b>La bonificación municipal no pedida</b><span>Muchas ordenanzas la condicionan a una solicitud en plazo.</span></div>
+    <span class="n">4</span><div><b>Comunidad mal elegida</b><span>Sin documentar la residencia de los últimos cinco años.</span></div>
+    <span class="n">5</span><div><b>La prórroga pedida tarde</b><span>En Sucesiones, dentro de los cinco primeros meses.</span></div>
+  </div>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>8 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Preguntar a la sala cuál han visto más. Es el momento de más participación: dejar dos o tres minutos.</p>
+
+<!-- 9 -->
+<section class="s" aria-label="Diapositiva 9">
+  <p class="k">Demostración · 5 minutos</p>
+  <h2 style="font-size:50px">El mismo método, con una herramienta.</h2>
+  <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:36px;margin-top:34px;align-items:start">
+    <ul class="l" style="margin:0;font-size:22px">
+      <li><span>Arrastrar los documentos de un caso ficticio: PDF, Word, fotos del móvil</span></li>
+      <li><span>O escanearlos con la cámara: se enderezan y se leen</span></li>
+      <li><span>Revisar lo leído y cargar lo marcado</span></li>
+      <li><span>Sucesiones y plusvalía, paso a paso y con su norma</span></li>
+      <li><span>Mi día: qué hacer hoy en todo el despacho</span></li>
+    </ul>
+    <div class="shot"><img src="../video/hereda-demo-poster-1600.webp" alt="Expediente calculado a partir de 26 documentos de ejemplo"></div>
+  </div>
+  <div class="pie"><span>Demostración con datos ficticios</span><span>9 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Seguir el guion de demostración (venta/guion-demo.md, pasos 2 a 4), en versión corta. Tener la carpeta del caso 1 preparada y el lector abierto una vez antes de la charla para que el reconocedor de texto ya esté descargado. Si la conexión falla, poner el vídeo de demostración (video/hereda-demo.mp4, minuto y medio, sin sonido) o usar esta captura.</p>
+
+<!-- 10 -->
+<section class="s" aria-label="Diapositiva 10">
+  <p class="k">Límites</p>
+  <h2>Lo que una herramienta no debe hacer por vosotros.</h2>
+  <div class="g2">
+    <div class="c"><b>Decidir</b><p>El criterio, la estrategia y la firma son del abogado. Lo que lee o calcula un programa es una propuesta que se revisa.</p></div>
+    <div class="c"><b>Sacar los datos del despacho</b><p>El secreto profesional obliga a saber dónde están los expedientes y quién puede verlos. <small>LO 5/2024 del Derecho de Defensa</small></p></div>
+    <div class="c"><b>Inventar</b><p>Lo que no se reconoce debe quedar vacío y avisado, no rellenado con una suposición.</p></div>
+    <div class="c"><b>Esconder la fuente</b><p>Cada cifra tiene que poder explicarse con su norma ante el cliente y ante la Administración.</p></div>
+  </div>
+  <div class="pie"><span>La herencia en 20 minutos</span><span>10 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Esta diapositiva vale para cualquier herramienta, también la nuestra: Hereda+ funciona en el equipo del despacho, no usa IA y marca todo lo leído como «por revisar». Decirlo sin insistir.</p>
+
+<!-- 11 -->
+<section class="s" aria-label="Diapositiva 11">
+  <p class="k">Si queréis probarlo</p>
+  <h2>Con una herencia que ya hayáis presentado.</h2>
+  <ul class="l">
+    <li><span><b>Despacho de demostración</b> con 14 expedientes ficticios, sin dar ningún dato.</span></li>
+    <li><span><b>30 días de prueba</b> con todas las funciones, sin tarjeta y sin instalar nada.</span></li>
+    <li><span>Metéis un caso ya cerrado, sin nombres ni DNI, y <b>comparáis las cifras</b>.</span></li>
+    <li><span>Los expedientes se quedan en vuestro ordenador; si no contratáis, quedan en solo lectura.</span></li>
+    <li><span>Régimen común y <b>forales</b>: Navarra, Álava, Bizkaia y Gipuzkoa.</span></li>
+  </ul>
+  <p class="lead" style="font-size:30px;color:var(--brand);font-weight:600;margin-top:40px">heredate.github.io</p>
+  <div class="pie"><span>Hereda+ · software de sucesiones para despachos</span><span>11 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Una sola diapositiva comercial. No pedir correos en la sala: quien quiera, que escriba o se acerque al terminar. No enviar después correos a quien no lo haya pedido.</p>
+
+<!-- 12 -->
+<section class="s oscuro" aria-label="Diapositiva 12">
+  <p class="k">Resumen</p>
+  <h2 style="font-size:72px;margin-top:auto">Tres relojes. Siete documentos. Cinco pasos. Cinco errores.</h2>
+  <p class="lead">Preguntas.</p>
+  <div class="pie" style="position:static;margin-top:56px"><span>La herencia en 20 minutos</span><span>12 / 12</span></div>
+</section>
+<p class="nota"><b>Nota.</b> Cerrar volviendo a la pregunta inicial: «¿cuánto tardáis hoy?». Dejar la diapositiva 12 durante las preguntas.</p>
+
+</body>
+</html>

@@ -1,0 +1,89 @@
+HEREDA+ · DOCUMENTOS DE EJEMPLO PARA PROBAR LA LECTURA (versión 1.5)
+=====================================================================
+
+Todos los documentos son FICTICIOS: nombres, DNI, referencias catastrales, cuentas, sociedades y
+cifras están inventados. Reproducen la estructura de los documentos oficiales reales para probar
+la app. Cada uno lleva el aviso «DOCUMENTO FICTICIO».
+
+CÓMO PROBAR
+1. Abre la app web (Chrome o Edge).
+2. En la portada pulsa «Desde documentos».
+3. Arrastra TODOS los archivos de una carpeta a la vez (un caso = un expediente).
+4. Espera: los PDF, Word y texto se leen al instante; las fotos y el PDF escaneado tardan unos
+   segundos la primera vez (se descarga el reconocedor de texto, solo una vez).
+   ¿En papel? Pulsa «Escanear con la cámara» (móvil, tableta o webcam): el papel se detecta solo,
+   se dispara cuando está quieto, se endereza y se guarda como PDF, que se lee igual.
+5. Revisa las propuestas: cada línea dice de qué documentos sale; lo dudoso va sin marcar.
+6. «Cargar lo marcado en el expediente». El expediente queda listo para calcular.
+
+CASO 1 · caso1-testamento-malaga (26 archivos) · Antonio Jiménez Soler, Málaga, con testamento
+- Causante fallecido el 20/04/2026, casado en gananciales, residente en Málaga (Andalucía).
+- Testamento: usufructo universal a la viuda, hijos por partes iguales, legado del garaje al sobrino.
+- Personas: viuda e hijos con edad (libro de familia y DNI), sobrino legatario.
+- Vivienda de calle Larios: nota simple + certificación catastral con la estructura real de la
+  Sede del Catastro (catastral 140.000 €, suelo 60.000 €) + certificado de valor de referencia
+  aparte (182.400 €, como lo expide el Catastro) + compraventa de 1995 en pesetas + IBI + datos
+  fiscales, todo fundido.
+- Garaje de Torremolinos: nota simple telemática (tabla de titularidades, como las actuales) +
+  IBI + escritura de herencia de 2004 + certificado de valor de referencia (21.300 €).
+- Cuentas y fondos de Unicaja y CaixaBank: los saldos de los bancos (a la fecha del fallecimiento)
+  sustituyen a los de los datos fiscales (a 31/12); las acciones de Telefónica solo constan en
+  los datos fiscales. Plan de pensiones sin marcar (no es herencia).
+- Deudas: préstamo hipotecario (saldo del banco; la hipoteca de la nota simple queda sin marcar),
+  préstamo personal y tarjeta. Gasto: factura de la funeraria (3.872 €).
+- Documentos ajenos: carta del banco (se archiva sin datos).
+Resultado esperado: 6 personas, 11 bienes, 3 deudas, 1 gasto · caudal bruto 206.742 €, neto
+180.909 € · Sucesiones 0 € (Andalucía) · plusvalía 3.071 € (vivienda y garaje).
+
+CASO 2 · caso2-intestada-torremolinos (18 archivos) · María Dolores Ruiz Cano, sin testamento
+- Certificados de defunción antiguo y plurilingüe, «no consta» testamento, acta de herederos con
+  nietos en representación de un hijo premuerto, certificado de nacimiento, padrón.
+- Nota simple con dos fincas (en el local la causante solo era usufructuaria: queda sin marcar),
+  rústica en Sevilla a tercios, IBI de SUMA (Altea), Santander, permiso de circulación, DNI
+  antiguo, modelo 650 en borrador, nómina (documento ajeno).
+- Certificación catastral de la vivienda y su certificado de valor de referencia (148.900 €),
+  certificado de valor de referencia de Altea (131.700 €) y compraventa de Altea de 2003 (96.000 €).
+Resultado esperado: 4 herederos (2 hijos y 2 nietos), 6 bienes · caudal bruto 289.091 € ·
+Sucesiones 0 € · plusvalía 3.720 € (Altea). La vivienda de Torremolinos se heredó: falta anotar
+la fecha de adquisición (fallecimiento del esposo) para calcular su plusvalía; se avisa.
+
+CASO 3 · caso3-capitulaciones-madrid (24 archivos) · Elena Martín Rojas, Madrid, con testamento
+- Casada en 1978 en gananciales; capitulaciones de 1992 pactan separación de bienes. El certificado
+  de defunción dice «casada», el de matrimonio lleva la nota marginal y la escritura de
+  capitulaciones manda: se carga separación de bienes.
+- Testamento en .txt (copia simple), certificado literal de nacimiento de un hijo, DNI de la hija
+  fotografiado torcido y con poco contraste (se endereza antes de leerlo), padrón de Madrid.
+- Nota simple con tres fincas (una rústica), IBI de dos inmuebles, certificación catastral de la
+  vivienda y de la finca rústica (polígono 8, parcela 112; no está sujeta a plusvalía), con sus
+  certificados de valor de referencia (412.300 € y 9.870 €), datos fiscales, cuenta y fondo de Bankinter, acciones (Renta 4), plan de pensiones
+  (informativo), escritura del préstamo (sin marcar) y certificado de deuda pendiente (48.213,77 €),
+  contrato de alquiler en Word (.docx) del piso de la calle Áncora, participaciones sociales
+  (50 % de una S.L., valor teórico 92.150 €), facturas de la funeraria y de la clínica.
+Resultado esperado: cónyuge y 2 hijos, 8 bienes, 1 deuda, 2 gastos · caudal bruto 597.270 €,
+neto 541.960 € · Sucesiones 265 € (Madrid) · plusvalía 3.635 € en 2 inmuebles: vivienda de
+Almagro 1.705 € y piso alquilado de Áncora 1.930 € (los dos por el método objetivo). El piso
+alquilado no tiene valor de referencia en ningún documento: queda SIN VALOR y la app lo avisa
+(«Falta por completar»); hasta que se anote, no suma en Sucesiones. Su plusvalía sí se calcula:
+el método objetivo solo necesita el valor catastral del suelo, que trae el recibo del IBI
+(51.200 €), y la fecha de adquisición (noviembre de 2008) que consta en los documentos.
+
+FORMATOS · formatos (12 archivos, se prueban uno a uno)
+Los mismos documentos en los formatos que llegan al despacho: correo .eml del banco con el
+certificado en PDF adjunto (el adjunto se lee y se archiva aparte), Excel (.xlsx) y CSV de la banca
+en línea, página web guardada de la Sede del Catastro, recibo del IBI en RTF, testamento en
+OpenDocument (.odt), certificado de defunción en TIFF de escáner de oficina (blanco y negro, dos
+páginas), foto con la orientación en EXIF, PDF con contraseña (1234), formulario PDF del modelo
+650 rellenado en pantalla, PDF con carátula de texto y páginas escaneadas, y foto HEIC del iPhone
+(fijos/foto-iphone-certificacion-catastral.heic, hecha con pillow-heif a partir de una foto del
+banco; el resto lo genera generar.mjs).
+
+BANCO DE ESCANEOS DIFÍCILES · banco (43 fotos)
+Seis documentos fotografiados en malas condiciones: torcidos 12°, con perspectiva fuerte, con una
+sombra dura, con poco contraste, a baja resolución, de lado y boca abajo, más una doble página.
+La prueba mide qué parte de los datos clave se recupera leyendo la foto tal cual (como la 1.4) y
+con el procesado del escáner (localizar el papel, enderezar, quitar sombras, girar, separar
+páginas). BANCO=completo node tools/ejemplos/prueba.mjs mide las 43; por defecto, 15.
+
+QUÉ NOS AYUDA
+Documentos reales del despacho con nombres y NIF tachados: cada formato nuevo (otro Registro,
+otro ayuntamiento, otro banco, otra notaría) se incorpora en un día.

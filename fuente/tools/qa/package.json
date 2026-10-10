@@ -1,0 +1,10 @@
+{
+  "name": "hereda-qa",
+  "private": true,
+  "description": "Herramientas de control de calidad de Hereda+ (accesibilidad con axe-core y Lighthouse). No forman parte de la app publicada.",
+  "type": "module",
+  "devDependencies": {
+    "axe-core": "^4.14.0",
+    "lighthouse": "^13.5.0"
+  }
+}

@@ -1,0 +1,100 @@
+/* ───────────── Hereda+ · producto: despacho (socio), auditoría, búsqueda, tareas y acciones masivas ─────────────
+   Solo piezas nuevas; todo lo demás reutiliza las clases de la app (card, kpi, grid-t, rd-row, st, seg, sectitle…). */
+
+/* Selector «Soy» (barra lateral y cabecera del panel) */
+.sc-quien{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;color:var(--label-2)}
+.sc-quien select{flex:1;min-width:0;max-width:240px;background:var(--fill-2);color:var(--label);border:0;box-shadow:inset 0 0 0 .5px var(--hair-2);border-radius:8px;height:30px;padding:0 8px;font:500 13px var(--text)}
+.sc-quien-k{font-weight:500;color:var(--ink-3);font-size:12px}
+.sc-quien.sc-side{position:relative;padding:6px 10px;border-radius:10px;cursor:pointer}
+.sc-quien.sc-side:hover{background:var(--fill-2)}
+.sc-quien.sc-side .sc-q-t{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.sc-quien.sc-side .sc-q-t b{font-weight:500;color:var(--label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-quien.sc-side .sc-q-t small{font-size:11.5px;color:var(--label-3)}
+.sc-quien.sc-side select.sc-over{position:absolute;inset:0;width:100%;height:100%;max-width:none;opacity:0;cursor:pointer}
+.sc-quien.sc-side:focus-within{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* Panel del despacho */
+.sc-tabs{margin:4px 0 16px}
+.sc-ns{display:grid;grid-template-columns:minmax(220px,auto) 1fr;gap:24px;align-items:center}
+.sc-ns-n .k{display:block;font:500 12.5px/1.3 var(--text);color:var(--label-2)}
+.sc-ns-n b{display:block;font:600 40px/1.05 var(--font-sans,var(--text));letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:6px 0 4px;color:var(--label)}
+.sc-ns.ok .sc-ns-n b{color:var(--green)}
+.sc-ns.warn .sc-ns-n b{color:var(--orange)}
+.sc-ns.bad .sc-ns-n b{color:var(--red)}
+.sc-ns-n small{font-size:13px;color:var(--label-2)}
+.sc-ns-t .caption{margin:6px 0 0;max-width:62ch}
+.sc-spark{width:100%;max-width:340px;height:44px;color:var(--accent);display:block}
+.sc-kpis{margin-top:14px}
+@media (min-width:900px){.sc-kpis{grid-template-columns:repeat(5,1fr)}}
+.sc-grid{margin-top:14px}
+.sc-card{min-width:0}
+.sc-wide{margin-top:14px}
+.sc-col{display:grid;gap:14px;align-content:start;min-width:0}
+.sc-tw{overflow-x:auto;margin:0 -4px;padding:0 4px}
+.sc-grid{align-items:start}
+.sc-t td small,.sc-t td .caption{display:block}
+.sc-t tbody tr[data-sc]{cursor:pointer}
+.sc-p{display:flex;align-items:center;gap:10px;min-width:0}
+.sc-p>span:last-child{min-width:0}
+.sc-p small{display:block;color:var(--label-3);font-size:12px}
+.sc-chip{margin:2px 0 0;display:inline-block}
+.chip.warn{background:var(--orange-t,var(--fill));color:var(--orange)}
+td.sc-bad,.kv .sc-bad{color:var(--red);font-weight:600}
+.kv .sc-warn{color:var(--orange);font-weight:600}
+.sc-foot{margin:12px 0 0}
+.sc-bars{display:grid;gap:9px}
+.sc-bar{display:grid;grid-template-columns:minmax(0,1fr) 120px 56px;gap:10px;align-items:center;font-size:13.5px}
+.sc-bar-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-bar-b{height:8px;border-radius:99px;background:var(--fill);overflow:hidden}
+.sc-bar-b i{display:block;height:100%;background:var(--orange);border-radius:99px}
+.sc-bar-n{text-align:right;color:var(--label-2);font-size:12.5px}
+.sc-lentos{display:flex;flex-wrap:wrap;gap:6px}
+.sc-fases td small{color:var(--label-3);font-size:11.5px}
+@media (max-width:759px){.sc-ns{grid-template-columns:1fr;gap:10px}.sc-bar{grid-template-columns:minmax(0,1fr) 70px 48px}}
+
+/* Auditoría */
+.au-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 4px}
+.au-f .search{flex:1 1 240px;margin:0;height:34px}
+.au-f .search input{flex:1;min-width:0;background:none;border:0;color:var(--label);font:inherit;outline:none}
+.au-f select{height:34px;border-radius:8px;border:0;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair-2);color:var(--label);padding:0 8px;font:500 13px var(--text)}
+.au-t td{vertical-align:top}
+.au-t td b{display:block}
+.au-t td small{display:block;color:var(--label-3);font-size:12px}
+.au-t .au-w{white-space:nowrap;font-size:12.5px;color:var(--label-2)}
+.au-k{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label-3);margin-bottom:2px}
+.au-t .au-a{color:var(--label-3);text-decoration:line-through;text-decoration-color:var(--hair-2)}
+.au-t .au-d{font-weight:600}
+
+/* Tareas del despacho */
+.tk-form{grid-template-columns:minmax(0,1fr) 180px 150px auto;margin-top:0}
+@media (max-width:759px){.tk-form{grid-template-columns:1fr 1fr}.tk-form input[name="titulo"]{grid-column:1/-1}}
+.tk-hechas{margin-top:10px}
+.tk-hechas summary{cursor:pointer;font-size:13px;color:var(--label-2);padding:6px 2px}
+
+/* Acciones masivas */
+.grid-t th.ma-c,.grid-t td.ma-c{width:44px;padding-right:0}
+.ma-ck.st{width:22px;height:22px}
+.ma-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:10px;padding:10px 14px;position:sticky;top:64px;z-index:3}
+.ma-f{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--label-2)}
+.ma-f select{height:32px;border-radius:8px;border:0;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair-2);color:var(--label);padding:0 8px;font:500 13px var(--text)}
+/* robustez.js: expedientes con datos dañados apartados de la cartera y pantalla de error (nunca en blanco) */
+.rb-danados{margin:14px 0;padding:14px 16px;box-shadow:inset 3px 0 0 var(--warning)}
+.rb-danados .rb-h{display:flex;gap:12px;align-items:flex-start}
+.rb-danados .rb-h b{display:block}.rb-danados .rb-h small{display:block;color:var(--ink-2);margin-top:2px;line-height:1.45}
+.rb-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;padding:10px 0 0;margin-top:10px;border-top:1px solid var(--border)}
+.rb-item .t{min-width:0;flex:1 1 260px}.rb-item .t b{display:block;overflow-wrap:anywhere}.rb-item .t small{display:block;color:var(--ink-2);font-size:var(--fs-caption);overflow-wrap:anywhere}
+.rb-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.rb-conf{font-size:var(--fs-caption);color:var(--danger)}
+.rb-error{max-width:720px;margin:40px auto;padding:0 16px}.rb-error p{color:var(--ink-2);line-height:1.55}.rb-error code{overflow-wrap:anywhere;font-size:12px}
+.rb-error .rb-acts{margin-top:18px}
+/* ───────── Despacho en red (red.js, prefijo red-): asistente, choques y avisos. Usa los componentes de seguridad.js (sg-modal, sg-opt, sg-banner) ───────── */
+.red-paso{margin:2px 0 4px;font:550 12px/1.3 var(--text);color:var(--label-2);letter-spacing:.01em}
+.red-h{margin:0 0 10px;font:650 16px/1.3 var(--display);letter-spacing:-.01em;color:var(--label)}
+.red-f{gap:6px;margin:4px 0 2px}.red-f label{font:550 13px/1.3 var(--text);color:var(--label-2)}
+.red-f select{height:46px;border-radius:12px;border:0;background:var(--fill-2);box-shadow:inset 0 0 0 1px var(--hair);padding:0 12px;font-size:16px;color:var(--label);outline:none;width:100%}
+.red-f select:focus{box-shadow:inset 0 0 0 1.5px var(--accent),0 0 0 3px var(--accent-tint)}
+.red-hint{font-size:12.5px;line-height:1.45;color:var(--label-2)}
+.red-ch{margin:0 0 14px}.red-ch-t{margin:0 0 8px;font-size:14px;line-height:1.45}.red-ch-t b{display:block;font-weight:600;color:var(--label);overflow-wrap:anywhere}.red-ch-t small{display:block;font-size:13px;color:var(--label-2)}
+.red-ch-o{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.red-opt{width:100%;cursor:pointer}.red-opt b{overflow-wrap:anywhere}.red-opt:hover{border-color:var(--accent)}
+.red-opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){.red-ch-o{grid-template-columns:1fr}}

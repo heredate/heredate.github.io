@@ -1,0 +1,379 @@
+<!doctype html>
+<!-- Borrador pendiente de revisión: texto preparado para su revisión por el titular antes de publicarse. No es la versión definitiva. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Condiciones generales de licencia y uso · Hereda+</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
+<meta name="description" content="Condiciones generales de licencia y uso del software Hereda+ para despachos de abogados.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+/* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
+:root{--bg:#F4F2EC;--bg-2:#EBE9E2;--surface:#FFFEFB;--surface-2:#FAF9F5;--border:#E0DCD2;--border-2:#CBC5B8;
+  --ink-1:#121C2A;--ink-2:#434C59;--ink-3:#5C6470;--brand:#0F2B4C;--brand-tint:rgba(15,43,76,.07);--on-brand:#FFFFFF;
+  --success:#1F6E6B;--warning:#875A1A;--warning-bg:#F5EDDD;--danger:#9E3B2B;--btn:#0F2B4C;--on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
+  --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink-1);font:16px/1.6 var(--font-sans);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:100;background:var(--btn);color:var(--on-btn);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+@media (max-width:520px){.wrap{padding:0 16px}}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;color:var(--ink-1)}
+.brand:hover{text-decoration:none}
+.logo{width:26px;height:26px;display:block;flex:none}
+.links{display:flex;gap:26px;font-size:14px}
+.links a{color:var(--ink-2)}
+.links a:hover,.links a[aria-current]{color:var(--ink-1);text-decoration:none}
+.links a[aria-current]{font-weight:650}
+@media (max-width:860px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:999px;font:600 15px/1 var(--font-sans);border:0;cursor:pointer;transition:opacity .2s,background-color .2s}
+.btn:hover{text-decoration:none}
+.btn.pri{background:var(--btn);color:var(--on-btn)}
+.btn.pri:hover{opacity:.86}
+.btn.sec{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.btn.sec:hover{background:var(--surface)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:14px}
+.btn.big{min-height:48px;padding:0 24px;font-size:16px}
+.head{padding:clamp(48px,7vw,88px) 0 12px}
+.eyebrow{display:inline-block;font-size:14px;font-weight:650;color:var(--brand);margin-bottom:14px}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.04;margin:0;max-width:16em}
+.lead{font-size:clamp(17px,1.7vw,19px);color:var(--ink-2);max-width:42em;margin:18px 0 0}
+.meta{font-size:14px;color:var(--ink-3);margin-top:14px}
+section{padding:clamp(48px,6vw,72px) 0;border-top:1px solid var(--border);scroll-margin-top:60px}
+h2{font-size:clamp(26px,3.2vw,36px);line-height:1.12;margin:0 0 14px;max-width:22em}
+.grid3{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--surface);border-radius:18px;padding:26px;box-shadow:var(--sh-1)}
+.card h3,.card h4{margin:0 0 8px;font-size:16.5px;font-weight:650;font-family:var(--font-sans);letter-spacing:-.01em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+p a,li a,td a,dd a,.lead a,label a,details a{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.card p{margin:0;color:var(--ink-2);font-size:15px}
+.card .k{font-size:13px;font-weight:650;color:var(--brand);margin-bottom:12px}
+.plans{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:640px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:18px;padding:28px 26px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.plan .n{font-size:16px;font-weight:650}
+.plan .p{font:600 46px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan .p small{font:500 15px/1 var(--font-sans);color:var(--ink-2);letter-spacing:0}
+.plan .iva{font-size:14px;color:var(--ink-3)}
+.plan ul{list-style:none;padding:0;margin:8px 0 16px;display:flex;flex-direction:column;gap:9px;font-size:15px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--success);margin-right:8px;font-weight:700}
+.plan .btn{margin-top:auto}
+.fine{font-size:14px;color:var(--ink-3);margin-top:18px}
+footer{padding:36px 0 56px;color:var(--ink-3);font-size:13.5px;border-top:1px solid var(--border)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+footer a{color:var(--ink-2)}
+/* Documento legal */
+.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:80px}
+@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,740px);justify-content:start;gap:72px}}
+.toc{font-size:14px}
+.toc b{display:block;font-size:13px;font-weight:650;color:var(--ink-3);margin-bottom:10px}
+.toc ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.toc a,.toc li a{color:var(--ink-2);text-decoration:none}
+.toc li a:hover{color:var(--ink-1);text-decoration:underline}
+@media (min-width:1000px){.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+@media (max-width:999px){.toc{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1)}}
+.prose{min-width:0}
+.prose h2{font-size:clamp(22px,2.4vw,26px);margin:48px 0 12px;scroll-margin-top:80px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:17px;margin:26px 0 6px}
+.prose p,.prose li{color:var(--ink-1);overflow-wrap:anywhere}
+.prose p{margin:0 0 12px}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:0 0 6px}
+.prose .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:6px}
+.box{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1);margin:0 0 18px}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.box.note{background:var(--brand-tint);box-shadow:none}
+.ph{background:var(--warning-bg);color:var(--warning);border-radius:4px;padding:0 3px;font-weight:650}
+.tbl{width:100%;overflow-x:auto;margin:0 0 18px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--border)}
+thead th{font-size:13px;color:var(--ink-3);font-weight:650;background:var(--surface)}
+tbody th{font-weight:600}
+table.cmp{table-layout:fixed;min-width:620px}
+table.cmp td,table.cmp th{text-align:center}
+table.cmp thead th:first-child{width:30%}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left}
+table.cmp .hi{background:var(--brand-tint)}
+dl.id{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
+dl.id dt{color:var(--ink-3)}
+dl.id dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){dl.id{grid-template-columns:1fr;gap:2px}dl.id dd{margin-bottom:8px}}
+/* Pasos y formulario */
+.steps{counter-reset:s;display:grid;grid-template-columns:1fr;gap:14px;list-style:none;padding:0;margin:0}
+@media (min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.steps li{counter-increment:s}
+.steps li .k::before{content:"Paso " counter(s)}
+.form{display:grid;grid-template-columns:1fr;gap:16px;max-width:760px}
+@media (min-width:700px){.form{grid-template-columns:1fr 1fr}.form .full{grid-column:1/-1}}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.form label span.opt{font-weight:400;color:var(--ink-3)}
+.form input,.form select,.form textarea{font:15px/1.4 var(--font-sans);color:var(--ink-1);background:var(--surface);border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.form textarea{min-height:96px;resize:vertical}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.form .check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}
+.form .check input{width:18px;min-height:18px;height:18px;margin:3px 0 0;flex:none}
+.form .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-size:14px;color:var(--ink-2)}
+.msg.err{color:var(--danger)}
+.oferta{display:flex;gap:18px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:26px 28px;border-radius:18px;background:var(--brand);color:var(--on-brand)}
+.oferta h3{margin:4px 0 6px;font:600 24px/1.2 var(--font-display)}.oferta p{margin:0;opacity:.9;max-width:640px}.oferta .k{font-size:13px;font-weight:650;opacity:.85}
+.oferta .btn.pri{background:var(--on-brand);color:var(--brand)}
+.pagoinfo{font-size:14px;color:var(--ink-2);background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-1)}
+.sinmail{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--warning-bg);color:var(--warning);font-size:14.5px}
+details.faq{border-bottom:1px solid var(--border);padding:16px 0}
+details.faq summary{cursor:pointer;font-weight:600;font-size:16.5px}
+details.faq p{color:var(--ink-2);margin:10px 0 0}
+@media print{.nav,.toc,footer nav,.skip{display:none}.doc{display:block;padding:0}body{font-size:11pt;background:#fff;color:#000}section{border:0}}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="/"><img class="logo" src="icons/hereda-marca.svg" alt="" width="26" height="26">Hereda+</a>
+  <nav class="links" aria-label="Información legal"><a href="condiciones.html" aria-current="page">Condiciones</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Planes y contratación</a></nav>
+  <a class="btn pri sm" href="contratar.html">Contratar</a>
+</div></header>
+<main id="contenido">
+<div class="head"><div class="wrap">
+  <span class="eyebrow">Documento contractual</span>
+  <h1>Condiciones generales de licencia y uso</h1>
+  <p class="lead">Regulan la licencia del software Hereda+ para despachos y profesionales de la abogacía. Solo se contrata entre profesionales.</p>
+  <p class="meta">Versión 1.1 (para Hereda+ 1.4) · En vigor desde el 4 de octubre de 2026</p>
+</div></div>
+
+<div class="wrap doc">
+<nav class="toc" aria-label="Índice">
+  <b>Índice</b>
+  <ol>
+    <li><a href="#c1">1. Proveedor</a></li>
+    <li><a href="#c2">2. Objeto y ámbito</a></li>
+    <li><a href="#c3">3. Definiciones</a></li>
+    <li><a href="#c4">4. Contratación</a></li>
+    <li><a href="#c5">5. Periodo de prueba</a></li>
+    <li><a href="#c6">6. Licencia</a></li>
+    <li><a href="#c7">7. Naturaleza del software</a></li>
+    <li><a href="#c8">8. Datos del Cliente</a></li>
+    <li><a href="#c9">9. Funciones en la nube</a></li>
+    <li><a href="#c10">10. Precio y pago</a></li>
+    <li><a href="#c11">11. Duración y baja</a></li>
+    <li><a href="#c12">12. Soporte y actualizaciones</a></li>
+    <li><a href="#c13">13. Obligaciones del Cliente</a></li>
+    <li><a href="#c14">14. Propiedad intelectual</a></li>
+    <li><a href="#c15">15. Garantía</a></li>
+    <li><a href="#c16">16. Responsabilidad</a></li>
+    <li><a href="#c17">17. Confidencialidad</a></li>
+    <li><a href="#c18">18. Protección de datos</a></li>
+    <li><a href="#c19">19. Suspensión y resolución</a></li>
+    <li><a href="#c20">20. Modificaciones</a></li>
+    <li><a href="#c21">21. Otras cláusulas</a></li>
+    <li><a href="#c22">22. Ley y tribunales</a></li>
+  </ol>
+</nav>
+
+<article class="prose">
+<div class="box note">
+  <p><b>En resumen.</b> Hereda+ es una herramienta de cálculo y preparación de documentos para abogados. Los datos de los expedientes, incluidos los documentos que el programa lee, se guardan y se procesan solo en los equipos del despacho: nosotros no los recibimos. No usa inteligencia artificial. Lo que el programa lee o calcula es una propuesta que el abogado revisa, decide y firma. Prueba gratuita de 30 días. Precio mensual pagado por trimestres o semestres, sin permanencia, o pago anual. Si no se renueva, el software queda en modo de solo lectura y los datos nunca se bloquean. Este resumen no sustituye al texto de las condiciones.</p>
+</div>
+<div class="box">
+  <p><b>Cambios respecto a la versión 1.0.</b> Se describen el lector de documentos (cláusulas 3, 7.6 y 8.1), los avisos de plazos y acciones (7.7), el registro de cambios y los perfiles de usuario (3 y 8.7), las copias automáticas (8.4) y los componentes de código abierto (14.4). No cambian el precio, la duración, la responsabilidad ni el tratamiento de datos por el Proveedor.</p>
+</div>
+
+<h2 id="c1">1. Proveedor</h2>
+<dl class="id box">
+  <dt>Titular</dt><dd><span class="ph">[RAZÓN SOCIAL]</span></dd>
+  <dt>NIF</dt><dd><span class="ph">[NIF]</span></dd>
+  <dt>Domicilio</dt><dd><span class="ph">[DOMICILIO]</span></dd>
+  <dt>Correo electrónico</dt><dd><span class="ph">[EMAIL DE CONTACTO]</span></dd>
+</dl>
+<p>En adelante, el «Proveedor». «Hereda+» es el nombre comercial del software.</p>
+
+<h2 id="c2">2. Objeto y ámbito</h2>
+<p><span class="n">2.1</span>Estas condiciones generales (las «Condiciones») regulan la licencia de uso del software Hereda+ y los servicios de soporte y actualización asociados.</p>
+<p><span class="n">2.2</span>Hereda+ se ofrece <b>exclusivamente a profesionales</b>: despachos de abogados, sociedades profesionales y profesionales de la abogacía que lo usan en su actividad profesional. Quien contrata declara que actúa en ese ámbito. No se contrata con consumidores. Por ello no se aplica la normativa de protección de consumidores y usuarios, incluido el derecho de desistimiento del Real Decreto Legislativo 1/2007.</p>
+<p><span class="n">2.3</span>Forman el contrato, por este orden de prevalencia: (a) las condiciones particulares o la propuesta aceptada por el Cliente, si las hay; (b) estas Condiciones; (c) el Anexo I de encargo del tratamiento, solo cuando se activen funciones en la nube (cláusula 9); y (d) la descripción de planes publicada en la página de contratación en la fecha de la solicitud.</p>
+<p><span class="n">2.4</span>El contrato se celebra en español.</p>
+
+<h2 id="c3">3. Definiciones</h2>
+<ul>
+  <li><b>Cliente</b>: el despacho, sociedad o profesional que contrata la licencia.</li>
+  <li><b>Software</b>: la aplicación Hereda+ en cualquiera de sus formas de uso: la versión web publicada por el Proveedor y el archivo HTML que se abre en el navegador sin conexión. Incluye el lector de documentos, el cuestionario para familias, la calculadora para la web del Cliente y la documentación de uso.</li>
+  <li><b>Lector de documentos</b>: la función del Software que reconoce el texto de los documentos que el Cliente carga (PDF, Word, texto e imágenes) y propone datos para el expediente. Funciona en el navegador del dispositivo del Cliente.</li>
+  <li><b>Registro de cambios</b>: la relación, guardada en el dispositivo del Cliente, de los cambios hechos en datos relevantes del expediente, con el Usuario autorizado que los hizo, la fecha, el valor anterior y el nuevo.</li>
+  <li><b>Plan</b>: la modalidad contratada (Individual, Despacho, Despacho+ o Fundador) con el número de Usuarios autorizados que le corresponde.</li>
+  <li><b>Código de licencia</b>: la clave que el Proveedor entrega al Cliente para activar el Software. Es única por Cliente.</li>
+  <li><b>Usuario autorizado</b>: la persona física que trabaja para el Cliente (abogados, personal del despacho o colaboradores) y a la que el Cliente permite usar el Software dentro del límite de su Plan.</li>
+  <li><b>Datos del Cliente</b>: toda la información que el Cliente o sus Usuarios autorizados introducen, generan o guardan con el Software (expedientes, documentos, cálculos, escritos, datos de clientes y familias).</li>
+  <li><b>Modo local</b>: el funcionamiento actual del Software, en el que los Datos del Cliente se guardan solo en el almacenamiento del navegador del dispositivo del Cliente.</li>
+  <li><b>Funciones en la nube</b>: funciones futuras que guarden o sincronicen Datos del Cliente en servidores (cláusula 9).</li>
+</ul>
+
+<h2 id="c4">4. Contratación</h2>
+<p><span class="n">4.1</span>El Cliente envía una solicitud con sus datos de facturación y el Plan elegido desde la página de contratación o por correo electrónico. La solicitud no obliga a ninguna de las partes.</p>
+<p><span class="n">4.2</span>El Proveedor responde con la confirmación del Plan, el precio, estas Condiciones y la factura o el medio de pago. El contrato queda celebrado cuando el Proveedor envía al Cliente el Código de licencia junto con la confirmación de la contratación. Esa confirmación se envía por correo electrónico en las 24 horas siguientes a la aceptación, con copia de estas Condiciones en un formato que el Cliente puede guardar.</p>
+<p><span class="n">4.3</span>El Proveedor conserva una copia del contrato celebrado (confirmación y versión de las Condiciones aplicables) y la facilita al Cliente si la pide.</p>
+<p><span class="n">4.4</span>El Cliente puede detectar y corregir errores en los datos de su solicitud antes de aceptar la propuesta, respondiendo al correo del Proveedor.</p>
+<p><span class="n">4.5</span>El Proveedor puede rechazar una solicitud cuando no proceda de un profesional o cuando existan indicios de uso contrario a estas Condiciones.</p>
+
+<h2 id="c5">5. Periodo de prueba</h2>
+<p><span class="n">5.1</span>El Cliente puede probar el Software gratis durante <b>30 días naturales</b>, sin facilitar datos de pago y sin compromiso de contratación.</p>
+<p><span class="n">5.2</span>Al terminar la prueba sin contratar, el Software pasa a modo de solo lectura (cláusula 11.4). La prueba no se convierte en una licencia de pago de forma automática.</p>
+<p><span class="n">5.3</span>Durante la prueba el Software se facilita en el estado en que se encuentra. Se recomienda probarlo con casos anonimizados o ya cerrados. Las cláusulas 7, 8, 13, 14 y 17 se aplican también durante la prueba. El Proveedor solo responde durante la prueba en caso de dolo o culpa grave.</p>
+
+<h2 id="c6">6. Licencia</h2>
+<p><span class="n">6.1</span>Durante la vigencia del contrato, el Proveedor concede al Cliente una licencia de uso del Software <b>no exclusiva, intransferible y no sublicenciable</b>, limitada al número de Usuarios autorizados del Plan y a la actividad profesional propia del Cliente, incluida la prestación de servicios a sus propios clientes.</p>
+<p><span class="n">6.2</span>Cada Usuario autorizado puede usar el Software en los dispositivos que utilice para su trabajo. El Código de licencia es confidencial y solo puede comunicarse a los Usuarios autorizados.</p>
+<p><span class="n">6.3</span>Salvo en lo que permita de forma imperativa el artículo 100 del texto refundido de la Ley de Propiedad Intelectual, el Cliente no puede: (a) copiar, modificar, descompilar o hacer ingeniería inversa del Software; (b) venderlo, alquilarlo, cederlo o ponerlo a disposición de terceros ajenos al Cliente; (c) eludir el Código de licencia o sus límites; (d) usarlo para crear un producto competidor; (e) retirar los avisos de titularidad.</p>
+<p><span class="n">6.4</span>Si el Cliente necesita más Usuarios autorizados que los de su Plan, puede pasar a un Plan superior en cualquier momento (cláusula 10.6).</p>
+
+<h2 id="c7">7. Naturaleza del software: herramienta de apoyo al abogado</h2>
+<p><span class="n">7.1</span>Hereda+ <b>lee, calcula y prepara</b>: propuestas de datos leídos de los documentos que carga el Cliente, estimaciones del Impuesto sobre Sucesiones y Donaciones y del Impuesto sobre el Incremento de Valor de los Terrenos de Naturaleza Urbana, simulaciones de estrategia fiscal, calendario de trámites y plazos, y borradores de escritos. <b>No presta asesoramiento jurídico ni fiscal</b>, no presenta declaraciones ni autoliquidaciones y no sustituye el criterio profesional.</p>
+<p><span class="n">7.2</span>El asesoramiento, la revisión de cada cálculo y documento, la decisión sobre su uso y la firma corresponden al profesional de la abogacía, conforme a la Ley Orgánica 5/2024, de 11 de noviembre, del Derecho de Defensa, y a las normas deontológicas de la profesión. El Cliente debe comprobar los resultados con la normativa vigente en la fecha de devengo de cada impuesto y con los datos reales del caso antes de usarlos.</p>
+<p><span class="n">7.3</span>Los cálculos se hacen con un motor de reglas que aplica la normativa estatal, autonómica y municipal cargada en el Software, y que se comprueba con pruebas automáticas. <b>Ni el cálculo ni el lector de documentos usan inteligencia artificial</b>: aplican reglas escritas, de forma que los mismos datos dan siempre el mismo resultado. Las funciones de inteligencia artificial que puedan ofrecerse fuera del Software, en plataformas de terceros, no forman parte de esta licencia.</p>
+<p><span class="n">7.4</span>El Proveedor actualiza la normativa con diligencia razonable, pero no garantiza que recoja cada cambio normativo desde su publicación ni cada criterio administrativo o jurisprudencial. El Software indica, en lo posible, la norma y la fecha en que se basa cada cálculo.</p>
+<p><span class="n">7.5</span>Los enlaces a sedes electrónicas y organismos oficiales se ofrecen para facilitar el trabajo. El Proveedor no controla esos sitios.</p>
+<p><span class="n">7.6</span><b>Lector de documentos.</b> Los datos que el lector extrae son <b>propuestas</b>: solo entran en el expediente los que el Usuario autorizado marca, quedan señalados como «leído de documento» y el documento queda «por revisar» hasta que el Usuario lo valida. El lector puede no reconocer, o reconocer de forma incompleta o errónea, datos de documentos con formatos no previstos, escaneos o fotografías de baja calidad, o textos manuscritos. El Cliente debe cotejar cada dato con el documento original antes de usarlo.</p>
+<p><span class="n">7.7</span><b>Plazos, avisos y acciones.</b> Las funciones que ordenan el trabajo (Mi día, «Qué hacer» en cada expediente, el semáforo de plazos y el panel del despacho) se calculan con reglas a partir de los datos introducidos en el Software. Son una ayuda: no sustituyen el control de plazos del Cliente, y que el Software no muestre un aviso no significa que no exista un plazo o una obligación.</p>
+
+<h2 id="c8">8. Datos del Cliente en el modo local</h2>
+<p><span class="n">8.1</span>En el modo local, los Datos del Cliente se guardan <b>solo en el navegador del dispositivo del Cliente</b> (almacenamiento local e IndexedDB). El Software no los envía al Proveedor ni a terceros. El Proveedor no tiene acceso a ellos. Lo mismo se aplica a los documentos que se cargan para su lectura: se leen en el propio dispositivo. Para leer escaneos e imágenes, el Software descarga del sitio del Proveedor, una sola vez, el componente de reconocimiento de texto; esa descarga no envía ningún documento ni dato del expediente.</p>
+<p><span class="n">8.2</span>Por ello, en el modo local el Proveedor no trata Datos del Cliente por cuenta de este y no actúa como encargado del tratamiento. El Cliente es el responsable del tratamiento de los datos personales de sus clientes y de terceros que introduzca en el Software.</p>
+<p><span class="n">8.3</span>El cuestionario para familias funciona en el navegador de quien lo rellena y genera un archivo que la familia envía directamente al Cliente. El Proveedor no recibe esos datos. El Cliente decide si usa el cuestionario y debe informar a las familias del tratamiento que hará de sus datos.</p>
+<p><span class="n">8.4</span>Como los datos están solo en sus dispositivos, el Cliente es responsable de: (a) hacer <b>copias de seguridad</b> periódicas con la función de exportación del Software o activar las copias automáticas en una carpeta de su elección, cuya custodia, ubicación y cifrado decide el Cliente; (b) proteger el acceso a sus dispositivos y cuentas; (c) no borrar los datos de navegación del sitio sin exportar antes. Borrar los datos del navegador, reinstalarlo, usar el modo privado o cambiar de dispositivo puede hacer que los datos no estén disponibles. El Proveedor no puede recuperarlos.</p>
+<p><span class="n">8.5</span>En el modo local, cada dispositivo guarda sus propios datos. Para compartir un expediente entre Usuarios autorizados se usan las funciones de exportación e importación de archivos.</p>
+<p><span class="n">8.6</span>Si, para resolver una incidencia de soporte, el Cliente decide enviar al Proveedor un archivo o una captura, debe anonimizarlo antes. Si aun así contiene datos personales, el Proveedor los usará solo para resolver la incidencia, con el deber de confidencialidad de la cláusula 17, y los borrará al cerrarla.</p>
+<p><span class="n">8.7</span>El Software permite asignar a cada Usuario autorizado un perfil (socio, abogado o administrativo) y guarda en el dispositivo el registro de cambios y los tiempos que se anotan. Esos datos se refieren a los Usuarios autorizados y los trata el Cliente como responsable: le corresponde informar a sus Usuarios autorizados de su existencia y finalidad y usarlos conforme a la normativa de protección de datos y laboral aplicable. El Proveedor no los recibe.</p>
+
+<h2 id="c9">9. Funciones en la nube (futuras)</h2>
+<p><span class="n">9.1</span>El Proveedor puede ofrecer en el futuro funciones en la nube, como cuentas de usuario, sincronización o copias de seguridad en servidores situados en la Unión Europea.</p>
+<p><span class="n">9.2</span>Esas funciones solo se activan si el Cliente lo solicita o acepta de forma expresa. Antes de activarlas, las partes firman el <b>Anexo I, contrato de encargo del tratamiento</b> conforme al artículo 28 del Reglamento (UE) 2016/679 (RGPD), con la lista de subencargados y las medidas de seguridad. Mientras no se activen, el Anexo I no se aplica.</p>
+<p><span class="n">9.3</span>Las condiciones particulares de las funciones en la nube (disponibilidad, capacidad y precio, si lo hubiera) se comunicarán antes de su activación.</p>
+
+<h2 id="c10">10. Precio, facturación y pago</h2>
+<p><span class="n">10.1</span>El precio es el del Plan publicado en la página de contratación en la fecha de la solicitud, o el que figure en la propuesta aceptada. <b>Los precios no incluyen el IVA</b>, que se añade al tipo vigente (21 % en la fecha de estas Condiciones).</p>
+<p><span class="n">10.2</span>Se factura por adelantado, al inicio de cada periodo de pago: trimestral, semestral o anual (este último, con el precio de 10 meses). Las facturas se emiten en formato electrónico y se envían a la dirección de correo indicada por el Cliente.</p>
+<p><span class="n">10.3</span>Medio de pago: transferencia bancaria a la cuenta que el Proveedor indica en la confirmación de la contratación y en cada factura. El Código de licencia se envía al recibir la transferencia (normalmente el mismo día hábil). En las renovaciones, el plazo de pago de la factura es de 15 días desde su emisión, dentro de los límites de la Ley 3/2004, de 29 de diciembre, de lucha contra la morosidad.</p>
+<p><span class="n">10.4</span>Si una factura no se paga en plazo, el Proveedor avisará al Cliente por correo electrónico. Si sigue impagada 15 días después del aviso, el Proveedor puede suspender la licencia, que pasa a modo de solo lectura hasta el pago. Se aplican los intereses de demora de la Ley 3/2004.</p>
+<p><span class="n">10.5</span><b>Cambios de precio.</b> El Proveedor puede modificar los precios con un preaviso mínimo de 60 días. El nuevo precio se aplica desde la siguiente renovación. El Cliente que no lo acepte puede dar de baja la licencia antes de esa renovación. El precio del Plan Fundador se mantiene en las condiciones indicadas en la página de contratación.</p>
+<p><span class="n">10.6</span><b>Cambios de Plan.</b> Subir de Plan tiene efecto inmediato; en el primer periodo se factura la diferencia proporcional a los días que quedan. Bajar de Plan tiene efecto en la siguiente renovación.</p>
+
+<h2 id="c11">11. Duración, renovación y baja</h2>
+<p><span class="n">11.1</span><b>Precio mensual</b>: se paga por adelantado por trimestres o semestres y se renueva por el mismo periodo. No tiene permanencia más allá del periodo pagado: el Cliente puede comunicar la baja en cualquier momento por correo electrónico y tiene efecto al final del periodo ya pagado.</p>
+<p><span class="n">11.2</span><b>Plan anual</b>: se renueva por periodos anuales, salvo que el Cliente comunique la baja con al menos 15 días de antelación a la renovación. El Proveedor recordará la renovación con 30 días de antelación.</p>
+<p><span class="n">11.3</span>No se reembolsan periodos ya iniciados, salvo cuando la baja se deba a un incumplimiento del Proveedor o a una modificación de estas Condiciones que el Cliente no acepte (cláusula 20), en cuyo caso se devuelve la parte proporcional del periodo no disfrutado.</p>
+<p><span class="n">11.4</span><b>Al terminar la licencia</b> por cualquier causa, el Software pasa a <b>modo de solo lectura</b>: el Cliente puede seguir consultando, imprimiendo y exportando sus expedientes, pero no crear ni modificar. <b>Los Datos del Cliente nunca se bloquean ni se borran</b> por el fin de la licencia. Siguen en sus dispositivos y en los formatos de exportación del Software.</p>
+<p><span class="n">11.5</span>Cada Código de licencia es válido hasta el último día del periodo pagado más 7 días naturales de cortesía, para que la transferencia de la renovación llegue sin interrumpir el trabajo. La aplicación avisa del vencimiento con antelación.</p>
+
+<h2 id="c12">12. Soporte y actualizaciones</h2>
+<p><span class="n">12.1</span>La licencia incluye, sin coste adicional, las actualizaciones del Software y de la normativa cargada, y soporte por correo electrónico en días hábiles (de lunes a viernes, salvo festivos nacionales).</p>
+<p><span class="n">12.2</span>Tiempos de primera respuesta objetivo:</p>
+<div class="tbl" tabindex="0" role="region" aria-label="Tiempos de primera respuesta del soporte"><table>
+  <thead><tr><th>Incidencia</th><th>Todos los planes</th></tr></thead>
+  <tbody>
+    <tr><th>Crítica: error de cálculo que puede afectar a una liquidación o el Software no abre</th><td>1 día hábil</td></tr>
+    <tr><th>Normal: fallo de una función con alternativa</th><td>1 día hábil</td></tr>
+    <tr><th>Consulta de uso o sugerencia</th><td>1 día hábil</td></tr>
+  </tbody>
+</table></div>
+<p>Las incidencias del plan Despacho+ se atienden con prioridad dentro de ese plazo.</p>
+<p><span class="n">12.3</span>Ante un error de cálculo confirmado, el Proveedor publicará la corrección o una forma de evitarlo lo antes posible, y avisará a los Clientes afectados.</p>
+<p><span class="n">12.4</span>Los tiempos son objetivos de servicio, no plazos cuyo incumplimiento genere indemnización. Si el Proveedor incumple de forma reiterada los tiempos de incidencias críticas, el Cliente puede resolver el contrato con la devolución prevista en la cláusula 11.3.</p>
+<p><span class="n">12.5</span>En el modo local, el Software funciona también sin conexión con el archivo HTML. El Proveedor no garantiza una disponibilidad concreta de la versión web.</p>
+<p><span class="n">12.6</span>El soporte no incluye el asesoramiento sobre casos concretos ni la revisión de expedientes del Cliente.</p>
+
+<h2 id="c13">13. Obligaciones del Cliente</h2>
+<ul>
+  <li>Usar el Software conforme a la ley, a estas Condiciones y a su deontología profesional.</li>
+  <li>Revisar los cálculos y documentos antes de usarlos (cláusula 7).</li>
+  <li>Guardar la confidencialidad del Código de licencia y respetar el número de Usuarios autorizados.</li>
+  <li>Hacer copias de seguridad y proteger sus dispositivos (cláusula 8.4).</li>
+  <li>Cumplir sus obligaciones como responsable del tratamiento de los datos que introduce en el Software.</li>
+  <li>Usar navegadores actualizados de los indicados en la documentación.</li>
+  <li>Pagar el precio en plazo.</li>
+</ul>
+
+<h2 id="c14">14. Propiedad intelectual</h2>
+<p><span class="n">14.1</span>El Software, su código, su diseño, sus bases de datos de normativa y trámites, su documentación y la marca y el nombre comercial Hereda+ son del Proveedor o de sus licenciantes. Esta licencia no transmite ningún derecho sobre ellos, salvo el uso previsto en la cláusula 6.</p>
+<p><span class="n">14.2</span>Los Datos del Cliente y los documentos que el Cliente genera con el Software son del Cliente, que puede usarlos, modificarlos y conservarlos sin limitación, también después de terminar la licencia.</p>
+<p><span class="n">14.3</span>Si el Cliente envía sugerencias de mejora, el Proveedor puede usarlas libremente para mejorar el Software, sin obligación de pago y sin usar Datos del Cliente.</p>
+<p><span class="n">14.4</span>El lector de documentos incluye componentes de código abierto de terceros (pdf.js y Tesseract.js, con licencia Apache 2.0), que se rigen por sus propias licencias. Sus textos se publican junto al Software, en la carpeta <a href="/lib/LICENSE-pdfjs.txt">/lib</a> del sitio.</p>
+
+<h2 id="c15">15. Garantía</h2>
+<p><span class="n">15.1</span>El Proveedor garantiza que el Software funciona sustancialmente como se describe en su documentación. Si no es así, la obligación del Proveedor es corregir el error en un plazo razonable. Si no puede corregirlo, el Cliente puede resolver el contrato con la devolución prevista en la cláusula 11.3.</p>
+<p><span class="n">15.2</span>La garantía no cubre fallos causados por modificaciones del Cliente, usos contrarios a estas Condiciones, navegadores o dispositivos no compatibles, ni la pérdida de datos por borrado del almacenamiento del navegador.</p>
+<p><span class="n">15.3</span>Salvo lo previsto en esta cláusula, el Proveedor no garantiza que el Software esté libre de errores ni que se adapte a necesidades concretas del Cliente no descritas en la documentación.</p>
+
+<h2 id="c16">16. Responsabilidad</h2>
+<p><span class="n">16.1</span>La responsabilidad total del Proveedor frente al Cliente por cualquier causa derivada del contrato se limita al <b>importe pagado por el Cliente en los doce meses anteriores</b> al hecho que la origine.</p>
+<p><span class="n">16.2</span>El Proveedor no responde de: (a) daños indirectos, lucro cesante, pérdida de clientela o daño reputacional; (b) sanciones, recargos, intereses o diferencias de cuota derivados de liquidaciones, declaraciones o escritos que el Cliente haya presentado o firmado, ya que su revisión corresponde al profesional (cláusula 7); (c) la pérdida de Datos del Cliente guardados en sus dispositivos (cláusula 8.4); (d) los actos de terceros, incluidos los sitios oficiales enlazados.</p>
+<p><span class="n">16.3</span>Estas limitaciones no se aplican en caso de dolo o culpa grave del Proveedor, ni en los demás supuestos en que la ley no permita limitar la responsabilidad.</p>
+<p><span class="n">16.4</span>El Cliente responde frente al Proveedor de los daños derivados del uso del Software contrario a estas Condiciones.</p>
+
+<h2 id="c17">17. Confidencialidad</h2>
+<p><span class="n">17.1</span>Cada parte guarda confidencialidad sobre la información no pública de la otra que conozca por el contrato, durante su vigencia y cinco años después. El Proveedor guarda además secreto sobre cualquier dato de los clientes del Cliente al que pudiera tener acceso, sin límite de tiempo, en coherencia con el secreto profesional que obliga al Cliente.</p>
+<p><span class="n">17.2</span>El Proveedor no pedirá nunca al Cliente datos reales de sus expedientes para prestar soporte.</p>
+
+<h2 id="c18">18. Protección de datos</h2>
+<p><span class="n">18.1</span>El Proveedor trata como responsable los datos de contacto y facturación del Cliente y de sus Usuarios autorizados para gestionar la licencia, según la <a href="privacidad.html">política de privacidad</a>.</p>
+<p><span class="n">18.2</span>En el modo local, el Proveedor no trata Datos del Cliente (cláusula 8). Si se activan funciones en la nube, se aplica el Anexo I (cláusula 9).</p>
+
+<h2 id="c19">19. Suspensión y resolución</h2>
+<p><span class="n">19.1</span>Cualquiera de las partes puede resolver el contrato si la otra incumple una obligación esencial y no lo corrige en 15 días desde que se le requiera por escrito.</p>
+<p><span class="n">19.2</span>El Proveedor puede suspender la licencia sin esperar ese plazo si detecta un uso que ponga en riesgo la seguridad del Software o que infrinja sus derechos de propiedad intelectual, y lo comunicará al Cliente.</p>
+<p><span class="n">19.3</span>Si el Proveedor decide dejar de ofrecer el Software, lo comunicará con al menos 90 días de antelación, devolverá la parte proporcional de los periodos pagados no disfrutados y mantendrá la exportación de datos. En el modo local, el archivo HTML del Software seguirá permitiendo consultar los datos.</p>
+<p><span class="n">19.4</span>Al terminar el contrato se aplica la cláusula 11.4. Las cláusulas 14, 16, 17 y 22 siguen vigentes.</p>
+
+<h2 id="c20">20. Modificación de las Condiciones</h2>
+<p>El Proveedor puede modificar estas Condiciones por motivos legales, técnicos o comerciales. Comunicará los cambios que afecten a los derechos del Cliente con al menos 30 días de antelación por correo electrónico. Si el Cliente no los acepta, puede resolver el contrato antes de su entrada en vigor con la devolución de la cláusula 11.3. Los cambios no se aplican a periodos ya pagados si perjudican al Cliente.</p>
+
+<h2 id="c21">21. Otras cláusulas</h2>
+<p><span class="n">21.1</span><b>Cesión.</b> El Cliente no puede ceder el contrato sin consentimiento del Proveedor. El Proveedor puede cederlo a una sociedad que él mismo constituya o controle, o a quien adquiera el Software, comunicándolo al Cliente con 30 días de antelación y sin empeorar sus condiciones. El Cliente puede resolver el contrato si no está de acuerdo con la cesión.</p>
+<p><span class="n">21.2</span><b>Fuerza mayor.</b> Ninguna parte responde del incumplimiento causado por hechos fuera de su control razonable, mientras duren.</p>
+<p><span class="n">21.3</span><b>Notificaciones.</b> Se hacen por correo electrónico a las direcciones indicadas en la contratación. Al Proveedor, a <span class="ph">[EMAIL DE CONTACTO]</span>.</p>
+<p><span class="n">21.4</span><b>Referencias.</b> El Proveedor solo mencionará al Cliente como usuario de Hereda+ con su autorización previa por escrito.</p>
+<p><span class="n">21.5</span><b>Nulidad parcial.</b> Si una cláusula se declara nula, las demás siguen en vigor.</p>
+
+<h2 id="c22">22. Ley aplicable y tribunales</h2>
+<p><span class="n">22.1</span>El contrato se rige por la ley española.</p>
+<p><span class="n">22.2</span>Antes de acudir a los tribunales, las partes intentarán resolver cualquier discrepancia de buena fe durante 30 días desde que una de ellas la comunique por escrito, y podrán acudir a mediación conforme a la Ley 5/2012, de 6 de julio.</p>
+<p><span class="n">22.3</span>Si no hay acuerdo, serán competentes los juzgados y tribunales que correspondan conforme a la Ley de Enjuiciamiento Civil.</p>
+
+<h2 id="anexo">Anexo I. Contrato de encargo del tratamiento</h2>
+<p>Se aplica solo cuando se activen funciones en la nube (cláusula 9). Su texto se entregará y firmará antes de esa activación.</p>
+</article>
+</div>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 Hereda+ · <span class="ph">[RAZÓN SOCIAL]</span> · <span class="ph">[NIF]</span></span>
+  <nav aria-label="Enlaces legales"><a href="condiciones.html">Condiciones de licencia</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Contratar</a></nav>
+</div></footer>
+</body>
+</html>
