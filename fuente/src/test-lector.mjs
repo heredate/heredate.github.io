@@ -371,6 +371,12 @@ CUARTA.- Si alguno de los legitimarios no aceptase el legado de usufructo, se ap
   t("tes fecha letras", campo(d, "testamentoFecha")?.valor === "2015-06-15", campo(d, "testamentoFecha"));
   t("tes notario", campo(d, "testamentoNotario")?.valor === "Fernando Ruiz Castillo", campo(d, "testamentoNotario"));
 }
+// Auditoría ISD 10-10-2026 (M-2): el legatario «cuñado» se lee como cuñado/a (grupo III, STS 18-03-2003), no como persona sin parentesco (grupo IV)
+{
+  const d = L.lecAnalizar(TEST.replace("Lega a su sobrino DON MIGUEL JIMÉNEZ SOLER", "Lega a su cuñado DON MIGUEL JIMÉNEZ SOLER"), "testamento.pdf");
+  const leg = d.personas.find((p) => p.legatario);
+  t("tes legado cuñado → relación cunado", leg?.nombre === "Miguel Jiménez Soler" && leg.relacion === "cunado", leg);
+}
 // Testamento «uno para el otro» con hijos sin apellidos comunes explícitos y premuerto
 const TEST2 = `TESTAMENTO ABIERTO. En Torremolinos, a veintiocho de marzo de dos mil diez. Ante mí, LUISA MARTÍN SANZ, Notaria. COMPARECE: DOÑA MARÍA DOLORES RUIZ CANO, viuda, vecina de Torremolinos. Manifiesta que tiene dos hijos llamados DON PABLO GARCÍA RUIZ y DOÑA ELENA GARCÍA RUIZ, habiendo fallecido con anterioridad su hijo DON JORGE GARCÍA RUIZ, que dejó descendencia. Instituye herederos por partes iguales a sus hijos.`;
 {

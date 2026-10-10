@@ -54,7 +54,10 @@ function lotes(x, R) {
   const cargas = R.isd.masa.deudas + R.isd.masa.gastos;
   const dinero = Math.max(0, divis.reduce((s, b) => s + valorBienX(b), 0) - cargas);
   const masa = indiv.reduce((s, b) => s + valorBienX(b), 0) + dinero;
-  const obj = Object.fromEntries(vivos.map((p) => [p.id, cuota[p.id] * masa]));
+  // Colación (arts. 1035-1047 CC; auditoría civil 10-10-2026): cada lote apunta al haber que resulta de colacionar, no a la cuota bruta
+  const PTc = (() => { try { return particion(x, R); } catch (e) { return null; } })(), conCol = !!(PTc && PTc.COL && PTc.COL.aplica);
+  const habCol = (id) => { const h = PTc.H.find((q) => q.p.id === id); return h ? h.haber / (R.isd.masa.netoReparto || 1) : 0; };
+  const obj = Object.fromEntries(vivos.map((p) => [p.id, (conCol ? habCol(p.id) : cuota[p.id]) * masa]));
   const lleva = Object.fromEntries(vivos.map((p) => [p.id, 0]));
   const asig = {}, plusAsig = {}, notas = [];
   for (const b of indiv) {
@@ -88,7 +91,7 @@ function lotes(x, R) {
 // ── Motor de palancas ─────────────────────────────────────────
 const _cacheE = new Map();
 function estrategia(x) {
-  const key = JSON.stringify([x.fecha, x.ccaa, x.ccaaBienes, x.civil, x.testamento, x.personas, x.bienes, x.deudas, x.gastos, x.ajuar, x.enPlazo, x.aplicarEmpresa, x.criterioVivienda, x.viviendaA, x.noAplicarVivienda, x.ventaVivienda, x.tramites?.prorroga, x.tramites?.particion, x.causanteEmpadronado]);
+  const key = JSON.stringify([x.fecha, x.ccaa, x.ccaaBienes, x.civil, x.testamento, x.personas, x.bienes, x.deudas, x.gastos, x.ajuar, x.enPlazo, x.aplicarEmpresa, x.criterioVivienda, x.viviendaA, x.noAplicarVivienda, x.ventaVivienda, x.tramites?.prorroga, x.tramites?.particion, x.causanteEmpadronado, x.acrecer, x.professioIuris, x.situ?.nacionalidadExtranjera, x.fechaParticion]);
   if (_cacheE.has(key)) return _cacheE.get(key);
   const out = estrategia0(x);
   if (_cacheE.size > 60) _cacheE.clear();
@@ -163,6 +166,7 @@ function estrategia0(x) {
 
   // 4 · Ajuar doméstico
   if ((x.ajuar || "sts") === "3pct") { const c = sim((y) => { y.ajuar = "sts"; }); const ah = r2(B.total - c.total); add({ id: "ajuar", estado: ah >= EP.UMBRAL ? "si" : "info", ahorro: Math.max(0, ah), riesgo: "bajo", titulo: "Ajuar doméstico solo sobre bienes de uso personal", sub: "Criterio del Tribunal Supremo de 2020", cuerpo: `<p>El 3 % no se calcula sobre dinero, valores ni inmuebles, solo sobre los bienes de uso personal y doméstico. La Agencia Tributaria de Andalucía ya lo aplica así.</p>`, norma: "SSTS 342/2020 y 499/2020 · art. 15 Ley 29/1987", aplicar: (y) => { y.ajuar = "sts"; } }); }
+  else if (x.ajuar === "ata") add({ id: "ajuar", estado: "info", titulo: "Ajuar con el criterio de la Agencia Tributaria de Andalucía", sub: "Elegido a mano: el menos prudente", cuerpo: `<p>Solo bienes muebles de uso personal. El Tribunal Supremo (STS 499/2020) y el TEAC (30-05-2025) llevan la base a las viviendas de uso residencial, que es el criterio por defecto: si la Administración lo aplica, la cuota será mayor (auditoría ISD 10-10-2026, M-8).</p>`, norma: "STS 499/2020; TEAC RG 6258/2024" });
   else add({ id: "ajuar", estado: "hecho", titulo: "Ajuar doméstico solo sobre bienes de uso personal", sub: "Ya aplicado en el cálculo", cuerpo: `<p>El expediente ya calcula el ajuar con el criterio del Supremo: 3 % solo de las viviendas de uso residencial no alquiladas ni cedidas, sin dinero ni valores (STS 499/2020; TEAC 30-05-2025).</p>`, norma: "SSTS 342/2020 y 499/2020" });
 
   // 5 · Renuncia pura y simple: nunca se recomienda sola. Se simula con la parte renunciada asignada a quien la recibe por ley

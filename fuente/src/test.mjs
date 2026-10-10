@@ -1,8 +1,8 @@
-// Pruebas del motor v0.4.2 · node test.mjs (datos de Hacienda del IIVTNU 2026 y cota superior en los 8.132 municipios en la sección 18; regresiones de la auditoría independiente de 01-10-2026 en la sección 12; cambios de la mesa jurídica CM-001 a CM-004 en la sección 13;
+// Pruebas del motor v0.4.3 · node test.mjs (auditoría del Impuesto sobre Sucesiones de 10-10-2026 en la sección 27; datos de Hacienda del IIVTNU 2026 y cota superior en los 8.132 municipios en la sección 18; regresiones de la auditoría independiente de 01-10-2026 en la sección 12; cambios de la mesa jurídica CM-001 a CM-004 en la sección 13;
 // renuncia al usufructo universal, art. 22.3 y plazos unificados en la 14; robustez exhaustiva de plusvalía (todas las ordenanzas y los 8.132 municipios) en la 15 y del ISD (22 territorios) en la 16)
 import { tramitesDe, TR_TOTAL } from "./tramites.mjs";
 import { readFileSync } from "node:fs";
-import { repartoIntestado, repartoUsufructoUniversal, calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
+import { repartoIntestado, repartoUsufructoUniversal, repartoPorcentajes, interesesDemora, interesProrrogaISD, sumarHabiles,  calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, formulario650, modelo650, relacion660, documentos650, ibanOculto, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
 
 let ok = 0, ko = 0;
 const eq = (n, got, exp, tol = 0.02) => { const p = Math.abs(got - exp) <= tol; p ? ok++ : ko++; if (!p || process.env.V) console.log(`${p ? "✔" : "✘"} ${n}: ${got} (esperado ${exp})`); };
@@ -482,7 +482,9 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   eq("I-2 · 12-04-2026: prórroga hasta el 14-09-2026 (12-09 es sábado)", PZ("2026-04-12").prorroga_isd.limite === "2026-09-14" ? 1 : 0, 1);
   eq("I-2 · 12-04-2026: prescripción desde el fin del plazo trasladado", PZ("2026-04-12").prescripcion.limite === "2030-10-13" ? 1 : 0, 1);
   eq("I-2 · 06-06-2026: 06-12 domingo → 07-12 (solo festivos nacionales)", PZ("2026-06-06").isd.limite === "2026-12-07" ? 1 : 0, 1);
-  eq("I-2 · últimas voluntades: 15 hábiles descontando el 1 de mayo", PZ("2026-04-12").ultimas_voluntades.desde === "2026-05-04" ? 1 : 0, 1);
+  // Auditoría civil 10-10-2026 (F-3/m4): la prueba fijaba el 15.º día hábil (04-05) como primer día útil; la sede exige que hayan TRANSCURRIDO
+  // 15 días hábiles, así que el certificado se pide desde el siguiente hábil (05-05). La prueba codificaba el error.
+  eq("I-2 · últimas voluntades: desde el día hábil siguiente a 15 hábiles descontando el 1 de mayo", PZ("2026-04-12").ultimas_voluntades.desde === "2026-05-05" ? 1 : 0, 1);
   eq("I-2 · 25-12-2026 → 28-12-2026", aHabil("2026-12-25") === "2026-12-28" ? 1 : 0, 1);
 
   // I-8 · Madrid: aviso sobre el registro de la pareja (Ley 11/2001)
@@ -524,14 +526,17 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   eq("CM-002 · EST cuota tributaria teórica 51.397,81", paso(n1, /^Cuota tributaria teórica/).valor, 51397.81);
   eq("CM-002 · EST tipo medio 18,10 % (en la traza)", paso(n1, /^Cuota íntegra/).tipoMedio, 18.10, 1e-9);
   eq("CM-002 · EST tipo medio expuesto en el heredero", n1.tipoMedio, 18.10, 1e-9);
-  eq("CM-002 · EST cuota 41.094,81 (antes 37.387,51)", n1.aIngresar, 41094.81);
+  // Auditoría ISD 10-10-2026 (m-1): BL × tipo medio EXACTO (51.397,81 / 284.043,13), no redondeado a dos decimales: 227.043,13 × 0,180951… = 41.083,62
+  // (con el 18,10 % redondeado salían 41.094,81, 11,19 € de más; ningún precepto exige redondear el tipo antes de aplicarlo).
+  eq("CM-002 · EST cuota 41.083,62 (tipo exacto; antes 41.094,81 con el tipo redondeado)", n1.aIngresar, 41083.62);
   eq("CM-002 · EST traza: puntos doctrinales PENDIENTES", paso(n1, /^Base liquidable teórica/).estado === "PENDIENTE" && /DGT/.test(paso(n1, /^Base liquidable teórica/).norma) ? 1 : 0, 1);
   eq("CM-002 · EST traza: regla VERIFICADA", paso(n1, /^Cuota íntegra/).estado === "VERIFICADO" && /51\.2/.test(paso(n1, /^Cuota íntegra/).norma) ? 1 : 0, 1);
   const n2r = nu("AND", 1500000), n2 = hh(n2r, "h");
   eq("CM-002 · AND nuda 1.215.000: BL 215.000", n2.baseLiquidable, 215000);
   eq("CM-002 · AND tipo medio 19,92 %", n2.tipoMedio, 19.92, 1e-9);
-  eq("CM-002 · AND cuota 42.828,00", n2.cuotaTributaria, 42828);
-  eq("CM-002 · AND bonificación 99 % → 428,28 (antes 349,20)", n2.aIngresar, 428.28);
+  // m-1: tipo exacto 99.620 / 500.000 = 19,924 % → 215.000 × 0,19924 = 42.836,60 (con el 19,92 % redondeado, 42.828,00)
+  eq("CM-002 · AND cuota 42.836,60 (tipo exacto 19,924 %)", n2.cuotaTributaria, 42836.6);
+  eq("CM-002 · AND bonificación 99 % → 428,37", n2.aIngresar, 428.37);
   eq("CM-002 · aviso (a): extinción del usufructo con el tipo medio guardado", n2r.alertas.some((a) => /26\.c/.test(a) && /19,92/.test(a)) ? 1 : 0, 1);
   eq("CM-002 · el usufructuario no usa tipo medio", hh(n2r, "v").tipoMedio === undefined ? 1 : 0, 1);
   eq("CM-002 · pleno dominio sin nuda: sin tipo medio", hh(m1).tipoMedio === undefined ? 1 : 0, 1);
@@ -568,7 +573,11 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   const a3 = base({ ccaa: "EST", reparto: "intestado", conyugeViviendaCatastral: 120000, herederos: [Hd("w", "conyuge", 70), Hd("h", "hijo", 40)], bienes: bienesA });
   eq("CM-003 · con viudo: 9.000 − 3 % de 120.000 = 5.400,00", a3.masa.ajuar, 5400);
   const aAnd = base({ ccaa: "AND", reparto: "intestado", herederos: [Hd("h", "hijo", 40)], bienes: [...bienesA, { id: "o", tipo: "otro", valor: 10000, titularidad: "privativo" }] });
-  eq("CM-003 · AND por defecto: modo \"ata\" (3 % de bienes de uso personal) y PENDIENTE", aAnd.masa.modoAjuar === "ata" && aAnd.masa.ajuar === 300 && paso(hh(aAnd), /^Ajuar/).estado === "PENDIENTE" ? 1 : 0, 1);
+  // Auditoría ISD 10-10-2026 (M-8): en Andalucía el defecto pasa a ser el criterio de la STS 499/2020 y del TEAC (30-05-2025): viviendas de uso residencial.
+  // El criterio de la ATA queda como opción manual, PENDIENTE y con aviso. bienesA: 300.000 € de vivienda residencial → 9.000 €.
+  eq("CM-003 · AND por defecto: modo residencial (STS 499/2020; TEAC) y VERIFICADO", aAnd.masa.modoAjuar === "residencial" && aAnd.masa.ajuar === 9000 && paso(hh(aAnd), /^Ajuar/).estado === "VERIFICADO" ? 1 : 0, 1);
+  const aAta = base({ ccaa: "AND", ajuar: "ata", reparto: "intestado", herederos: [Hd("h", "hijo", 40)], bienes: [...bienesA, { id: "o", tipo: "otro", valor: 10000, titularidad: "privativo" }] });
+  eq("CM-003 · AND «ata» a mano: 3 % de bienes de uso personal, PENDIENTE y con aviso", aAta.masa.modoAjuar === "ata" && aAta.masa.ajuar === 300 && paso(hh(aAta), /^Ajuar/).estado === "PENDIENTE" && aAta.alertas.some((a) => /menos prudente/.test(a)) ? 1 : 0, 1);
   eq("CM-003 · \"ninguno\": sin ajuar", m1.masa.ajuar, 0);
 
   // CM-004 · Plusvalía: estado de los coeficientes máximos
@@ -612,7 +621,10 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   eq("14.1 · AND: 0 € (reducción del art. 28 Ley 5/2021)", base({ ccaa: "AND", reparto: "usufructoUniversal", herederos: [Hd("v", "conyuge", 70, { renuncia: true }), Hd("a", "hijo", 40), Hd("b", "hijo", 38)], bienes: [C("c", 300000)] }).total, 0);
   // Renuncia de la pareja inscrita: mismo efecto. Un hijo único recibe 300.000: BL 284.043,13 → 40.011,04 + 44.654,00 × 25,5 % = 51.397,81 (EST)
   const rp = base({ ccaa: "EST", reparto: "usufructoUniversal", herederos: [Hd("p", "pareja_hecho", 60, { inscrita: true, renuncia: true }), Hd("a", "hijo", 40)], bienes: [C("c", 300000)] });
-  eq("14.1 · renuncia de la pareja: hijo único por el todo (51.397,81)", hh(rp, "a").aIngresar, 51397.81);
+  // Auditoría ISD 10-10-2026 (M-7): la parte que procede de la renuncia (el usufructo del 29 %, 87.000 €) lleva el coeficiente de la pareja renunciante, grupo IV
+  // en el régimen estatal (×2), por ser mayor que el del hijo (×1): 51.397,81 × (1 + 0,29 × (2 − 1)) = 66.303,17 (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991).
+  // Antes solo se avisaba y salían 51.397,81.
+  eq("14.1 · renuncia de la pareja: hijo único por el todo, coeficiente ×2 de la pareja sobre el 29 % renunciado (66.303,17)", hh(rp, "a").aIngresar, 66303.17);
   // Sin renuncia, el reparto no cambia (nuda propiedad)
   eq("14.1 · sin renuncia: el hijo sigue con nuda propiedad", hh(base({ ccaa: "EST", reparto: "usufructoUniversal", herederos: [Hd("v", "conyuge", 70), Hd("a", "hijo", 40)], bienes: [C("c", 300000)] }), "a").derechos[0].tipo === "nuda" ? 1 : 0, 1);
   // Alerta general de renuncia (art. 28.1): propio parentesco, coeficiente del renunciante si es mayor. Hijo renuncia, hereda el sobrino por porcentajes
@@ -651,7 +663,7 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   eq("14.3 · fin de mes 31-08-2025 → 02-03-2026 en las dos", PZ("2025-08-31").isd.limite === "2026-03-02" && TRM("2025-08-31").isd.limite === "2026-03-02" ? 1 : 0, 1);
   // Fiesta nacional: 12-04-2026 + 6 = lunes 12-10-2026 (Fiesta Nacional) → 13-10-2026
   eq("14.3 · 12-10-2026 festivo: 13-10-2026 en las dos", PZ("2026-04-12").isd.limite === "2026-10-13" && TRM("2026-04-12").isd.limite === "2026-10-13" ? 1 : 0, 1);
-  eq("14.3 · últimas voluntades: 15 hábiles con festivos nacionales en las dos (04-05-2026)", PZ("2026-04-12").ultimas_voluntades.desde === "2026-05-04" && TRM("2026-04-12").ultimas.desde === "2026-05-04" ? 1 : 0, 1);
+  eq("14.3 · últimas voluntades: transcurridos 15 hábiles con festivos nacionales en las dos (05-05-2026; auditoría civil F-3)", PZ("2026-04-12").ultimas_voluntades.desde === "2026-05-05" && TRM("2026-04-12").ultimas.desde === "2026-05-05" ? 1 : 0, 1);
   // Plazos civiles: de fecha a fecha, sin traslado (art. 5 CC). Alquiler: 04-07-2026 (sábado) se mantiene
   eq("14.3 · subrogación del alquiler (civil) sin traslado", TRM("2026-04-04", { situ: { inquilino: true } }).alquiler_inquilino.limite === "2026-07-04" ? 1 : 0, 1);
   // Barrido: cada día de 2025-01-01 a 2027-06-30, con y sin prórroga, las dos vistas coinciden en ISD, prórroga, plusvalía, prescripción y últimas voluntades
@@ -948,7 +960,7 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
 
 // H40 · Andalucía (criterio de la ATA): los vehículos no son ajuar (art. 4.Cuatro y art. 18 Ley 19/1991)
 {
-  const A = (bienes) => calcularISD({ fechaFallecimiento: "2026-06-10", ccaa: "AND", ajuar: "sts", reparto: "intestado", herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 40 }], bienes }).masa.ajuar;
+  const A = (bienes) => calcularISD({ fechaFallecimiento: "2026-06-10", ccaa: "AND", ajuar: "ata" /* criterio ATA, elegido a mano (M-8) */, reparto: "intestado", herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 40 }], bienes }).masa.ajuar;
   eq("H40 · AND: coche y cuenta, sin ajuar", A([{ id: "c", tipo: "vehiculo", valor: 4500 }, { id: "q", tipo: "cuenta", valor: 120000 }]), 0, 0);
   eq("H40 · AND: mobiliario de 10.000 € → ajuar 300 €", A([{ id: "o", tipo: "otro", valor: 10000 }, { id: "c", tipo: "vehiculo", valor: 4500 }]), 300);
 }
@@ -1622,57 +1634,433 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   eq("26 · otros trámites no son condicionales", tramitesDe({ fecha: "2026-05-04", nHerederos: 2, inmuebles: 1, situ: {} }).filter((t) => t.condicional).length, 0);
 }
 
+// ── 27 · G02 (10-10-2026): modelos 650 y 660 casilla a casilla por territorio. Capa de salida: cada casilla es una cifra del cálculo y
+// las relaciones del formulario cuadran (base imponible, base liquidable, cuota tributaria, a ingresar, recargo, relación de bienes).
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const fila = (m, k) => m.filas.find((f) => f.k === k);
+  const val = (m, k) => m.filas.filter((f) => f.k === k).reduce((s, f) => s + f.v, 0);
+  // Tres casos por territorio: hijo único con cuenta; viudo con usufructo, gananciales, deudas, gastos, seguro y legado; colaterales con discapacidad, fuera de plazo
+  const casos = (t) => [
+    { fechaFallecimiento: "2026-03-10", ccaa: t, reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 240000, iban: "ES9121000418450200051332", entidad: "CaixaBank" }], herederos: [{ id: "h", nombre: "Hija", relacion: "hijo", edad: 35 }] },
+    { fechaFallecimiento: "2026-02-01", ccaa: t, reparto: "usufructoUniversal", bienes: [{ id: "v", tipo: "inmueble", descripcion: "Vivienda", valor: 320000, esViviendaHabitual: true, titularidad: "ganancial", refCatastral: "9872023VH5797S0001WX" }, { id: "c", tipo: "cuenta", valor: 180000 }, { id: "l", tipo: "valores", valor: 40000, legatarioId: "n", isin: "ES0113900J37" }, { id: "k", tipo: "vehiculo", valor: 9000, matricula: "1234BCD" }],
+      deudas: [{ concepto: "Hipoteca", importe: 30000, ganancial: true }], gastos: [{ concepto: "Funeral", importe: 4200 }], seguros: [{ beneficiarioId: "w", importe: 25000 }],
+      herederos: [{ id: "w", nombre: "Viuda", relacion: "conyuge", edad: 72 }, { id: "a", nombre: "Hijo", relacion: "hijo", edad: 44 }, { id: "b", nombre: "Hija menor", relacion: "hijo", edad: 17 }, { id: "n", nombre: "Nieto legatario", relacion: "nieto", edad: 20, estirpe: "Hijo" }] },
+    { fechaFallecimiento: "2025-01-15", fechaReferencia: "2026-10-10", enPlazo: false, ccaa: t, reparto: "porcentajes", bienes: [{ id: "i", tipo: "inmueble", valor: 210000, refCatastral: "1234567VK4713S0001AB" }, { id: "e", tipo: "empresa", valor: 60000, nifSociedad: "B12345674" }, { id: "o", tipo: "otro", valor: 5000 }],
+      herederos: [{ id: "s", nombre: "Sobrina", relacion: "sobrino", edad: 50, pct: 60, discapacidad: 45 }, { id: "x", nombre: "Amigo", relacion: "extrano", edad: 61, pct: 40, patrimonioPreexistente: 500000 }] },
+  ];
+  let filasOk = 0, filasTot = 0, n660 = 0;
+  for (const [t, nombre] of TERRITORIOS) {
+    const F = formulario650(t);
+    si(`27 · ${t}: formulario con nombre, organismo y norma de aprobación o motivo`, !!(F.nombre && F.organo && (F.aprobacion || F.motivo)));
+    si(`27 · ${t}: estado de la numeración válido`, ["VERIFICADO", "PARCIAL", "NO LOCALIZADO"].includes(F.estado) && F.orientativo === (F.estado === "NO LOCALIZADO"));
+    casos(t).forEach((caso, ci) => {
+      const R = calcularISD(caso);
+      let suma = 0, sumRec = 0;
+      for (const hh of R.herederos) {
+        const m = modelo650(caso, R, hh.id);
+        filasTot++; if (m.ok) filasOk++; else console.log("✘ cuadre", t, ci, hh.nombre, JSON.stringify(m.cuadre.filter((c) => !c.ok)));
+        // Valores iguales al cálculo
+        const iguales = Math.abs(val(m, "bi") - hh.baseImponible) <= 0.01 && Math.abs(val(m, "bl") - hh.baseLiquidable) <= 0.01 && Math.abs(val(m, "ci") - hh.cuotaIntegra) <= 0.01 && Math.abs(val(m, "ct") - hh.cuotaTributaria) <= 0.01 && Math.abs(val(m, "aIngresar") - hh.aIngresar) <= 0.01;
+        if (!iguales) si(`27 · ${t} caso ${ci + 1} ${hh.nombre}: casillas iguales al cálculo`, false);
+        if (F.orientativo && m.filas.some((f) => f.n != null)) si(`27 · ${t}: orden orientativo sin números de casilla`, false);
+        suma += m.aIngresar; sumRec += m.recargo ? m.recargo.importe : 0;
+      }
+      eq(`27 · ${t} caso ${ci + 1}: la suma de las autoliquidaciones es el total del expediente`, suma, R.total);
+      if (R.recargo && R.recargo.importe > 0) eq(`27 · ${t} caso ${ci + 1}: el recargo por heredero suma el del expediente`, sumRec, R.recargo.importe, 0.01 * R.herederos.length + 0.005);
+      const r6 = relacion660(caso, R); if (r6.ok) n660++; else console.log("✘ 660", t, ci, JSON.stringify(r6.cuadre));
+    });
+  }
+  eq("27 · 650: todas las hojas (22 territorios × 3 casos × herederos) cuadran", filasOk, filasTot, 0);
+  eq("27 · 660: las 66 relaciones de bienes cuadran con la masa del cálculo", n660, TERRITORIOS.length * 3, 0);
 
-// ── 27. G07 · Defensa tributaria: plazos desde la notificación (arts. 62.2, 99.8, 120.3, 135, 223 y 235 LGT; art. 14.2 TRLRHL; art. 30 Ley 39/2015)
+  // Formulario que se presenta
+  for (const t of ["EST", "CEU", "MEL"]) si(`27 · ${t}: se presenta el 650 de la AEAT`, formulario650(t).id === "AEAT" && formulario650(t).estado === "VERIFICADO");
+  si("27 · Andalucía: 650 y 660 de la ATA, orden orientativo, se presenta aunque salga 0 €", formulario650("AND").id === "AND" && formulario650("AND").orientativo && formulario650("AND").cero);
+  si("27 · Madrid: importa su XML pero el esquema no es público (no se genera)", /XML/.test(formulario650("MAD").importa.formato) && /no está publicado/.test(formulario650("MAD").importa.nota));
+  si("27 · Cataluña: Ordre ECF/122/2025", /ECF\/122\/2025/.test(formulario650("CAT").aprobacion));
+  si("27 · Bizkaia: Orden Foral 1973/2018", /1973\/2018/.test(formulario650("BIZ").aprobacion));
+  si("27 · Navarra: Orden Foral 345/2012", /345\/2012/.test(formulario650("NAV").aprobacion));
+  si("27 · un territorio inexistente no inventa casillas", Object.keys(formulario650("XXX").casillas).length === 0 && formulario650("XXX").orientativo);
+
+  // AEAT (no residente): casillas verificadas y sus relaciones (22 = 19 + 20 + 21; 37 = 22 − 36; 40 = 38 × 39)
+  const cEst = { fechaFallecimiento: "2026-04-20", ccaa: "EST", reparto: "porcentajes", bienes: [{ id: "v", tipo: "inmueble", valor: 300000, esViviendaHabitual: true }, { id: "c", tipo: "cuenta", valor: 200000 }, { id: "l", tipo: "cuenta", valor: 30000, legatarioId: "b" }], seguros: [{ beneficiarioId: "a", importe: 20000 }],
+    herederos: [{ id: "a", nombre: "A", relacion: "hijo", edad: 40, pct: 50 }, { id: "b", nombre: "B", relacion: "hermano", edad: 60, pct: 50 }] };
+  const Rest = calcularISD(cEst), mA = modelo650(cEst, Rest, "a"), mB = modelo650(cEst, Rest, "b");
+  const cas = (m, n) => m.filas.filter((f) => f.n === n).reduce((s, f) => s + f.v, 0);
+  si("27 · AEAT: casillas 19, 21, 22, 23, 25, 27, 36, 37, 38, 39, 40 y 63 presentes", [19, 21, 22, 23, 25, 27, 36, 37, 38, 39, 40, 63].every((n) => mA.filas.some((f) => f.n === n)));
+  eq("27 · AEAT: casilla 19 = porción + ajuar imputado", cas(mA, 19), Rest.herederos[0].traza.filter((t) => /^(Porción|Ajuar)/.test(t.paso)).reduce((s, t) => s + t.valor, 0));
+  eq("27 · AEAT: 22 = 19 + 20 + 21", cas(mB, 22), cas(mB, 19) + cas(mB, 20) + cas(mB, 21));
+  eq("27 · AEAT: 22 = 19 + 20 + 21 (con seguro)", cas(mA, 22), cas(mA, 19) + cas(mA, 20) + cas(mA, 21));
+  eq("27 · AEAT: 36 = suma de las reducciones (23 a 35)", cas(mA, 36), mA.filas.filter((f) => f.sec === "red" && f.k !== "totalRed").reduce((s, f) => s + f.v, 0));
+  eq("27 · AEAT: 37 = 22 − 36", cas(mA, 37), cas(mA, 22) - cas(mA, 36));
+  eq("27 · AEAT: 40 = 38 × 39 (hermano, coeficiente 1,5882)", cas(mB, 40), Math.round(cas(mB, 38) * cas(mB, 39) * 100) / 100);
+  eq("27 · AEAT: coeficiente del hermano en la casilla 39", cas(mB, 39), 1.5882, 0.00001);
+  eq("27 · AEAT: 63 = a ingresar del cálculo", cas(mB, 63), Rest.herederos[1].aIngresar);
+  si("27 · AEAT: el legado va a la casilla 20", fila(mB, "legados").n === 20 && fila(mB, "legados").v === 30000);
+  // Nuda propiedad: las casillas 38 a 40 no se rellenan (tipo medio efectivo)
+  const cNuda = { fechaFallecimiento: "2026-04-20", ccaa: "EST", reparto: "usufructoUniversal", bienes: [{ id: "c", tipo: "cuenta", valor: 600000 }], herederos: [{ id: "w", nombre: "W", relacion: "conyuge", edad: 70 }, { id: "a", nombre: "A", relacion: "hijo", edad: 40 }] };
+  const Rn = calcularISD(cNuda), mN = modelo650(cNuda, Rn, "a");
+  si("27 · AEAT con nuda propiedad: sin números en las casillas 38 a 40, con la base liquidable teórica", mN.nuda && ["ci", "coef", "ct"].every((k) => fila(mN, k).n == null) && !!fila(mN, "blTeorica"));
+  // Ceuta: la bonificación del 50 % va a la casilla 50
+  const cCeu = { fechaFallecimiento: "2026-04-20", ccaa: "CEU", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 200000 }], herederos: [{ id: "h", nombre: "H", relacion: "hermano", edad: 60 }] };
+  const Rc = calcularISD(cCeu), mC = modelo650(cCeu, Rc, "h");
+  si("27 · Ceuta: bonificación en la casilla 50", fila(mC, "bonif") && fila(mC, "bonif").n === 50 && fila(mC, "bonif").v > 0);
+  // Fuera de plazo: la casilla 63 la calcula el programa (no se numera la cuota antes del recargo)
+  const cRec = { ...cEst, fechaFallecimiento: "2025-01-15", fechaReferencia: "2026-10-10", enPlazo: false }, Rr = calcularISD(cRec), mR = modelo650(cRec, Rr, "b");
+  si("27 · AEAT fuera de plazo: recargo e intereses aparte y sin número en la cuota antes del recargo", mR.recargo && fila(mR, "recargo").v > 0 && fila(mR, "aIngresar").n == null && /49 − 61 \+ 62/.test(fila(mR, "aIngresar").nota));
+  eq("27 · AEAT fuera de plazo: total = cuota + recargo + intereses", fila(mR, "total").v, fila(mR, "aIngresar").v + fila(mR, "recargo").v + (fila(mR, "intereses") ? fila(mR, "intereses").v : 0));
+
+  // Castilla y León: casillas 41, 48, 49, 50, 51, 52 y 53 (instrucciones oficiales); las demás, sin número
+  const cCyl = { fechaFallecimiento: "2026-04-20", ccaa: "CYL", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 700000 }], herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 45 }] };
+  const Ry = calcularISD(cCyl), mY = modelo650(cCyl, Ry, "h");
+  si("27 · Castilla y León: numeración parcial", mY.form.estado === "PARCIAL");
+  si("27 · CyL: parentesco en la 41 y reducción variable hasta 400.000 € en la 48", fila(mY, "parentesco").n === 41 && fila(mY, "variable").n === 48);
+  eq("27 · CyL: 49 = suma de las reducciones = 400.000 €", cas(mY, 49), 400000);
+  eq("27 · CyL: 50 = base liquidable", cas(mY, 50), Ry.herederos[0].baseLiquidable);
+  eq("27 · CyL: 53 = 51 × 52", cas(mY, 53), Math.round(cas(mY, 51) * cas(mY, 52) * 100) / 100);
+  si("27 · CyL: base imponible sin número (no verificado)", fila(mY, "bi").n == null);
+
+  // Casos de la demostración (misma familia y bienes principales)
+  const demo = [
+    ["AND", "Málaga: viuda y dos hijos, sin testamento, gananciales", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 285000, valorReferencia: 271000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 64000, titularidad: "ganancial" }], gastos: [{ concepto: "Funeral", importe: 4300 }], herederos: [{ id: "p1", nombre: "Estrella", relacion: "conyuge", edad: 71 }, { id: "p2", nombre: "Rufino", relacion: "hijo", edad: 45 }, { id: "p3", nombre: "Nieves", relacion: "hijo", edad: 41 }] }],
+    ["MAD", "Chamberí: pareja inscrita 30 % e hijo 70 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 540000, valorReferencia: 498000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 85000 }], gastos: [{ concepto: "Funeral", importe: 5100 }], herederos: [{ id: "p1", nombre: "Verónica", relacion: "pareja_hecho", inscrita: true, edad: 58, pct: 30 }, { id: "p2", nombre: "Rogelio", relacion: "hijo", edad: 34, pct: 70 }] }],
+    ["CAT", "Eixample: cónyuge 40 % e hijos 30 % y 30 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 610000, valorReferencia: 575000, esViviendaHabitual: true }, { id: "b2", tipo: "valores", valor: 120000 }], gastos: [{ concepto: "Funeral", importe: 6200 }], herederos: [{ id: "p1", nombre: "Carme", relacion: "conyuge", edad: 66, pct: 40 }, { id: "p2", nombre: "Mercè", relacion: "hijo", edad: 38, pct: 30 }, { id: "p3", nombre: "Jaume", relacion: "hijo", edad: 35, pct: 30 }] }],
+    ["VAL", "Russafa: viuda e hijos de 19 y 15 años, hipoteca ganancial", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 255000, valorReferencia: 238000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 22000, titularidad: "ganancial" }], deudas: [{ concepto: "Hipoteca Banco Sabadell", importe: 62000, ganancial: true }], gastos: [{ concepto: "Funeral", importe: 3800 }], herederos: [{ id: "p1", nombre: "Lledó", relacion: "conyuge", edad: 48 }, { id: "p2", nombre: "Aina", relacion: "hijo", edad: 19 }, { id: "p3", nombre: "Pol", relacion: "hijo", edad: 15 }] }],
+    ["CLM", "Toledo: tres hijos, uno renuncia; préstamo personal", { reparto: "intestado", bienes: [{ id: "b1", tipo: "inmueble", valor: 198000, valorReferencia: 184000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 41000 }], deudas: [{ concepto: "Préstamo personal en Ibercaja", importe: 18000 }], gastos: [{ concepto: "Funeral", importe: 3300 }], herederos: [{ id: "p1", nombre: "Gabriel", relacion: "hijo", edad: 55, renuncia: true }, { id: "p2", nombre: "Olga", relacion: "hijo", edad: 52 }, { id: "p3", nombre: "Eduardo", relacion: "hijo", edad: 47 }] }],
+    ["GAL", "Vigo: usufructo universal de la viuda", { reparto: "usufructoUniversal", bienes: [{ id: "b1", tipo: "inmueble", valor: 248000, valorReferencia: 231000, titularidad: "ganancial", esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 58000, titularidad: "ganancial" }], gastos: [{ concepto: "Funeral", importe: 4100 }], herederos: [{ id: "p1", nombre: "Noela", relacion: "conyuge", edad: 77 }, { id: "p2", nombre: "Iago", relacion: "hijo", edad: 50 }, { id: "p3", nombre: "Uxía", relacion: "hijo", edad: 46 }] }],
+    ["NAV", "Pamplona: dos hijos al 50 %", { reparto: "porcentajes", bienes: [{ id: "b1", tipo: "inmueble", valor: 315000, valorReferencia: 296000, esViviendaHabitual: true }, { id: "b2", tipo: "cuenta", valor: 90000 }], gastos: [{ concepto: "Funeral", importe: 4000 }], herederos: [{ id: "p1", nombre: "Edurne", relacion: "hijo", edad: 51, pct: 50 }, { id: "p2", nombre: "Txomin", relacion: "hijo", edad: 48, pct: 50 }] }],
+  ];
+  for (const [t, d, c] of demo) {
+    const caso = { fechaFallecimiento: "2026-06-01", ccaa: t, ...c }, R = calcularISD(caso);
+    const M = R.herederos.map((hh) => modelo650(caso, R, hh.id)), r6 = relacion660(caso, R);
+    si(`27 · demostración ${t} (${d}): hojas del 650 cuadradas e iguales al cálculo`, M.every((m, i) => m.ok && Math.abs(m.aIngresar - R.herederos[i].aIngresar) < 0.005 && Math.abs(val(m, "bl") - R.herederos[i].baseLiquidable) < 0.005));
+    si(`27 · demostración ${t}: relación de bienes cuadrada (bienes ${r6.totales.bienes} = caudal ${R.masa.bruto})`, r6.ok);
+    eq(`27 · demostración ${t}: suma de los 650`, M.reduce((s, m) => s + m.aIngresar, 0), R.total);
+  }
+
+  // 660: referencias y totales
+  const c2 = casos("MAD")[1], R2 = calcularISD(c2), r2_ = relacion660(c2, R2);
+  si("27 · 660: bloques en orden (inmuebles, cuentas, valores, vehículos)", r2_.bloques.map((b) => b.id).join() === "inmuebles,cuentas,valores,vehiculos");
+  si("27 · 660: el inmueble ganancial entra por la mitad y lleva la referencia catastral", r2_.bloques[0].filas[0].valor === 160000 && r2_.bloques[0].filas[0].refs.some(([k, v]) => k === "Referencia catastral" && v === "9872023VH5797S0001WX"));
+  si("27 · 660: el valor legado indica el legatario y su ISIN", r2_.bloques[2].filas[0].legatario === "Nieto legatario" && r2_.bloques[2].filas[0].refs.some(([k, v]) => k === "ISIN" && v === "ES0113900J37"));
+  eq("27 · 660: la hipoteca ganancial resta por la mitad", r2_.totales.deudas, 15000);
+  eq("27 · 660: caudal neto = bienes − deudas − gastos", r2_.totales.neto, R2.masa.neto);
+  const r1 = relacion660(casos("AND")[0], calcularISD(casos("AND")[0]));
+  si("27 · 660: el IBAN se muestra oculto (país, control y últimas cuatro cifras)", r1.bloques[0].filas[0].refs.some(([k, v]) => k === "IBAN" && v === "ES91 **** **** **** **** 1332"));
+  si("27 · ibanOculto no deja ver las cifras intermedias", !/0418450200/.test(ibanOculto("ES91 2100 0418 4502 0005 1332")));
+  // Documentos que se acompañan
+  const D2 = documentos650(c2).map((d) => d.doc).join(" | ");
+  si("27 · documentos: deudas, gastos, seguros y vivienda generan su justificante", /certificado de cada deuda/i.test(D2) && /facturas del entierro/i.test(D2) && /aseguradora/i.test(D2) && /empadronamiento/i.test(D2));
+  si("27 · documentos: sin testamento pide el acta de declaración de herederos", /declaración de herederos/.test(documentos650(casos("MAD")[0]).map((d) => d.doc).join()));
+  si("27 · documentos: en Andalucía, modelo de representación del colaborador social", documentos650(casos("AND")[0]).some((d) => /colaborador social/.test(d.doc)));
+}
+
+// ── 28. Auditoría del Impuesto sobre Sucesiones (10-10-2026, auditoria/sucesiones.md): regresiones R-1 a R-10 y correcciones C, M, O y m
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const C27 = (o) => calcularISD({ fechaFallecimiento: "2026-09-15", ajuar: "ninguno", deudas: [], gastos: [], seguros: [], ...o });
+  // Un solo heredero que lo recibe todo en metálico, sin ajuar; devengo 15-09-2026 (mismo molde que auditoria/pruebas-sucesiones.mjs)
+  const u = (ccaa, h, v, x = {}) => C27({ ccaa, reparto: "porcentajes", enPlazo: true, fechaFallecimiento: x.fecha || "2026-09-15", bienes: x.bienes || [{ id: "c", tipo: "cuenta", valor: v }], seguros: x.seguros || [], herederos: [{ id: "h", nombre: "H", pct: 100, ...h }], ...(x.caso || {}) }).herederos[0];
+  const viv = (cuenta, vivienda) => ({ bienes: [{ id: "c", tipo: "cuenta", valor: cuenta }, { id: "v", tipo: "inmueble", esViviendaHabitual: true, valor: vivienda }] });
+
+  // R · Regresiones cotejadas que ya pasaban (art. 21, 20.2.a, 22.2 y 26.a Ley 29/1987; Cataluña, Murcia, Andalucía, Castilla-La Mancha, Galicia y Ceuta)
+  eq("28 · R-1 · EST hijo 30 a. 300.000 € (arts. 20.2.a y 21 Ley 29/1987)", u("EST", { relacion: "hijo", edad: 30 }, 300000).aIngresar, 51397.81);
+  eq("28 · R-2 · EST salto de tramo del coeficiente (art. 22.2 Ley 29/1987)", u("EST", { relacion: "hermano", edad: 50, patrimonioPreexistente: 402700 }, 100000).aIngresar, 17689.68);
+  for (const [e, p] of [[60, 0.29], [74, 0.15], [85, 0.10], [19, 0.70], [20, 0.69]]) eq(`27 · R-3 · usufructo vitalicio ${e} años (art. 26.a Ley 29/1987)`, pctUsufructoVitalicio(e), p, 1e-9);
+  eq("28 · R-4 · EST hijo 15 a. 100.000 € (art. 20.2.a)", u("EST", { relacion: "hijo", edad: 15 }, 100000).aIngresar, 6272.07);
+  eq("28 · R-4 · EST hijo 2 a. 100.000 € (tope de 47.858,59)", u("EST", { relacion: "hijo", edad: 2 }, 100000).aIngresar, 5221.96);
+  eq("28 · R-5 · CAT coeficientes de la ATC, hijo con 600.000 € previos", u("CAT", { relacion: "hijo", edad: 30, patrimonioPreexistente: 600000 }, 600000).aIngresar, 45289.53);
+  eq("28 · R-5 · CAT hermano, 1,5882 fijo con 5 M€ previos", u("CAT", { relacion: "hermano", edad: 50, patrimonioPreexistente: 5e6 }, 200000).aIngresar, 34368.65);
+  eq("28 · R-6 · MUR hermano 1.000.000 € (tarifa propia, art. 5 D. Leg. 1/2010)", u("MUR", { relacion: "hermano", edad: 50 }, 1000000).aIngresar, 441903.52);
+  eq("28 · R-6 · MUR hijo 1.500.000 € (99 %)", u("MUR", { relacion: "hijo", edad: 30 }, 1500000).aIngresar, 4578.35);
+  eq("28 · R-7 · AND extraño 200.000 € (arts. 37-38 Ley 5/2021)", u("AND", { relacion: "extrano", edad: 50 }, 200000).aIngresar, 60078);
+  eq("28 · R-8 · CLM BL 174.999,99 → 100 % (art. 17 Ley 8/2013)", u("CLM", { relacion: "hijo", edad: 30 }, 174999.99 + 15956.87).aIngresar, 0);
+  eq("28 · R-8 · CLM BL 175.000 → 95 %", u("CLM", { relacion: "hijo", edad: 30 }, 175000 + 15956.87).aIngresar, 1316.42);
+  eq("28 · R-9 · GAL hermano 100.000 € (25.000 €, Ley 5/2024)", u("GAL", { relacion: "hermano", edad: 50 }, 100000).aIngresar, 13371.6);
+  eq("28 · R-10 · CEU sobrino 100.000 € (art. 23 bis, 50 %)", u("CEU", { relacion: "sobrino", edad: 50 }, 100000).aIngresar, 8833.89);
+
+  // C-1 · Cantabria: art. 5 D. Leg. 62/2008 equipara al cónyuge la pareja inscrita (Ley de Cantabria 1/2005 o registros análogos) → grupo II y 100 % (art. 8.1)
+  { const h = u("CANT", { relacion: "pareja_hecho", inscrita: true, edad: 50 }, 300000); si("28 · C-1 · CANT pareja inscrita en el grupo II", h.grupo === "II"); eq("28 · C-1 · CANT pareja inscrita 300.000 € → 0 € (antes 110.933,62)", h.aIngresar, 0); }
+  eq("28 · C-1 · CANT pareja NO inscrita sigue como extraño", u("CANT", { relacion: "pareja_hecho", inscrita: false, edad: 50 }, 300000).aIngresar, 110933.62);
+  // C-2 · La Rioja: Ley 10/2017 (2 años de convivencia, inscripción; desde el 01-01-2025 cualquier registro, Ley 6/2024) → grupo II y 99 %: 51.397,81 × 1 % = 513,98
+  { const h = u("RIO", { relacion: "pareja_hecho", inscrita: true, edad: 50 }, 300000); si("28 · C-2 · RIO pareja en el grupo II", h.grupo === "II"); eq("28 · C-2 · RIO pareja 300.000 € → 513,98 (antes 110.933,62)", h.aIngresar, 513.98); }
+  si("28 · C-2 · RIO antes de 2025, inscrita solo en otro registro → grupo IV", u("RIO", { relacion: "pareja_hecho", inscrita: true, registroPareja: "OTRO", edad: 50 }, 300000, { fecha: "2024-06-01" }).grupo === "IV");
+  si("28 · C-2 · RIO antes de 2025, inscrita en La Rioja → grupo II", u("RIO", { relacion: "pareja_hecho", inscrita: true, registroPareja: "RIO", edad: 50 }, 300000, { fecha: "2024-06-01" }).grupo === "II");
+  si("28 · C-2 · RIO desde 2025, otro registro vale (Ley 6/2024)", u("RIO", { relacion: "pareja_hecho", inscrita: true, registroPareja: "OTRO", edad: 50 }, 300000).grupo === "II");
+  // C-3 · Illes Balears: coeficientes propios (D. Leg. 1/2014; ATIB). Hermano: 29.920 × 1,2706 = 38.016,35 − 60 % = 15.206,54; extraño: 31.407,50 × 1,70 = 53.392,75
+  eq("28 · C-3 · BAL hermano 200.000 € (×1,2706; antes 19.007,58)", u("BAL", { relacion: "hermano", edad: 50 }, 200000).aIngresar, 15206.54);
+  eq("28 · C-3 · BAL extraño 200.000 € (×1,70; antes 62.815)", u("BAL", { relacion: "extrano", edad: 40 }, 200000).aIngresar, 53392.75);
+  eq("28 · C-3 · BAL extraño con 5 M€ previos (×2,04; antes 75.378)", u("BAL", { relacion: "extrano", edad: 40, patrimonioPreexistente: 5e6 }, 200000).aIngresar, 64071.3);
+  eq("28 · C-3 · BAL sobrino político (fila de afinidad ×1,6575, −35 %)", u("BAL", { relacion: "sobrino_afin", edad: 40 }, 200000).aIngresar, 32235.06);
+  si("28 · C-3 · BAL fila de afinidad PENDIENTE en los tramos 2-4", REGLAS.BAL.coef({ relacion: "cunado" }, "III", 0, 1000).estado === "PENDIENTE" && REGLAS.BAL.coef({ relacion: "hermano" }, "III", 0, 1000).estado === "VERIFICADO");
+  // C-4 · Gipuzkoa NF 2/2022: colaterales de 2.º y 3.er grado por afinidad en el grupo III; ascendientes y descendientes por afinidad en el II
+  si("28 · C-4 · GIP sobrino político en el grupo III", u("GIP", { relacion: "sobrino_afin", edad: 40 }, 200000).grupo === "III");
+  si("28 · C-4 · GIP tío político y cuñado en el grupo III", u("GIP", { relacion: "tio_afin", edad: 40 }, 200000).grupo === "III" && u("GIP", { relacion: "cunado", edad: 40 }, 200000).grupo === "III");
+  si("28 · C-4 · GIP suegro sigue en el grupo II", u("GIP", { relacion: "suegro", edad: 70 }, 200000).grupo === "II");
+  // C-5 · Bizkaia art. 43 NF 4/2015: grupo III = colaterales de 3.er grado por consanguinidad y ascendientes/descendientes por afinidad; colaterales afines al IV
+  si("28 · C-5 · BIZ sobrino político en el grupo IV", u("BIZ", { relacion: "sobrino_afin", edad: 40 }, 200000).grupo === "IV");
+  si("28 · C-5 · BIZ cuñado en el grupo IV", u("BIZ", { relacion: "cunado", edad: 40 }, 200000).grupo === "IV");
+  si("28 · C-5 · BIZ suegro sigue en el grupo III", u("BIZ", { relacion: "suegro", edad: 70 }, 200000).grupo === "III");
+  // C-6 · Asturias, art. 17 bis D. Leg. 2/2014 (Ley 7/2017): escala 99/98/97/96/95 % con umbrales 90.000 / 120.000 / 180.000 / 240.000 € (texto de la ley) y
+  // límite estatal de 122.606,47 € («los restantes límites y requisitos, los de la legislación estatal»). Vivienda de 200.000 € → 96 % = 192.000, limitado a 122.606,47:
+  // BL 500.000 − 300.000 − 122.606,47 = 77.393,53 → 11.900 + 21.393,53 × 25,5 % = 17.355,35. (La auditoría proponía 95 % sin límite y 2.125 €: ver informe.)
+  eq("28 · C-6 · AST hijo, vivienda 200.000 € al 96 % con el límite de 122.606,47 €", u("AST", { relacion: "hijo", edad: 30 }, 0, viv(300000, 200000)).aIngresar, 17355.35);
+  eq("28 · C-6 · AST vivienda de 90.000 € al 99 % (bajo el límite): BL 900", u("AST", { relacion: "hijo", edad: 30 }, 0, viv(300000, 90000)).baseLiquidable, 900);
+  eq("28 · C-6 · AST hermano de 70 años conviviente, vivienda 200.000 €: BL 69.400,07", u("AST", { relacion: "hermano", edad: 70, convivio2anios: true }, 0, viv(0, 200000)).baseLiquidable, 69400.07);
+  // M-1 · Comunitat Valenciana, art. 10 Ley 13/1997: discapacidad psíquica desde el 33 % → 240.000 € (la física o sensorial del 33 %, 120.000 €)
+  eq("28 · M-1 · VAL hermano con discapacidad psíquica del 33 %, 200.000 € → 0 € (antes 9.553,26)", u("VAL", { relacion: "hermano", edad: 50, discapacidad: 33, discapacidadPsiquica: true }, 200000).aIngresar, 0);
+  eq("28 · M-1 · VAL hijo con discapacidad psíquica del 33 %, 300.000 € → 0 €", u("VAL", { relacion: "hijo", edad: 30, discapacidad: 33, discapacidadPsiquica: true }, 300000).aIngresar, 0);
+  eq("28 · M-1 · VAL discapacidad física del 33 %: sigue en 120.000 € (BL 80.000)", u("VAL", { relacion: "hijo", edad: 30, discapacidad: 33 }, 300000).baseLiquidable, 80000);
+  eq("28 · M-1 · EST: la distinción solo existe en Valencia (47.858,59 €)", u("EST", { relacion: "hijo", edad: 30, discapacidad: 33, discapacidadPsiquica: true }, 300000).aIngresar, 39330.06);
+  // M-2 · Cuñado/a: colateral de 2.º grado por afinidad, grupo III (art. 20.2.a Ley 29/1987; STS 18-03-2003 y 28-11-2017). EST 100.000: 11.124,41 × 1,5882 = 17.667,79
+  eq("28 · M-2 · EST cuñado 100.000 € (grupo III; como extraño, 24.830,72)", u("EST", { relacion: "cunado", edad: 50 }, 100000).aIngresar, 17667.79);
+  eq("28 · M-2 · GAL cuñado 100.000 € (25.000 € del grupo III, Xunta)", u("GAL", { relacion: "cunado", edad: 50 }, 100000).aIngresar, 13371.6);
+  eq("28 · M-2 · MAD cuñado desde el 01-07-2025: 50 % (Ley 2/2025, todo el grupo III)", u("MAD", { relacion: "cunado", edad: 50 }, 100000).aIngresar, 8826.44);
+  eq("28 · M-2 · MAD cuñado antes del 01-07-2025: sin bonificación", u("MAD", { relacion: "cunado", edad: 50 }, 100000, { fecha: "2025-03-01" }).aIngresar, 17652.89);
+  eq("28 · M-2 · BAL cuñado: fila de afinidad y 35 %", u("BAL", { relacion: "cunado", edad: 40 }, 200000).aIngresar, 32235.06);
+  { const r = C27({ ccaa: "EST", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 100000 }], herederos: [{ id: "a", nombre: "A", relacion: "hermano", edad: 60 }, { id: "k", nombre: "K", relacion: "cunado", edad: 60 }] });
+    si("28 · M-2 · sin testamento el cuñado no hereda (arts. 946-955 CC) y se avisa", !r.herederos.some((h) => h.id === "k") && r.alertas.some((a) => /cuñado\/a/.test(a))); }
+  // M-4 · Aragón, art. 131-1 D. Leg. 1/2005: hijos menores de edad, 100 % hasta 3.000.000 € (Hijo de 10 años, 2.000.000 € → 0 €; antes 4.381,23)
+  eq("28 · M-4 · ARA hijo de 10 años, 2.000.000 € → 0 €", u("ARA", { relacion: "hijo", edad: 10 }, 2000000).aIngresar, 0);
+  eq("28 · M-4 · ARA hijo de 17 años, 3.500.000 €: BL 500.000 (tope de 3.000.000)", u("ARA", { relacion: "hijo", edad: 17 }, 3500000).baseLiquidable, 500000);
+  eq("28 · M-4 · ARA hijo de 18 años: tope general de 500.000 € (BL 1.500.000)", u("ARA", { relacion: "hijo", edad: 18 }, 2000000).baseLiquidable, 1500000);
+  // M-5 · Usufructo temporal (art. 26.a Ley 29/1987): 10 años → 20 %; vitalicio y temporal a la vez, la nuda con la regla que le dé menor valor (1 − máx(20 %, 29 %))
+  { const r = C27({ ccaa: "EST", reparto: "usufructoUniversal", usufructoTemporalAnios: 10, bienes: [{ id: "c", tipo: "cuenta", valor: 600000 }], herederos: [{ id: "v", nombre: "V", relacion: "conyuge", edad: 60 }, { id: "a", nombre: "A", relacion: "hijo", edad: 35 }] });
+    const v = r.herederos.find((h) => h.id === "v"), a = r.herederos.find((h) => h.id === "a");
+    eq("28 · M-5 · usufructo temporal de 10 años: 20 % = 120.000 €", v.valorAdquirido, 120000);
+    eq("28 · M-5 · viudo: BL 104.043,13 → 13.068,32", v.aIngresar, 13068.32);
+    eq("28 · M-5 · nuda propiedad: 71 % (menor valor de la nuda)", a.valorAdquirido, 426000); }
+  // M-6 · Transmisiones sucesivas (art. 20.3 Ley 29/1987): se deduce de la base lo pagado en la transmisión anterior a descendientes en 10 años
+  eq("28 · M-6 · EST hijo, 10.000 € pagados antes: BL 274.043,13", u("EST", { relacion: "hijo", edad: 40, impuestoTransmisionAnterior: 10000 }, 300000).baseLiquidable, 274043.13);
+  eq("28 · M-6 · solo a descendientes: el hermano no la aplica", u("EST", { relacion: "hermano", edad: 40, impuestoTransmisionAnterior: 10000 }, 100000).aIngresar, 17667.79);
+  // M-7 · Renuncia pura (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991): el sobrino recibe la mitad del extraño renunciante; coeficiente ×2 en esa mitad
+  // CI 29.942,24 × (1,5882 × 0,5 + 2 × 0,5) = 53.719,38 (sin renuncia, 29.942,24 × 1,5882 = 47.554,27)
+  { const r = C27({ ccaa: "EST", reparto: "porcentajes", bienes: [{ id: "c", tipo: "cuenta", valor: 200000 }], herederos: [{ id: "s", nombre: "S", relacion: "sobrino", edad: 40, pct: 50 }, { id: "e", nombre: "E", relacion: "extrano", edad: 40, pct: 50, renuncia: true }] });
+    eq("28 · M-7 · coeficiente del renunciante sobre la parte renunciada", r.herederos[0].aIngresar, 53719.38);
+    si("28 · M-7 · traza con la norma y PENDIENTE del reparto proporcional", r.herederos[0].traza.some((t) => /renunciante/.test(t.paso) && /28\.1/.test(t.norma) && t.estado === "PENDIENTE")); }
+  eq("28 · M-7 · el renunciante con coeficiente menor no cambia nada (hijo renuncia a favor del otro hijo)", C27({ ccaa: "EST", reparto: "porcentajes", bienes: [{ id: "c", tipo: "cuenta", valor: 300000 }], herederos: [{ id: "a", nombre: "A", relacion: "hijo", edad: 40, pct: 50 }, { id: "b", nombre: "B", relacion: "hijo", edad: 40, pct: 50, renuncia: true }] }).total, 51397.81);
+  // M-8 · Andalucía: ajuar por defecto residencial (STS 499/2020; TEAC 30-05-2025); el criterio de la ATA, solo a mano y con aviso
+  { const b = [{ id: "v", tipo: "inmueble", esViviendaHabitual: true, valor: 200000 }, { id: "c", tipo: "cuenta", valor: 100000 }];
+    const d = C27({ ccaa: "AND", ajuar: undefined, reparto: "intestado", bienes: b, herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 40 }] });
+    si("28 · M-8 · AND por defecto: 3 % de la vivienda (6.000 €)", d.masa.modoAjuar === "residencial" && d.masa.ajuar === 6000);
+    const a = C27({ ccaa: "AND", ajuar: "ata", reparto: "intestado", bienes: b, herederos: [{ id: "h", nombre: "H", relacion: "hijo", edad: 40 }] });
+    si("28 · M-8 · AND «ata» a mano: 0 € y aviso de que es el criterio menos prudente", a.masa.modoAjuar === "ata" && a.masa.ajuar === 0 && a.alertas.some((t) => /menos prudente/.test(t))); }
+  // M-9 · DA 2.ª Ley 29/1987: causante no residente sin bienes en España → norma de la comunidad de residencia de cada heredero; el no residente, no sujeto (art. 7)
+  { const r = C27({ ccaa: "EST", sinBienesEnEspana: true, reparto: "porcentajes", bienes: [{ id: "c", tipo: "cuenta", valor: 600000 }], herederos: [{ id: "a", nombre: "A", relacion: "hijo", edad: 40, pct: 50, ccaaResidencia: "MAD" }, { id: "b", nombre: "B", relacion: "hijo", edad: 40, pct: 50, ccaaResidencia: "EXT" }, { id: "c", nombre: "C", relacion: "hijo", edad: 40, pct: 0 }] });
+    const a = r.herederos.find((h) => h.id === "a"), b = r.herederos.find((h) => h.id === "b");
+    eq("28 · M-9 · heredero residente en Madrid: normativa de Madrid (513,51)", a.aIngresar, 513.51);
+    si("28 · M-9 · territorio del heredero en el resultado", a.territorio === "Comunidad de Madrid");
+    si("28 · M-9 · heredero que reside fuera: no sujeto, 0 €", b.noSujeto === true && b.aIngresar === 0);
+    si("28 · M-9 · aviso de la DA 2.ª", r.alertas.some((t) => /disposición adicional 2\.ª/.test(t))); }
+  eq("28 · M-9 · sin la marca, la ley estatal como antes", C27({ ccaa: "EST", reparto: "porcentajes", bienes: [{ id: "c", tipo: "cuenta", valor: 300000 }], herederos: [{ id: "a", nombre: "A", relacion: "hijo", edad: 40, pct: 100, ccaaResidencia: "MAD" }] }).total, 51397.81);
+  // M-11 · Patrimonio Histórico (art. 20.2.c Ley 29/1987, 95 % a cónyuge y descendientes) y doble imposición internacional (art. 23)
+  eq("28 · M-11 · EST hijo con un bien del Patrimonio Histórico de 100.000 €: BL 189.043,13", u("EST", { relacion: "hijo", edad: 40 }, 0, { bienes: [{ id: "c", tipo: "cuenta", valor: 200000 }, { id: "p", tipo: "inmueble", valor: 100000, patrimonioHistorico: true }] }).baseLiquidable, 189043.13);
+  eq("28 · M-11 · el sobrino no tiene esa reducción", u("EST", { relacion: "sobrino", edad: 40 }, 0, { bienes: [{ id: "c", tipo: "cuenta", valor: 100000 }, { id: "p", tipo: "inmueble", valor: 100000, patrimonioHistorico: true }] }).baseLiquidable, 192006.54);
+  // Art. 23: tipo medio 51.397,81 / 284.043,13 × 100.000 = 18.095,07 < 20.000 pagados → deducción 18.095,07 → 33.302,74
+  eq("28 · M-11 · doble imposición internacional: la menor de las dos cantidades", u("EST", { relacion: "hijo", edad: 40, impuestoExtranjero: 20000, valorBienesExtranjero: 100000 }, 300000).aIngresar, 33302.74);
+  eq("28 · M-11 · doble imposición: si se pagó menos fuera, se deduce lo pagado", u("EST", { relacion: "hijo", edad: 40, impuestoExtranjero: 5000, valorBienesExtranjero: 100000 }, 300000).aIngresar, 46397.81);
+  // O-1 · Comunitat Valenciana, Ley 5/2026 (efectos 11-08-2026): con requerimiento, sin bonificación de colaterales (PENDIENTE); antes de esa fecha, 25 %
+  eq("28 · O-1 · VAL hermano con requerimiento después del 11-08-2026", u("VAL", { relacion: "hermano", edad: 50 }, 100000, { caso: { conRequerimiento: true } }).aIngresar, 17782.44);
+  eq("28 · O-1 · VAL hermano con requerimiento antes de la Ley 5/2026: 25 %", u("VAL", { relacion: "hermano", edad: 50 }, 100000, { fecha: "2026-07-01", caso: { conRequerimiento: true } }).aIngresar, 13336.83);
+  // O-2 · Galicia, Ley 5/2025: reducción única desde el 01-01-2026 (400.000 € ya consumidos → BL 700.000 → 67.500); antes de 2026 no se descuenta
+  eq("28 · O-2 · GAL hijo con 400.000 € de reducción consumida (2026)", u("GAL", { relacion: "hijo", edad: 40, reduccionConsumida: 400000 }, 1300000).aIngresar, 67500);
+  eq("28 · O-2 · GAL mismo caso en 2025: sin efecto", u("GAL", { relacion: "hijo", edad: 40, reduccionConsumida: 400000 }, 1300000, { fecha: "2025-12-31" }).aIngresar, 23500);
+  // O-3 · Extremadura, Ley 2/2026 (desde el 05-08-2026): sobrino de especial vinculación confirmado → 500.000 € y 99 %; sin marcar o antes de la fecha, cuota completa
+  eq("28 · O-3 · EXT sobrino de especial vinculación, 600.000 €", u("EXT", { relacion: "sobrino", edad: 40, especialVinculacion: true }, 600000).aIngresar, 197.18);
+  eq("28 · O-3 · EXT el mismo antes del 05-08-2026: sin efecto", u("EXT", { relacion: "sobrino", edad: 40, especialVinculacion: true }, 600000, { fecha: "2026-08-04" }).aIngresar, 219395.08);
+  eq("28 · O-3 · EXT sin confirmar los requisitos: cuota completa", u("EXT", { relacion: "sobrino", edad: 40 }, 600000).aIngresar, 219395.08);
+  // m-1 · tipo medio exacto en la nuda propiedad: usufructo universal de 600.000 €, viudo de 60 y dos hijos; esperado independiente de la auditoría 35.655,10
+  { const r = C27({ ccaa: "EST", reparto: "usufructoUniversal", bienes: [{ id: "c", tipo: "cuenta", valor: 600000 }], herederos: [{ id: "v", nombre: "V", relacion: "conyuge", edad: 60 }, { id: "a", nombre: "A", relacion: "hijo", edad: 35 }, { id: "b", nombre: "B", relacion: "hijo", edad: 30 }] });
+    eq("28 · m-1 · EST nuda propiedad con el tipo exacto (antes 35.664,81)", r.herederos.find((h) => h.id === "a").aIngresar, 35655.1); }
+  // m-2 · Ceuta y Melilla: sin los cinco años de residencia del causante, sin bonificación (art. 23 bis)
+  eq("28 · m-2 · CEU causante con menos de 5 años de residencia: sin bonificación", u("CEU", { relacion: "hijo", edad: 40 }, 300000, { caso: { residenciaCeutaMelilla5: false } }).aIngresar, 51397.81);
+  // m-5 · Navarra: acumulación de donaciones previas (tipo medio sobre la base total; PENDIENTE de cotejo foral). Base 500.000 → 5.000 €, 1 % × 300.000 = 3.000
+  eq("28 · m-5 · NAV hijo con 200.000 € de donaciones previas", u("NAV", { relacion: "hijo", edad: 40, donacionesPreviasBL: 200000 }, 300000).aIngresar, 3000);
+}
+
+// ── 29. Auditoría civil y de plusvalía de 10-10-2026 (auditoria/civil-plusvalia.md): casos que el motor resolvía mal ──
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const H = (id, relacion, x = {}) => ({ id, nombre: id, relacion, ...x });
+  const fr = (r, id) => (r.derechos[id] || []).reduce((s, d) => s + d.fraccion, 0);
+  // A-1 (m1) · art. 107.4 TRLRHL y art. 5.1 CC: el plazo iniciado un 29-02 vence el último día de febrero → 10 años completos, coeficiente 0,12
+  const pA = (adq, fecha) => calcularPlusvalia({ inmueble: { municipio: "OTRO", cuota: 1, valorCatastralSuelo: 50000, valorCatastralTotal: 100000, adquisicion: { fecha: adq } }, titulares: [{ heredero: H("A", "hijo"), fraccion: 1 }], fecha });
+  eq("29 · A-1 · 29-02-2016 → 28-02-2026: 10 años (art. 5.1 CC), coeficiente 0,12", pA("2016-02-29", "2026-02-28").coeficiente, 0.12, 1e-4);
+  eq("29 · A-1 · 29-02-2016 → 27-02-2026: aún 9 años, 0,15", pA("2016-02-29", "2026-02-27").coeficiente, 0.15, 1e-4);
+  eq("29 · A-1 · meses: 31-01 → 28-02 es un mes completo (art. 5.1 CC): 0,15 × 1/12", pA("2026-01-31", "2026-02-28").coeficiente, 0.0125, 1e-4);
+  // B-1 · Eivissa y Formentera: art. 79 Compilación balear → arts. 809 y 810.1 CC: la mitad del haber para los padres, por mitad
+  const lEiv = calcularLegitimas({ ccaa: "BAL", isla: "eivissa", reparto: "porcentajes", herederos: [H("P", "padre"), H("M", "padre"), H("X", "extrano")], derechos: { X: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  eq("29 · B-1 · Eivissa: legítima de los padres = 1/2 (art. 79 Compilación → art. 809 CC)", lEiv.tercios.estricta, 150000, 1);
+  eq("29 · B-1 · Eivissa: mínimo de cada progenitor (art. 810.1 CC)", lEiv.herederos.find((h) => h.id === "P").legitimaMinima, 75000, 1);
+  si("29 · B-1 · Eivissa: etiqueta «(1/2)», ya no «(1/4)», y lesión detectada", /\(1\/2\)/.test(lEiv.tercios.etiquetas[0]) && lEiv.herederos.find((h) => h.id === "P").estado === "vulnerada");
+  const lEivC = calcularLegitimas({ ccaa: "BAL", isla: "formentera", reparto: "porcentajes", herederos: [H("P", "padre"), H("V", "conyuge", { edad: 70 }), H("X", "extrano")], derechos: { X: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  si("29 · B-1 · Formentera con viudo: único progenitor con la mitad y marca PENDIENTE (art. 809 CC dudoso)", lEivC.herederos.find((h) => h.id === "P").legitimaMinima === 150000 && lEivC.tercios.estado === "PENDIENTE");
+  const lMall = calcularLegitimas({ ccaa: "BAL", isla: "mallorca", reparto: "porcentajes", herederos: [H("P", "padre"), H("X", "extrano")], derechos: { X: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  eq("29 · B-1 · Mallorca sin cambios: padres 1/4 (art. 43 Compilación)", lMall.tercios.estricta, 75000, 1);
+  // B-2 (m2) · art. 851 CC: el desheredado sin causa probada recupera la legítima de SU estirpe (base 300.000, dos estirpes: 50.000)
+  const lDes = calcularLegitimas({ ccaa: "MAD", reparto: "porcentajes", herederos: [H("A", "hijo", { desheredado: true }), H("B", "hijo"), H("N1", "nieto", { estirpe: "A" }), H("N2", "nieto", { estirpe: "A" })], derechos: { B: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  eq("29 · B-2 · desheredado representado: mínimo = legítima de su estirpe (art. 851 CC)", lDes.herederos.find((h) => h.id === "A").legitimaMinima, 50000, 1);
+  // C-1 · indignidad: el indigno no hereda (art. 756 CC) y sus hijos le representan (arts. 761 y 929 CC)
+  const rInd = repartoIntestado([H("A", "hijo", { indigno: true }), H("B", "hijo"), H("N1", "nieto", { estirpe: "A" }), H("N2", "nieto", { estirpe: "A" })]);
+  eq("29 · C-1 · indigno: no hereda (art. 756 CC)", fr(rInd, "A"), 0, 1e-9);
+  eq("29 · C-1 · indigno: sus hijos le representan, 1/4 cada uno (arts. 761 y 929 CC)", fr(rInd, "N1"), 0.25, 1e-9);
+  const iInd = calcularISD({ fechaFallecimiento: "2026-05-01", ccaa: "MAD", ajuar: "cero", reparto: "intestado", bienes: [{ id: "c", tipo: "cuenta", valor: 400000 }], herederos: [H("A", "hijo", { edad: 50, indigno: true }), H("B", "hijo", { edad: 48 }), H("N1", "nieto", { edad: 20, estirpe: "A" })] });
+  si("29 · C-1 · ISD: el indigno no tributa, el nieto representante sí, con aviso de los arts. 756-762 CC", !iInd.herederos.some((h) => h.id === "A") && Math.abs(fr({ derechos: iInd.derechos }, "N1") - 0.5) < 1e-9 && iInd.alertas.some((a) => /indigno/.test(a) && /761/.test(a)));
+  const lInd = calcularLegitimas({ ccaa: "MAD", reparto: "porcentajes", herederos: [H("A", "hijo", { indigno: true }), H("B", "hijo"), H("N1", "nieto", { estirpe: "A" })], derechos: { B: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  si("29 · C-1 · legítimas: el nieto representa al indigno (50.000) y el indigno no tiene mínimo (art. 761 CC)", Math.abs(lInd.herederos.find((h) => h.id === "N1").legitimaMinima - 50000) < 1 && lInd.herederos.find((h) => h.id === "A").estado === "indigno" && lInd.herederos.find((h) => h.id === "A").legitimaMinima === 0);
+  const lInd0 = calcularLegitimas({ ccaa: "MAD", reparto: "porcentajes", herederos: [H("A", "hijo", { indigno: true }), H("B", "hijo")], derechos: { B: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 } });
+  eq("29 · C-1 · indigno sin descendientes: no hace número (legítima estricta entera para el otro hijo)", lInd0.herederos.find((h) => h.id === "B").legitimaMinima, 200000, 1);
+  // C-2 · cuotas numéricas: no hay acrecimiento (arts. 982 y 983 CC); la porción vacante va a los herederos legítimos (arts. 912.3.º y 986 CC)
+  eq("29 · C-2 · repartoPorcentajes con cuotas numéricas: vacante 40 %", repartoPorcentajes([H("A", "hijo", { pct: 60 }), H("X", "extrano", { pct: 40, renuncia: true })], { acrecer: false }).vacante ?? 0, 0.4, 1e-9);
+  eq("29 · C-2 · por defecto, cuotas distintas: no acrece", repartoPorcentajes([H("A", "hijo", { pct: 60 }), H("X", "extrano", { pct: 40, renuncia: true })]).vacante ?? 0, 0.4, 1e-9);
+  eq("29 · C-2 · cuotas iguales («por partes iguales», art. 983.2 CC): acrece por defecto", fr(repartoPorcentajes([H("A", "hijo", { pct: 50 }), H("X", "extrano", { pct: 50, renuncia: true })]), "A"), 1, 1e-9);
+  const iVac = calcularISD({ fechaFallecimiento: "2026-05-01", ccaa: "MAD", ajuar: "cero", reparto: "porcentajes", bienes: [{ id: "c", tipo: "cuenta", valor: 100000 }], herederos: [H("S", "sobrino", { edad: 40, pct: 30, estirpe: "Hn" }), H("X", "extrano", { edad: 40, pct: 70, renuncia: true }), H("Hn", "hermano", { edad: 60, pct: 0 })] });
+  si("29 · C-2 · ISD: el 70 % vacante va al hermano, heredero abintestato (art. 986 CC); el sobrino conserva el 30 %", Math.abs(fr({ derechos: iVac.derechos }, "S") - 0.3) < 1e-9 && Math.abs(fr({ derechos: iVac.derechos }, "Hn") - 0.7) < 1e-9);
+  const iAcr = calcularISD({ fechaFallecimiento: "2026-05-01", ccaa: "MAD", ajuar: "cero", reparto: "porcentajes", acrecer: "si", bienes: [{ id: "c", tipo: "cuenta", valor: 100000 }], herederos: [H("S", "sobrino", { edad: 40, pct: 30, estirpe: "Hn" }), H("X", "extrano", { edad: 40, pct: 70, renuncia: true }), H("Hn", "hermano", { edad: 60, pct: 0 })] });
+  eq("29 · C-2 · con «acrece» marcado: el sobrino lo recibe todo (art. 982 CC)", fr({ derechos: iAcr.derechos }, "S"), 1, 1e-9);
+  // D-1 · Reglamento (UE) 650/2012: residencia habitual fuera de España (arts. 21-22)
+  const iEst = calcularISD({ fechaFallecimiento: "2026-05-01", ccaa: "EST", ajuar: "cero", reparto: "intestado", bienes: [{ id: "b", tipo: "cuenta", valor: 100000 }], herederos: [H("A", "hijo", { edad: 30 })] });
+  si("29 · D-1 · residente fuera: aviso del Reglamento 650/2012 en cabeza (ley de la residencia habitual salvo professio iuris)", /650\/2012/.test(iEst.alertas[0]) && iEst.leyAplicable && !iEst.leyAplicable.espanola);
+  const iPi = calcularISD({ fechaFallecimiento: "2026-05-01", ccaa: "EST", professioIuris: "nacionalidad", ajuar: "cero", reparto: "intestado", bienes: [{ id: "b", tipo: "cuenta", valor: 100000 }], herederos: [H("A", "hijo", { edad: 30 })] });
+  si("29 · D-1 · español residente fuera que eligió su ley nacional (art. 22): ley española", iPi.leyAplicable.espanola === true);
+  const legD = (x) => calcularLegitimas({ ccaa: "MAD", reparto: "porcentajes", herederos: [H("A", "hijo"), H("B", "hijo"), H("X", "extrano")], derechos: { X: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 }, ...x });
+  si("29 · D-1 · legítimas con ley extranjera: no verificables, sin lesión ni preterición", legD({ residenciaExtranjero: true }).herederos.every((h) => h.estado === "no verificable") && !legD({ residenciaExtranjero: true }).intangibilidad.some((i) => i.tipo === "cuantitativa" || i.tipo === "pretericion"));
+  si("29 · D-1 · extranjero residente en España sin elección: ley española (art. 21.1) y lesión detectada", legD({ nacionalidadExtranjera: true }).herederos.some((h) => h.estado === "vulnerada"));
+  si("29 · D-1 · extranjero residente en España que eligió su ley nacional: no verificable", legD({ nacionalidadExtranjera: true, professioIuris: "nacionalidad" }).herederos.every((h) => h.estado === "no verificable"));
+  // F-1 · art. 69.2 RD 1629/1991: intereses de demora del periodo prorrogado (01-04-2026 → 30-09-2026: 182 días al 4,0625 %)
+  const base1 = { ccaa: "MAD", ajuar: "cero", reparto: "intestado", bienes: [{ id: "b", tipo: "cuenta", valor: 1500000 }], herederos: [H("S", "sobrino", { edad: 40 })] };
+  const iPr = calcularISD({ ...base1, fechaFallecimiento: "2025-10-01", prorrogaISD: true, fechaReferencia: "2026-09-30", enPlazo: true });
+  eq("29 · F-1 · prórroga: intereses de demora del periodo prorrogado (art. 69.2 RD 1629/1991)", iPr.interesesProrroga, Math.round(iPr.total * 0.040625 * 182 / 365 * 100) / 100, 0.01);
+  eq("29 · F-1 · se suman a totalConRecargo", iPr.totalConRecargo, Math.round((iPr.total + iPr.interesesProrroga) * 100) / 100, 0.01);
+  eq("29 · F-1 · presentado dentro de los seis meses: sin intereses", calcularISD({ ...base1, fechaFallecimiento: "2025-10-01", prorrogaISD: true, fechaReferencia: "2026-03-30", enPlazo: true }).interesesProrroga, 0, 0);
+  eq("29 · F-1 · intereses que cruzan de año con el tipo de cada año (art. 26.6 LGT)", interesesDemora(10000, "2022-12-01", "2023-01-31").importe, Math.round((10000 * 0.0375 * 30 / 365 + 10000 * 0.040625 * 31 / 365) * 100) / 100, 0.01);
+  eq("29 · F-1 · interesProrrogaISD: prórroga completa de un fallecimiento del 15-01-2026, 184 días (D-9 de la auditoría del ISD)", interesProrrogaISD(20000, "2026-01-15").importe, 409.59, 0.01);
+  // F-2 (m3) · art. 27.2 LGT, lectura literal: el 15 % exige que hayan «transcurrido» más de 12 meses
+  eq("29 · F-2 · 12 meses justos: 1 % + 12 % = 13 %", recargoArt27(10000, "2026-03-16", "2027-03-16").pct, 0.13, 1e-4);
+  eq("29 · F-2 · un día después: 15 %", recargoArt27(10000, "2026-03-16", "2027-03-17").pct, 0.15, 1e-4);
+  // F-3 (m4) · últimas voluntades: transcurridos 15 días hábiles, desde el siguiente hábil
+  const fUv = "2026-03-31", uv = calcularPlazos(fUv).find((q) => q.id === "ultimas_voluntades");
+  si("29 · F-3 · últimas voluntades: desde el día siguiente al 15.º hábil", uv.desde > sumarHabiles(fUv, 15) && uv.desde === sumarHabiles(fUv, 16));
+  // F-4 (m5, m6) · coherencia de Agenda (calcularPlazos) y Trámites (catálogo)
+  const fF4 = "2026-05-04", PF4 = Object.fromEntries(calcularPlazos(fF4, { autonomo: true, hayVehiculos: true }).map((q) => [q.id, q]));
+  const TF4 = Object.fromEntries(tramitesDe({ fecha: fF4, nHerederos: 2, inmuebles: 1, situ: { autonomo: true }, hayVehiculos: true }).map((x) => [x.id, x]));
+  si("29 · F-4a · baja del autónomo: mismo límite en plazos y trámites (3 días naturales, art. 32.3 RD 84/1996)", TF4.baja_reta && PF4.baja_ss.limite === TF4.baja_reta.limite && PF4.baja_ss.limite === "2026-05-07");
+  si("29 · F-4a · ya no se cita el «RD 643/2026», no localizado", TF4.baja_reta && !/643\/2026/.test(TF4.baja_reta.norma) && TF4.baja_reta.estado === "PENDIENTE");
+  si("29 · F-4b · transferencia DGT: corre desde la adjudicación, sin fecha fija desde el fallecimiento", PF4.dgt && !PF4.dgt.limite && /adjudicación/.test(PF4.dgt.nota));
+  // m7 · Cataluña: solo las donaciones de los diez años anteriores, salvo las imputables a la legítima (art. 451-5 CCCat)
+  const lCat = (dons) => calcularLegitimas({ ccaa: "CAT", fechaFallecimiento: "2026-05-01", reparto: "porcentajes", herederos: [H("A", "hijo"), H("B", "hijo")], derechos: { A: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 }, donaciones: dons });
+  eq("29 · m7 · Cataluña: donación de hace 12 años fuera de la base", lCat([{ herederoId: "B", valor: 100000, fecha: "2014-01-10" }]).base, 300000, 1);
+  eq("29 · m7 · Cataluña: donación de hace 5 años dentro", lCat([{ herederoId: "B", valor: 100000, fecha: "2021-01-10" }]).base, 400000, 1);
+  eq("29 · m7 · Cataluña: la imputable a la legítima cuenta aunque sea antigua (art. 451-5.c)", lCat([{ herederoId: "B", valor: 100000, fecha: "2014-01-10", imputable: true }]).base, 400000, 1);
+  eq("29 · m7 · derecho común: todas las donaciones (art. 818 CC)", calcularLegitimas({ ccaa: "MAD", fechaFallecimiento: "2026-05-01", reparto: "porcentajes", herederos: [H("A", "hijo")], derechos: { A: [{ tipo: "pleno", fraccion: 1 }] }, masa: { neto: 300000, netoReparto: 300000 }, donaciones: [{ herederoId: "A", valor: 100000, fecha: "2000-01-10" }] }).base, 400000, 1);
+  // m9 · Zaragoza 2026: 95 % también a la segunda vivienda de valor catastral inferior a 200.000 € · m10 · Córdoba: la pareja de hecho no figura en el art. 11.2
+  const pZ = (inm, rel = "hijo") => calcularPlusvalia({ inmueble: { municipio: "ZARAGOZA", cuota: 1, valorCatastralSuelo: 40000, valorCatastralTotal: 120000, adquisicion: { fecha: "2006-01-10" }, ...inm }, titulares: [{ heredero: H("A", rel, { inscrita: true }), fraccion: 1 }], fecha: "2026-05-01" }).porTitular[0];
+  eq("29 · m9 · Zaragoza: segunda vivienda (uso residencial) < 200.000 € → 95 %", pZ({ usoResidencial: true }).bonificacionPct, 0.95, 1e-9);
+  eq("29 · m9 · Zaragoza: otro inmueble → 65 %", pZ({}).bonificacionPct, 0.65, 1e-9);
+  const pC = (rel) => calcularPlusvalia({ inmueble: { municipio: "CORDOBA", cuota: 1, valorCatastralSuelo: 40000, valorCatastralTotal: 120000, adquisicion: { fecha: "2006-01-10" }, esViviendaHabitual: true }, titulares: [{ heredero: H("A", rel, { inscrita: true }), fraccion: 1 }], fecha: "2026-05-01" }).porTitular[0];
+  si("29 · m10 · Córdoba: hijo 95 %, pareja de hecho sin bonificación (art. 11.2 OF 306)", pC("hijo").bonificacionPct === 0.95 && pC("pareja_hecho").bonificacionPct === 0);
+}
+
+// ── 30. Partición (app/particion.js, lógica pura en vm): exceso inevitable o evitable, TPO por comunidad y colación (auditoría civil 10-10-2026) ──
+{
+  const vm = await import("node:vm");
+  const leer = (f) => readFileSync(new URL("./app/" + f, import.meta.url), "utf8");
+  const L = leer("logic.js").split("\n").filter((l) => /^const (num|numLeer|pctCausante|grp|eur|esc) = /.test(l)).join("\n");
+  const ctx = vm.createContext({ console, Intl, Date, cuotaCausante: (b) => (b.titularidad === "ganancial" ? 0.5 : b.titularidad === "proindiviso" ? Math.min(1, Math.max(0, (b.porcentaje ?? 100) / 100)) : 1), pctUsufructoVitalicio, RELACIONES: { hijo: { label: "Hijo/a" }, conyuge: { label: "Cónyuge" } }, TIPO_BIEN: { vivienda: ["Vivienda habitual"], inmueble: ["Otro inmueble"], cuenta: ["Cuenta"], vehiculo: ["Vehículo"] } });
+  vm.runInContext(L + "\n" + leer("particion.js") + "\nglobalThis.T = { particion, cuadroParticion, cpTributar, cpTipos, cpTpoInm, CP_TPO };", ctx);
+  const T = ctx.T, si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const caso = (ccaa, bienes, personas, extra = {}) => {
+    const x = { id: "t", fecha: "2026-06-01", ccaa, civil: "viudo", testamento: "no", ajuar: "cero", personas, bienes, deudas: [], gastos: [], ...extra };
+    const isd = calcularISD({ fechaFallecimiento: x.fecha, ccaa, ajuar: "cero", reparto: "intestado", vecindadCivil: extra.vecindadCivil, bienes: bienes.map((b) => ({ id: b.id, tipo: b.tipo === "vivienda" ? "inmueble" : b.tipo, esViviendaHabitual: b.tipo === "vivienda", valor: b.valor, titularidad: b.titularidad || "privativo" })), deudas: (extra.deudas || []), herederos: personas.map((p) => ({ id: p.id, nombre: p.nombre, relacion: p.relacion, edad: p.edad, renuncia: !!p.renuncia })) });
+    return { x, R: { isd, plus: [], totalPlus: 0 } };
+  };
+  const hijos = [{ id: "A", nombre: "Ana", relacion: "hijo", edad: 45 }, { id: "B", nombre: "Blas", relacion: "hijo", edad: 41 }];
+  const dosPisos = [{ id: "v1", tipo: "vivienda", valor: 200000, adjudicadoA: "A" }, { id: "v2", tipo: "inmueble", valor: 200000, adjudicadoA: "A" }];
+  const cp = (ccaa, bienes, personas = hijos, extra) => { const { x, R } = caso(ccaa, bienes, personas, extra); return T.cuadroParticion(x, R); };
+  // P-1 · art. 1061 CC y art. 7.2.B TRLITPAJD: dos pisos al mismo heredero → el exceso es evitable (otro lote cabía) y tributa por TPO
+  const p1 = cp("MAD", dosPisos), a1 = p1.H.find((h) => h.id === "A");
+  eq("30 · P-1 · dos pisos de 200.000 al mismo heredero: exceso evitable 200.000", a1.evitable, 200000, 1);
+  eq("30 · P-1 · Madrid: TPO del 6 % (art. 28 D. Leg. 1/2010) = 12.000", p1.coste, 12000, 1);
+  eq("30 · P-1 · Cataluña: escala del D.-ley 5/2025 sobre 200.000 = 20.000", cp("CAT", dosPisos).coste, 20000, 1);
+  eq("30 · P-1 · Comunitat Valenciana (partición desde el 01-06-2026): 9 % = 18.000", cp("VAL", dosPisos, hijos, { fechaParticion: "2026-10-10" }).coste, 18000, 1);
+  eq("30 · P-1 · Comunitat Valenciana antes del 01-06-2026: 10 % = 20.000", cp("VAL", dosPisos, hijos, { fechaParticion: "2026-05-15" }).coste, 20000, 1);
+  eq("30 · P-1 · Castilla y León: 8 % (la base no supera 250.000) = 16.000", cp("CYL", dosPisos).coste, 16000, 1);
+  const p1m = cp("MAD", [{ ...dosPisos[0], art1062: true }, { ...dosPisos[1], art1062: true }]);
+  eq("30 · P-1 · marcados inseparables por pericial (art. 1062 CC): el exceso pasa a inevitable", p1m.H.find((h) => h.id === "A").inevitable, 200000, 1);
+  // P2 de la auditoría (control, no cambia): piso de 300.000 + 100.000 en cuenta, piso a Ana → inevitable 100.000 y evitable 50.000
+  const p2 = cp("AND", [{ id: "v", tipo: "vivienda", valor: 300000, adjudicadoA: "A" }, { id: "c", tipo: "cuenta", valor: 100000 }]), a2 = p2.H.find((h) => h.id === "A");
+  si("30 · P2 · un solo bien indivisible: inevitable 100.000 y evitable 50.000, como antes", Math.abs(a2.inevitable - 100000) < 1 && Math.abs(a2.evitable - 50000) < 1);
+  eq("30 · P2 · Andalucía: AJD 1,2 % del inevitable + TPO 4 % del dinero evitable", p2.coste, 1200 + 2000, 1);
+  si("30 · TPO: sin comunidad (residente fuera sin bienes situados) no se suma y se dice", T.cpTributar("EST", { inevitable: 0, evitable: 100000, fInmEv: 1 }).tpo === null);
+  si("30 · TPO: todas las comunidades y ciudades autónomas de régimen común y foral tienen tipo", ["AND", "ARA", "AST", "BAL", "CAN", "CANT", "CLM", "CYL", "CAT", "EXT", "GAL", "MAD", "MUR", "RIO", "VAL", "NAV", "BIZ", "GIP", "ALA", "CEU", "MEL"].every((k) => T.CP_TPO[k] && T.CP_TPO[k].t[0][1] > 0 && T.CP_TPO[k].n));
+  eq("30 · TPO Aragón: escala marginal sobre 500.000 (8 % + 8,5 % + 9 %)", T.cpTpoInm("ARA", 500000).cuota, 400000 * 0.08 + 50000 * 0.085 + 50000 * 0.09, 0.01);
+  // P-2 · colación (arts. 1035 y 1047 CC): Ana recibió 60.000 colacionables; masa 240.000 + 60.000 = 300.000 → 150.000 cada uno; Ana toma 90.000
+  const colA = [{ ...hijos[0], donacionColacionable: 60000 }, hijos[1]];
+  const p5 = cp("MAD", [{ id: "c", tipo: "cuenta", valor: 240000 }], colA);
+  eq("30 · P-2 · colación: haber de Ana en el caudal (art. 1047 CC)", p5.H.find((h) => h.id === "A").haber, 90000, 1);
+  eq("30 · P-2 · colación: haber de Blas en el caudal", p5.H.find((h) => h.id === "B").haber, 150000, 1);
+  si("30 · P-2 · en proindiviso cuadra sin exceso ni defecto (3/8 y 5/8 de la cuenta)", !p5.excesos.length && Math.abs(p5.PT.cell.c.A.v - 90000) < 1);
+  const p5d = cp("MAD", [{ id: "c", tipo: "cuenta", valor: 240000 }], [{ ...colA[0], dispensaColacion: true }, hijos[1]]);
+  eq("30 · P-2 · dispensa de colación (art. 1036 CC): partes iguales", p5d.H.find((h) => h.id === "A").haber, 120000, 1);
+  const p5r = cp("MAD", [{ id: "c", tipo: "cuenta", valor: 240000 }], [{ ...hijos[0], donacionColacionable: 400000 }, hijos[1]]);
+  si("30 · P-2 · donación mayor que su parte: no recibe más ni devuelve (arts. 1036 y 654 CC); el otro hijo toma todo el caudal", p5r.H.find((h) => h.id === "A").haber === 0 && Math.abs(p5r.H.find((h) => h.id === "B").haber - 240000) < 1);
+  const p5c = cp("CAT", [{ id: "c", tipo: "cuenta", valor: 240000 }], colA, { vecindadCivil: "CAT" });
+  si("30 · P-2 · vecindad catalana: la colación del CC no se aplica (art. 464-17 CCCat; PENDIENTE)", Math.abs(p5c.H.find((h) => h.id === "A").haber - 120000) < 1 && p5c.colacion.notas.some((n) => /derecho civil propio/.test(n)));
+  const p5x = cp("MAD", [{ id: "v", tipo: "vivienda", valor: 240000, adjudicadoA: "B" }], colA);
+  eq("30 · P-2 · con adjudicación: Blas recibe el piso de 240.000 y compensa a Ana 90.000", p5x.compensaciones[0].importe, 90000, 1);
+}
+
+// ── 31. G07 · Defensa tributaria: plazos desde la notificación (arts. 62.2, 99.8, 120.3, 135, 223 y 235 LGT; art. 14.2 TRLRHL; art. 30 Ley 39/2015)
 {
   const { plazosDefensa, pagoVoluntarioLiquidacion, simularTPC, DF_COSTE_PERITO } = await import("./motor.mjs");
   const si = (n, c, extra) => { eq(n, c ? 1 : 0, 1, 0); if (!c && extra !== undefined) console.log("   ", JSON.stringify(extra).slice(0, 300)); };
   const it = (o, id) => plazosDefensa(o).items.find((q) => q.id === id) || {};
   // Meses «de fecha a fecha»: notificada el 16-03-2026 (lunes) → 16-04-2026 (jueves, hábil)
   const L1 = { tributo: "ISD", tipo: "liquidacion", fechaNotificacion: "2026-03-16" };
-  si("27 · reposición: un mes de fecha a fecha (16-03 → 16-04-2026)", it(L1, "reposicion").limite === "2026-04-16" && !it(L1, "reposicion").trasladado, it(L1, "reposicion"));
-  si("27 · reclamación económico-administrativa: el mismo mes (art. 235.1 LGT)", it(L1, "reclamacionEA").limite === "2026-04-16" && /235\.1 LGT/.test(it(L1, "reclamacionEA").norma));
-  si("27 · tasación pericial contradictoria: dentro del plazo del primer recurso (art. 135.1 LGT)", it(L1, "tpc").limite === it(L1, "reposicion").limite && /135\.1/.test(it(L1, "tpc").norma) && /valor de referencia/.test(it(L1, "tpc").nota));
+  si("31 · reposición: un mes de fecha a fecha (16-03 → 16-04-2026)", it(L1, "reposicion").limite === "2026-04-16" && !it(L1, "reposicion").trasladado, it(L1, "reposicion"));
+  si("31 · reclamación económico-administrativa: el mismo mes (art. 235.1 LGT)", it(L1, "reclamacionEA").limite === "2026-04-16" && /235\.1 LGT/.test(it(L1, "reclamacionEA").norma));
+  si("31 · tasación pericial contradictoria: dentro del plazo del primer recurso (art. 135.1 LGT)", it(L1, "tpc").limite === it(L1, "reposicion").limite && /135\.1/.test(it(L1, "tpc").norma) && /valor de referencia/.test(it(L1, "tpc").nota));
   // Fin de mes sin día equivalente y traslado al hábil: notificada el 31-01-2026 → 28-02-2026 (sábado) → lunes 02-03-2026
   const L2 = { ...L1, fechaNotificacion: "2026-01-31" };
-  si("27 · notificada el 31-01: vence el último día de febrero (art. 30.4) y, por ser sábado, el lunes 02-03-2026 (art. 30.5)", it(L2, "reposicion").limiteNatural === "2026-02-28" && it(L2, "reposicion").limite === "2026-03-02" && it(L2, "reposicion").trasladado === true, it(L2, "reposicion"));
+  si("31 · notificada el 31-01: vence el último día de febrero (art. 30.4) y, por ser sábado, el lunes 02-03-2026 (art. 30.5)", it(L2, "reposicion").limiteNatural === "2026-02-28" && it(L2, "reposicion").limite === "2026-03-02" && it(L2, "reposicion").trasladado === true, it(L2, "reposicion"));
   // Festivo nacional: notificada el 08-11-2026 → 08-12-2026 (Inmaculada, martes) → 09-12-2026
-  si("27 · vence en festivo nacional (08-12-2026): pasa al 09-12-2026", it({ ...L1, fechaNotificacion: "2026-11-08" }, "reposicion").limite === "2026-12-09");
+  si("31 · vence en festivo nacional (08-12-2026): pasa al 09-12-2026", it({ ...L1, fechaNotificacion: "2026-11-08" }, "reposicion").limite === "2026-12-09");
   // Alegaciones en días hábiles: notificada el viernes 27-03-2026; 10 días hábiles sin el Viernes Santo (03-04-2026) → 13-04-2026
   const P1 = { tributo: "ISD", tipo: "propuestaLiquidacion", fechaNotificacion: "2026-03-27" };
-  si("27 · alegaciones: 10 días hábiles sin sábados, domingos ni el Viernes Santo → 13-04-2026", it(P1, "alegaciones").limite === "2026-04-13", it(P1, "alegaciones"));
-  si("27 · alegaciones: 15 días hábiles si lo fija la propuesta → 20-04-2026", it({ ...P1, diasAlegaciones: 15 }, "alegaciones").limite === "2026-04-20");
-  si("27 · alegaciones: fuera de 10-15 días se acota (art. 99.8 LGT)", it({ ...P1, diasAlegaciones: 30 }, "alegaciones").limite === "2026-04-20" && it({ ...P1, diasAlegaciones: 3 }, "alegaciones").limite === "2026-04-13");
-  si("27 · propuesta: no da plazo de recurso ni de tasación (aún no hay liquidación)", !it(P1, "reposicion").id && !it(P1, "tpc").id);
+  si("31 · alegaciones: 10 días hábiles sin sábados, domingos ni el Viernes Santo → 13-04-2026", it(P1, "alegaciones").limite === "2026-04-13", it(P1, "alegaciones"));
+  si("31 · alegaciones: 15 días hábiles si lo fija la propuesta → 20-04-2026", it({ ...P1, diasAlegaciones: 15 }, "alegaciones").limite === "2026-04-20");
+  si("31 · alegaciones: fuera de 10-15 días se acota (art. 99.8 LGT)", it({ ...P1, diasAlegaciones: 30 }, "alegaciones").limite === "2026-04-20" && it({ ...P1, diasAlegaciones: 3 }, "alegaciones").limite === "2026-04-13");
+  si("31 · propuesta: no da plazo de recurso ni de tasación (aún no hay liquidación)", !it(P1, "reposicion").id && !it(P1, "tpc").id);
   // Pago en periodo voluntario (art. 62.2 LGT)
-  si("27 · pago: notificada el 10-03-2026 (1 a 15) → 20-04-2026", pagoVoluntarioLiquidacion("2026-03-10").limite === "2026-04-20");
-  si("27 · pago: notificada el 20-03-2026 (16 a fin de mes) → 05-05-2026", pagoVoluntarioLiquidacion("2026-03-20").limite === "2026-05-05");
-  si("27 · pago: notificada el 25-10-2026 → 05-12-2026 es sábado → 07-12-2026", pagoVoluntarioLiquidacion("2026-10-25").limite === "2026-12-07" && pagoVoluntarioLiquidacion("2026-10-25").trasladado);
-  si("27 · pago: notificada el 16-11-2026 → 05-01-2027 (cambio de año)", pagoVoluntarioLiquidacion("2026-11-16").limite === "2027-01-05");
-  si("27 · pago: notificada el 15-12-2026 → 20-01-2027", pagoVoluntarioLiquidacion("2026-12-15").limite === "2027-01-20");
+  si("31 · pago: notificada el 10-03-2026 (1 a 15) → 20-04-2026", pagoVoluntarioLiquidacion("2026-03-10").limite === "2026-04-20");
+  si("31 · pago: notificada el 20-03-2026 (16 a fin de mes) → 05-05-2026", pagoVoluntarioLiquidacion("2026-03-20").limite === "2026-05-05");
+  si("31 · pago: notificada el 25-10-2026 → 05-12-2026 es sábado → 07-12-2026", pagoVoluntarioLiquidacion("2026-10-25").limite === "2026-12-07" && pagoVoluntarioLiquidacion("2026-10-25").trasladado);
+  si("31 · pago: notificada el 16-11-2026 → 05-01-2027 (cambio de año)", pagoVoluntarioLiquidacion("2026-11-16").limite === "2027-01-05");
+  si("31 · pago: notificada el 15-12-2026 → 20-01-2027", pagoVoluntarioLiquidacion("2026-12-15").limite === "2027-01-20");
   // Plusvalía: reposición obligatoria ante el ayuntamiento (art. 14.2 TRLRHL), sin TPC ni reclamación estatal
   const M1 = { tributo: "IIVTNU", tipo: "liquidacion", fechaNotificacion: "2026-05-12" };
-  si("27 · plusvalía: reposición previa obligatoria, un mes (12-05 → 12-06-2026)", it(M1, "reposicionLocal").limite === "2026-06-12" && /14\.2/.test(it(M1, "reposicionLocal").norma) && !it(M1, "reclamacionEA").id && !it(M1, "tpc").id);
+  si("31 · plusvalía: reposición previa obligatoria, un mes (12-05 → 12-06-2026)", it(M1, "reposicionLocal").limite === "2026-06-12" && /14\.2/.test(it(M1, "reposicionLocal").norma) && !it(M1, "reclamacionEA").id && !it(M1, "tpc").id);
   // Rectificación de autoliquidación: cuatro años desde el fin del plazo o desde el ingreso fuera de plazo (arts. 66.c y 67.1 LGT)
   const A1 = { tributo: "ISD", tipo: "autoliquidacion", finPlazoPresentacion: "2026-10-20", fechaIngreso: "2026-10-15" };
-  si("27 · rectificación: ingreso en plazo → cuatro años desde el fin del plazo (20-10-2030)", it(A1, "rectificacion").limite === "2030-10-20" && /120\.3 LGT/.test(it(A1, "rectificacion").norma), it(A1, "rectificacion"));
-  si("27 · rectificación: ingreso fuera de plazo (05-11-2026) → desde el ingreso (05-11-2030)", it({ ...A1, fechaIngreso: "2026-11-05" }, "rectificacion").limite === "2030-11-05");
-  si("27 · rectificación: la prescripción no se traslada al día hábil (20-10-2029 es sábado y se mantiene)", it({ ...A1, finPlazoPresentacion: "2025-10-20", fechaIngreso: "" }, "rectificacion").limite === "2029-10-20");
-  si("27 · valor de referencia: se impugna por la rectificación, con el mismo plazo", it(A1, "valorReferencia").limite === "2030-10-20" && /9\.3 Ley 29\/1987/.test(it(A1, "valorReferencia").norma));
-  si("27 · sin fecha de notificación: aviso y sin plazos", plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).items.length === 0 && plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).avisos.some((a) => /fecha de notificación/.test(a)));
-  si("27 · territorio foral: aviso de norma foral y estado pendiente", plazosDefensa({ ...L1, foral: true }).estado === "PENDIENTE" && plazosDefensa({ ...L1, foral: true }).avisos.some((a) => /Norma Foral General Tributaria/.test(a)));
-  si("27 · sanción: reposición y reclamación, sin tasación pericial", !!it({ ...L1, tipo: "sancion" }, "reposicion").id && !it({ ...L1, tipo: "sancion" }, "tpc").id);
+  si("31 · rectificación: ingreso en plazo → cuatro años desde el fin del plazo (20-10-2030)", it(A1, "rectificacion").limite === "2030-10-20" && /120\.3 LGT/.test(it(A1, "rectificacion").norma), it(A1, "rectificacion"));
+  si("31 · rectificación: ingreso fuera de plazo (05-11-2026) → desde el ingreso (05-11-2030)", it({ ...A1, fechaIngreso: "2026-11-05" }, "rectificacion").limite === "2030-11-05");
+  si("31 · rectificación: la prescripción no se traslada al día hábil (20-10-2029 es sábado y se mantiene)", it({ ...A1, finPlazoPresentacion: "2025-10-20", fechaIngreso: "" }, "rectificacion").limite === "2029-10-20");
+  si("31 · valor de referencia: se impugna por la rectificación, con el mismo plazo", it(A1, "valorReferencia").limite === "2030-10-20" && /9\.3 Ley 29\/1987/.test(it(A1, "valorReferencia").norma));
+  si("31 · sin fecha de notificación: aviso y sin plazos", plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).items.length === 0 && plazosDefensa({ tributo: "ISD", tipo: "liquidacion" }).avisos.some((a) => /fecha de notificación/.test(a)));
+  si("31 · territorio foral: aviso de norma foral y estado pendiente", plazosDefensa({ ...L1, foral: true }).estado === "PENDIENTE" && plazosDefensa({ ...L1, foral: true }).avisos.some((a) => /Norma Foral General Tributaria/.test(a)));
+  si("31 · sanción: reposición y reclamación, sin tasación pericial", !!it({ ...L1, tipo: "sancion" }, "reposicion").id && !it({ ...L1, tipo: "sancion" }, "tpc").id);
   // Simulador de tasación pericial contradictoria (art. 135 LGT)
   const s1 = simularTPC({ valorDeclarado: 200000, valorComprobado: 260000, tipoMedio: 0.15, diasIntereses: 365, interes: 0.04 });
-  eq("27 · TPC: diferencia comprobada", s1.diferencia, 60000);
-  eq("27 · TPC: cuota adicional = diferencia × tipo", s1.cuotaAdicional, 9000);
-  eq("27 · TPC: intereses de un año al 4 %", s1.intereses, 360);
-  eq("27 · TPC: coste del perito estimado si no se indica", s1.costePerito, DF_COSTE_PERITO);
-  si("27 · TPC: compensa (9.360 € frente a 600 €)", s1.recomendacion === "compensa" && s1.umbralTercero === 240000);
-  si("27 · TPC: cuota adicional conocida (del motor) manda sobre el tipo", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 450, tipoMedio: 0.3, honorariosPerito: 600 }).recomendacion === "no compensa");
-  si("27 · TPC: dudoso si lo que se discute es menor que el doble del perito", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 1000, honorariosPerito: 600 }).recomendacion === "dudoso");
-  si("27 · TPC: valor comprobado no superior → no procede", simularTPC({ valorDeclarado: 100000, valorComprobado: 90000, tipoMedio: 0.2 }).recomendacion === "no procede");
-  si("27 · TPC: regla de los 120.000 € y el 10 % (art. 135.2 LGT)", simularTPC({ valorDeclarado: 300000, valorComprobado: 380000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === true && simularTPC({ valorDeclarado: 300000, valorComprobado: 400000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === false);
+  eq("31 · TPC: diferencia comprobada", s1.diferencia, 60000);
+  eq("31 · TPC: cuota adicional = diferencia × tipo", s1.cuotaAdicional, 9000);
+  eq("31 · TPC: intereses de un año al 4 %", s1.intereses, 360);
+  eq("31 · TPC: coste del perito estimado si no se indica", s1.costePerito, DF_COSTE_PERITO);
+  si("31 · TPC: compensa (9.360 € frente a 600 €)", s1.recomendacion === "compensa" && s1.umbralTercero === 240000);
+  si("31 · TPC: cuota adicional conocida (del motor) manda sobre el tipo", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 450, tipoMedio: 0.3, honorariosPerito: 600 }).recomendacion === "no compensa");
+  si("31 · TPC: dudoso si lo que se discute es menor que el doble del perito", simularTPC({ valorDeclarado: 100000, valorComprobado: 110000, cuotaAdicional: 1000, honorariosPerito: 600 }).recomendacion === "dudoso");
+  si("31 · TPC: valor comprobado no superior → no procede", simularTPC({ valorDeclarado: 100000, valorComprobado: 90000, tipoMedio: 0.2 }).recomendacion === "no procede");
+  si("31 · TPC: regla de los 120.000 € y el 10 % (art. 135.2 LGT)", simularTPC({ valorDeclarado: 300000, valorComprobado: 380000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === true && simularTPC({ valorDeclarado: 300000, valorComprobado: 400000, valorPeritoPropio: 350000, tipoMedio: 0.1 }).valePropia === false);
 }
 
 console.log(`\n${ok} correctas · ${ko} fallidas`);

@@ -1150,7 +1150,7 @@ function lecTestamento(t) {
   // Legados: «Lega a su sobrino DON JACINTO TÉBAR VILLALOBOS la plaza de garaje…»
   for (const m of T.matchAll(new RegExp(`\\b[Ll][Ee][Gg][Aa]\\s+[aA]\\s+(?:[sS][uU]\\s+)?([sS]obrin[oa]|[hH]erman[oa]|[nN]iet[oa]|[hH]ij[oa]|[aA]hijad[oa]|[aA]mig[oa]|[eE]sposa|[eE]sposo|[cC][óo]nyuge|[cC]u[ñn]ad[oa]|[tT][íi][oa])?\\s*,?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}\\s*,?\\s*(?:mayor de edad[^,]*,\\s*)?(?:el|la|los|las|un|una|su)\\s+((?:[^.;]|\\.(?=\\d)){5,120}?)(?:\\.(?!\\d)|;|\\s+(?:que|sit[oa]|ubicad|con cargo))`, "g"))) { // r5: «20.000 €» no corta el legado
     const rel = lecN(m[1] || ""), nombre = lecNombre(m[2]); if (!nombre) continue;
-    const relacion = /SOBRIN/.test(rel) ? "sobrino" : /HERMAN/.test(rel) ? "hermano" : /NIET/.test(rel) ? "nieto" : /HIJ/.test(rel) ? "hijo" : /ESPOS|CONYUG/.test(rel) ? "conyuge" : /TI[OA]/.test(rel) ? "tio" : "extrano";
+    const relacion = /SOBRIN/.test(rel) ? "sobrino" : /HERMAN/.test(rel) ? "hermano" : /NIET/.test(rel) ? "nieto" : /HIJ/.test(rel) ? "hijo" : /ESPOS|CONYUG/.test(rel) ? "conyuge" : /CUNAD/.test(rel) ? "cunado" : /TI[OA]/.test(rel) ? "tio" : "extrano";
     if (!/usufructo/i.test(m[3]) && !out.personas.some((p) => p.nombre === nombre)) { const ld = m[3].trim().replace(/[\s,;:]+$/, ""); out.personas.push({ nombre, relacion, legatario: true, legadoDesc: ld, conf: 1 }); out.avisos.push(`Legado a ${nombre}: «${ld.slice(0, 80)}». Marca el bien correspondiente como legado en su ficha.`); }
   }
   const fechaT = lecFechas(T.slice(0, 600)); if (fechaT.length) out.campos.push({ k: "testamentoFecha", etiqueta: "Fecha del testamento", valor: fechaT[0].f, mostrar: fechaLarga(fechaT[0].f), conf: 1 });
@@ -1160,7 +1160,7 @@ function lecTestamento(t) {
   return out;
 }
 // Acta notarial de declaración de herederos abintestato: causante, fecha, estado civil, herederos declarados con parentesco y cuotas
-const LEC_REL_PAL = { hij: "hijo", descend: "hijo", niet: "nieto", padre: "padre", madre: "padre", progenit: "padre", ascend: "padre", herman: "hermano", sobrin: "sobrino", conyug: "conyuge", espos: "conyuge", viud: "conyuge", pareja: "pareja_hecho", tio: "tio", tia: "tio" };
+const LEC_REL_PAL = { hij: "hijo", descend: "hijo", niet: "nieto", padre: "padre", madre: "padre", progenit: "padre", ascend: "padre", herman: "hermano", sobrin: "sobrino", conyug: "conyuge", espos: "conyuge", viud: "conyuge", pareja: "pareja_hecho", tio: "tio", tia: "tio", cunad: "cunado" }; // cuñado/a: grupo III (auditoría ISD 10-10-2026, M-2)
 const lecRelPalabra = (w) => { const k = lecN(w).toLowerCase(); for (const [pref, rel] of Object.entries(LEC_REL_PAL)) if (k.startsWith(pref)) return rel; return ""; };
 function lecHerederos(t) {
   const out = { campos: [], personas: [], avisos: [] }; const T = t.replace(/\s+/g, " ");

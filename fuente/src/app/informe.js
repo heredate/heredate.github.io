@@ -41,7 +41,9 @@ function pdfInformeBloques(x, R) {
   if (m.gastos) bl.push({ tipo: "fila", etiqueta: "Gastos de última enfermedad y entierro", valor: "– " + pdfEur(m.gastos) });
   if (m.legados) bl.push({ tipo: "fila", etiqueta: "Legados", valor: "– " + pdfEur(m.legados) });
   bl.push({ tipo: "fila", etiqueta: "Neto a repartir entre herederos", valor: pdfEur(m.netoReparto), negrita: true });
-  if (m.ajuar) bl.push({ tipo: "p", texto: `Ajuar doméstico: ${pdfEur(m.ajuar)}. Solo cuenta a efectos del impuesto (se suma a la base imponible de cada heredero, art. 15 Ley 29/1987); no se reparte, por eso no está en el neto.` });
+  // M-8 (auditoría ISD 10-10-2026): el criterio del ajuar se muestra siempre, también cuando sale 0 €
+  const critAj = { residencial: "3 % de las viviendas de uso residencial no arrendadas ni cedidas (STS 499/2020; TEAC 30-05-2025), criterio por defecto", ata: "criterio de la Agencia Tributaria de Andalucía, elegido a mano: solo bienes muebles de uso personal (menos prudente que el del Supremo y el TEAC)", "3pct": "3 % de todo el caudal, elegido a mano" }[m.modoAjuar] || "sin ajuar (se declara o prueba que no existe)";
+  bl.push({ tipo: "p", texto: `Ajuar doméstico: ${pdfEur(m.ajuar || 0)}. Criterio: ${critAj}. Solo cuenta a efectos del impuesto (se suma a la base imponible de cada heredero, art. 15 Ley 29/1987); no se reparte, por eso no está en el neto.` });
   if (m.gananciales) bl.push({ tipo: "p", texto: `Se ha liquidado la sociedad de gananciales: ${eur0(m.mitadViudo)} pertenecen al cónyuge viudo y no forman parte de la herencia.` });
 
   if (m.pasivoExcede > 0) bl.push({ tipo: "nota", texto: `Más deudas que bienes: el pasivo supera al caudal en ${pdfEur(m.pasivoExcede)}. Valorar aceptar a beneficio de inventario (arts. 1010 y 1023 CC) o repudiar (art. 1008 CC) antes de cualquier acto de aceptación (art. 999 CC).` });
@@ -52,13 +54,15 @@ function pdfInformeBloques(x, R) {
 
   bl.push({ tipo: "h", numero: "4.", texto: "Impuesto sobre Sucesiones, paso a paso" });
   R.isd.herederos.forEach((h, i) => {
-    bl.push({ tipo: "h", numero: `4.${i + 1}`, texto: `${h.nombre} · ${RELACIONES[h.relacion]?.label || ""} · grupo ${h.grupo}` });
+    bl.push({ tipo: "h", numero: `4.${i + 1}`, texto: `${h.nombre} · ${RELACIONES[h.relacion]?.label || ""} · grupo ${h.grupo}${h.territorio && h.territorio !== R.isd.territorio ? ` · ${h.territorio}` : ""}` });
     // K2 (control de calidad 07-10-2026): de cada reducción se muestra lo que realmente se aplica y, si es menor, el máximo legal en el concepto
     bl.push({ tipo: "tabla", cabecera: ["Paso", "Importe", "Norma"], filas: (h.traza || []).map((s) => { const parcial = s.aplicado != null && Math.abs(s.aplicado - s.valor) > 0.005; return [parcial ? `${s.paso} · aplicada hasta agotar la base (máximo ${pdfEur(Math.abs(s.valor))})` : s.paso, pdfEur(parcial ? s.aplicado : s.valor), (s.norma || "") + (s.estado === "PENDIENTE" ? " (pendiente de cotejo)" : "")]; }), alinear: ["l", "r", "l"] });
   });
   bl.push({ tipo: "fila", etiqueta: "Total Sucesiones", valor: pdfEur(R.isd.total), negrita: true, separada: true });
   // C2: fuera de plazo, el recargo del art. 27 LGT en su propia línea, con su etiqueta (nunca «15 %» si lleva intereses)
   if (R.isd.recargo && R.isd.recargo.importe) { bl.push({ tipo: "fila", etiqueta: `Recargo por presentación fuera de plazo (${R.isd.recargo.etiqueta})`, valor: pdfEur(R.isd.recargo.importe) }); bl.push({ tipo: "fila", etiqueta: "Sucesiones con recargo", valor: pdfEur(R.isd.totalConRecargo), negrita: true }); bl.push({ tipo: "nota", texto: `Plazo vencido el ${fechaLarga(R.isd.recargo.limite)}; recargo calculado a la fecha del informe sin requerimiento previo (art. 27.2 LGT). Se reduce un 25 % si se ingresa todo al presentar: ${pdfEur(R.isd.recargo.reducido)} (art. 27.5 LGT).` }); }
+  // Auditoría civil 10-10-2026 (F-1): intereses de demora del periodo de prórroga (art. 69.2 RD 1629/1991)
+  if (R.isd.interesesProrroga) { bl.push({ tipo: "fila", etiqueta: `Intereses de demora de la prórroga (${R.isd.interesesProrrogaDias} días, art. 69.2 RD 1629/1991)`, valor: pdfEur(R.isd.interesesProrroga) }); if (!(R.isd.recargo && R.isd.recargo.importe)) bl.push({ tipo: "fila", etiqueta: "Sucesiones con intereses", valor: pdfEur(R.isd.totalConRecargo), negrita: true }); }
 
   bl.push({ tipo: "h", numero: "5.", texto: "Plusvalía municipal" });
   if (!R.plus.length) bl.push({ tipo: "p", texto: "Sin inmuebles con los datos catastrales completos. La plusvalía se calculará al completarlos." });
