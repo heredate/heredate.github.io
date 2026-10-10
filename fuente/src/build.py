@@ -115,6 +115,12 @@ shell = (shell.replace("/*__MOTOR__*/", modulo("motor.mjs"))
               .replace("/*__FAMILIA__*/", "/*__DATOS_FAMILIA__*/")
               .replace("/*__UI__*/", HEREDA_SOPORTE + "\n" + "\n".join(marca((root / "src/app" / f).read_text()) for f in ("partes.js", "visual.js", "estrategia.js", "archivo.js", "despacho.js", "normativa.js", "compartir.js", "calculo.js", "particion.js", "muni.js", "pdf.js", "informe.js", "licencia.js", "diagnostico.js", "legitimas.js", "foral.js", "segunda.js", "reunion.js", "paleta.js", "motion.js", "acceso.js", "radar.js", "terceros.js", "firma.js", "escritos.js", "tiempos.js", "bienvenida.js", "demo.js", "widget.js", "seguridad.js", "ayuda.js", "guia.js", "lector.js", *sorted(p.name for p in (root / "src/app").glob("lector-*.js")), "escaner.js", *MODULOS_PRODUCTO, "robustez.js", "ui.js"))))
 shell = shell.replace("/*__PRO_CSS__*/", (root / "src/app/pro.css").read_text() + "\n" + ((root / "src/app/producto.css").read_text() if (root / "src/app/producto.css").exists() else "") + "\n" + ((root / "src/app/escaner.css").read_text() if (root / "src/app/escaner.css").exists() else ""))  # escaner.css: escáner con la cámara
+# Capa visual «cine» (src/app/cine.css y, si existe, src/app/cine.js): va justo después de la hoja de estilos principal y antes de
+# <div id="app">, en su propio <style id="hereda-cine"> (y <script id="hereda-cine-js">), para poder quitarla o cambiarla sin tocar el resto
+_cine_css, _cine_js = root / "src/app/cine.css", root / "src/app/cine.js"
+CINE = (('<style id="hereda-cine">\n' + _cine_css.read_text() + "</style>\n") if _cine_css.exists() else "") + (('<script id="hereda-cine-js">\n' + _cine_js.read_text() + "</script>\n") if _cine_js.exists() else "")
+assert "<!--CINE-->\n" in shell, "shell.html ha perdido el marcador <!--CINE-->"
+shell = shell.replace("<!--CINE-->\n", CINE, 1)
 shell = marca(shell)
 # Dos variantes: completa (archivo único y Claude) y ligera (app publicada, con las partes aparte)
 shell_ligero = shell.replace("/*__DATOS__*/", marca(DATOS_LIGERO), 1).replace("/*__DATOS_FAMILIA__*/", FAMILIA_LIGERO, 1)
@@ -256,6 +262,9 @@ for _i, _sc in enumerate(re.findall(r"<script>(.*?)</script>", (root / "app/inde
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as _f: _f.write(_sc)
     _r = subprocess.run(["node", "--check", _f.name], capture_output=True, text=True)
     if _r.returncode: raise SystemExit("Error de sintaxis en el script %d:\n%s" % (_i, _r.stderr[:1500]))
+if _cine_js.exists():  # capa cine: su script también se comprueba
+    _r = subprocess.run(["node", "--check", str(_cine_js)], capture_output=True, text=True)
+    if _r.returncode: raise SystemExit("Error de sintaxis en src/app/cine.js:\n" + _r.stderr[:1500])
 for _k in list(PARTES) + ["../nucleo/motor", "../nucleo/app"]:  # partes que se cargan aparte y núcleo
     _r = subprocess.run(["node", "--check", str(root / "app/partes" / (_k + ".js"))], capture_output=True, text=True)
     if _r.returncode: raise SystemExit("Error de sintaxis en la parte %s:\n%s" % (_k, _r.stderr[:1500]))
