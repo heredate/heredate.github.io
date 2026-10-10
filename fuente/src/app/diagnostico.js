@@ -292,7 +292,7 @@ function dgPlazoInfo(x) {
   const manual = x.enPlazoManual === true || x.enPlazo === false;
   const presentado = !!(x.tramites && x.tramites.isd && x.tramites.isd.estado === "hecho");
   const prorroga = !!(x.tramites && x.tramites.prorroga && x.tramites.prorroga.estado === "hecho");
-  const plazo = x.fecha && typeof plazoPresentacionISD === "function" ? plazoPresentacionISD(x.fecha, { hoy: dgHoy(), prorroga }) : null;
+  const plazo = x.fecha && typeof plazoPresentacionISD === "function" ? plazoPresentacionISD(x.fecha, { hoy: dgHoy(), prorroga, ccaa: x.ccaa, ine: x.muniPlazos || "" }) : null;
   if (manual || presentado || !plazo || x.proyeccion) return { enPlazo: x.enPlazo !== false, auto: false, plazo, presentado, prorroga };
   return { enPlazo: !plazo.fueraDePlazo, auto: true, plazo, presentado, prorroga };
 }
@@ -301,7 +301,9 @@ function enPlazoExp(x) { return dgPlazoInfo(x).enPlazo; }
 // vecindad civil (I6), isla (Baleares) y conmutación del usufructo catalán (art. 442-5 CCCat).
 function casoMotorJur(x) {
   const P = dgPlazoInfo(x);
-  return { enPlazo: P.enPlazo, fechaReferencia: P.presentado || x.proyeccion ? undefined : dgHoy(), prorrogaISD: P.prorroga, vecindadCivil: x.vecindadCivil || undefined, isla: x.isla || undefined, conmutacionCat: x.conmutacionCat === true };
+  return { enPlazo: P.enPlazo, fechaReferencia: P.presentado || x.proyeccion ? undefined : dgHoy(), prorrogaISD: P.prorroga, vecindadCivil: x.vecindadCivil || undefined, isla: x.isla || undefined, conmutacionCat: x.conmutacionCat === true,
+    // Auditoría civil 10-10-2026: acrecimiento con cuotas (C-2) y ley sucesoria con elemento internacional (D-1, Reglamento (UE) 650/2012)
+    acrecer: x.acrecer || undefined, residenciaExtranjero: x.ccaa === "EST" || undefined, nacionalidadExtranjera: !!(x.situ && x.situ.nacionalidadExtranjera) || undefined, professioIuris: x.professioIuris || undefined };
 }
 // Aviso rojo cuando el reparto legal no se puede calcular (vecindad foral no modelada): Impuestos, Herederos y Resumen
 function bloqueoRepartoHTML(x, R) {

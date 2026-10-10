@@ -3,7 +3,7 @@
 // legitimario y avisos de intangibilidad. No calcula por su cuenta. Prefijo: lg / LG_.
 const LG_ESTADO = {
   cubierta: ["Cubierta", "ok"], vulnerada: ["Vulnerada", "bad"], renuncia: ["Renuncia", "gray"], desheredado: ["Desheredado", "gray"],
-  "no verificable": ["No verificable", "gray"], "no legitimario": ["No legitimario", "gray"], colectiva: ["Colectiva", "gray"], formal: ["Formal", "gray"],
+  "no verificable": ["No verificable", "gray"], indigno: ["Indigno", "gray"], "no legitimario": ["No legitimario", "gray"], colectiva: ["Colectiva", "gray"], formal: ["Formal", "gray"],
 };
 const LG_TIPO = { "no legitimario": "Descendiente (no legitimario)", descendiente: "Descendiente", ascendiente: "Ascendiente", conyuge: "Cónyuge viudo" };
 
@@ -19,9 +19,10 @@ function lgCaso(x, R) {
   return {
     ccaa: x.ccaa === "EST" && x.ccaaBienes ? x.ccaaBienes : x.ccaa, vecindadCivil: x.vecindadCivil, isla: x.isla,
     reparto: x.testamento === "usufructo" ? "usufructoUniversal" : x.testamento === "porcentajes" ? "porcentajes" : "intestado",
-    herederos: (x.personas || []).map((p) => ({ id: p.id, separado: !!p.separado, nombre: p.nombre || RELACIONES[p.relacion]?.label || "Sin nombre", relacion: p.relacion === "pareja_hecho" && !p.inscrita ? "pareja_no_inscrita" : p.relacion, edad: p.edad === "" || p.edad == null ? null : num(p.edad), renuncia: !!p.renuncia, desheredado: !!p.desheredado, estirpe: p.estirpe, inscrita: !!p.inscrita, lineaAsc: p.lineaAsc })),
+    fechaFallecimiento: x.fecha, residenciaExtranjero: x.ccaa === "EST", nacionalidadExtranjera: !!(x.situ && x.situ.nacionalidadExtranjera), professioIuris: x.professioIuris || undefined,
+    herederos: (x.personas || []).map((p) => ({ id: p.id, separado: !!p.separado, indigno: !!p.indigno, nombre: p.nombre || RELACIONES[p.relacion]?.label || "Sin nombre", relacion: p.relacion === "pareja_hecho" && !p.inscrita ? "pareja_no_inscrita" : p.relacion, edad: p.edad === "" || p.edad == null ? null : num(p.edad), renuncia: !!p.renuncia, desheredado: !!p.desheredado, estirpe: p.estirpe, inscrita: !!p.inscrita, lineaAsc: p.lineaAsc })),
     derechos: R.isd.derechos, masa: R.isd.masa, legados,
-    donaciones: (x.personas || []).filter((p) => num(p.donacionColacionable) > 0).map((p) => ({ herederoId: p.id, valor: num(p.donacionColacionable) })),
+    donaciones: (x.personas || []).filter((p) => num(p.donacionColacionable) > 0).map((p) => ({ herederoId: p.id, valor: num(p.donacionColacionable), fecha: p.fechaDonacion || undefined, imputable: !!p.donacionImputable })),
     hayEmpresa: (x.bienes || []).some((b) => b.tipo === "empresa"),
   };
 }
@@ -88,8 +89,22 @@ function lgVecindadHTML(x, R) {
     <div class="field"><label for="lg-vec">Vecindad civil al fallecer</label><select id="lg-vec" data-opt="vecindadCivil"><option value="auto" ${cur === "auto" ? "selected" : ""}>Sin confirmar: según la residencia (${esc(nomRes)})</option>${LG_VEC.map(([k, t]) => `<option value="${k}" ${cur === k ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>
       <span class="hint">${V.supuesta ? "Supuesta por la residencia: confírmala. Se adquiere por filiación, opción o residencia continuada de dos o diez años (arts. 14-15 CC). " : ""}${estado}</span></div>
     ${V.id === "BAL" ? `<div class="field"><label for="lg-isla">Isla</label><select id="lg-isla" data-opt="isla"><option value="" ${!x.isla ? "selected" : ""}>Sin indicar (se aplica Mallorca y Menorca)</option>${[["mallorca", "Mallorca"], ["menorca", "Menorca"], ["eivissa", "Eivissa"], ["formentera", "Formentera"]].map(([k, t]) => `<option value="${k}" ${x.isla === k ? "selected" : ""}>${t}</option>`).join("")}</select></div>` : ""}
+    ${lgLeyHTML(x, R)}${lgAcrecerHTML(x)}
     ${V.id === "CAT" && intestado && viudo && desc ? `<div class="row toggle"><span class="t"><b>El viudo o conviviente conmuta el usufructo universal</b><small>Por la cuarta parte de la herencia en propiedad y el usufructo de la vivienda familiar, dentro del año siguiente al fallecimiento (art. 442-5 CCCat)</small></span><label class="switch"><input type="checkbox" data-opt="conmutacionCat" ${x.conmutacionCat ? "checked" : ""}><span></span></label></div>` : ""}
   </div>`;
+}
+// Auditoría civil 10-10-2026 (D-1): ley aplicable con elemento internacional (Reglamento (UE) 650/2012). Elección de ley en testamento (art. 22)
+function lgLeyHTML(x, R) {
+  const L = R && R.isd && R.isd.leyAplicable;
+  if (x.ccaa !== "EST" && !(x.situ && x.situ.nacionalidadExtranjera)) return "";
+  return `<div class="field"><label for="lg-pi">Ley sucesoria (Reglamento UE 650/2012)</label><select id="lg-pi" data-opt="professioIuris"><option value="" ${!x.professioIuris ? "selected" : ""}>No eligió ley en testamento: la de su residencia habitual (art. 21)</option><option value="nacionalidad" ${x.professioIuris === "nacionalidad" ? "selected" : ""}>Eligió en testamento la ley de su nacionalidad (art. 22)</option></select>
+    <span class="hint">${L ? `${esc(L.aviso)} ` : ""}${x.ccaa === "EST" ? "Residía fuera de España." : ""}${x.situ && x.situ.nacionalidadExtranjera ? " Tenía nacionalidad extranjera (Situaciones)." : ""}</span></div>`;
+}
+// Auditoría civil 10-10-2026 (C-2): derecho de acrecer con cuotas en el testamento (arts. 982-986 CC)
+function lgAcrecerHTML(x) {
+  if (x.testamento !== "porcentajes" || !(x.personas || []).some((p) => (p.renuncia || p.indigno) && num(p.pct) > 0)) return "";
+  const v = x.acrecer || "";
+  return `<div class="field"><label for="lg-acr">Parte de quien renuncia o es indigno</label><select id="lg-acr" data-opt="acrecer"><option value="" ${!v ? "selected" : ""}>Según las cuotas: acrece si son iguales; si no, va a los herederos legítimos</option><option value="si" ${v === "si" ? "selected" : ""}>Acrece a los coherederos: llamados sin designar partes o «por partes iguales» (art. 983.2 CC)</option><option value="no" ${v === "no" ? "selected" : ""}>No acrece: el testamento fija una cuota numérica a cada uno (arts. 912.3.º, 983 y 986 CC)</option></select><span class="hint">Si el testamento nombra sustitutos, se aplican ellos (art. 774 CC): introdúcelos por porcentajes.</span></div>`;
 }
 // Sección completa para la pestaña Herederos y bienes (o una hoja propia)
 function tLegitimas(x, R) { return lgVecindadHTML(x, R) + tLegitimas0(x, R); }

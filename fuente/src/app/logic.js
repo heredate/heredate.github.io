@@ -169,7 +169,7 @@ function casoMotor(x) {
     planesPensiones: (x.personas || []).filter((p) => num(p.planPensiones) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.planPensiones) })),
     // G04: régimen económico matrimonial (estado civil del alta y, si los hay, datos del matrimonio, reintegros, participación…)
     estadoCivil: x.civil || undefined, regimen: regimenMotor(x.regimen),
-    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones),
+    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, indigno: !!p.indigno || undefined, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones),
       discapacidadPsiquica: !!p.discapacidadPsiquica, especialVinculacion: !!p.especialVinculacion, reduccionConsumida: num(p.reduccionConsumida), impuestoTransmisionAnterior: num(p.impuestoTransmisionAnterior), impuestoExtranjero: num(p.impuestoExtranjero), valorBienesExtranjero: num(p.valorBienesExtranjero), ccaaResidencia: p.ccaaResidencia || undefined })),
   };
 }
@@ -205,7 +205,9 @@ const titularPlus = (p) => ({ id: p.id, nombre: p.nombre, relacion: p.relacion =
 // tipoManual: número (admite «29,5»), entre 0 y el máximo legal del 30 % (art. 108.1 TRLRHL); vacío = tipo de la ordenanza o, sin ordenanza, el 30 %
 const tipoManualNum = (v) => (v == null || String(v).trim() === "" ? undefined : Math.min(30, Math.max(0, num(v))));
 const ineBien = (b) => b.muniIne || (b.municipio && b.municipio !== "OTRO" && typeof MUNI_CLAVES === "object" ? MUNI_CLAVES[b.municipio] || "" : "");
-function datosPlus(x, b, caudal, isd) { const lq = isd && isd.masa.liquidacion && isd.masa.liquidacion.porBien[b.id]; return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
+// G09: municipio (código INE y nombre) de cada inmueble urbano, para contar los festivos de su ayuntamiento en el plazo de la plusvalía
+function inmueblesMuniExp(x) { return (x.bienes || []).filter((b) => b.tipo === "vivienda" || b.tipo === "inmueble").map((b) => ({ ine: ineBien(b), nombre: b.muniNombre || (ORDENANZAS[b.municipio] || {}).nombre || "" })).filter((b) => b.ine); }
+function datosPlus(x, b, caudal, isd) { const lq = isd && isd.masa.liquidacion && isd.masa.liquidacion.porBien[b.id]; return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", usoResidencial: b.tipo === "inmueble" && b.usoResidencial === true, esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
 const plusCompleto = (b) => (b.tipo === "vivienda" || b.tipo === "inmueble") && num(b.valorCatastralTotal) && num(b.valorCatastralSuelo) && b.fechaAdq;
 // ── Copia de los cálculos por expediente (I10). calcular() es una función pura del expediente (y del día): con 200 expedientes,
 // cada pintado de la cartera lo repetía cientos de veces. La clave es la huella del JSON del expediente más la fecha de hoy, así
@@ -241,9 +243,9 @@ function calcularBase(x) {
   const isd = calcularISD(casoMotor(x));
   for (const t of legadosSinBien(x)) isd.alertas.unshift(t);
   const plus = (x.bienes || []).filter(plusCompleto).map((b) => {
-    const adj = b.adjudicadoA && (x.personas || []).find((p) => p.id === b.adjudicadoA && !p.renuncia);
-    const leg = b.legatarioId && (x.personas || []).find((p) => p.id === b.legatarioId && !p.renuncia); // I8: legado a persona quitada o que renuncia → vuelve a la masa
-    const titulares = leg ? [{ heredero: titularPlus(leg), fraccion: 1 }] : adj ? [{ heredero: titularPlus(adj), fraccion: 1 }] : (x.personas || []).filter((p) => !p.renuncia).map((p) => ({ heredero: titularPlus(p), fraccion: (isd.derechos[p.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : d.tipo === "usufructo" ? d.fraccion * pctUsufructoVitalicio(num(p.edad) || 40) : d.fraccion * (1 - pctUsufructoVitalicio(num(persona(x, d.usufructuarioId).edad) || 40))), 0) })).filter((t) => t.fraccion > 0);
+    const adj = b.adjudicadoA && (x.personas || []).find((p) => p.id === b.adjudicadoA && !p.renuncia && !p.indigno);
+    const leg = b.legatarioId && (x.personas || []).find((p) => p.id === b.legatarioId && !p.renuncia && !p.indigno); // I8: legado a persona quitada o que renuncia → vuelve a la masa
+    const titulares = leg ? [{ heredero: titularPlus(leg), fraccion: 1 }] : adj ? [{ heredero: titularPlus(adj), fraccion: 1 }] : (x.personas || []).filter((p) => !p.renuncia && !p.indigno).map((p) => ({ heredero: titularPlus(p), fraccion: (isd.derechos[p.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : d.tipo === "usufructo" ? d.fraccion * pctUsufructoVitalicio(num(p.edad) || 40) : d.fraccion * (1 - pctUsufructoVitalicio(num(persona(x, d.usufructuarioId).edad) || 40))), 0) })).filter((t) => t.fraccion > 0);
     const r = calcularPlusvalia({ inmueble: datosPlus(x, b, undefined, isd), titulares, fecha: x.fecha, caudalTotal: isd.masa.bruto });
     if ((b.municipio || "OTRO") === "OTRO") {
       // Municipio sin ordenanza incorporada. Tipo, por orden: el introducido a mano; el que el ayuntamiento comunica a Hacienda para 2026
@@ -266,7 +268,7 @@ function calcularBase(x) {
     }
     return { b, r };
   });
-  const plazos = calcularPlazos(x.fecha, { autonomo: !!x.autonomo, hayInmuebles: (x.bienes || []).some((b) => b.tipo === "vivienda" || b.tipo === "inmueble"), hayVehiculos: (x.bienes || []).some((b) => b.tipo === "vehiculo"), hayConyuge: (x.personas || []).some((p) => p.relacion === "conyuge"), ccaa: x.ccaa });
+  const plazos = calcularPlazos(x.fecha, { autonomo: !!x.autonomo, hayInmuebles: (x.bienes || []).some((b) => b.tipo === "vivienda" || b.tipo === "inmueble"), hayVehiculos: (x.bienes || []).some((b) => b.tipo === "vehiculo"), hayConyuge: (x.personas || []).some((p) => p.relacion === "conyuge"), ccaa: x.ccaa, ine: x.muniPlazos || "", inmuebles: inmueblesMuniExp(x) });
   return { isd, plus, plazos, totalPlus: plus.reduce((s, p) => s + p.r.total, 0) };
 }
 // Auditoría r5 (H9): legados leídos del testamento (persona.notaLegado) sin ningún bien marcado como legado a esa persona. Antes la nota se
@@ -285,7 +287,7 @@ const nombreTerr = (id) => (TERRITORIOS.find((t) => t[0] === id) || [id, id])[1]
 const REV = (t) => `⟦REVISIÓN OBLIGATORIA POR ABOGADO: ${t}⟧`;
 function docTexto(x, R, tipo) {
   // Escritos de escritos.js (escritura, cuaderno, renuncia, 790, familia, Catastro, plusvalía); los demás, aquí. Los huecos «[dato]» pasan a «⟦dato⟧».
-  const ES = { escritura: esrEscritura, cuaderno: esrCuaderno, renuncia: esrRenuncia, solicitud790: esrSolicitud790, cartaFamilia: esrCartaFamilia, catastro: esrCatastro, plusvalia: esrPlusvalia }[tipo];
+  const ES = { escritura: esrEscritura, cuaderno: esrCuaderno, renuncia: esrRenuncia, solicitud790: esrSolicitud790, cartaFamilia: esrCartaFamilia, catastro: esrCatastro, plusvalia: esrPlusvalia, aplazamiento: typeof apEscrito === "function" ? apEscrito : null }[tipo];
   const t0 = esrHuecos(ES ? ES(x, R) : docTexto0(x, R, tipo));
   return x.testamento === "nose" && tipo !== "certificados" && t0 ? REV("aún no consta si hay testamento: este borrador se ha preparado como si no lo hubiera. Confírmalo con el certificado de últimas voluntades antes de usarlo.") + "\n\n" + t0 : t0;
 }
@@ -454,7 +456,7 @@ async function iaLeerDoc(file) {
   ui.leyendo = false; render();
 }
 
-const DOC_TIT = { escritura: "Borrador de escritura de herencia", solicitud790: "Solicitud de certificados (modelo 790)", cartaFamilia: "Carta a la familia: documentos pendientes", catastro: "Cambio de titular en el Catastro (modelo 900D)", plusvalia: "Declaración de plusvalía municipal", liquidacion: "Propuesta de liquidación", notaria: "Nota para la notaría", recibi: "Liquidación final y recibí", banco: "Carta al banco", prorroga: "Solicitud de prórroga", acuerdo: "Acuerdo entre herederos", certificados: "Guía de certificados", cuaderno: "Cuaderno particional", informe: "Informe para el cliente", unico: "Instancia de heredero único", renuncia: "Borrador de escritura de renuncia", encargo: "Hoja de encargo y presupuesto" };
+const DOC_TIT = { escritura: "Borrador de escritura de herencia", solicitud790: "Solicitud de certificados (modelo 790)", cartaFamilia: "Carta a la familia: documentos pendientes", catastro: "Cambio de titular en el Catastro (modelo 900D)", plusvalia: "Declaración de plusvalía municipal", liquidacion: "Propuesta de liquidación", notaria: "Nota para la notaría", recibi: "Liquidación final y recibí", banco: "Carta al banco", prorroga: "Solicitud de prórroga", aplazamiento: "Solicitud de aplazamiento o fraccionamiento", acuerdo: "Acuerdo entre herederos", certificados: "Guía de certificados", cuaderno: "Cuaderno particional", informe: "Informe para el cliente", unico: "Instancia de heredero único", renuncia: "Borrador de escritura de renuncia", encargo: "Hoja de encargo y presupuesto" };
 function informe(x) {
   const R = calcular(x); if (!R) return "";
   const L = [`{{MARCA}} · informe · motor ${VERSION}`, `${x.nombre || "Herencia"} · ${nombreTerr(x.ccaa)} · fallecimiento ${x.fecha}`, `Caudal del fallecido ${eur(R.isd.masa.bruto)} · neto ${eur(R.isd.masa.neto)} · ajuar ${eur(R.isd.masa.ajuar)}`, ""];
