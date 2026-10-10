@@ -1224,6 +1224,10 @@ CARGAS: No constan cargas.`;
   t("docx: lecTexto", r && r.formato === "Word" && /MARIO VEGA LUNA/.test(r.texto), r);
   const latin = new Uint8Array([0x52, 0x45, 0x47, 0x49, 0x53, 0x54, 0x52, 0x4f, 0x20, 0x43, 0x49, 0x56, 0x49, 0x4c, 0x20, 0x44, 0x45, 0x20, 0x4d, 0xc1, 0x4c, 0x41, 0x47, 0x41]);
   t("txt: Windows-1252 se decodifica", vm.runInContext("lecDecodificar", ctx)(latin) === "REGISTRO CIVIL DE MÁLAGA", vm.runInContext("lecDecodificar", ctx)(latin));
+  // 0x80-0x9F de Windows-1252 (€, comillas, rayas): no dependen del TextDecoder del entorno (Node 22.22 lo trata como Latin-1)
+  const w1252 = new Uint8Array([0x31, 0x2e, 0x32, 0x30, 0x30, 0x20, 0x80, 0x20, 0x93, 0x53, 0x8a, 0x94, 0x20, 0x96, 0x20, 0x8c]);
+  t("txt: Windows-1252 con €, comillas, raya, Š y Œ", vm.runInContext("lecDecodificar", ctx)(w1252) === "1.200 € “SŠ” – Œ", vm.runInContext("lecDecodificar", ctx)(w1252));
+  t("correo: charset iso-8859-1 se lee como Windows-1252", vm.runInContext("lecDecodificarCon", ctx)(new Uint8Array([0x80, 0x20, 0xe9]), "ISO-8859-1") === "€ é", 0);
   t("txt: UTF-8 con BOM", vm.runInContext("lecDecodificar", ctx)(new Uint8Array([0xef, 0xbb, 0xbf, ...Buffer.from("Málaga")])) === "Málaga", 0);
   t("lecLegible acepta docx y txt, no doc", vm.runInContext("[lecLegible({name:'a.docx',type:''}), lecLegible({name:'b.txt',type:''}), lecLegible({name:'c.doc',type:''})].join()", ctx) === "true,true,false", 0);
 }
