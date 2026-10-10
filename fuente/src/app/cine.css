@@ -128,6 +128,9 @@ td.sc-bad::before,.kv .sc-bad::before,.kv .sc-warn::before,.rd-sg.bad::before,.r
 .chip.ok,.chip.warn,.chip.bad,.chip.info,.st-b.ok,.st-b.warn,.st-b.bad,.tag.V,.tag.P,.tag.bajo,.tag.medio,.tag.warn,.tag.alto,.tag.litigioso,.tag.gold,
 .status.ok,.status.warn,.status.bad,.mtag.ok,.mtag.rev,.lg-pill.ok,.lg-pill.bad,.tc-chip.warn,.tc-chip.ok,.tc-pill.est-enviada,.tc-pill.est-reclamada,.tc-pill.est-escalada,.tc-pill.est-recibida,
 .vf-gs em.vf-eb,.vf-gs em.vf-ea,.vf-gs em.vf-eo,.chip-r.warn{color:var(--ink-1)}
+/* Modelos 650 y 660 (modelos.js): cifras y píldoras en tinta neutra; solo la negativa en rojo (cine.js) */
+.m6-chk-h em,.m6-badge{color:var(--ink-1)}
+.vf-tot b,.vf-l.t2 b.num,.vf-jump button .num,.m6 b.num,.m6-blq-h .num{color:var(--ink-1)}
 
 /* Cifras negativas: el único color permitido (las marca la pequeña rutina «hereda-cine-js» o la propia app) */
 .money.neg,.sr.resta .sr-v{color:var(--hc-neg)}
