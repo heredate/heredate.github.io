@@ -12,9 +12,48 @@ function fracTxt(f) {
 const DER_T = { pleno: "propiedad", usufructo: "usufructo", nuda: "nuda propiedad" };
 const derTxt = (d) => (Math.abs(d.fraccion - 1) < 1e-9 ? `Todo en ${DER_T[d.tipo]}` : `${fracTxt(d.fraccion)} en ${DER_T[d.tipo]}`);
 
+// ───────────────────── Colación (arts. 1035-1047 CC) · auditoría civil 10-10-2026, P-2 ─────────────────────
+// El heredero forzoso que concurre con otros herederos forzosos trae a la masa lo que recibió del causante en vida por título lucrativo (art. 1035)
+// para la cuenta de partición: toma de menos tanto como ya recibió y los demás reciben el equivalente (art. 1047). No se colaciona si el donante lo
+// dispensó expresamente o si el donatario repudia la herencia (art. 1036); se colaciona por el valor al tiempo de la partición (art. 1045). Si lo
+// donado supera lo que le correspondería, no recibe nada más y no devuelve el exceso salvo inoficiosidad (arts. 1036 y 654 CC). Solo en derecho común:
+// los derechos forales tienen reglas propias (en Cataluña, por ejemplo, solo si el causante lo ordena: art. 464-17 CCCat) y no se calculan (PENDIENTE).
+// Grupo: descendientes y ascendientes que heredan; el cónyuge no colaciona (doctrina mayoritaria). Dato: persona.donacionColacionable (valor actual),
+// persona.dispensaColacion. La colación no cambia las cuotas ni el Impuesto sobre Sucesiones (art. 27.1 Ley 29/1987): solo cuánto toma cada uno.
+const PC_REL = ["hijo", "nieto", "bisnieto", "padre", "abuelo"];
+function pColacion(x, R, P, share, netoReparto) {
+  const reg = (R.isd.vecindad && R.isd.vecindad.id) || "comun";
+  const G = P.filter((p) => PC_REL.includes(p.relacion) && share[p.id] > 1e-9);
+  const don = (p) => Math.max(0, num(p.donacionColacionable));
+  const conDon = G.filter((p) => don(p) > 0.5), disp = conDon.filter((p) => p.dispensaColacion), col = conDon.filter((p) => !p.dispensaColacion);
+  const out = { aplica: false, reg, grupo: G.map((p) => p.id), dispensadas: disp.map((p) => p.id), haber: {}, colacion: {}, masa: 0, notas: [] };
+  const renDon = (x.personas || []).filter((p) => p.renuncia && PC_REL.includes(p.relacion) && num(p.donacionColacionable) > 0.5);
+  if (renDon.length) out.notas.push(`${renDon.map((p) => p.nombre || "Quien renuncia").join(", ")}: repudia la herencia, así que no trae a colación lo donado (art. 1036 CC); solo se reduce si es inoficioso (arts. 636 y 654 CC).`);
+  if (disp.length) out.notas.push(`${disp.map((p) => p.nombre || "Heredero").join(", ")}: el donante dispensó la colación (art. 1036 CC); la donación cuenta para las legítimas (art. 818 CC), no para la partición.`);
+  if (!col.length || G.length < 2) { if (col.length && G.length < 2) out.notas.push("La colación solo opera entre herederos forzosos que concurren entre sí (art. 1035 CC): aquí no hay otro con quien colacionar."); return out; }
+  if (reg !== "comun") { out.notas.push(`Hay donaciones colacionables, pero la sucesión se rige por un derecho civil propio con reglas de colación distintas: no se aplican en el cuadro (PENDIENTE de criterio del abogado).`); return out; }
+  const S = G.reduce((s, p) => s + share[p.id], 0), base = S * netoReparto;
+  let act = G.slice();
+  for (let i = 0; i < G.length; i++) { // quien recibió de más que su parte en la masa colacionada sale del cálculo (no devuelve) y se recalcula
+    const Sa = act.reduce((s, p) => s + share[p.id], 0), M = base + act.reduce((s, p) => s + (p.dispensaColacion ? 0 : don(p)), 0);
+    const h = Object.fromEntries(act.map((p) => [p.id, (share[p.id] / Sa) * M - (p.dispensaColacion ? 0 : don(p))]));
+    const neg = act.filter((p) => h[p.id] < -0.005);
+    out.masa = M;
+    if (!neg.length) { for (const p of G) out.haber[p.id] = act.includes(p) ? Math.max(0, h[p.id]) : 0; break; }
+    act = act.filter((p) => !neg.includes(p));
+    if (!act.length) { for (const p of G) out.haber[p.id] = share[p.id] / S * base; break; }
+  }
+  for (const p of col) out.colacion[p.id] = don(p);
+  const fuera = G.filter((p) => out.haber[p.id] === 0 && col.includes(p));
+  out.aplica = true;
+  out.notas.unshift(`Colación (arts. 1035, 1045 y 1047 CC): ${col.map((p) => `${p.nombre || "Heredero"} trae ${eur0(don(p))}`).join(" y ")} por su valor actual. Masa a partir entre ${G.length} herederos forzosos: ${eur0(base)} + ${eur0(col.reduce((s, p) => s + don(p), 0))} = ${eur0(base + col.reduce((s, p) => s + don(p), 0))}; cada uno toma de menos lo que ya recibió.`);
+  if (fuera.length) out.notas.push(`${fuera.map((p) => p.nombre || "Heredero").join(", ")}: lo donado supera su parte en la partición; no recibe más bienes y no devuelve el exceso salvo que sea inoficioso (arts. 1036, 654 y 820 CC).`);
+  return out;
+}
+
 function particion(x, R) {
   const m = R.isd.masa;
-  const P = (x.personas || []).filter((p) => !p.renuncia);
+  const P = (x.personas || []).filter((p) => !p.renuncia && !p.indigno);
   const edad = (p) => (p && p.edad !== "" && p.edad != null && !isNaN(num(p.edad)) ? num(p.edad) : 40);
   const porId = Object.fromEntries((x.personas || []).map((p) => [p.id, p]));
   const der = R.isd.derechos || {};
@@ -24,21 +63,27 @@ function particion(x, R) {
     const inm = b.tipo === "vivienda" || b.tipo === "inmueble";
     const total = inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
     const cc = cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) });
-    const leg = b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia ? b.legatarioId : "";
-    const adj = !leg && b.adjudicadoA && porId[b.adjudicadoA] && !porId[b.adjudicadoA].renuncia ? b.adjudicadoA : "";
+    const ok = (id) => id && porId[id] && !porId[id].renuncia && !porId[id].indigno;
+    const leg = ok(b.legatarioId) ? b.legatarioId : "";
+    const adj = !leg && ok(b.adjudicadoA) ? b.adjudicadoA : "";
     return { b, inm, total, cc, v: total * cc, leg, adj };
   }).filter((q) => q.total > 0);
   const cols = P.filter((p) => (der[p.id] || []).length || B.some((q) => q.leg === p.id));
   const DG = (m.deudas || 0) + (m.gastos || 0);
+  // Colación: lo que el colacionante toma de menos se reparte entre los demás del grupo. Sin adjudicaciones, cada uno recibe en proindiviso la
+  // fracción que cuadra su nuevo haber (bienes − cargas = haber); las cargas siguen las cuotas (art. 1084 CC).
+  const COL = pColacion(x, R, P, share, m.netoReparto);
+  const vPart = B.filter((q) => !q.leg).reduce((s, q) => s + q.v, 0);
+  const kCol = Object.fromEntries(P.map((p) => [p.id, COL.aplica && COL.grupo.includes(p.id) && share[p.id] * vPart > 0.005 ? (COL.haber[p.id] + share[p.id] * DG) / (share[p.id] * vPart) : 1]));
   const cell = {};
   for (const q of B) {
     cell[q.b.id] = {};
     for (const p of cols) {
       if (q.leg) { cell[q.b.id][p.id] = q.leg === p.id ? { v: q.v, lab: "Legado" } : null; continue; }
       if (q.adj) { cell[q.b.id][p.id] = q.adj === p.id ? { v: q.v, lab: "Adjudicado entero" } : null; continue; }
-      const L = (der[p.id] || []).filter((d) => d.fraccion > 0);
-      const v = L.reduce((s, d) => s + q.v * d.fraccion * fEco(p, d), 0);
-      cell[q.b.id][p.id] = v > 0.004 ? { v, lab: L.map(derTxt).join(" · ") } : null;
+      const L = (der[p.id] || []).filter((d) => d.fraccion > 0), k = kCol[p.id] ?? 1;
+      const v = L.reduce((s, d) => s + q.v * d.fraccion * fEco(p, d), 0) * k;
+      cell[q.b.id][p.id] = v > 0.004 ? { v, lab: L.map((d) => derTxt(Math.abs(k - 1) > 1e-9 ? { ...d, fraccion: d.fraccion * k } : d)).join(" · ") } : null;
     }
   }
   const H = cols.map((p) => {
@@ -50,11 +95,11 @@ function particion(x, R) {
     // cambian (su parte económica es menor en la misma proporción), pero se separa la parte que «reduce el usufructo» de la que se paga.
     const cargasUsufructo = (der[p.id] || []).filter((d) => d.tipo === "usufructo").reduce((s, d) => s + d.fraccion * fEco(p, d), 0) * DG;
     const adjud = bienes - cargas;
-    const haber = share[p.id] * m.netoReparto;
+    const haber = COL.aplica && COL.grupo.includes(p.id) ? COL.haber[p.id] : share[p.id] * m.netoReparto;
     const legados = B.filter((q) => q.leg === p.id).reduce((s, q) => s + q.v, 0);
-    return { p, bienes, cargas, cargasUsufructo, cargasCapital: cargas - cargasUsufructo, adjud, haber, legados, dif: adjud - haber, share: share[p.id] };
+    return { p, bienes, cargas, cargasUsufructo, cargasCapital: cargas - cargasUsufructo, adjud, haber, legados, dif: adjud - haber, share: share[p.id], colacion: COL.colacion[p.id] || 0 };
   });
-  return { B, cols, cell, H, DG, share, fEco };
+  return { B, cols, cell, H, DG, share, fEco, COL };
 }
 
 // ───────────────────── Cuadro de adjudicación: ÚNICA fuente de las cifras del exceso ─────────────────────
@@ -62,12 +107,16 @@ function particion(x, R) {
 // Mi día, informe PDF, cuaderno, carpeta y modo reunión) leen el exceso, las compensaciones y su coste de aquí.
 // Base legal (research/estrategia-fiscal.md, palanca 3):
 //  · El ISD se liquida por cuotas «cualesquiera que sean las particiones» (art. 27.1 LISD): adjudicar no cambia el ISD.
-//  · Exceso inevitable (bien indivisible, art. 1062 CC) compensado en dinero: NO sujeto a TPO (art. 7.2.B TRLITPAJD).
+//  · Exceso inevitable (bien indivisible, art. 1062 CC) compensado en dinero: NO sujeto a TPO (art. 7.2.B TRLITPAJD: quedan fuera los excesos que
+//    nacen de los arts. 821, 829, 1056.2 y 1062.1 CC; TEAC 17-09-2015 los trata como no sujeción). Auditoría civil 10-10-2026 (P-1): es inevitable
+//    solo lo que el bien indivisible de MAYOR valor adjudicado (o el conjunto que el abogado marca como inseparable, bien.art1062) rebasa el haber;
+//    los demás bienes podían ir a otros lotes (art. 1061 CC; la DGT, V0239-16, juzga la indivisibilidad sobre el conjunto).
 //    AJD: Andalucía lo sujeta al 1,2 % (STSJ Andalucía 895/2026, de 15-04-2026; tipo de la Ley 5/2021) · Madrid no
 //    (STSJ Madrid de 30-09-2024, rec. 996/2022) · resto de comunidades: PENDIENTE de verificar.
 //    La cuota gradual de AJD solo grava documentos inscribibles (art. 31.2 TRLITPAJD): aquí, los inmuebles.
-//  · Exceso evitable (otro reparto lo reducía): TPO a cargo de quien recibe de más. Andalucía 7 % inmuebles y 4 % muebles
-//    (Ley 5/2021); resto, tipos estatales de referencia (art. 11 TRLITPAJD: 6 % y 4 %) PENDIENTES del tipo autonómico.
+//  · Exceso evitable (otro reparto lo reducía): compraventa entre coherederos, TPO a cargo de quien recibe de más, con el tipo general de inmuebles
+//    de cada comunidad (CP_TPO, cotejado el 10-10-2026; escalas por tramos donde la ley las fija) y el 4 % estatal de muebles (art. 11.1.a
+//    TRLITPAJD; Andalucía, Ley 5/2021). Sin comunidad conocida (residente fuera sin bienes situados) no se suma y se avisa.
 //    La indivisibilidad se juzga sobre el conjunto (DGT V0239-16); separar la parte evitable es INFERENCIA nuestra.
 //  · Exceso sin compensación: donación entre coherederos (art. 27.3 LISD). Aquí se supone siempre compensado en dinero.
 const cpLista = (L) => (L.length > 1 ? L.slice(0, -1).join(", ") + " y " + L[L.length - 1] : L[0] || ""); // «a, b y c»
@@ -76,21 +125,60 @@ const CP_INDIV = (b) => !CP_LIQ(b);
 const cpR2 = (v) => Math.round((v + Number.EPSILON) * 100) / 100;
 const cpTerr = (x) => (x.ccaa === "EST" && x.ccaaBienes ? x.ccaaBienes : x.ccaa);
 const cpViudo = (p) => p && ["conyuge", "pareja_hecho"].includes(p.relacion);
-function cpTipos(terr) {
-  if (terr === "AND") return { ajd: 0.012, ajdTxt: "AJD 1,2 %", ajdEstado: "VERIFICADO", ajdNorma: "art. 7.2.B TRLITPAJD · STSJ Andalucía 895/2026", ajdNota: "En Andalucía el exceso inevitable compensado en dinero tributa por AJD al 1,2 % (STSJ Andalucía 895/2026).", tpoInm: 0.07, tpoMue: 0.04, tpoEstado: "VERIFICADO", tpoNorma: "art. 7.2.B TRLITPAJD · Ley 5/2021 de Andalucía" };
-  if (terr === "MAD") return { ajd: 0, noSujeto: true, ajdTxt: "AJD: no sujeto", ajdEstado: "VERIFICADO", ajdNorma: "art. 7.2.B TRLITPAJD · STSJ Madrid de 30-09-2024", ajdNota: "En Madrid el TSJ considera no sujeto a AJD el exceso inevitable (sentencia de 30-09-2024).", tpoInm: 0.06, tpoMue: 0.04, tpoEstado: "PENDIENTE", tpoNorma: "art. 7.2.B y art. 11 TRLITPAJD (tipo autonómico en verificación)" };
-  return { ajd: null, ajdTxt: "AJD (tipo autonómico)", ajdEstado: "PENDIENTE", ajdNorma: "art. 7.2.B TRLITPAJD", ajdNota: "La tributación por AJD del exceso inevitable en esta comunidad está pendiente de verificar: no se suma al coste.", tpoInm: 0.06, tpoMue: 0.04, tpoEstado: "PENDIENTE", tpoNorma: "art. 7.2.B y art. 11 TRLITPAJD (tipo autonómico en verificación)" };
+// TPO general de inmuebles por comunidad (auditoría civil 10-10-2026, ficha 7.9). t: tramos [desde €, tipo] que se aplican por escala (cada tramo a
+// su tipo); un solo tramo es un tipo plano. desde/antes: tipo anterior a una reforma. sup: tipo para inmuebles de más de cierto valor (sobre todo).
+// Fuente: búsqueda web de 10-10-2026 (guiafiscal.es, taxdown.es, infoitp.es, conversoriaecnae.es, Garrigues, KPMG, portal tributario de la JCCM, AEAT
+// para Ceuta y Melilla); V si concuerdan varias y citan la norma; P si discrepan. El devengo es la fecha de la escritura de partición (art. 49.1.a TRLITPAJD).
+const CP_TPO = {
+  AND: { t: [[0, 0.07]], n: "Ley 5/2021 de Andalucía, art. 37 (7 %)", e: "VERIFICADO" },
+  ARA: { t: [[0, 0.08], [400000, 0.085], [450000, 0.09], [500000, 0.095], [750000, 0.10]], n: "art. 121-1 D. Leg. 1/2005 de Aragón (escala del 8 al 10 %)", e: "VERIFICADO" },
+  AST: { t: [[0, 0.08], [300000, 0.09], [500000, 0.10]], n: "D. Leg. 2/2014 del Principado de Asturias (8, 9 y 10 %)", e: "PENDIENTE", nota: "las fuentes discrepan sobre si se aplica por tramos o al valor total" },
+  BAL: { t: [[0, 0.08], [400000, 0.09], [600000, 0.10], [1000000, 0.12], [2000000, 0.13]], n: "art. 10 D. Leg. 1/2014 de Illes Balears (escala del 8 al 13 %)", e: "PENDIENTE", nota: "una fuente sitúa el último tramo en 3.000.000 €" },
+  CAN: { t: [[0, 0.065]], n: "D. Leg. 1/2009 de Canarias (6,5 %)", e: "VERIFICADO" },
+  CANT: { t: [[0, 0.09]], n: "D. Leg. 62/2008 de Cantabria, art. 9.1, redacción de la Ley 5/2026 (9 %)", e: "PENDIENTE", nota: "reforma de 2026 no cotejada en el BOC" },
+  CLM: { t: [[0, 0.09]], n: "Ley 8/2013 de Castilla-La Mancha (9 %)", e: "VERIFICADO" },
+  CYL: { t: [[0, 0.08], [250000, 0.10]], n: "D. Leg. 1/2013 de Castilla y León, arts. 24-26 (8 % y 10 % sobre el exceso de 250.000 €)", e: "VERIFICADO" },
+  CAT: { t: [[0, 0.10], [600000, 0.11], [900000, 0.12], [1500000, 0.13]], desde: "2025-06-27", antes: [[0, 0.10], [1000000, 0.11]], n: "art. 5.1 D.-ley 5/2025 de Cataluña (escala del 10 al 13 % desde el 27-06-2025)", e: "VERIFICADO" },
+  EXT: { t: [[0, 0.08], [360000, 0.10], [600000, 0.11]], n: "D. Leg. 1/2018 de Extremadura (8, 10 y 11 %)", e: "PENDIENTE", nota: "fecha de la última reforma no confirmada" },
+  GAL: { t: [[0, 0.08]], n: "art. 14.Uno D. Leg. 1/2011 de Galicia (8 %)", e: "VERIFICADO" },
+  MAD: { t: [[0, 0.06]], n: "art. 28 D. Leg. 1/2010 de la Comunidad de Madrid (6 %)", e: "VERIFICADO" },
+  MUR: { t: [[0, 0.0775]], desde: "2025-07-25", antes: [[0, 0.08]], n: "art. 6.1 D. Leg. 1/2010 de la Región de Murcia, redacción de la Ley 3/2025 (7,75 %)", e: "VERIFICADO" },
+  RIO: { t: [[0, 0.07]], n: "art. 44.1 Ley 10/2017 de La Rioja (7 %)", e: "VERIFICADO" },
+  VAL: { t: [[0, 0.09]], desde: "2026-06-01", antes: [[0, 0.10]], sup: [1000000, 0.11], n: "art. 13 Ley 13/1997 de la Comunitat Valenciana, redacción de la Ley 5/2025 (9 % desde el 01-06-2026; 11 % si supera 1.000.000 €)", e: "VERIFICADO" },
+  NAV: { t: [[0, 0.06]], n: "Texto refundido del ITPAJD de Navarra (6 %)", e: "VERIFICADO" },
+  BIZ: { t: [[0, 0.07]], n: "Norma Foral del ITPAJD de Bizkaia (7 %; 4 % en viviendas)", e: "PENDIENTE", nota: "las fuentes dan el 4 % para viviendas y discrepan sobre el general: se usa el 7 %, el prudente" },
+  GIP: { t: [[0, 0.07]], n: "Norma Foral del ITPAJD de Gipuzkoa (7 %; 4 % en viviendas)", e: "PENDIENTE", nota: "las fuentes dan el 4 % para viviendas y discrepan sobre el general: se usa el 7 %, el prudente" },
+  ALA: { t: [[0, 0.07]], n: "Norma Foral del ITPAJD de Álava (7 %; 4 % en viviendas)", e: "PENDIENTE", nota: "las fuentes dan el 4 % para viviendas y discrepan sobre el general: se usa el 7 %, el prudente" },
+  CEU: { t: [[0, 0.03]], n: "art. 11.1.a TRLITPAJD (6 %) con la bonificación del 50 % del art. 57 bis (Ceuta)", e: "VERIFICADO" },
+  MEL: { t: [[0, 0.03]], n: "art. 11.1.a TRLITPAJD (6 %) con la bonificación del 50 % del art. 57 bis (Melilla)", e: "VERIFICADO" },
+};
+const cpHoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+// Cuota de TPO de inmuebles para una base, con la escala del territorio a la fecha de la partición
+function cpTpoInm(terr, base, fecha) {
+  const T = CP_TPO[terr]; if (!T || !(base > 0)) return { cuota: T ? 0 : null, T };
+  const t = T.desde && (fecha || cpHoy()) < T.desde ? T.antes : T.t;
+  if (T.sup && base > T.sup[0]) return { cuota: base * T.sup[1], T, tipoMedio: T.sup[1] };
+  let c = 0; for (let i = 0; i < t.length; i++) { const de = t[i][0], a = i + 1 < t.length ? t[i + 1][0] : Infinity; if (base > de) c += (Math.min(base, a) - de) * t[i][1]; }
+  return { cuota: c, T, tipoMedio: c / base };
+}
+function cpTipos(terr, fecha) {
+  const Tp = CP_TPO[terr], tt = Tp ? (Tp.desde && (fecha || cpHoy()) < Tp.desde ? Tp.antes : Tp.t) : null;
+  const tpo = { tpoInm: tt ? tt[0][1] : null, tpoEscala: !!(tt && tt.length > 1), tpoMue: 0.04, tpoEstado: Tp ? Tp.e : "PENDIENTE", tpoNorma: `art. 7.2.B TRLITPAJD · ${Tp ? Tp.n : "tipo de la comunidad donde radica cada inmueble (art. 33.2 Ley 22/2009), sin determinar"}${Tp && Tp.nota ? ` (${Tp.nota})` : ""}`, tpoMueNorma: terr === "AND" ? "Ley 5/2021 de Andalucía (4 % muebles)" : "art. 11.1.a TRLITPAJD (4 % muebles; tipo autonómico de muebles no cotejado)" };
+  if (terr === "AND") return { ajd: 0.012, ajdTxt: "AJD 1,2 %", ajdEstado: "VERIFICADO", ajdNorma: "art. 7.2.B TRLITPAJD · STSJ Andalucía 895/2026", ajdNota: "En Andalucía el exceso inevitable compensado en dinero tributa por AJD al 1,2 % (STSJ Andalucía 895/2026).", ...tpo };
+  if (terr === "MAD") return { ajd: 0, noSujeto: true, ajdTxt: "AJD: no sujeto", ajdEstado: "VERIFICADO", ajdNorma: "art. 7.2.B TRLITPAJD · STSJ Madrid de 30-09-2024", ajdNota: "En Madrid el TSJ considera no sujeto a AJD el exceso inevitable (sentencia de 30-09-2024).", ...tpo };
+  return { ajd: null, ajdTxt: "AJD (tipo autonómico)", ajdEstado: "PENDIENTE", ajdNorma: "art. 7.2.B TRLITPAJD", ajdNota: "La tributación por AJD del exceso inevitable en esta comunidad está pendiente de verificar: no se suma al coste.", ...tpo };
 }
 // Coste de un exceso: parte inevitable (AJD sobre lo inscribible) y parte evitable (TPO). La usan el cuadro y la propuesta de lotes.
 function cpTributar(terr, o) {
-  const T = cpTipos(terr), inev = Math.max(0, o.inevitable || 0), ev = Math.max(0, o.evitable || 0);
+  const T = cpTipos(terr, o.fecha), inev = Math.max(0, o.inevitable || 0), ev = Math.max(0, o.evitable || 0);
   const ajdBase = cpR2(inev * Math.max(0, Math.min(1, o.fInmInev ?? 1)));
   const ajd = T.ajd == null ? null : cpR2(ajdBase * T.ajd);
   const fEv = Math.max(0, Math.min(1, o.fInmEv ?? 0)), tpoInmBase = cpR2(ev * fEv), tpoMueBase = cpR2(ev - tpoInmBase);
-  const tpo = cpR2(tpoInmBase * T.tpoInm + tpoMueBase * T.tpoMue);
+  const ti = cpTpoInm(terr, tpoInmBase, o.fecha);
+  const tpoInm = ti.cuota == null ? null : cpR2(ti.cuota), tpo = tpoInm == null && tpoInmBase > 0.5 ? null : cpR2((tpoInm || 0) + tpoMueBase * T.tpoMue);
   // La parte evitable se separa por INFERENCIA nuestra (DGT V0239-16 juzga la indivisibilidad sobre el conjunto): siempre PENDIENTE
   const pendiente = (ajd == null && ajdBase > 0.5) || ev > 0.5;
-  return { T, ajdBase, ajd, tpoBase: cpR2(ev), tpoInmBase, tpoMueBase, tpo, coste: cpR2((ajd || 0) + tpo), pendiente, estado: pendiente || (ajdBase > 0.5 && T.ajdEstado === "PENDIENTE") ? "PENDIENTE" : "VERIFICADO" };
+  return { T, ajdBase, ajd, tpoBase: cpR2(ev), tpoInmBase, tpoMueBase, tpoInm, tpoTipoMedio: ti.tipoMedio, tpo, coste: cpR2((ajd || 0) + (tpo || 0)), pendiente, estado: pendiente || (ajdBase > 0.5 && T.ajdEstado === "PENDIENTE") ? "PENDIENTE" : "VERIFICADO" };
 }
 const cpPct = (t) => grp(t * 100, Math.abs(t * 100 - Math.round(t * 100)) > 0.05 ? 1 : 0) + " %";
 // Texto del coste de un exceso, igual en todas las pantallas
@@ -98,7 +186,7 @@ function cpTxtCoste(e) {
   const t = e.trib, L = [];
   if (t.ajdBase > 0.5) L.push(t.T.noSujeto ? `AJD: no sujeto (${eur0(t.ajdBase)} inevitable)` : t.ajd == null ? `AJD sobre ${eur0(t.ajdBase)}: tipo autonómico pendiente de verificar` : `AJD ${cpPct(t.T.ajd)} sobre ${eur0(t.ajdBase)} = ${eur(t.ajd)}`);
   if (e.inevitable - t.ajdBase > 0.5) L.push(`${eur0(e.inevitable - t.ajdBase)} de bienes no inscribibles: sin AJD`);
-  if (t.tpoBase > 0.5) L.push(`TPO sobre la parte evitable, ${eur0(t.tpoBase)} (${[t.tpoInmBase > 0.5 ? `${cpPct(t.T.tpoInm)} inmuebles` : "", t.tpoMueBase > 0.5 ? `${cpPct(t.T.tpoMue)} ${t.tpoInmBase > 0.5 ? "resto" : "muebles"}` : ""].filter(Boolean).join(", ")}) = ${eur(t.tpo)}, criterio en verificación`);
+  if (t.tpoBase > 0.5) L.push(t.tpo == null ? `TPO sobre la parte evitable, ${eur0(t.tpoBase)}: tipo de la comunidad donde están los inmuebles sin determinar, no se suma` : `TPO sobre la parte evitable, ${eur0(t.tpoBase)} (${[t.tpoInmBase > 0.5 ? `${t.T.tpoEscala ? `escala del ${cpPct(t.T.tpoInm)} en adelante, tipo medio ${cpPct(t.tpoTipoMedio || t.T.tpoInm)}` : cpPct(t.T.tpoInm)} inmuebles` : "", t.tpoMueBase > 0.5 ? `${cpPct(t.T.tpoMue)} ${t.tpoInmBase > 0.5 ? "resto" : "muebles"}` : ""].filter(Boolean).join(", ")}) = ${eur(t.tpo)}, criterio en verificación`);
   return L.join(" · ") || "Sin coste";
 }
 function cuadroParticion(x, R) {
@@ -109,18 +197,21 @@ function cuadroParticion(x, R) {
   const nom = (p) => (p.nombre || "").trim() || (RELACIONES[p.relacion] ? RELACIONES[p.relacion].label : "Heredero");
   const H = PT.H.map((h) => {
     const id = h.p.id, enteros = PT.B.filter((q) => q.adj === id), indiv = enteros.filter((q) => CP_INDIV(q.b));
-    const vIndiv = indiv.reduce((s, q) => s + q.v, 0), vInmIndiv = indiv.filter((q) => q.inm).reduce((s, q) => s + q.v, 0);
+    // Unidad indivisible: el bien indivisible de mayor valor, o el conjunto que el abogado marca como inseparable (art. 1062 CC, por acuerdo o pericial)
+    const conj = indiv.filter((q) => q.b.art1062), sueltos = indiv.filter((q) => !q.b.art1062).sort((a, b) => b.v - a.v);
+    const vConj = conj.reduce((s, q) => s + q.v, 0), U = sueltos.length && sueltos[0].v > vConj ? [sueltos[0]] : conj.length ? conj : [];
+    const vIndiv = U.reduce((s, q) => s + q.v, 0), vInmIndiv = U.filter((q) => q.inm).reduce((s, q) => s + q.v, 0);
     const exceso = h.dif >= 1 ? cpR2(h.dif) : 0, defecto = h.dif <= -1 ? cpR2(-h.dif) : 0;
     const inevitable = exceso ? cpR2(Math.max(0, Math.min(exceso, vIndiv - h.cargas - h.haber))) : 0;
     const evitable = cpR2(exceso - inevitable);
-    // Naturaleza de lo que forma la parte evitable: lo que recibe además de los bienes indivisibles adjudicados enteros
-    const otros = PT.B.filter((q) => !indiv.includes(q) && !q.leg && PT.cell[q.b.id][id]);
+    // Naturaleza de lo que forma la parte evitable: todo lo que recibe además de la unidad indivisible
+    const otros = PT.B.filter((q) => !U.includes(q) && !q.leg && PT.cell[q.b.id][id]);
     const vOtros = otros.reduce((s, q) => s + PT.cell[q.b.id][id].v, 0), vOtrosInm = otros.filter((q) => q.inm).reduce((s, q) => s + PT.cell[q.b.id][id].v, 0);
     // Liquidez para compensar: dinero propio (su mitad de gananciales en cuentas y fondos) + dinero que recibe en pleno dominio
     const liqPropio = cpViudo(h.p) && x.civil === "gananciales" ? (x.bienes || []).filter((b) => CP_LIQ(b) && b.titularidad === "ganancial").reduce((s, b) => s + num(b.valor) * 0.5, 0) : 0;
     const liqHerencia = PT.B.filter((q) => CP_LIQ(q.b)).reduce((s, q) => s + (q.leg ? (q.leg === id ? q.v : 0) : q.adj ? (q.adj === id ? q.v : 0) : q.v * pleno(id)), 0);
-    const trib = cpTributar(terr, { inevitable, evitable, fInmInev: vIndiv ? vInmIndiv / vIndiv : 0, fInmEv: vOtros ? vOtrosInm / vOtros : 0 });
-    return { id, p: h.p, nombre: nom(h.p), haber: cpR2(h.haber), adjudicado: cpR2(h.adjud), legados: cpR2(h.legados), cargas: cpR2(h.cargas), dif: cpR2(h.dif), exceso, defecto, inevitable, evitable, bienesEnteros: enteros.map((q) => ({ b: q.b, v: q.v, indivisible: CP_INDIV(q.b), inm: q.inm })), liqPropio: cpR2(liqPropio), liqHerencia: cpR2(liqHerencia), liquido: cpR2(liqPropio + liqHerencia), trib };
+    const trib = cpTributar(terr, { inevitable, evitable, fInmInev: vIndiv ? vInmIndiv / vIndiv : 0, fInmEv: vOtros ? vOtrosInm / vOtros : 0, fecha: x.fechaParticion });
+    return { id, p: h.p, nombre: nom(h.p), haber: cpR2(h.haber), adjudicado: cpR2(h.adjud), legados: cpR2(h.legados), cargas: cpR2(h.cargas), dif: cpR2(h.dif), colacion: cpR2(h.colacion || 0), exceso, defecto, inevitable, evitable, inevitableDe: U.map((q) => q.b), evitableInm: evitable > 0.5 && vOtrosInm > 0.5, bienesEnteros: enteros.map((q) => ({ b: q.b, v: q.v, indivisible: CP_INDIV(q.b), inm: q.inm, unidad: U.includes(q) })), liqPropio: cpR2(liqPropio), liqHerencia: cpR2(liqHerencia), liquido: cpR2(liqPropio + liqHerencia), trib };
   });
   // Compensaciones: cada uno que recibe de más paga a los que reciben de menos en proporción a lo que les falta
   const pag = H.filter((e) => e.exceso > 0), rec = H.filter((e) => e.defecto > 0), totDef = rec.reduce((s, e) => s + e.defecto, 0);
@@ -137,13 +228,13 @@ function cuadroParticion(x, R) {
       if ((der[e.id] || []).some((d) => d.tipo === "usufructo")) alternativas.push({ t: "Mantener el usufructo sobre la vivienda (o conmutarlo solo por su valor) en lugar de adjudicarle la propiedad entera.", n: "arts. 839-840 CC", s: "VERIFICADO" });
     }
     const otrosNoms = rec.map((r) => r.nombre);
-    return { ...e, paga, falta, alternativas, sugerencia: e.evitable > 0.5 ? `Si ${cpLista(otrosNoms) || "los demás"} se adjudican la parte de ${e.nombre} en los demás bienes${(der[e.id] || []).some((d) => d.tipo === "usufructo") ? " (conmutando el resto de su usufructo)" : ""}, el exceso baja a ${eur0(e.inevitable)} y queda solo la parte inevitable.` : "", txtCoste: cpTxtCoste(e) };
+    return { ...e, paga, falta, alternativas, sugerencia: e.evitable > 0.5 ? `Si ${cpLista(otrosNoms) || "los demás"} se adjudican ${e.bienesEnteros.filter((b) => b.indivisible && !b.unidad).length ? `${e.bienesEnteros.filter((b) => b.indivisible && !b.unidad).map((b) => b.b.descripcion || TIPO_BIEN[b.b.tipo][0]).join(", ")} o ` : ""}la parte de ${e.nombre} en los demás bienes${(der[e.id] || []).some((d) => d.tipo === "usufructo") ? " (conmutando el resto de su usufructo)" : ""}, el exceso baja a ${eur0(e.inevitable)} y queda solo la parte inevitable.` : "", txtCoste: cpTxtCoste(e) };
   });
   const coste = cpR2(excesos.reduce((s, e) => s + e.trib.coste, 0));
   const adjudicaciones = PT.B.filter((q) => q.adj || q.leg).map((q) => ({ b: q.b, v: q.v, tipo: q.leg ? "legado" : "adjudicado", aId: q.leg || q.adj, aNombre: nom(porId[q.leg || q.adj] || {}) }));
   const proindiviso = PT.B.filter((q) => !q.adj && !q.leg && PT.cols.filter((p) => PT.cell[q.b.id][p.id]).length > 1).map((q) => q.b);
   const avisos = excesos.filter((e) => e.falta > 0.5).map((e) => ({ id: e.id, tipo: "liquidez", titulo: `${e.nombre} debe compensar ${eur0(e.paga)} y su dinero disponible es ${eur0(e.liquido)}`, detalle: `Le faltan ${eur0(e.falta)}. Dinero disponible: ${e.liqPropio ? `${eur0(e.liqPropio)} de su mitad de gananciales en cuentas y fondos` : ""}${e.liqPropio && e.liqHerencia ? " y " : ""}${e.liqHerencia ? `${eur0(e.liqHerencia)} que recibe en dinero en la herencia` : ""}${!e.liquido ? "ninguno que conste en el expediente" : ""}.`, alternativas: e.alternativas }));
-  return { x, R, PT, terr, T: cpTipos(terr), H, excesos, compensaciones, coste, pendiente: excesos.some((e) => e.trib.pendiente), totalExceso: cpR2(excesos.reduce((s, e) => s + e.exceso, 0)), hayAdjudicaciones: PT.B.some((q) => q.adj), adjudicaciones, proindiviso, avisos };
+  return { x, R, PT, terr, T: cpTipos(terr, x.fechaParticion), H, colacion: PT.COL, excesos, compensaciones, coste, pendiente: excesos.some((e) => e.trib.pendiente), totalExceso: cpR2(excesos.reduce((s, e) => s + e.exceso, 0)), hayAdjudicaciones: PT.B.some((q) => q.adj), adjudicaciones, proindiviso, avisos };
 }
 // Coste fiscal total del expediente con el exceso en su propia línea (Sucesiones + plusvalía + AJD/TPO del exceso)
 function costeExpediente(x, R) {
@@ -152,7 +243,8 @@ function costeExpediente(x, R) {
   const exceso = C ? C.coste : 0;
   // C2 (control de calidad 07-10-2026): fuera de plazo, el recargo del art. 27 LGT forma parte del coste fiscal total
   const recargo = R.isd.recargo ? R.isd.recargo.importe || 0 : 0;
-  return { isd: R.isd.total, plus: R.totalPlus, exceso, excesoPendiente: !!(C && C.pendiente), recargo, total: cpR2(R.isd.total + R.totalPlus + exceso + recargo), C };
+  const interesesProrroga = R.isd.interesesProrroga || 0; // art. 69.2 RD 1629/1991 (auditoría civil 10-10-2026, F-1)
+  return { isd: R.isd.total, plus: R.totalPlus, exceso, excesoPendiente: !!(C && C.pendiente), recargo, interesesProrroga, total: cpR2(R.isd.total + R.totalPlus + exceso + recargo + interesesProrroga), C };
 }
 // Frases para la familia y los documentos
 function cpTxtCompensaciones(C, conImporte = true) {
@@ -170,8 +262,9 @@ function cpBloqueExceso(x, R, terr) {
   const n = (s) => esc(s);
   return `<div class="card cp-exc" style="margin-top:12px">${C.excesos.map((e) => `<div class="cp-e">
       <p><b>${n(e.nombre)} recibe ${eur0(e.exceso)} más de lo que le corresponde</b> y lo compensa en dinero a ${C.compensaciones.filter((c) => c.de.id === e.id).map((c) => `${n(c.aNombre)} (${eur0(c.importe)})`).join(" y ")}.</p>
-      <div class="kv sm cp-kv"><span>Exceso inevitable${e.bienesEnteros.some((b) => b.indivisible) ? ` · ${n(e.bienesEnteros.filter((b) => b.indivisible).map((b) => b.b.descripcion || TIPO_BIEN[b.b.tipo][0]).join(", "))}, indivisible` : ""}</span><span class="num">${eur(e.inevitable)}</span>${e.evitable > 0.5 ? `<span>Exceso evitable · su parte en los demás bienes</span><span class="num">${eur(e.evitable)}</span>` : ""}<span>Coste del exceso${e.trib.estado === "PENDIENTE" ? " " + cpTag("PENDIENTE") : ""}</span><span class="num"><b>${eur(e.trib.coste)}</b></span></div>
+      <div class="kv sm cp-kv"><span>Exceso inevitable${e.bienesEnteros.some((b) => b.unidad) ? ` · ${n(e.bienesEnteros.filter((b) => b.unidad).map((b) => b.b.descripcion || TIPO_BIEN[b.b.tipo][0]).join(", "))}, indivisible${e.bienesEnteros.filter((b) => b.unidad).length > 1 ? "s en conjunto" : ""}` : ""}</span><span class="num">${eur(e.inevitable)}</span>${e.evitable > 0.5 ? `<span>Exceso evitable · ${e.bienesEnteros.some((b) => b.indivisible && !b.unidad) ? "los demás bienes adjudicados enteros y su parte en el resto" : "su parte en los demás bienes"}</span><span class="num">${eur(e.evitable)}</span>` : ""}<span>Coste del exceso${e.trib.estado === "PENDIENTE" ? " " + cpTag("PENDIENTE") : ""}</span><span class="num"><b>${eur(e.trib.coste)}</b></span></div>
       <p class="caption">${n(e.txtCoste)}. Lo paga ${n(e.nombre)}. ${n(e.trib.T.ajdNota)} ${cpNormas(e.trib.T.ajdNorma + " · art. 1062 CC", terr)}</p>
+      ${e.evitable > 0.5 ? `<p class="caption"><b>Inevitable y evitable.</b> Solo es inevitable lo que el bien indivisible de mayor valor${e.bienesEnteros.some((b) => b.b.art1062) ? " (o el conjunto marcado como inseparable)" : ""} rebasa su haber: compensado en dinero no tributa por TPO (${cpNormas("art. 1062 CC · art. 7.2.B TRLITPAJD", terr)}). El resto podía evitarse formando otros lotes (${cpNormas("art. 1061 CC", terr)}): es una compra entre coherederos que tributa por TPO, ${n(e.trib.T.tpoInm == null ? "con el tipo de la comunidad donde estén los inmuebles" : `${e.trib.T.tpoEscala ? "con la escala" : "al tipo general"} de ${typeof nombreTerr === "function" ? nombreTerr(terr) : terr}`)} (${n(e.trib.T.tpoNorma)}${e.trib.T.tpoEstado === "PENDIENTE" ? "; en verificación" : ""}).${e.evitableInm ? " Quienes ceden su parte de inmuebles pueden devengar además plusvalía municipal (art. 104 TRLRHL) y ganancia patrimonial en el IRPF." : ""} Si el bien es inseparable de otros por acuerdo o pericial, márcalo en su ficha.</p>` : ""}
       ${e.sugerencia ? `<p class="caption"><b>Para reducirlo:</b> ${n(e.sugerencia)}</p>` : ""}
       ${e.falta > 0.5 ? `<div class="infobar cp-liq"><span class="ico orange">${I.info}</span><span><b>${n(e.nombre)} no tiene dinero suficiente para compensar.</b> Debe pagar ${eur0(e.paga)} y dispone de ${eur0(e.liquido)}${e.liqPropio ? ` (su mitad de gananciales en cuentas y fondos${e.liqHerencia ? " y el dinero que hereda" : ""})` : ""}: faltan ${eur0(e.falta)}. Alternativas a valorar:<ul>${e.alternativas.map((a) => `<li>${n(a.t)} <span class="caption">${cpNormas(a.n, terr)} ${cpTag(a.s)}</span></li>`).join("")}</ul></span></div>` : ""}
     </div>`).join("")}
@@ -212,7 +305,8 @@ function tParticion(x, R) {
     const tot = PT.H.reduce((s, h) => s + h.haber, 0) || 1;
     body = cab("Qué proporción corresponde a cada uno", x.testamento === "porcentajes" ? "Según el testamento. El usufructo se valora por la edad de quien lo recibe." : x.testamento === "usufructo" ? "Usufructo universal al cónyuge y nuda propiedad a los hijos. El usufructo vale más cuanto más joven es el usufructuario." : "Sin testamento, la ley llama a los herederos por órdenes. El cónyuge viudo recibe su usufructo.") +
       `<div class="card" style="padding:22px"><div class="pstack">${PT.H.filter((h) => h.haber > 0.5).map((h) => `<i style="width:${h.haber / tot * 100}%;background:${col(h.p.id)}" title="${nom(h.p)}"></i>`).join("")}</div>
-      <div class="pcuotas">${PT.H.map((h) => `<div class="pc"><div class="pc-l">${dot(h.p.id)}<span><b>${nom(h.p)}</b><small>${esc(gnCap(gnRel(h.p)))}${h.p.edad !== "" && h.p.edad != null ? ` · ${esc(h.p.edad)} años` : ""}</small></span></div><div class="pc-d">${(R.isd.derechos[h.p.id] || []).map((d) => `<span class="chip-d ${d.tipo}">${derTxt(d)}${d.tipo !== "pleno" ? ` · vale el ${grp(PT.fEco(h.p, d) * 100, 0)} %` : ""}</span>`).join("")}${h.legados ? `<span class="chip-d leg">Legado ${eur0(h.legados)}</span>` : ""}</div><div class="pc-v num"><b>${eur0(h.haber)}</b><small>${grp(h.share * 100, 2)} % de lo que se reparte</small></div></div>`).join("")}</div></div>
+      <div class="pcuotas">${PT.H.map((h) => `<div class="pc"><div class="pc-l">${dot(h.p.id)}<span><b>${nom(h.p)}</b><small>${esc(gnCap(gnRel(h.p)))}${h.p.edad !== "" && h.p.edad != null ? ` · ${esc(h.p.edad)} años` : ""}</small></span></div><div class="pc-d">${(R.isd.derechos[h.p.id] || []).map((d) => `<span class="chip-d ${d.tipo}">${derTxt(d)}${d.tipo !== "pleno" ? ` · vale el ${grp(PT.fEco(h.p, d) * 100, 0)} %` : ""}</span>`).join("")}${h.legados ? `<span class="chip-d leg">Legado ${eur0(h.legados)}</span>` : ""}${h.colacion ? `<span class="chip-d leg">Trae a colación ${eur0(h.colacion)}</span>` : ""}</div><div class="pc-v num"><b>${eur0(h.haber)}</b><small>${h.colacion ? `${grp(h.share * 100, 2)} % de la cuota, menos lo colacionado` : `${grp(h.share * 100, 2)} % de lo que se reparte`}</small></div></div>`).join("")}</div></div>
+      ${PT.COL && PT.COL.notas.length ? `<div class="group" style="margin-top:12px"><ul class="notes">${PT.COL.notas.map((t) => `<li><i class="dot gold"></i><span>${esc(t)}</span></li>`).join("")}</ul></div>` : ""}
       ${R.isd.notasReparto.length ? `<div class="group" style="margin-top:12px"><ul class="notes">${frLeyRepartoHTML(R)}${R.isd.notasReparto.map((n) => `<li><i class="dot gold"></i><span>${esc(n)}</span></li>`).join("")}</ul></div>` : ""}
       ${R.isd.alertas.filter((a) => /legítima|Renuncia|menores/i.test(a)).map((a) => `<div class="infobar" style="margin-top:10px"><span class="ico orange">${I.info}</span><span>${esc(a)}</span></div>`).join("")}
       <p class="caption pnote">Valor del usufructo: 89 menos la edad del usufructuario, entre el 10 % y el 70 % (${linkNorma("art. 26 Ley 29/1987", terr)}).${x.testamento === "no" || x.testamento === "nose" ? ` Orden de llamamiento sin testamento: ${R.isd.regimenReparto && R.isd.regimenReparto !== "comun" ? esc(R.isd.leyReparto || "derecho civil propio de la vecindad del causante") : linkNorma("arts. 930-958 CC", terr)}.` : ` Legítimas: ${linkNorma("arts. 806-822 CC", terr)}.`}</p>`;
@@ -313,6 +407,7 @@ function cpCuaderno(x, R) {
       else if (q.adj === id) L.push(`el pleno dominio de ${nomB(q.b)}${parte}, valorado en ${eur(c.v)}${CP_INDIV(q.b) ? ", bien indivisible que se adjudica entero (art. 1062 CC)" : ""}`);
       else L.push(`${(der[id] || []).filter((d) => d.fraccion > 0).map(derF).join(" y ")} de ${nomB(q.b)}${parte}, valorado en ${eur(c.v)}`);
     }
+    if (h.colacion > 0.5) L.push(`trae a colación ${eur(h.colacion)} recibidos en vida del causante, por su valor al tiempo de la partición, y toma de menos esa cantidad (arts. 1035, 1045 y 1047 CC)`);
     if (h.cargasCapital > 0.5) L.push(`asume deudas y gastos por ${eur(h.cargasCapital)}`);
     if (h.cargasUsufructo > 0.5) L.push(`su usufructo recae sobre el caudal líquido, una vez pagadas con bienes de la herencia las deudas y gastos, sin que responda de su pago (arts. 510 y 643 CC), lo que reduce su valor en ${eur(h.cargasUsufructo)}`);
     const paga = C.compensaciones.filter((c) => c.de.id === id), cobra = C.compensaciones.filter((c) => c.a.id === id);
@@ -320,7 +415,7 @@ function cpCuaderno(x, R) {
     for (const c of cobra) L.push(`recibe en dinero ${eur(c.importe)} de ${c.deNombre} en compensación de lo que recibe de menos`);
     return `- A ${gnTrat(h.p)}${h.p.nombre || "—"}, en pago de su haber de ${eur(h.haber + h.legados)}: ${L.join("; ")}.`;
   }).join("\n");
-  const exc = C.excesos.map((e) => `Exceso de adjudicación de ${e.nombre}: ${eur(e.exceso)}${e.bienesEnteros.some((b) => b.indivisible) ? `, que nace de adjudicarle entero ${e.bienesEnteros.filter((b) => b.indivisible).map((b) => nomB(b.b)).join(", ")}, bien indivisible o que desmerece mucho con su división (art. 1062 CC)` : ""}. Se compensa en dinero: ${cpLista(C.compensaciones.filter((c) => c.de.id === e.id).map((c) => `${eur(c.importe)} a ${c.aNombre}`))}.`).join("\n");
+  const exc = C.excesos.map((e) => `Exceso de adjudicación de ${e.nombre}: ${eur(e.exceso)}${e.inevitable > 0.5 && e.bienesEnteros.some((b) => b.unidad) ? `, del que ${eur(e.inevitable)} nace de adjudicarle entero ${e.bienesEnteros.filter((b) => b.unidad).map((b) => nomB(b.b)).join(", ")}, bien indivisible o que desmerece mucho con su división (art. 1062 CC)` : ""}${e.evitable > 0.5 ? `${e.inevitable > 0.5 ? " y" : ","} ${eur(e.evitable)} que no viene impuesto por la indivisibilidad (art. 1061 CC)` : ""}. Se compensa en dinero: ${cpLista(C.compensaciones.filter((c) => c.de.id === e.id).map((c) => `${eur(c.importe)} a ${c.aNombre}`))}.`).join("\n");
   const rev = C.excesos.map((e) => `${e.nombre}: exceso inevitable ${eur(e.inevitable)}${e.evitable > 0.5 ? `, evitable ${eur(e.evitable)}` : ""}. Tributación prevista: ${e.txtCoste} (${C.T.ajdNorma}).${e.sugerencia ? " " + e.sugerencia : ""}${e.falta > 0.5 ? ` Su dinero disponible (${eur(e.liquido)}) no cubre la compensación: faltan ${eur(e.falta)}; prever pago aplazado con garantía, proindiviso o venta (art. 1062 CC).` : ""}`).join(" ");
   return { C, gan, lineas, exc, rev, hayComp: C.compensaciones.length > 0, deudasP, pasivoG };
 }

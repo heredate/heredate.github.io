@@ -154,7 +154,7 @@ function casoMotor(x) {
     deudas: (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial })),
     gastos: (x.gastos || []).map((g) => ({ importe: num(g.importe) })),
     seguros: (x.personas || []).filter((p) => num(p.seguro) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.seguro) })),
-    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones) })),
+    herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, indigno: !!p.indigno || undefined, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones) })),
   };
 }
 // La pareja de hecho no inscrita se trata como extraño también en la plusvalía (auditoría 01-10-2026, C-5), igual que en el ISD
@@ -162,7 +162,7 @@ const titularPlus = (p) => ({ id: p.id, nombre: p.nombre, relacion: p.relacion =
 // tipoManual: número (admite «29,5»), entre 0 y el máximo legal del 30 % (art. 108.1 TRLRHL); vacío = tipo de la ordenanza o, sin ordenanza, el 30 %
 const tipoManualNum = (v) => (v == null || String(v).trim() === "" ? undefined : Math.min(30, Math.max(0, num(v))));
 const ineBien = (b) => b.muniIne || (b.municipio && b.municipio !== "OTRO" && typeof MUNI_CLAVES === "object" ? MUNI_CLAVES[b.municipio] || "" : "");
-function datosPlus(x, b, caudal) { return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
+function datosPlus(x, b, caudal) { return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", usoResidencial: b.tipo === "inmueble" && b.usoResidencial === true, esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
 const plusCompleto = (b) => (b.tipo === "vivienda" || b.tipo === "inmueble") && num(b.valorCatastralTotal) && num(b.valorCatastralSuelo) && b.fechaAdq;
 // ── Copia de los cálculos por expediente (I10). calcular() es una función pura del expediente (y del día): con 200 expedientes,
 // cada pintado de la cartera lo repetía cientos de veces. La clave es la huella del JSON del expediente más la fecha de hoy, así
@@ -198,9 +198,9 @@ function calcularBase(x) {
   const isd = calcularISD(casoMotor(x));
   for (const t of legadosSinBien(x)) isd.alertas.unshift(t);
   const plus = (x.bienes || []).filter(plusCompleto).map((b) => {
-    const adj = b.adjudicadoA && (x.personas || []).find((p) => p.id === b.adjudicadoA && !p.renuncia);
-    const leg = b.legatarioId && (x.personas || []).find((p) => p.id === b.legatarioId && !p.renuncia); // I8: legado a persona quitada o que renuncia → vuelve a la masa
-    const titulares = leg ? [{ heredero: titularPlus(leg), fraccion: 1 }] : adj ? [{ heredero: titularPlus(adj), fraccion: 1 }] : (x.personas || []).filter((p) => !p.renuncia).map((p) => ({ heredero: titularPlus(p), fraccion: (isd.derechos[p.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : d.tipo === "usufructo" ? d.fraccion * pctUsufructoVitalicio(num(p.edad) || 40) : d.fraccion * (1 - pctUsufructoVitalicio(num(persona(x, d.usufructuarioId).edad) || 40))), 0) })).filter((t) => t.fraccion > 0);
+    const adj = b.adjudicadoA && (x.personas || []).find((p) => p.id === b.adjudicadoA && !p.renuncia && !p.indigno);
+    const leg = b.legatarioId && (x.personas || []).find((p) => p.id === b.legatarioId && !p.renuncia && !p.indigno); // I8: legado a persona quitada o que renuncia → vuelve a la masa
+    const titulares = leg ? [{ heredero: titularPlus(leg), fraccion: 1 }] : adj ? [{ heredero: titularPlus(adj), fraccion: 1 }] : (x.personas || []).filter((p) => !p.renuncia && !p.indigno).map((p) => ({ heredero: titularPlus(p), fraccion: (isd.derechos[p.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : d.tipo === "usufructo" ? d.fraccion * pctUsufructoVitalicio(num(p.edad) || 40) : d.fraccion * (1 - pctUsufructoVitalicio(num(persona(x, d.usufructuarioId).edad) || 40))), 0) })).filter((t) => t.fraccion > 0);
     const r = calcularPlusvalia({ inmueble: datosPlus(x, b), titulares, fecha: x.fecha, caudalTotal: isd.masa.bruto });
     if ((b.municipio || "OTRO") === "OTRO") {
       // Municipio sin ordenanza incorporada. Tipo, por orden: el introducido a mano; el que el ayuntamiento comunica a Hacienda para 2026

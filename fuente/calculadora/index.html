@@ -723,6 +723,7 @@ function cuotaCausante(b) {
 // o (control de calidad 07-10-2026, I6): variantes forales que remiten al Código Civil con otros derechos del viudo (Galicia, Mallorca y Menorca):
 // usufDesc/usufAsc/usufAbuelos (fracción del usufructo del viudo), notaDesc/notaAsc (texto con su norma), parejaComoConyuge, notaFinal.
 function repartoIntestado(personas, o = {}) {
+  personas = sinIndignos(personas); // arts. 756, 761 y 929 CC: el indigno no hereda y sus descendientes le representan como a un premuerto
   const der = {}; const add = (id, d) => (der[id] = der[id] || []).push(d);
   const notas = [], avisos = [];
   const norm = (t) => String(t || "").trim().toLowerCase();
@@ -863,16 +864,29 @@ function repartoUsufructoUniversal(personas) {
   return { derechos: der, notas: [`Usufructo universal al cónyuge y nuda propiedad a los descendientes por partes iguales${hayEstirpes ? ", por estirpes" : ""}. Suele ir con cautela socini: si un hijo exige su legítima libre, se reduce a la estricta. Revisar el testamento.`], avisos: avisosFuera };
 }
 
-function repartoPorcentajes(personas) {
-  const activos = personas.filter((p) => !p.renuncia && (Number(p.pct) || 0) > 0);
-  const total = activos.reduce((s, p) => s + Number(p.pct), 0);
-  const renunciado = personas.filter((p) => p.renuncia).reduce((s, p) => s + (Number(p.pct) || 0), 0);
+// Auditoría civil 10-10-2026 (C-2): la designación de cuotas numéricas excluye el derecho de acrecer (arts. 982.2.º y 983 CC); la porción vacante
+// (renuncia o indignidad, sin sustituto) pasa a los herederos legítimos del testador (arts. 912.3.º y 986 CC). «Por mitad» o «por partes iguales»
+// no excluye el acrecimiento (art. 983.2 CC). o.acrecer: true/"si" acrece · false/"no" no acrece · sin dato: acrece solo si las cuotas son iguales
+// (el programa no ve si el testamento dice «por partes iguales» o fija la cifra: se avisa). Sin acrecer devuelve `vacante` (fracción del caudal).
+function repartoPorcentajes(personas, o = {}) {
+  const pc = (p) => Number(p.pct) || 0, fuera = (p) => p.renuncia || p.indigno;
+  const activos = personas.filter((p) => !fuera(p) && pc(p) > 0);
+  const total = activos.reduce((s, p) => s + pc(p), 0);
+  const vac = personas.filter((p) => fuera(p) && pc(p) > 0), renunciado = vac.reduce((s, p) => s + pc(p), 0);
+  const cuotas = [...activos, ...vac].map(pc), iguales = cuotas.every((c) => Math.abs(c - cuotas[0]) < 1e-9);
+  const ac = o.acrecer === true || o.acrecer === "si" ? true : o.acrecer === false || o.acrecer === "no" ? false : iguales;
   const der = {}; const notas = [];
-  for (const p of activos) der[p.id] = [{ tipo: "pleno", fraccion: (Number(p.pct) / (total || 1)) }];
-  if (renunciado) notas.push(`Hay renuncias (${renunciado} %): su parte se ha repartido entre los demás en proporción (derecho de acrecer, arts. 981-987 CC). Si el testamento prevé sustitutos, se aplican ellos. Fiscalmente, quien recibe la parte renunciada tributa con su propio parentesco, aplicando el coeficiente multiplicador del renunciante si es superior al suyo (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991).`);
+  const sinAcrecer = renunciado > 0 && !ac && total > 0;
+  const tot = sinAcrecer ? total + renunciado : total;
+  for (const p of activos) der[p.id] = [{ tipo: "pleno", fraccion: (pc(p) / (tot || 1)) }];
+  const quien = `${vac.some((p) => p.renuncia) ? "renuncias" : ""}${vac.some((p) => p.renuncia) && vac.some((p) => p.indigno) ? " e " : ""}${vac.some((p) => p.indigno) ? "indignidad" : ""}`;
+  if (renunciado && !sinAcrecer) notas.push(`Hay ${quien} (${renunciado} %): su parte se ha repartido entre los demás en proporción (derecho de acrecer, arts. 981-987 CC)${o.acrecer == null ? ". Se ha supuesto que el testamento llama «por partes iguales» o sin designar partes (art. 983.2 CC): si fija una cuota numérica a cada heredero, no hay acrecimiento y la parte vacante va a los herederos legítimos (arts. 912.3.º y 986 CC); indícalo en el testamento" : ""}. Si el testamento prevé sustitutos, se aplican ellos. Fiscalmente, quien recibe la parte renunciada tributa con su propio parentesco, aplicando el coeficiente multiplicador del renunciante si es superior al suyo (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991).`);
+  if (sinAcrecer) notas.push(`Hay ${quien} (${renunciado} % de la herencia): ${o.acrecer == null ? "las cuotas del testamento son distintas y numéricas" : "el testamento designa cuotas numéricas"}, así que no hay derecho de acrecer (arts. 982 y 983 CC). Sin sustituto, esa porción vacante pasa a los herederos legítimos del testador, que la reciben con sus cargas (arts. 912.3.º y 986 CC). Si quien falta era legitimario, su legítima va a los colegitimarios por derecho propio (art. 985.2 CC). Si el testamento prevé sustitutos, se aplican ellos.`);
   if (Math.abs(total + renunciado - 100) > 0.01) notas.push(`Los porcentajes suman ${total + renunciado} %, no 100 %. Se han normalizado.`);
-  return { derechos: der, notas };
+  return { derechos: der, notas, ...(sinAcrecer ? { vacante: renunciado / tot } : {}) };
 }
+// El indigno para suceder (art. 756 CC) no hereda; sus hijos y descendientes ocupan su lugar en la legítima y en la sucesión intestada (arts. 761 y 929 CC)
+function sinIndignos(personas) { return (personas || []).filter((p) => !p.indigno); }
 
 // ─────────────────────────── Vecindad civil y sucesión intestada foral (control de calidad 07-10-2026, I6) ───────────────────────────
 // La sucesión se rige por la ley personal del causante al fallecer, que entre españoles es la de su VECINDAD CIVIL (arts. 9.8, 14 y 16.1 CC),
@@ -886,6 +900,25 @@ function vecindadCivil(caso) {
   return { id: map(caso && caso.ccaa), supuesta: true, residencia: map(caso && caso.ccaa) };
 }
 const esParejaRel = (p) => p.relacion === "pareja_hecho" || p.relacion === "pareja_no_inscrita";
+// ── Ley aplicable con elemento internacional: Reglamento (UE) 650/2012 (auditoría civil 10-10-2026, D-1) ──
+// Fallecimientos desde el 17-08-2015 (art. 83). Regla general: la ley del Estado de la residencia habitual del causante al fallecer (art. 21.1), salvo
+// vínculo manifiestamente más estrecho con otro Estado (art. 21.2) o elección de la ley de su nacionalidad en una disposición mortis causa (professio
+// iuris, art. 22). La ley rige toda la sucesión: herederos, cuotas, legítimas y colación (art. 23). Si la ley elegida o aplicable es la española, sus
+// normas internas deciden qué derecho civil territorial rige (art. 36.1 → arts. 9.8 y 16 CC: vecindad civil); para un extranjero residente en España
+// sin vecindad civil, la ley de la unidad territorial de su residencia (art. 36.2.a; criterio de la DGSJFP, PENDIENTE de cotejo). Reenvío a la ley
+// española desde un tercer Estado no miembro: art. 34. caso.residenciaExtranjero (o ccaa «EST»), caso.nacionalidadExtranjera y caso.professioIuris
+// («nacionalidad»: eligió en testamento la ley de su nacionalidad).
+function leySucesoria(caso) {
+  const resExt = !!(caso && (caso.residenciaExtranjero || caso.ccaa === "EST")), nacExt = !!(caso && caso.nacionalidadExtranjera), pi = caso && caso.professioIuris === "nacionalidad";
+  if (!resExt && !nacExt) return null;
+  const N = "arts. 21, 22 y 36 Reglamento (UE) 650/2012";
+  const espanola = resExt ? !nacExt && pi : !(nacExt && pi);
+  const motivo = resExt
+    ? (nacExt ? `residía fuera de España y no era español: rige la ley del Estado de su residencia habitual${pi ? ", o la de su nacionalidad que eligió en testamento" : ""} (arts. 21.1 y 22)` : pi ? "residía fuera de España, pero eligió en testamento la ley española, la de su nacionalidad (art. 22): rige el derecho español, y entre españoles el de su vecindad civil (art. 36.1; arts. 9.8 y 16 CC)" : "residía fuera de España: rige la ley del Estado de su residencia habitual (art. 21.1), salvo que eligiera en testamento la ley española, la de su nacionalidad (art. 22), o que esa ley reenvíe a la española (art. 34, solo desde Estados no miembros)")
+    : pi ? "tenía nacionalidad extranjera y eligió en testamento la ley de su nacionalidad (art. 22): esa ley rige toda la sucesión" : "tenía nacionalidad extranjera pero residía en España: rige la ley española de su residencia habitual (art. 21.1) salvo elección en testamento de la ley de su nacionalidad (art. 22); dentro de España, el derecho civil del territorio de su residencia (art. 36.2.a), criterio PENDIENTE de cotejo";
+  return { espanola, determinable: espanola, resExt, nacExt, professioIuris: pi, norma: N, estado: espanola && !resExt ? P : V,
+    aviso: `Reglamento (UE) 650/2012: el causante ${motivo}. ${espanola ? "El reparto y las legítimas se calculan con el derecho español; compruébalo con el testamento (la elección de ley debe constar en una disposición mortis causa, art. 22.2)." : "El reparto, las cuotas y las legítimas dependen de una ley extranjera que el programa no aplica: las cifras de reparto son una referencia provisional con el Código Civil y las legítimas no se verifican. Determinar la ley con el abogado (cláusula de escape del art. 21.2; certificado sucesorio europeo, arts. 62 y ss.)."}` };
+}
 
 // Cataluña · Codi civil de Catalunya, llibre IV (Ley 10/2008), título IV. Cotejado el 07-10-2026 con dos fuentes secundarias concordantes
 // (Economist & Jurist, «El régimen de la sucesión intestada en Cataluña»; notariosyregistradores.com, resumen del libro IV) y con el preámbulo
@@ -1232,6 +1265,7 @@ function repartoIntestadoForal(reg, personas, o = {}) {
 // Reparto sin testamento según la vecindad civil del causante
 function repartoLegal(personas, vec, o = {}) {
   const id = vec && vec.id || "comun";
+  personas = sinIndignos(personas);
   if (id === "CAT") return repartoIntestadoCAT(personas, o);
   if (id === "GAL") return repartoIntestadoGAL(personas);
   if (id === "BAL") return repartoIntestadoBAL(personas, o);
@@ -1255,13 +1289,33 @@ const LEGITIMA_REGIMENES = {
   GAL: { nombre: "Galicia · Ley 2/2006 de Derecho Civil", norma: "arts. 238-266 Ley 2/2006", estado: V },
   BAL: { nombre: "Illes Balears · Compilación de Derecho Civil", norma: "arts. 41-51 (Mallorca y Menorca) y 79-81 (Eivissa y Formentera) Compilación", estado: P },
 };
+// Reglamento (UE) 650/2012 (auditoría civil 10-10-2026, D-1): si la sucesión se rige por una ley extranjera, no se afirma ninguna lesión
 function calcularLegitimas(caso) {
+  const res = calcularLegitimas0(caso), LS = leySucesoria(caso);
+  if (!LS) return res;
+  res.leyAplicable = LS;
+  if (LS.espanola) { res.notas.push(LS.aviso); return res; }
+  for (const h of res.herederos) if (!["renuncia", "desheredado", "indigno", "no legitimario"].includes(h.estado)) { h.estado = "no verificable"; h.deficit = 0; h.nota = (h.nota ? h.nota + ". " : "") + "Ley sucesoria extranjera (Reglamento 650/2012)"; }
+  if (res.larga) res.larga = { ...res.larga, estado: "no verificable", deficit: 0 };
+  if (res.colectiva) res.colectiva = { ...res.colectiva, estado: "no verificable", deficit: 0 };
+  res.intangibilidad = res.intangibilidad.filter((i) => !["cuantitativa", "pretericion"].includes(i.tipo));
+  res.intangibilidad.unshift({ tipo: "ley", gravedad: "alta", titulo: "Ley sucesoria extranjera: legítimas no verificables", detalle: LS.aviso, accion: "Determinar la ley aplicable y sus legítimas (o reservas) con el abogado antes de partir.", norma: LS.norma, estado: LS.estado });
+  res.estado = P; res.resumen = `${LS.aviso} ${res.resumen ? "Referencia con el derecho español: " + res.resumen : ""}`.trim();
+  res.pendientes.push("ley sucesoria extranjera (Reglamento (UE) 650/2012)");
+  return res;
+}
+function calcularLegitimas0(caso) {
   const herederos = (caso.herederos || []).map((h) => ({ ...h, edad: h.edad == null || h.edad === "" || Number.isNaN(Number(h.edad)) ? null : Number(h.edad) }));
   const derechos = caso.derechos || {}, masa = caso.masa || {};
   const porId = Object.fromEntries(herederos.map((h) => [h.id, h]));
   const norm = (t) => String(t || "").trim().toLowerCase();
   const legados = (caso.legados || []).filter((l) => l && porId[l.legatarioId] && !porId[l.legatarioId].renuncia);
-  const donaciones = (caso.donaciones || []).filter((d) => d && d.valor > 0);
+  // Cataluña (auditoría civil 10-10-2026, m7): solo se suman las donaciones de los diez años anteriores a la muerte, más las imputables a la
+  // legítima de cualquier fecha (art. 451-5.b y c CCCat). Sin fecha se suman y se avisa.
+  const esCat = vecindadCivil(caso).id === "CAT", f10 = esCat && /^\d{4}-\d{2}-\d{2}$/.test(caso.fechaFallecimiento || "") ? sumarMeses(caso.fechaFallecimiento, -120) : null;
+  const donTodas = (caso.donaciones || []).filter((d) => d && d.valor > 0);
+  const donFuera = f10 ? donTodas.filter((d) => d.fecha && d.fecha < f10 && !d.imputable) : [];
+  const donaciones = donTodas.filter((d) => !donFuera.includes(d));
   const netoReparto = Number(masa.netoReparto) || 0, neto = Number(masa.neto) || 0;
   const donTotal = r2(donaciones.reduce((s, d) => s + (Number(d.valor) || 0), 0));
   const base = r2(neto + donTotal); // art. 818 CC: relictum líquido (sin las cargas del testamento) + donatum colacionable
@@ -1280,17 +1334,20 @@ function calcularLegitimas(caso) {
     return { porcion: r2(v), legados: r2(leg), donaciones: r2(don), total: r2(v + leg + don), usufructo, tieneDerechos: (derechos[h.id] || []).length > 0 || leg > 0 };
   };
   const testado = caso.reparto === "porcentajes" || caso.reparto === "usufructoUniversal";
-  const vivos = herederos.filter((h) => !h.renuncia);
+  const vivos = herederos.filter((h) => !h.renuncia && !h.indigno);
   const conySeparado = vivos.find((h) => h.relacion === "conyuge" && h.separado);
   const cony = vivos.find((h) => h.relacion === "conyuge" && !h.separado); // el separado legalmente o de hecho no es legitimario (art. 834 CC)
   const desc = herederos.filter((h) => linea(h) === "desc");
   const asc = vivos.filter((h) => linea(h) === "asc");
-  const hayDesc = desc.some((h) => !h.renuncia && !h.desheredado) || desc.some((h) => h.desheredado && desc.some((n) => n.relacion !== "hijo" && !n.renuncia && norm(n.estirpe) === norm(h.nombre)));
+  const excluido = (h) => h.desheredado || h.indigno; // desheredado o indigno: le representan sus descendientes (arts. 761, 857 y 929 CC)
+  const hayDesc = desc.some((h) => !h.renuncia && !excluido(h)) || desc.some((h) => excluido(h) && desc.some((n) => n.relacion !== "hijo" && !n.renuncia && norm(n.estirpe) === norm(h.nombre)));
   const intang = [], notas = [], pendientes = [];
+  if (donFuera.length) notas.push(`Cataluña: no se suman ${donFuera.length === 1 ? "una donación anterior" : donFuera.length + " donaciones anteriores"} a los diez años previos a la muerte (${Math.round(donFuera.reduce((s, d) => s + Number(d.valor), 0)).toLocaleString("es-ES")} €), salvo que sean imputables a la legítima (art. 451-5 CCCat).`);
+  if (esCat && donaciones.some((d) => !d.fecha && !d.imputable)) notas.push("Cataluña: hay donaciones sin fecha. Se suman a la base de la legítima; solo cuentan las de los diez años anteriores a la muerte y las imputables a la legítima (art. 451-5 CCCat): indica la fecha.");
   const it = (o) => intang.push(o);
   const regimenId = vecindadCivil(caso).id; // misma regla que el reparto sin testamento (control de calidad 07-10-2026, I6)
   const RG = LEGITIMA_REGIMENES[regimenId];
-  const estadoDe = (h, minima, rec) => h.renuncia ? "renuncia" : h.desheredado ? "desheredado" : minima > 0 && edadFalta(h) && (rec.usufructo > 0) ? "no verificable" : rec.total + 1 >= minima ? "cubierta" : "vulnerada";
+  const estadoDe = (h, minima, rec) => h.renuncia ? "renuncia" : h.indigno ? "indigno" : h.desheredado ? "desheredado" : minima > 0 && edadFalta(h) && (rec.usufructo > 0) ? "no verificable" : rec.total + 1 >= minima ? "cubierta" : "vulnerada";
   const fila = (h, tipo, minima, norma, nota) => { const rec = recibeDe(h); const estado = estadoDe(h, minima, rec); return { id: h.id, nombre: h.nombre, relacion: h.relacion, tipo, legitimaMinima: r2(minima), recibe: rec.total, porcion: rec.porcion, legados: rec.legados, donaciones: rec.donaciones, deficit: estado === "vulnerada" ? r2(Math.max(0, minima - rec.total)) : 0, estado, norma, nota: nota || "" }; };
   // Estirpes de descendientes: hijos que cuentan + nietos que representan a un hijo premuerto o desheredado (arts. 814.3 y 857 CC; en derecho común el renunciante no hace número: art. 985.2)
   const estirpes = (contarRenunciantes, contarDesheredados = contarRenunciantes) => {
@@ -1300,15 +1357,15 @@ function calcularLegitimas(caso) {
     const out = [];
     for (const h of hijos) {
       const repr = nietos.filter((n) => norm(n.estirpe) && norm(n.estirpe) === norm(h.nombre));
-      if (h.desheredado && repr.length) { out.push({ cabeza: h, miembros: repr, representada: true }); continue; }
+      if (excluido(h) && repr.length) { out.push({ cabeza: h, miembros: repr, representada: true }); continue; }
       if (h.renuncia && !contarRenunciantes) continue;
-      if (h.desheredado && !contarDesheredados) continue;
+      if (excluido(h) && !contarDesheredados) continue;
       out.push({ cabeza: h, miembros: [h] });
     }
     for (const n of nietos) if (!norm(n.estirpe) || !nomHijos.has(norm(n.estirpe))) { const k = norm(n.estirpe) || "_" + n.id; const g = out.find((e) => e.clave === k); if (g) g.miembros.push(n); else out.push({ cabeza: n, miembros: [n], clave: k, propia: true }); }
     // Si repudian todos los hijos y no queda ninguna estirpe, los nietos de los renunciantes son legitimarios por derecho propio y por cabezas
     // (art. 807.1 CC, por analogía con el art. 923 CC; criterio doctrinal: se avisa).
-    if (!out.length && !contarRenunciantes && hijos.length && hijos.every((h) => h.renuncia || h.desheredado)) {
+    if (!out.length && !contarRenunciantes && hijos.length && hijos.every((h) => h.renuncia || excluido(h))) {
       const propios = nietos.filter((n) => hijos.some((h) => h.renuncia && norm(h.nombre) === norm(n.estirpe)));
       for (const n of propios) out.push({ cabeza: n, miembros: [n], derechoPropio: true });
       const msg = "Todos los hijos han repudiado: se trata a sus descendientes como legitimarios por derecho propio y por cabezas (arts. 807.1 y 923 CC por analogía). Criterio doctrinal: confirmarlo con el abogado.";
@@ -1319,12 +1376,16 @@ function calcularLegitimas(caso) {
   const filasDesc = (fracTotal, norma, contarRenunciantes, notaEst) => {
     const E = estirpes(contarRenunciantes), n = E.length;
     const out = [];
-    for (const e of E) for (const m of e.miembros) out.push(fila(m, "descendiente", n ? fracTotal * base / n / e.miembros.length : 0, norma, e.representada ? `Representa a ${e.cabeza.nombre}, desheredado (art. 857 CC)` : e.derechoPropio ? "Por derecho propio: todos los hijos han repudiado" : m.relacion !== "hijo" ? "Por estirpes" : notaEst || ""));
+    for (const e of E) for (const m of e.miembros) out.push(fila(m, "descendiente", n ? fracTotal * base / n / e.miembros.length : 0, norma, e.representada ? `Representa a ${e.cabeza.nombre}, ${e.cabeza.indigno ? "indigno para suceder (arts. 761 y 929 CC)" : "desheredado (art. 857 CC)"}` : e.derechoPropio ? "Por derecho propio: todos los hijos han repudiado" : m.relacion !== "hijo" ? "Por estirpes" : notaEst || ""));
     for (const h of desc) if (!out.some((f) => f.id === h.id)) {
       // Descendiente de grado más lejano cuyo progenitor vive o ha repudiado: no representa ni es legitimario (arts. 807.1, 929 y 985.2 CC). Auditoría 01-10-2026, C-3.
-      const noLegitimario = !h.renuncia && !h.desheredado && h.relacion !== "hijo";
+      const noLegitimario = !h.renuncia && !excluido(h) && h.relacion !== "hijo";
       if (noLegitimario) { const f = fila(h, "no legitimario", 0, "arts. 807, 929 y 985.2 CC", `No es legitimario: su progenitor${h.estirpe ? " " + h.estirpe : ""} vive o ha repudiado, y no cabe representación (arts. 929 y 985.2 CC). Puede recibir la mejora o el tercio libre si el testamento se lo atribuye.`); f.estado = "no legitimario"; f.deficit = 0; out.push(f); continue; }
-      out.push(fila(h, "descendiente", h.renuncia ? 0 : fracTotal * base / (n + 1), norma, h.renuncia ? "Renuncia: su parte pasa a los demás legitimarios por derecho propio (art. 985 CC)" : "Desheredado: si la causa (arts. 852-853 CC) no se prueba, conserva la legítima (art. 851 CC)"));
+      if (h.indigno) { const f = fila(h, "descendiente", 0, "arts. 756 y 761 CC", "Indigno para suceder: no es legitimario; si tiene descendientes, le representan (arts. 761 y 929 CC)"); f.deficit = 0; out.push(f); continue; }
+      // Desheredado: si la causa no se prueba recupera la legítima de su estirpe (art. 851 CC). Si sus descendientes le representan, su estirpe ya cuenta
+      // en n y su mínimo es el de la estirpe (antes base/(n+1): estirpe contada dos veces; auditoría civil 10-10-2026, B-2/m2).
+      const suEst = h.desheredado && E.find((e) => e.cabeza === h && e.representada);
+      out.push(fila(h, "descendiente", h.renuncia ? 0 : suEst ? fracTotal * base / n : fracTotal * base / (n + 1), norma, h.renuncia ? "Renuncia: su parte pasa a los demás legitimarios por derecho propio (art. 985 CC)" : "Desheredado: si la causa (arts. 852-853 CC) no se prueba, conserva la legítima (art. 851 CC)"));
     }
     return { filas: out, n };
   };
@@ -1345,7 +1406,7 @@ function calcularLegitimas(caso) {
       const recibenDesc = r2(res.herederos.filter((h) => (h.tipo === "descendiente" && h.estado !== "renuncia") || h.tipo === "no legitimario").reduce((s, h) => s + h.recibe, 0));
       res.larga = { importe: larga, recibenDescendientes: recibenDesc, estado: recibenDesc + 1 >= larga ? "cubierta" : "vulnerada", deficit: r2(Math.max(0, larga - recibenDesc)), norma: "arts. 808 y 823 CC", estadoNorma: V };
       if (n === 1) {
-        const filasLeg = res.herederos.filter((q) => q.tipo === "descendiente" && q.estado !== "renuncia" && q.estado !== "desheredado");
+        const filasLeg = res.herederos.filter((q) => q.tipo === "descendiente" && q.estado !== "renuncia" && q.estado !== "desheredado" && q.estado !== "indigno");
         const aOtrosDesc = r2(res.herederos.filter((q) => q.tipo === "no legitimario").reduce((s, q) => s + q.recibe, 0)); // mejora que el testador haya dado a otros descendientes
         const minEstricta = filasLeg.length ? estricta / filasLeg.length : 0;
         for (const h of filasLeg) { h.legitimaMinima = r2(Math.max(minEstricta, (larga - aOtrosDesc) / filasLeg.length)); h.estado = estadoDe(porId[h.id], h.legitimaMinima, recibeDe(porId[h.id])); h.deficit = h.estado === "vulnerada" ? r2(Math.max(0, h.legitimaMinima - h.recibe)) : 0; h.nota = "Única estirpe: le corresponden legítima estricta y mejora, dos tercios" + (res.viudo ? " menos el usufructo legal del viudo" : "") + (aOtrosDesc > 0 ? ", menos la mejora atribuida a otros descendientes" : "") + " (arts. 808 y 823 CC)"; }
@@ -1386,9 +1447,10 @@ function calcularLegitimas(caso) {
     }
     // Preterición (art. 814): descendiente conocido sin atribución alguna en una sucesión testada
     const noLeg = new Set(res.herederos.filter((h) => h.tipo === "no legitimario").map((h) => h.id));
-    if (testado) for (const h of desc.filter((h) => !h.renuncia && !h.desheredado && !noLeg.has(h.id))) { const rec = recibeDe(h); if (!rec.tieneDerechos && rec.donaciones === 0) it({ tipo: "pretericion", gravedad: "alta", titulo: `Posible preterición de ${h.nombre}`, detalle: `${h.nombre} es descendiente y no recibe nada en el reparto del testamento. La preterición no perjudica la legítima (art. 814 CC): si es no intencional y afecta a todos los hijos se anulan las disposiciones patrimoniales; si afecta a alguno, se anula la institución de heredero y valen legados y mejoras no inoficiosos. Si el hijo nació o fue reconocido después del testamento, la preterición suele ser no intencional.`, accion: "Confirmar con el testamento si la omisión es intencional. Si hay preterición, el reparto debe rehacerse antes de la partición (arts. 814 y 815 CC).", norma: "art. 814 CC", estado: V }); }
+    if (testado) for (const h of desc.filter((h) => !h.renuncia && !excluido(h) && !noLeg.has(h.id))) { const rec = recibeDe(h); if (!rec.tieneDerechos && rec.donaciones === 0) it({ tipo: "pretericion", gravedad: "alta", titulo: `Posible preterición de ${h.nombre}`, detalle: `${h.nombre} es descendiente y no recibe nada en el reparto del testamento. La preterición no perjudica la legítima (art. 814 CC): si es no intencional y afecta a todos los hijos se anulan las disposiciones patrimoniales; si afecta a alguno, se anula la institución de heredero y valen legados y mejoras no inoficiosos. Si el hijo nació o fue reconocido después del testamento, la preterición suele ser no intencional.`, accion: "Confirmar con el testamento si la omisión es intencional. Si hay preterición, el reparto debe rehacerse antes de la partición (arts. 814 y 815 CC).", norma: "art. 814 CC", estado: V }); }
     // Desheredación (arts. 848-857)
-    for (const h of desc.filter((h) => h.desheredado)) it({ tipo: "desheredacion", gravedad: "media", titulo: `${h.nombre} consta desheredado`, detalle: "La desheredación exige causa legal expresada en el testamento (arts. 848-849 y 853 CC: negar alimentos, maltrato de obra o injuria grave, entre otras). Si el desheredado la niega, la prueba corresponde a los herederos (art. 850 CC); sin causa probada, se anula la institución de heredero en lo que le perjudique (art. 851 CC). Sus hijos y descendientes ocupan su lugar respecto a la legítima (art. 857 CC).", accion: "Revisar la causa alegada en el testamento y si el desheredado tiene descendientes, que conservan la legítima estricta.", norma: "arts. 848-857 CC", estado: V });
+    for (const h of herederos.filter((h) => h.indigno && !h.renuncia)) it({ tipo: "indignidad", gravedad: "media", titulo: `${h.nombre} consta indigno para suceder`, detalle: "El indigno no sucede ni es legitimario (art. 756 CC); si es descendiente, sus hijos y descendientes ocupan su lugar en la legítima (arts. 761 y 929 CC). La indignidad debe declararse judicialmente o reconocerla los interesados; no opera si el causante la conocía al testar o la perdonó en documento público (art. 757 CC), y la acción caduca a los cinco años (art. 762 CC).", norma: "arts. 756-762 y 929 CC", estado: V });
+    for (const h of desc.filter((h) => h.desheredado && !h.indigno)) it({ tipo: "desheredacion", gravedad: "media", titulo: `${h.nombre} consta desheredado`, detalle: "La desheredación exige causa legal expresada en el testamento (arts. 848-849 y 853 CC: negar alimentos, maltrato de obra o injuria grave, entre otras). Si el desheredado la niega, la prueba corresponde a los herederos (art. 850 CC); sin causa probada, se anula la institución de heredero en lo que le perjudique (art. 851 CC). Sus hijos y descendientes ocupan su lugar respecto a la legítima (art. 857 CC).", accion: "Revisar la causa alegada en el testamento y si el desheredado tiene descendientes, que conservan la legítima estricta.", norma: "arts. 848-857 CC", estado: V });
     if (donTotal) it({ tipo: "donaciones", gravedad: "baja", titulo: "Donaciones computadas para la legítima", detalle: `Se han añadido ${Math.round(donTotal).toLocaleString("es-ES")} € de donaciones colacionables al valor líquido de la herencia (art. 818 CC). Las hechas a hijos se imputan a su legítima; las hechas a extraños, al tercio libre (art. 819 CC). Si resultan inoficiosas se reducen, pero solo después de las mandas testamentarias (art. 820.1.º CC).`, accion: "Valorar las donaciones al tiempo de la muerte del causante y comprobar si el donante las dispensó de colación (art. 1036 CC).", norma: "arts. 818-820 CC", estado: V });
     if (caso.hayEmpresa && hayDesc) it({ tipo: "empresa", gravedad: "baja", titulo: "Empresa en la herencia: pago de la legítima en metálico", detalle: "El testador puede adjudicar la explotación económica o el control de la sociedad a uno de los herederos y ordenar que la legítima de los demás se pague en metálico, incluso con dinero extrahereditario y aplazado hasta cinco años (art. 1056.2 CC). Si el testamento no lo prevé, cualquier legitimario puede exigir su legítima en bienes de la herencia.", accion: "Comprobar si el testamento usa la facultad del art. 1056.2 CC y, en su caso, el plazo y la forma de pago.", norma: "art. 1056 CC", estado: V });
     if (conySeparado) notas.push(`${conySeparado.nombre} consta como cónyuge separado legalmente o de hecho: no es legitimario (art. 834 CC).`);
@@ -1439,11 +1501,22 @@ function calcularLegitimas(caso) {
   if (regimenId === "BAL") {
     const eivissa = caso.isla === "eivissa" || caso.isla === "ibiza" || caso.isla === "formentera";
     const n = nHijosQueHacenNumero(true);
-    const f = hayDesc ? (n > 4 ? 1 / 2 : 1 / 3) : asc.length && !eivissa ? 1 / 4 : 0;
-    res.tercios = { estricta: r2(base * f), mejora: 0, libre: r2(base * (1 - f)), fracciones: [f, 0, 1 - f], etiquetas: [hayDesc ? `Legítima (${n > 4 ? "1/2" : "1/3"})` : asc.length ? "Legítima de los padres (1/4)" : "", "", "Libre disposición"], norma: eivissa ? "art. 79 Compilación balear" : "arts. 42-43 Compilación balear", estado: V };
+    // Auditoría civil 10-10-2026 (B-1, crítica): en Eivissa y Formentera los padres SÍ son legitimarios; el art. 79 de la Compilación remite a los
+    // arts. 809 y 810.1 CC: la mitad del haber, por mitad entre los dos o toda al que sobreviva. Con viudo, el art. 809 la reduce a un tercio, pero en
+    // Eivissa el viudo no es legitimario y la remisión es dudosa: se muestra la mitad y se marca PENDIENTE. Antes: 0 € con la etiqueta «(1/4)» VERIFICADO.
+    const padresEiv = eivissa && !hayDesc ? asc.filter((h) => h.relacion === "padre") : [];
+    const fAsc = eivissa ? (padresEiv.length ? 1 / 2 : 0) : 1 / 4;
+    const f = hayDesc ? (n > 4 ? 1 / 2 : 1 / 3) : asc.length ? fAsc : 0;
+    const dudaViudoEiv = !!(eivissa && !hayDesc && padresEiv.length && cony);
+    res.tercios = { estricta: r2(base * f), mejora: 0, libre: r2(base * (1 - f)), fracciones: [f, 0, 1 - f], etiquetas: [hayDesc ? `Legítima (${n > 4 ? "1/2" : "1/3"})` : asc.length && f ? `Legítima de los padres (${eivissa ? "1/2" : "1/4"})` : "", "", "Libre disposición"], norma: eivissa ? (hayDesc ? "art. 79 Compilación balear" : "art. 79 Compilación balear · arts. 809 y 810 CC") : "arts. 42-43 Compilación balear", estado: dudaViudoEiv ? P : V };
     if (hayDesc) { const { filas } = filasDesc(f, eivissa ? "art. 79 Compilación balear" : "art. 42 Compilación balear", true, "Hacen número los hijos y estirpes, incluidos renunciantes y desheredados (art. 42)"); res.herederos.push(...filas); }
     else if (asc.length && !eivissa) { const padres = asc.filter((h) => h.relacion === "padre"); for (const p of padres) res.herederos.push(fila(p, "ascendiente", base / 4 / padres.length, "art. 43 Compilación balear", padres.length === 1 ? "Único progenitor: toda la cuarta parte" : "Por mitad entre ambos")); }
-    res.resumen = `${eivissa ? "Eivissa y Formentera" : "Mallorca y Menorca"}: la legítima de los hijos es la tercera parte del haber si son cuatro o menos y la mitad si son más de cuatro (${eivissa ? "art. 79" : "art. 42"} Compilación balear)${!eivissa ? "; a falta de descendientes, la de los padres es la cuarta parte (art. 43)" : ""}. ${eivissa ? "En Eivissa y Formentera el cónyuge viudo no figura entre los legitimarios (art. 79): PENDIENTE de cotejo." : "El cónyuge viudo es legitimario: usufructo de la mitad con descendientes, de dos tercios con padres y universal en los demás casos (art. 45)."}`;
+    else if (padresEiv.length) {
+      for (const p of padresEiv) res.herederos.push(fila(p, "ascendiente", base / 2 / padresEiv.length, "art. 79 Compilación balear · art. 810 CC", padresEiv.length === 1 ? "Único progenitor: toda la mitad (art. 810 CC)" : "Por mitad entre los dos (art. 810 CC)"));
+      for (const h of asc.filter((h) => !padresEiv.includes(h))) res.herederos.push(fila(h, "ascendiente", 0, "art. 79 Compilación balear", "Solo los padres son legitimarios en Eivissa y Formentera"));
+      if (dudaViudoEiv) notas.push("Eivissa y Formentera: con cónyuge viudo, el art. 809 CC reduciría la legítima de los padres a un tercio, pero el viudo no es legitimario en Eivissa (art. 79 Compilación). Se muestra la mitad, la cifra más protectora para los padres: PENDIENTE de criterio.");
+    }
+    res.resumen = `${eivissa ? "Eivissa y Formentera" : "Mallorca y Menorca"}: la legítima de los hijos es la tercera parte del haber si son cuatro o menos y la mitad si son más de cuatro (${eivissa ? "art. 79" : "art. 42"} Compilación balear)${!eivissa ? "; a falta de descendientes, la de los padres es la cuarta parte (art. 43)" : "; a falta de descendientes, los padres son legitimarios en la cuantía del Código Civil: la mitad del haber, repartida por mitad o toda al que sobreviva (art. 79 Compilación; arts. 809 y 810 CC)"}. ${eivissa ? "En Eivissa y Formentera el cónyuge viudo no figura entre los legitimarios (art. 79): PENDIENTE de cotejo." : "El cónyuge viudo es legitimario: usufructo de la mitad con descendientes, de dos tercios con padres y universal en los demás casos (art. 45)."}`;
     if (cony && !eivissa) { const fc = hayDesc ? 1 / 2 : asc.length ? 2 / 3 : 1; const v = r2(base * fc * pct(cony)); res.viudo = { id: cony.id, nombre: cony.nombre, sobre: hayDesc ? "mitad" : asc.length ? "dos tercios" : "universal", fraccion: fc, valor: v, pct: pct(cony), edadFalta: edadFalta(cony), norma: "art. 45.3 Compilación balear", estado: V }; res.herederos.push(fila(cony, "conyuge", v, "art. 45.3 Compilación balear", `Usufructo ${fc === 1 ? "universal" : "de " + (fc === 0.5 ? "la mitad" : "dos tercios")}, valorado por su edad`)); }
     if (eivissa) pendientes.push("arts. 79-81 Compilación balear (Eivissa y Formentera)");
     const vul = res.herederos.filter((h) => h.estado === "vulnerada");
@@ -1459,7 +1532,7 @@ function calcularLegitimas(caso) {
     res.tercios = { estricta: importe, mejora: 0, libre: r2(base - importe), fracciones: [f, 0, 1 - f], etiquetas: [hayDesc ? `Legítima colectiva (${vasco ? "1/3" : "1/2"})` : "", "", "Libre disposición"], norma: vasco ? "art. 49 Ley 5/2015" : "art. 486 CDFA", estado: V };
     if (hayDesc) {
       res.colectiva = { fraccion: f, importe, recibenDescendientes: recibenDesc, estado: recibenDesc + 1 >= importe ? "cubierta" : "vulnerada", deficit: r2(Math.max(0, importe - recibenDesc)), nota: "Colectiva: el testador la puede asignar a uno solo de los descendientes y apartar a los demás; no se comprueba por cabezas.", norma: vasco ? "arts. 48-49 Ley 5/2015" : "art. 486 CDFA", estadoNorma: V };
-      for (const h of desc) res.herederos.push({ ...fila(h, "descendiente", 0, vasco ? "arts. 48-49 Ley 5/2015" : "art. 486 CDFA", ""), legitimaMinima: null, deficit: 0, estado: h.renuncia ? "renuncia" : h.desheredado ? "desheredado" : "colectiva", nota: "Colectiva: no se comprueba por cabezas" });
+      for (const h of desc) res.herederos.push({ ...fila(h, "descendiente", 0, vasco ? "arts. 48-49 Ley 5/2015" : "art. 486 CDFA", ""), legitimaMinima: null, deficit: 0, estado: h.renuncia ? "renuncia" : h.indigno ? "indigno" : h.desheredado ? "desheredado" : "colectiva", nota: "Colectiva: no se comprueba por cabezas" });
       if (res.colectiva.estado === "vulnerada") it({ tipo: "cuantitativa", gravedad: "alta", titulo: `Legítima colectiva posiblemente insatisfecha (${vasco ? "un tercio" : "la mitad"} del caudal)`, detalle: `El conjunto de los descendientes recibe ${Math.round(recibenDesc).toLocaleString("es-ES")} € frente a ${Math.round(importe).toLocaleString("es-ES")} € de legítima colectiva.`, accion: vasco ? "Los legitimarios pueden pedir la reducción de las disposiciones que excedan de la parte de libre disposición (art. 56 Ley 5/2015; acciones: arts. 58-60, PENDIENTE de cotejo)." : "Los legitimarios pueden ejercitar la acción de lesión de la legítima colectiva y reducir liberalidades (arts. 494-500 CDFA: PENDIENTE de cotejo).", norma: vasco ? "arts. 56-60 Ley 5/2015" : "arts. 494-500 CDFA", estado: P });
     }
     if (vasco) {
@@ -1495,7 +1568,7 @@ function calcularISD(caso) {
   const fecha = caso.fechaFallecimiento;
   const alertas = [], pendientes = new Set();
   const vec = vecindadCivil(caso);
-  const personas = (caso.herederos || []).filter((h) => !h.renuncia);
+  const personas = (caso.herederos || []).filter((h) => !h.renuncia && !h.indigno); // el indigno no adquiere (art. 756 CC)
   const porId = Object.fromEntries((caso.herederos || []).map((h) => [h.id, h]));
 
   // 1. Inventario y liquidación de gananciales
@@ -1511,7 +1584,7 @@ function calcularISD(caso) {
   const gastos = r2((caso.gastos || []).reduce((s, g) => s + pos(g.importe), 0));
   // Legado válido: legatario que existe en el expediente y no renuncia. Si renuncia, el legado se refunde en la masa (art. 888 CC); si ya no
   // está en el expediente (persona quitada), se ignora y se avisa (control de calidad 07-10-2026, I8).
-  const legadoValido = (b) => !!(b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia);
+  const legadoValido = (b) => !!(b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia && !porId[b.legatarioId].indigno);
   const legados = bienes.filter(legadoValido);
   for (const b of bienes.filter((q) => q.legatarioId && !porId[q.legatarioId])) alertas.push(`${b.descripcion || "Un bien"} figura como legado a una persona que ya no está en el expediente: se trata como parte de la herencia. Revisa a quién se legó.`);
   const valorLegados = r2(legados.reduce((s, b) => s + b.valorHerencia, 0));
@@ -1554,13 +1627,26 @@ function calcularISD(caso) {
 
   // 3. Reparto de derechos
   let rep;
-  if (caso.reparto === "usufructoUniversal") rep = repartoUsufructoUniversal(caso.herederos || []);
-  else if (caso.reparto === "porcentajes") rep = repartoPorcentajes(caso.herederos || []);
-  // Sin testamento: reparto según la VECINDAD CIVIL del causante, no según la comunidad del impuesto (control de calidad 07-10-2026, I6)
-  else rep = repartoLegal(caso.herederos || [], vec, { isla: caso.isla, conmutacion: caso.conmutacionCat === true, valorVivienda, netoReparto,
+  const oLegal = { isla: caso.isla, conmutacion: caso.conmutacionCat === true, valorVivienda, netoReparto,
     // Bienes marcados troncales por el abogado (Aragón, Navarra y País Vasco): fracción sobre los bienes de la herencia menos los legados (ronda 4)
     troncales: bienes.filter((b) => b.troncal && !legadoValido(b)).map((b) => ({ id: b.id, descripcion: b.descripcion, valor: b.valorHerencia, linea: b.lineaTroncal, tipo: b.tipo })),
-    baseTroncal: r2(bruto - valorLegados), hayInmuebles: bienes.some((b) => b.tipo === "inmueble" && !legadoValido(b)) });
+    baseTroncal: r2(bruto - valorLegados), hayInmuebles: bienes.some((b) => b.tipo === "inmueble" && !legadoValido(b)) };
+  // Indignidad (arts. 756, 761 y 929 CC): el viudo indigno pierde el usufructo (se refunde como en la renuncia, art. 888 CC); el descendiente indigno
+  // sale del reparto y, si tiene descendientes que indican que descienden de él, le representan.
+  const esConyRel = (h) => ["conyuge", "pareja_hecho", "pareja_no_inscrita"].includes(h.relacion);
+  if (caso.reparto === "usufructoUniversal") rep = repartoUsufructoUniversal((caso.herederos || []).flatMap((h) => !h.indigno ? [h] : esConyRel(h) ? [{ ...h, renuncia: true }] : []));
+  else if (caso.reparto === "porcentajes") {
+    rep = repartoPorcentajes(caso.herederos || [], { acrecer: caso.acrecer });
+    // Sin acrecimiento, la porción vacante se defiere a los herederos legítimos (arts. 912.3.º y 986 CC) según la vecindad civil del causante
+    if (rep.vacante > 1e-9) {
+      const leg = repartoLegal(caso.herederos || [], vec, oLegal);
+      if (leg.bloqueado || !Object.keys(leg.derechos || {}).length) alertas.unshift(`Porción vacante del ${Math.round(rep.vacante * 10000) / 100} % sin herederos legítimos calculables en el expediente${leg.bloqueado ? ` (${leg.bloqueado.motivo})` : ""}: no se ha repartido. Añade a los herederos abintestato o, si no los hay, hereda el Estado o la comunidad autónoma (arts. 956-958 CC). PENDIENTE.`);
+      else { rep = { ...rep, derechos: combinarDerechos([{ f: 1, derechos: rep.derechos }, { f: rep.vacante, derechos: leg.derechos }]), notas: [...rep.notas, ...(leg.notas || []).map((n) => `Porción vacante (sucesión intestada): ${n}`)], avisos: [...(rep.avisos || []), ...(leg.avisos || [])] }; }
+    }
+  }
+  // Sin testamento: reparto según la VECINDAD CIVIL del causante, no según la comunidad del impuesto (control de calidad 07-10-2026, I6)
+  else rep = repartoLegal(caso.herederos || [], vec, oLegal);
+  for (const h of (caso.herederos || []).filter((h) => h.indigno && !h.renuncia)) alertas.push(`${h.nombre} consta como indigno para suceder: no hereda ni recibe legados (art. 756 CC)${["hijo", "nieto", "bisnieto", "hermano"].includes(h.relacion) ? "; sus descendientes que indiquen que descienden de él ocupan su lugar en la legítima y en la sucesión sin testamento (arts. 761 y 929 CC)" : ""}. La indignidad exige sentencia firme o que la reconozcan los demás interesados, y cesa si el causante la conocía al testar o le perdonó en documento público (art. 757 CC); la acción caduca a los cinco años (art. 762 CC).`);
   if (rep.bloqueado) alertas.unshift(`${rep.bloqueado.titulo}. ${rep.bloqueado.motivo} ${rep.bloqueado.accion} (${rep.bloqueado.norma}; PENDIENTE).`);
   const derechos = rep.derechos;
   for (const a of rep.avisos || []) alertas.push(a);
@@ -1718,6 +1804,8 @@ function calcularISD(caso) {
   });
 
   // 6. Alertas jurídicas
+  const leyRUE = leySucesoria(caso);
+  if (leyRUE) (leyRUE.espanola ? alertas.push(leyRUE.aviso) : alertas.unshift(leyRUE.aviso));
   // Vecindad civil (I6): el reparto sin testamento y las legítimas siguen la vecindad civil del causante; el impuesto, la residencia.
   if (vec.id !== "comun") alertas.push(vec.supuesta
     ? `Vecindad civil ${VECINDADES[vec.id]} supuesta por la residencia en ${R.nombre}, territorio con derecho civil propio: ese derecho decide el reparto sin testamento y las legítimas. La vecindad es la del causante al fallecer (arts. 9.8 y 16.1 CC) y se adquiere por filiación, opción o residencia continuada (arts. 14-15 CC): confírmala e indícala en el expediente.`
@@ -1762,6 +1850,11 @@ function calcularISD(caso) {
   const plazoISD = caso.fechaReferencia ? plazoPresentacionISD(fecha, { hoy: caso.fechaReferencia, prorroga: caso.prorrogaISD === true, ccaa: caso.ccaa }) : null;
   const recargo = caso.enPlazo === false && plazoISD && plazoISD.fueraDePlazo && !caso.conRequerimiento ? { ...recargoPresentacion(caso.ccaa, total, plazoISD.limite, caso.fechaReferencia), limite: plazoISD.limite } : null;
   const eurA = (v) => v.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Auditoría civil 10-10-2026 (F-1): con la prórroga concedida se pagan intereses de demora por el tiempo que va desde el fin de los seis meses
+  // hasta la presentación, como máximo hasta el fin de la prórroga (art. 69.2 RD 1629/1991), con el tipo de cada año. Se suman a totalConRecargo.
+  const intP = caso.prorrogaISD === true && plazoISD && caso.fechaReferencia > plazoISD.limite6 ? interesesDemora(total, plazoISD.limite6, caso.fechaReferencia < plazoISD.limite12 ? caso.fechaReferencia : plazoISD.limite12) : null;
+  const interesesProrroga = intP ? intP.importe : 0;
+  if (interesesProrroga > 0) alertas.push(`Prórroga del plazo: se pagan intereses de demora por ${intP.dias} días, desde el fin de los seis meses (${plazoISD.limite6.split("-").reverse().join("-")}) hasta la presentación prevista el ${(caso.fechaReferencia < plazoISD.limite12 ? caso.fechaReferencia : plazoISD.limite12).split("-").reverse().join("-")}: ${eurA(interesesProrroga)} € (${[...new Set(intP.tramos.map((t) => (t.tipo * 100).toLocaleString("es-ES", { maximumFractionDigits: 4 }) + " %"))].join(" y ")}; art. 69.2 RD 1629/1991)${FORALES_ISD.includes(caso.ccaa) ? ". Territorio foral: regla de la norma foral sin cotejar (PENDIENTE)" : ""}.`);
   if (recargo && recargo.importe > 0) alertas.push(`Recargo estimado por presentar el ${caso.fechaReferencia.split("-").reverse().join("-")} (plazo vencido el ${plazoISD.limite.split("-").reverse().join("-")}): ${eurA(recargo.importe)} € (${recargo.etiqueta})${recargo.reducido < recargo.importe ? `; ${eurA(recargo.reducido)} € si se ingresa todo al presentar (art. 27.5 LGT)` : ""}.${recargo.foral ? ` ${recargo.norma}${recargo.estado === P ? " · PENDIENTE" : ""}.` : ""}`);
   if (caso.enPlazo === false && caso.conRequerimiento) alertas.push("Con requerimiento previo de la Administración no se aplica el recargo del art. 27 LGT: la regularización puede llevar sanción (arts. 191 y siguientes LGT). Derivar al abogado.");
   // Bonificaciones y plazo: Andalucía y Madrid están cotejadas (no exigen plazo a los grupos I y II); Extremadura lo exige (modelado). En el resto no
@@ -1772,7 +1865,7 @@ function calcularISD(caso) {
     territorio: R.nombre, norma: R.norma, estadoGlobal: R.estadoGlobal, fecha,
     masa: { brutoTotal, gananciales, mitadViudo: r2(gananciales / 2), bruto, deudas, gastos, legados: valorLegados, neto, netoReparto, ajuar, notaAjuar, modoAjuar: modo, baseAjuar, pasivoExcede: r2(Math.max(0, pasivo - bruto)) },
     herederos: res, total, alertas, notasReparto: rep.notas, pendientes: [...pendientes], derechos,
-    vecindad: vec, regimenReparto: rep.regimen || "comun", leyReparto: caso.reparto === "usufructoUniversal" || caso.reparto === "porcentajes" ? null : LEY_REPARTO[rep.regimen || "comun"] || null, bloqueo: rep.bloqueado || null, plazoISD, recargo, totalConRecargo: r2(total + (recargo ? recargo.importe : 0)),
+    vecindad: vec, regimenReparto: rep.regimen || "comun", leyReparto: caso.reparto === "usufructoUniversal" || caso.reparto === "porcentajes" ? null : LEY_REPARTO[rep.regimen || "comun"] || null, bloqueo: rep.bloqueado || null, plazoISD, recargo, interesesProrroga, interesesProrrogaDias: intP ? intP.dias : 0, totalConRecargo: r2(total + (recargo ? recargo.importe : 0) + interesesProrroga), leyAplicable: leyRUE,
   };
 }
 
@@ -1824,7 +1917,7 @@ const PLUSVALIA_FORAL = {
   BIZ: { id: "BIZ", nombre: "Bizkaia", prov: "48", norma: "Norma Foral 8/1989, de 30 de junio, del IIVTNU de Bizkaia (adaptada por el DFN 7/2021 y la NF 3/2022)",
     tipoMax: 0.30, normaTipo: "art. 5.1 NF 8/1989, redacción de la NF 3/2022 (máximo del 30 %)", estadoTipo: V,
     coef: envolvente(COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025), desdeCoef: "2024-03-18", normaCoef: "art. 4.3 NF 8/1989: tabla del DFN 2/2024 y, por prudencia, la de 0,16 a 0,35 que Basauri aplica en 2026 (se toma el mayor de las dos para cada año); la actualización de la NF 4/2024 no se ha podido leer", estadoCoef: P,
-    notaCotejo: "La NF 4/2024, de medidas tributarias (BOB 30-12-2024), «actualiza los coeficientes máximos» para 2025, pero el PDF del BOB no se deja leer; la NF 7/2025 de presupuestos para 2026 no trae artículo sobre el impuesto en su índice. Si la tabla de 2025-2026 supera la envolvente en algún año, el cálculo quedaría corto: prioridad de cotejo.",
+    notaCotejo: "La NF 4/2024, de medidas tributarias (BOB 30-12-2024), «actualiza los coeficientes máximos» para 2025, pero el PDF del BOB no se deja leer; la NF 7/2025 de presupuestos para 2026 no trae artículo sobre el impuesto en su índice. Si la tabla de 2025-2026 supera la envolvente en algún año, el cálculo quedaría corto: prioridad de cotejo. Recotejo de la auditoría civil (10-10-2026, D1): en el BOB, fiscal-impuestos.com, derecholocal.es y guiafiscal.es solo aparece la tabla del DFN 2/2024; sigue la envolvente prudente.",
     cotejo: [
       { fecha: "2026-10-08", fuente: "DFN 2/2024 (BOB 55, 18-03-2024): el art. 4.3 NF 8/1989 manda actualizar los coeficientes cada año por norma foral, que puede ser la de presupuestos", url: "https://derecholocal.es/?p=13152", resultado: "confirmado el mecanismo; la tabla del decreto es una imagen" },
       { fecha: "2026-10-08", fuente: "NF 4/2024, de 27 de diciembre, de medidas tributarias (resumen de fiscal-impuestos.com)", url: "https://www.fiscal-impuestos.com/node/38171", resultado: "actualiza los coeficientes máximos; tabla NO LOCALIZADA (el PDF del BOB no se deja leer)" },
@@ -1835,7 +1928,7 @@ const PLUSVALIA_FORAL = {
   GIP: { id: "GIP", nombre: "Gipuzkoa", prov: "20", norma: "Norma Foral 16/1989, de 5 de julio, del IIVTNU de Gipuzkoa (adaptada por el Decreto Foral-Norma 7/2021)",
     tipoMax: 0.30, normaTipo: "NF 16/1989: el texto consolidado de 2018 fijaba un máximo del 15 %; el vigente tras la reforma de 2021 no se ha cotejado y se toma el 30 % por prudencia", estadoTipo: P,
     coef: COEF_PLUSVALIA_GIP_2024, desdeCoef: "2024-01-01", normaCoef: "art. 4.3 NF 16/1989, tabla del DFN 2/2023 (desde 01-01-2024); las de 2025 y 2026 no se han localizado", estadoCoef: P,
-    notaCotejo: "El art. 4.3 manda actualizar la tabla cada año por norma foral (puede ser la de presupuestos); en la parte legible de la NF 4/2024 (presupuestos 2025) y de la NF 6/2025 (presupuestos 2026) no aparece.",
+    notaCotejo: "El art. 4.3 manda actualizar la tabla cada año por norma foral (puede ser la de presupuestos); en la parte legible de la NF 4/2024 (presupuestos 2025) y de la NF 6/2025 (presupuestos 2026) no aparece. Recotejo de la auditoría civil (10-10-2026, D1): ni el BOG ni fiscal-impuestos.com ni guiafiscal.es publican una tabla de 2025 o 2026; sigue la de 2024.",
     cotejo: [
       { fecha: "2026-10-08", fuente: "Decreto Foral-Norma 7/2021 (art. 4.3: «Estos coeficientes máximos serán actualizados anualmente mediante norma foral»)", url: "https://derecholocal.es/?p=8474", resultado: "mecanismo confirmado; tabla en imagen" },
       { fecha: "2026-10-08", fuente: "NF 6/2025, de 19 de diciembre, de presupuestos de Gipuzkoa para 2026", url: "https://www.fiscal-impuestos.com/sites/fiscal-impuestos.com/files/Gipuzkoa-Presupuestos.pdf", resultado: "visibles las DA 1.ª a 3.ª (interés de demora 4,0625 %, valores catastrales × 1,020); sin coeficientes del impuesto; texto cortado" },
@@ -1846,7 +1939,7 @@ const PLUSVALIA_FORAL = {
   ALA: { id: "ALA", nombre: "Álava", prov: "01", norma: "Norma Foral 46/1989, de 19 de julio, del IIVTNU de Álava (texto del DFN 4/2021, adaptado por el DNUF 8/2021)",
     tipoMax: 0.30, normaTipo: "art. 5 NF 46/1989 (máximo del 30 %)", estadoTipo: V,
     coef: COEF_PLUSVALIA_ALA_2023, desdeCoef: "2023-01-01", normaCoef: "art. 4 NF 46/1989, tabla del DNUF 12/2022 (BOTHA 150, 30-12-2022; desde 01-01-2023); no se ha localizado una tabla foral posterior", estadoCoef: P,
-    notaCotejo: "Los decretos forales de diciembre de 2023 y 2025 sobre coeficientes (51/2023 y 41/2025) solo tratan IRPF e Impuesto sobre Sociedades.",
+    notaCotejo: "Los decretos forales de diciembre de 2023 y 2025 sobre coeficientes (51/2023 y 41/2025) solo tratan IRPF e Impuesto sobre Sociedades. Recotejo de la auditoría civil (10-10-2026, D1): no se ha localizado tabla posterior (los coeficientes de 2026 del BOTHA, DF 41/2025, son los del IRPF y el IS); sigue la de 2023.",
     cotejo: [
       { fecha: "2026-10-08", fuente: "DNUF 12/2022 (BOTHA 150/2022), vigencia desde 31-12-2022", url: "https://derecholocal.es/?p=10908", resultado: "confirma norma, boletín y fecha; tabla no transcrita en esa página (la del motor viene de NFL021712)" },
       { fecha: "2026-10-08", fuente: "Decreto Foral 51/2023 (BOTHA 29-12-2023) y Decreto Foral 41/2025 (BOTHA 146, 26-12-2025)", url: "https://www.fiscal-impuestos.com/node/40577", resultado: "coeficientes de IRPF e IS; no tocan el IIVTNU" },
@@ -1970,8 +2063,10 @@ const ORDENANZAS = {
     } },
   CORDOBA: { nombre: "Córdoba", tipo: 0.2752, estadoTipo: V,
     coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 8 OF 306 (propios)
+    // Auditoría civil 10-10-2026 (m10): el art. 11.2 de la OF 306 (2026) enumera descendientes y adoptados, cónyuge y ascendientes y adoptantes; no
+    // incluye a la pareja de hecho (antes DACP). Si el ayuntamiento la equipara por otra vía, se introduce a mano.
     bonif(c) {
-      if (!DACP(c.heredero)) return { pct: 0 };
+      if (!DAC(c.heredero)) return { pct: 0, ...(linea(c.heredero) === "pareja" ? { norma: "art. 11.2 OF nº 306 Córdoba: la pareja de hecho no figura entre los beneficiarios", estado: V } : {}) };
       if (c.inmueble.esViviendaHabitual) return { pct: 0.95, norma: "art. 11.2 OF nº 306 Córdoba (vivienda habitual del causante)", estado: V };
       if (c.inmueble.esLocalAfecto) return { pct: 0.95, norma: "art. 11.2 OF nº 306 Córdoba (local afecto; mantener actividad 5 años)", estado: V };
       return { pct: 0 };
@@ -2211,7 +2306,11 @@ const ORDENANZAS = {
     if (!DACP(c.heredero)) return { pct: 0, norma: n, estado: P };
     if (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) return { pct: 0.95, norma: n + ": 95 % vivienda habitual sin límite de valor y locales afectos; rogada", estado: P };
     if (c.inmueble.valorCatastralSuelo > 200000) return { pct: 0, norma: n + ": suelo superior a 200.000 €", estado: P };
-    return { pct: 0.65, norma: n + ": 65 % otros inmuebles con suelo hasta 200.000 €; una segunda vivienda, garaje o trastero llega al 95 % (ajustar a mano)", estado: P };
+    // Auditoría civil 10-10-2026 (m9): desde 2026 el 95 % alcanza también a segundas viviendas, garajes y trasteros de valor catastral inferior a
+    // 200.000 € (nota municipal en zaragoza.es, noticias 344390 y 344532; aprobación definitiva en el Pleno no cotejada: PENDIENTE). La vivienda no
+    // habitual de uso residencial se detecta sola; el garaje y el trastero, no (ajustar a mano).
+    if (c.inmueble.usoResidencial && (c.inmueble.valorCatastralTotal || 0) < 200000) return { pct: 0.95, norma: n + ": 95 % segunda vivienda (también garajes y trasteros) de valor catastral inferior a 200.000 €", estado: P };
+    return { pct: 0.65, norma: n + ": 65 % otros inmuebles con suelo hasta 200.000 €; un garaje o trastero de valor catastral inferior a 200.000 € llega al 95 % (ajustar a mano)", estado: P };
   } },
   HUESCA: { nombre: "Huesca", ccaa: "Aragón", tipo: 0, tipoFecha: (f) => (f >= "2026-01-01" ? 0 : 0.30), estadoTipo: V,
     alerta: (f) => (f >= "2026-01-01" ? "Huesca suprimió el impuesto para devengos desde el 1 de enero de 2026: no hay plusvalía que pagar." : "Huesca: fallecimiento anterior a 2026, rige la ordenanza anterior (no cotejada). Tipo provisional del 30 %."),
@@ -2525,8 +2624,14 @@ function ordenanzaDesdeDatos(d) {
   return o;
 }
 for (const d of ORDENANZAS_DATOS) { if (!d || !d.ine || !d.nombre || d.noLocalizado) continue; const k = "D_" + d.ine; if (!ORDENANZAS[k]) ORDENANZAS[k] = ordenanzaDesdeDatos(d); }
-function aniosCompletos(a, b) { const x = new Date(a), y = new Date(b); let n = y.getFullYear() - x.getFullYear(); if (y.getMonth() < x.getMonth() || (y.getMonth() === x.getMonth() && y.getDate() < x.getDate())) n--; return Math.max(0, n); }
-function mesesCompletos(a, b) { const x = new Date(a), y = new Date(b); let m = (y.getFullYear() - x.getFullYear()) * 12 + (y.getMonth() - x.getMonth()); if (y.getDate() < x.getDate()) m--; return Math.max(0, m); }
+// Cómputo de fecha a fecha (art. 5.1 CC): si en el mes del vencimiento no hay día equivalente al inicial (29-02, 31), el plazo se cumple el último
+// día del mes. Auditoría civil 10-10-2026 (A-1/m1): adquirido el 29-02-2016, los 10 años se cumplen el 28-02-2026. Se leen las fechas como texto
+// (año, mes, día) para no depender de la zona horaria.
+const ymd = (f) => { const [a, m, d] = String(f).slice(0, 10).split("-").map(Number); return { a, m, d }; };
+const ultimoDia = (a, m) => new Date(Date.UTC(a, m, 0)).getUTCDate(); // m de 1 a 12
+const diaVence = (x, y) => Math.min(x.d, ultimoDia(y.a, y.m)); // día del mes de y en que se cumple el plazo iniciado el día x.d
+function aniosCompletos(a, b) { const x = ymd(a), y = ymd(b); let n = y.a - x.a; if (y.m < x.m || (y.m === x.m && y.d < diaVence(x, y))) n--; return Math.max(0, n); }
+function mesesCompletos(a, b) { const x = ymd(a), y = ymd(b); let m = (y.a - x.a) * 12 + (y.m - x.m); if (y.d < diaVence(x, y)) m--; return Math.max(0, m); }
 
 // ─────────── IIVTNU 2026 según los datos que los ayuntamientos comunican al Ministerio de Hacienda ───────────
 // Fuente: Ministerio de Hacienda, «Consulta de información impositiva municipal», ejercicio 2026, régimen común, datos a 01-09-2026:
@@ -2872,6 +2977,21 @@ function plazoPresentacionISD(f, o = {}) {
 }
 // Interés de demora 2026: 4,0625 % (LPGE 2023 prorrogada; investigación estrategia-fiscal.md, VERIFICADO con segunda fuente)
 const INTERES_DEMORA = 0.040625;
+// Interés de demora de cada año (art. 26.6 LGT; DA de la LPGE de cada año): 3,75 % de 2020 a 2022 (LPGE 2021, prorrogada en 2022 por la LPGE 2022);
+// 4,0625 % desde 2023 (LPGE 2023, prorrogada en 2024, 2025 y 2026). Para un año sin dato se usa el último conocido.
+const INTERES_DEMORA_ANUAL = { 2020: 0.0375, 2021: 0.0375, 2022: 0.0375, 2023: 0.040625, 2024: 0.040625, 2025: 0.040625, 2026: 0.040625 };
+const interesAnio = (a) => INTERES_DEMORA_ANUAL[a] ?? (a < 2020 ? 0.0375 : INTERES_DEMORA);
+// Intereses de demora entre dos fechas (desde el día siguiente a «desde» hasta «hasta»), con el tipo de cada año natural
+function interesesDemora(cuota, desde, hasta) {
+  const c = Math.max(0, Number(cuota) || 0); if (!c || !desde || !hasta || hasta <= desde) return { importe: 0, dias: 0, tramos: [] };
+  const T = []; let dias = 0, imp = 0;
+  for (let y = Number(desde.slice(0, 4)); y <= Number(hasta.slice(0, 4)); y++) {
+    const a = desde > `${y - 1}-12-31` ? desde : `${y - 1}-12-31`, b = hasta < `${y}-12-31` ? hasta : `${y}-12-31`;
+    const d = Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 864e5), t = interesAnio(y);
+    if (d > 0) { T.push({ anio: y, dias: d, tipo: t }); dias += d; imp += c * t * d / 365; }
+  }
+  return { importe: r2(imp), dias, tramos: T };
+}
 // ── Territorios forales: plazo de presentación del ISD y recargos (fiscal r4, 08-10-2026) ──
 // En Navarra, Álava, Bizkaia y Gipuzkoa el ISD lo gestiona la Hacienda foral con su propia norma del impuesto y su norma general tributaria.
 // Plazo: no se ha podido leer el artículo de plazos de ninguna de las cuatro normas forales (DFL 250/2002 Navarra, NF 11/2005 Álava, NF 4/2015 Bizkaia,
@@ -2914,10 +3034,12 @@ function recargoArt27(cuota, limite, fechaPresentacion, interes = INTERES_DEMORA
   const c = Math.max(0, Number(cuota) || 0);
   const vacio = { pct: 0, recargo: 0, intereses: 0, importe: 0, reducido: 0, meses: 0, diasIntereses: 0, etiqueta: "sin recargo", norma: "art. 27 LGT", estado: V };
   if (!limite || !fechaPresentacion || fechaPresentacion <= limite) return vacio;
-  const m = mesesEntre(limite, fechaPresentacion);
-  if (m < 12) {
+  // «Una vez transcurridos doce meses» (art. 27.2 LGT): presentado el mismo día en que se cumplen los 12 meses de fecha a fecha, aún no han
+  // transcurrido; se aplica 1 % + 12 % = 13 % (lectura literal; auditoría civil 10-10-2026, F-2/m3. Hay quien lo lee como 15 %: criterio del abogado).
+  const m = mesesEntre(limite, fechaPresentacion), mas12 = m >= 12 && fechaPresentacion > sumarMeses(limite, 12);
+  if (!mas12) {
     const pct = r2(0.01 + 0.01 * m), rec = r2(c * pct);
-    return { ...vacio, pct, recargo: rec, importe: rec, reducido: r2(rec * 0.75), meses: m, etiqueta: `${Math.round(pct * 100)} % (1 % + 1 % por ${m === 1 ? "1 mes completo" : m + " meses completos"} de retraso)`, norma: "art. 27.2 y 27.5 LGT" };
+    return { ...vacio, pct, recargo: rec, importe: rec, reducido: r2(rec * 0.75), meses: m, etiqueta: `${Math.round(pct * 100)} % (1 % + 1 % por ${m === 1 ? "1 mes completo" : m + " meses completos"} de retraso${m === 12 ? "; aún no han transcurrido más de 12 meses" : ""})`, norma: m === 12 ? "art. 27.2 y 27.5 LGT (lectura literal de «una vez transcurridos doce meses»)" : "art. 27.2 y 27.5 LGT" };
   }
   const desde = sumarMeses(limite, 12);
   const dias = Math.max(0, Math.round((new Date(fechaPresentacion + "T12:00:00") - new Date(desde + "T12:00:00")) / 864e5));
@@ -2938,6 +3060,12 @@ function recargoPresentacion(ccaa, cuota, limite, fechaPresentacion, interes = I
   const rec = r2(c * pct), int = r2(c * (F.interes || interes) * dias / 365);
   return { ...vacio, pct, recargo: rec, intereses: int, importe: r2(rec + int), reducido: r2(rec + int), meses: m, diasIntereses: dias, etiqueta: `${Math.round(pct * 100)} % + intereses de demora de ${dias} ${dias === 1 ? "día" : "días"}` };
 }
+// Baja del autónomo en el RETA: tres días naturales desde el cese (art. 32.3 RD 84/1996; guía de la Seguridad Social). Una sola guía de 2026 cita un
+// «RD 643/2026» que la llevaría a seis días: no se ha localizado en el BOE, así que se usa el plazo de tres días, el prudente (PENDIENTE). Fuente única
+// para calcularPlazos y el catálogo de trámites.
+const BAJA_AUTONOMO_DIAS = 3;
+const BAJA_AUTONOMO_NOTA = "Tres días naturales (art. 32.3 RD 84/1996), trasladado al siguiente hábil; tras el fallecimiento la Tesorería suele tramitarla de oficio. Una reforma de 2026 que lo ampliaría a seis días no se ha podido verificar (PENDIENTE)";
+const DESDE_ULTIMAS_HABILES = 16;
 function sumarHabiles(f, n) { let d = f, k = 0; while (k < n) { d = sumarDias(d, 1); if (!esInhabil(d)) k++; } return d; }
 
 // o.prorrogaISD: prórroga del ISD concedida → el plazo de presentación y la prescripción se cuentan con los 12 meses
@@ -2950,13 +3078,17 @@ function calcularPlazos(f, o = {}) {
   const pro = habil(sumarMeses(f, 5)), isd = habil(sumarMeses(f, 6)), isd12 = habil(sumarMeses(f, 12)), plv = habil(sumarMeses(f, 6)), plv12 = habil(sumarMeses(f, 12));
   // isd.limite === limiteISD(f, false) e isd12.limite === limiteISD(f, true): misma regla que el catálogo de trámites (tramites.mjs), comprobado en test.mjs
   const p = [
-    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, 3)), estado: P, aplica: o.autonomo },
-    { id: "ultimas_voluntades", fase: 1, nombre: "Pedir el certificado de últimas voluntades", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V, nota: "Se descuentan los festivos nacionales; los autonómicos y locales, no" },
-    { id: "seguros_cert", fase: 1, nombre: "Pedir el certificado de seguros de fallecimiento", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, 15), estado: V },
+    // Auditoría civil 10-10-2026 (F-4a/m5): mismo plazo que el catálogo de trámites (BAJA_AUTONOMO_DIAS). F-3/m4: el certificado se pide una vez
+    // TRANSCURRIDOS 15 días hábiles, así que el primer día útil es el siguiente hábil al decimoquinto (DESDE_ULTIMAS_HABILES = 16).
+    { id: "baja_ss", fase: 0, nombre: "Baja en la Seguridad Social si era autónomo", organismo: "TGSS", limite: aHabil(sumarDias(f, BAJA_AUTONOMO_DIAS)), estado: P, nota: BAJA_AUTONOMO_NOTA, aplica: o.autonomo },
+    { id: "ultimas_voluntades", fase: 1, nombre: "Pedir el certificado de últimas voluntades", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, DESDE_ULTIMAS_HABILES), estado: V, nota: "Desde el día hábil siguiente a los 15 hábiles posteriores al fallecimiento. Se descuentan los festivos nacionales; los autonómicos y locales, no" },
+    { id: "seguros_cert", fase: 1, nombre: "Pedir el certificado de seguros de fallecimiento", organismo: "Ministerio de Justicia", desde: sumarHabiles(f, DESDE_ULTIMAS_HABILES), estado: V },
     { id: "viudedad", fase: 1, nombre: "Solicitar la pensión de viudedad u orfandad", organismo: "INSS", limite: aHabil(sumarMeses(f, 3)), recomendado: true, estado: P, aplica: o.hayConyuge },
-    { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", limite: aHabil(sumarDias(f, 90)), estado: P, aplica: o.hayVehiculos },
+    // F-4b/m6: el plazo de 90 días corre desde el documento de adjudicación, no desde el fallecimiento (catálogo: «dgt»; el de 90 días desde la muerte
+    // es la comunicación del poseedor si alguien usa el coche antes del reparto, «dgt_custodia», art. 32.6 RGV)
+    { id: "dgt", fase: 4, nombre: "Transferir los vehículos", organismo: "DGT", nota: "90 días desde la escritura o documento de adjudicación (Reglamento General de Vehículos, art. 32). Si alguien usa el vehículo antes del reparto, debe comunicarlo a Tráfico en 90 días desde el fallecimiento", estado: P, aplica: o.hayVehiculos },
     { id: "prorroga_isd", fase: 3, nombre: "Último día para pedir la prórroga del impuesto", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...pro, nota: [FPZ && FPZ.nota, nTras(pro, "")].filter(Boolean).join(". ") || undefined, estado: FPZ ? P : V },
-    { id: "isd", fase: 4, nombre: "Presentar y pagar el Impuesto sobre Sucesiones", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...(o.prorrogaISD ? isd12 : isd), nota: [FPZ && FPZ.nota, o.prorrogaISD ? nTras(isd12, "Prórroga concedida: doce meses (art. 68 RD 1629/1991)") : nTras(isd, "Con prórroga: " + isd12.limite)].filter(Boolean).join(". "), estado: FPZ ? P : V },
+    { id: "isd", fase: 4, nombre: "Presentar y pagar el Impuesto sobre Sucesiones", organismo: FPZ ? "Hacienda foral" : "Hacienda autonómica", ...(o.prorrogaISD ? isd12 : isd), nota: [FPZ && FPZ.nota, o.prorrogaISD ? nTras(isd12, "Prórroga concedida: doce meses (art. 68 RD 1629/1991), con intereses de demora desde el fin de los seis meses hasta la presentación (art. 69.2 RD 1629/1991)") : nTras(isd, "Con prórroga: " + isd12.limite)].filter(Boolean).join(". "), estado: FPZ ? P : V },
     { id: "plusvalia", fase: 4, nombre: "Declarar la plusvalía de cada inmueble urbano", organismo: "Ayuntamiento", ...plv, nota: nTras(plv, "Prorrogable hasta " + plv12.limite), estado: V, aplica: o.hayInmuebles },
     { id: "irpf", fase: 5, nombre: "Última declaración de la renta del fallecido", organismo: "AEAT", desde: `${anio}-04-01`, limite: `${anio}-06-30`, nota: "Fechas de campaña aproximadas", estado: P },
     { id: "prescripcion", fase: 5, nombre: "Prescribe el derecho de Hacienda a liquidar el impuesto", organismo: "Hacienda autonómica", limite: sumarMeses((o.prorrogaISD ? isd12 : isd).limite, 48), nota: "4 años contados desde el día siguiente al fin del plazo de presentación (arts. 66-67 LGT). Si se concede la prórroga, se cuentan desde el fin del plazo prorrogado", estado: V, informativo: true },

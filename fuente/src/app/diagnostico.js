@@ -301,7 +301,9 @@ function enPlazoExp(x) { return dgPlazoInfo(x).enPlazo; }
 // vecindad civil (I6), isla (Baleares) y conmutación del usufructo catalán (art. 442-5 CCCat).
 function casoMotorJur(x) {
   const P = dgPlazoInfo(x);
-  return { enPlazo: P.enPlazo, fechaReferencia: P.presentado || x.proyeccion ? undefined : dgHoy(), prorrogaISD: P.prorroga, vecindadCivil: x.vecindadCivil || undefined, isla: x.isla || undefined, conmutacionCat: x.conmutacionCat === true };
+  return { enPlazo: P.enPlazo, fechaReferencia: P.presentado || x.proyeccion ? undefined : dgHoy(), prorrogaISD: P.prorroga, vecindadCivil: x.vecindadCivil || undefined, isla: x.isla || undefined, conmutacionCat: x.conmutacionCat === true,
+    // Auditoría civil 10-10-2026: acrecimiento con cuotas (C-2) y ley sucesoria con elemento internacional (D-1, Reglamento (UE) 650/2012)
+    acrecer: x.acrecer || undefined, residenciaExtranjero: x.ccaa === "EST" || undefined, nacionalidadExtranjera: !!(x.situ && x.situ.nacionalidadExtranjera) || undefined, professioIuris: x.professioIuris || undefined };
 }
 // Aviso rojo cuando el reparto legal no se puede calcular (vecindad foral no modelada): Impuestos, Herederos y Resumen
 function bloqueoRepartoHTML(x, R) {

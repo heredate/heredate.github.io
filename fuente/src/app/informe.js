@@ -59,6 +59,8 @@ function pdfInformeBloques(x, R) {
   bl.push({ tipo: "fila", etiqueta: "Total Sucesiones", valor: pdfEur(R.isd.total), negrita: true, separada: true });
   // C2: fuera de plazo, el recargo del art. 27 LGT en su propia línea, con su etiqueta (nunca «15 %» si lleva intereses)
   if (R.isd.recargo && R.isd.recargo.importe) { bl.push({ tipo: "fila", etiqueta: `Recargo por presentación fuera de plazo (${R.isd.recargo.etiqueta})`, valor: pdfEur(R.isd.recargo.importe) }); bl.push({ tipo: "fila", etiqueta: "Sucesiones con recargo", valor: pdfEur(R.isd.totalConRecargo), negrita: true }); bl.push({ tipo: "nota", texto: `Plazo vencido el ${fechaLarga(R.isd.recargo.limite)}; recargo calculado a la fecha del informe sin requerimiento previo (art. 27.2 LGT). Se reduce un 25 % si se ingresa todo al presentar: ${pdfEur(R.isd.recargo.reducido)} (art. 27.5 LGT).` }); }
+  // Auditoría civil 10-10-2026 (F-1): intereses de demora del periodo de prórroga (art. 69.2 RD 1629/1991)
+  if (R.isd.interesesProrroga) { bl.push({ tipo: "fila", etiqueta: `Intereses de demora de la prórroga (${R.isd.interesesProrrogaDias} días, art. 69.2 RD 1629/1991)`, valor: pdfEur(R.isd.interesesProrroga) }); if (!(R.isd.recargo && R.isd.recargo.importe)) bl.push({ tipo: "fila", etiqueta: "Sucesiones con intereses", valor: pdfEur(R.isd.totalConRecargo), negrita: true }); }
 
   bl.push({ tipo: "h", numero: "5.", texto: "Plusvalía municipal" });
   if (!R.plus.length) bl.push({ tipo: "p", texto: "Sin inmuebles con los datos catastrales completos. La plusvalía se calculará al completarlos." });

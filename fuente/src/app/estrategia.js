@@ -54,7 +54,10 @@ function lotes(x, R) {
   const cargas = R.isd.masa.deudas + R.isd.masa.gastos;
   const dinero = Math.max(0, divis.reduce((s, b) => s + valorBienX(b), 0) - cargas);
   const masa = indiv.reduce((s, b) => s + valorBienX(b), 0) + dinero;
-  const obj = Object.fromEntries(vivos.map((p) => [p.id, cuota[p.id] * masa]));
+  // Colación (arts. 1035-1047 CC; auditoría civil 10-10-2026): cada lote apunta al haber que resulta de colacionar, no a la cuota bruta
+  const PTc = (() => { try { return particion(x, R); } catch (e) { return null; } })(), conCol = !!(PTc && PTc.COL && PTc.COL.aplica);
+  const habCol = (id) => { const h = PTc.H.find((q) => q.p.id === id); return h ? h.haber / (R.isd.masa.netoReparto || 1) : 0; };
+  const obj = Object.fromEntries(vivos.map((p) => [p.id, (conCol ? habCol(p.id) : cuota[p.id]) * masa]));
   const lleva = Object.fromEntries(vivos.map((p) => [p.id, 0]));
   const asig = {}, plusAsig = {}, notas = [];
   for (const b of indiv) {
@@ -88,7 +91,7 @@ function lotes(x, R) {
 // ── Motor de palancas ─────────────────────────────────────────
 const _cacheE = new Map();
 function estrategia(x) {
-  const key = JSON.stringify([x.fecha, x.ccaa, x.ccaaBienes, x.civil, x.testamento, x.personas, x.bienes, x.deudas, x.gastos, x.ajuar, x.enPlazo, x.aplicarEmpresa, x.criterioVivienda, x.viviendaA, x.noAplicarVivienda, x.ventaVivienda, x.tramites?.prorroga, x.tramites?.particion, x.causanteEmpadronado]);
+  const key = JSON.stringify([x.fecha, x.ccaa, x.ccaaBienes, x.civil, x.testamento, x.personas, x.bienes, x.deudas, x.gastos, x.ajuar, x.enPlazo, x.aplicarEmpresa, x.criterioVivienda, x.viviendaA, x.noAplicarVivienda, x.ventaVivienda, x.tramites?.prorroga, x.tramites?.particion, x.causanteEmpadronado, x.acrecer, x.professioIuris, x.situ?.nacionalidadExtranjera, x.fechaParticion]);
   if (_cacheE.has(key)) return _cacheE.get(key);
   const out = estrategia0(x);
   if (_cacheE.size > 60) _cacheE.clear();
