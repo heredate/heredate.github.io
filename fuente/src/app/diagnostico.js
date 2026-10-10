@@ -292,7 +292,7 @@ function dgPlazoInfo(x) {
   const manual = x.enPlazoManual === true || x.enPlazo === false;
   const presentado = !!(x.tramites && x.tramites.isd && x.tramites.isd.estado === "hecho");
   const prorroga = !!(x.tramites && x.tramites.prorroga && x.tramites.prorroga.estado === "hecho");
-  const plazo = x.fecha && typeof plazoPresentacionISD === "function" ? plazoPresentacionISD(x.fecha, { hoy: dgHoy(), prorroga }) : null;
+  const plazo = x.fecha && typeof plazoPresentacionISD === "function" ? plazoPresentacionISD(x.fecha, { hoy: dgHoy(), prorroga, ccaa: x.ccaa, ine: x.muniPlazos || "" }) : null;
   if (manual || presentado || !plazo || x.proyeccion) return { enPlazo: x.enPlazo !== false, auto: false, plazo, presentado, prorroga };
   return { enPlazo: !plazo.fueraDePlazo, auto: true, plazo, presentado, prorroga };
 }

@@ -3,6 +3,9 @@
 import { tramitesDe, TR_TOTAL } from "./tramites.mjs";
 import { readFileSync } from "node:fs";
 import { repartoIntestado, repartoUsufructoUniversal, repartoPorcentajes, interesesDemora, interesProrrogaISD, sumarHabiles,  calcularISD, calcularLegitimas, calcularPlusvalia, ordenanzaDesdeDatos, calcularPlazos, aHabil, limiteISD, sumarMeses, cuotaTarifa, pctUsufructoVitalicio, pctUsufructoTemporal, coefPlusvaliaLegal, coefPlusvaliaMax, regimenPlusvalia, PLUSVALIA_FORAL, REGLAS, TERRITORIOS, ORDENANZAS, HACIENDA_IIVTNU_2026, haciendaIIVTNU, plazoPresentacionISD, recargoArt27, vecindadCivil, recargoPresentacion, RECARGO_FORAL, PLAZO_ISD_FORAL, MODELO650_AUT, modelo650Aut, formulario650, modelo650, relacion660, documentos650, ibanOculto, COEF_PLUSVALIA_NAV_2026, COEF_PLUSVALIA_BIZ_2024, COEF_PLUSVALIA_RDL16_2025 } from "./motor.mjs";
+import { plazosProcedimiento, PROC_TIPOS, prescripcionTributo, simularAplazamiento, APLAZ_REGIMENES, INTERES_LEGAL, INTERES_DEMORA } from "./motor.mjs";
+import { esInhabil, festivoEn, venceHabil, infoCalendario, calendarioDe, plazoPlusvalia, sumarDias } from "./motor.mjs";
+import { FESTIVOS_NACIONALES, FESTIVOS_CCAA, FESTIVOS_LOCALES, PROV_CCAA, CAPITALES_INE } from "./festivos.mjs";
 
 let ok = 0, ko = 0;
 const eq = (n, got, exp, tol = 0.02) => { const p = Math.abs(got - exp) <= tol; p ? ok++ : ko++; if (!p || process.env.V) console.log(`${p ? "✔" : "✘"} ${n}: ${got} (esperado ${exp})`); };
@@ -2009,6 +2012,152 @@ eq("Andalucía: enlace al modelo 650/660", /modelo650660/.test(tr({ ccaa: "AND" 
   si("30 · P-2 · vecindad catalana: la colación del CC no se aplica (art. 464-17 CCCat; PENDIENTE)", Math.abs(p5c.H.find((h) => h.id === "A").haber - 120000) < 1 && p5c.colacion.notas.some((n) => /derecho civil propio/.test(n)));
   const p5x = cp("MAD", [{ id: "v", tipo: "vivienda", valor: 240000, adjudicadoA: "B" }], colA);
   eq("30 · P-2 · con adjudicación: Blas recibe el piso de 240.000 y compensa a Ana 90.000", p5x.compensaciones[0].importe, 90000, 1);
+}
+
+// ── 31. G09 · Inhábiles autonómicos y locales (art. 30 Ley 39/2015; festivos.mjs) ─────────
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const AND = { ccaa: "AND" }, MAD = { ccaa: "MAD" };
+  // Integridad de los datos
+  const MU = JSON.parse(readFileSync(new URL("./municipios.json", import.meta.url), "utf8")), INES = new Map(MU.m);
+  const fechaOk = (d, a) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d.startsWith(String(a)) && new Date(d + "T12:00:00Z").toISOString().slice(0, 10) === d;
+  const malos = [];
+  for (const a of [2025, 2026, 2027]) {
+    for (const k of ["AND", "ARA", "AST", "BAL", "CAN", "CANT", "CYL", "CLM", "CAT", "VAL", "EXT", "GAL", "MAD", "MUR", "NAV", "PV", "RIO", "CEU", "MEL"]) {
+      const R = FESTIVOS_CCAA[a][k]; if (!R) { malos.push(`${a} ${k} sin datos`); continue; }
+      if (!["VERIFICADO", "PENDIENTE"].includes(R.e) || !R.f) malos.push(`${a} ${k} sin estado o fuente`);
+      for (const d of R.d) { if (!fechaOk(d, a)) malos.push(`${a} ${k} ${d} fecha mala`); if (FESTIVOS_NACIONALES[a].includes(d)) malos.push(`${a} ${k} ${d} repite un nacional`); }
+      if (new Set(R.d).size !== R.d.length || [...R.d].sort().join() !== R.d.join()) malos.push(`${a} ${k} desordenado o repetido`);
+    }
+    for (const d of FESTIVOS_NACIONALES[a]) if (!fechaOk(d, a)) malos.push(`${a} nacional ${d}`);
+    for (const [ine, L] of Object.entries(FESTIVOS_LOCALES[a] || {})) { if (!INES.has(ine)) malos.push(`${a} ${ine} no existe`); if (!L.f || !L.n) malos.push(`${a} ${ine} sin fuente`); for (const d of L.d) if (!fechaOk(d, a)) malos.push(`${a} ${ine} ${d}`); }
+  }
+  if (malos.length) console.log(malos.join("\n"));
+  eq("31 · datos de festivos 2025-2027 completos, con fuente, estado y fechas válidas", malos.length, 0, 0);
+  si("31 · 52 capitales de provincia con su código INE", CAPITALES_INE.length === 52 && CAPITALES_INE.every((i) => INES.has(i)));
+  si("31 · cada provincia lleva a un territorio del motor", Object.values(PROV_CCAA).every((t) => TERRITORIOS.some(([k]) => k === t)) && Object.keys(PROV_CCAA).length === 52);
+  // Festivo autonómico: 06-06-2026 + 6 meses = lunes 07-12-2026 (traslado autonómico de la Constitución en Andalucía; 08-12 nacional) → 09-12-2026
+  eq("31 · sin comunidad: 07-12-2026 es hábil (comportamiento anterior)", limiteISD("2026-06-06", false) === "2026-12-07" ? 1 : 0, 1);
+  eq("31 · Andalucía: 07-12 y 08-12 inhábiles → 09-12-2026", limiteISD("2026-06-06", false, AND) === "2026-12-09" ? 1 : 0, 1);
+  eq("31 · Cataluña: 07-12-2026 es hábil", limiteISD("2026-06-06", false, { ccaa: "CAT" }) === "2026-12-07" ? 1 : 0, 1);
+  si("31 · festivoEn: 07-12-2026 autonómico VERIFICADO en Andalucía", (() => { const x = festivoEn("2026-12-07", AND); return x && x.tipo === "autonomico" && x.estado === "VERIFICADO" && /Andalucía/.test(x.ambito); })());
+  si("31 · Euskadi para Bizkaia, Álava y Gipuzkoa: 06-04-2026 lunes de Pascua", ["BIZ", "ALA", "GIP"].every((t) => esInhabil("2026-04-06", { ccaa: t })) && !esInhabil("2026-04-06", MAD));
+  // Cadena de inhábiles: Viernes Santo + fin de semana + lunes de Pascua (Comunitat Valenciana)
+  eq("31 · VAL: 03-04-2026 → 07-04-2026 (Viernes Santo, sábado, domingo, lunes de Pascua)", aHabil("2026-04-03", { ccaa: "VAL" }) === "2026-04-07" ? 1 : 0, 1);
+  eq("31 · MAD: 02-04-2026 (Jueves Santo) → 06-04-2026", aHabil("2026-04-02", MAD) === "2026-04-06" ? 1 : 0, 1);
+  eq("31 · sin comunidad: 03-04-2026 → 06-04-2026", aHabil("2026-04-03") === "2026-04-06" ? 1 : 0, 1);
+  // Sábado: inhábil en todo caso (art. 30.2)
+  eq("31 · sábado 14-03-2026 → lunes 16-03-2026", aHabil("2026-03-14", { ccaa: "VAL" }) === "2026-03-16" ? 1 : 0, 1);
+  // Fin de mes y festivo autonómico: 31-08-2026 + 6 meses = 28-02-2027 (domingo) → 01-03-2027, que en Andalucía es el Día de Andalucía trasladado → 02-03-2027
+  eq("31 · fin de mes: 31-08-2026 → 28-02-2027 natural", venceHabil(sumarMeses("2026-08-31", 6), AND).limiteNatural === "2027-02-28" ? 1 : 0, 1);
+  eq("31 · fin de mes + festivo autonómico: Andalucía 02-03-2027", limiteISD("2026-08-31", false, AND) === "2027-03-02" ? 1 : 0, 1);
+  eq("31 · fin de mes sin comunidad: 01-03-2027", limiteISD("2026-08-31", false) === "2027-03-01" ? 1 : 0, 1);
+  // 29 de febrero (año bisiesto 2028): de fecha a fecha
+  eq("31 · 31-08-2027 + 6 meses = 29-02-2028", sumarMeses("2027-08-31", 6) === "2028-02-29" ? 1 : 0, 1);
+  eq("31 · 29-02-2028 + 12 meses = 28-02-2029 (último día del mes)", sumarMeses("2028-02-29", 12) === "2029-02-28" ? 1 : 0, 1);
+  eq("31 · 29-02-2028 + 1 mes = 29-03-2028", sumarMeses("2028-02-29", 1) === "2028-03-29" ? 1 : 0, 1);
+  si("31 · año sin calendario (2028): solo fines de semana y aviso de que falta", aHabil("2028-02-29", AND) === "2028-02-29" && infoCalendario(AND, 2028).faltan.length > 0 && /Faltan/.test(infoCalendario(AND, 2028).texto));
+  // Festivo local VERIFICADO: Madrid 09-11-2026 (Almudena). 09-05-2026 + 6 meses = 09-11-2026
+  eq("31 · Madrid sin municipio: 09-11-2026", limiteISD("2026-05-09", false, MAD) === "2026-11-09" ? 1 : 0, 1);
+  eq("31 · Madrid capital (festivo local): 10-11-2026", limiteISD("2026-05-09", false, calendarioDe("MAD", "28079")) === "2026-11-10" ? 1 : 0, 1);
+  si("31 · nota: «Contados los festivos nacionales, de Comunidad de Madrid y de Madrid»", /Contados los festivos nacionales, de Comunidad de Madrid y de Madrid/.test(venceHabil("2026-11-09", calendarioDe("MAD", "28079")).nota));
+  si("31 · nota del traslado por festivo local", /festivo local de Madrid/.test(venceHabil("2026-11-09", calendarioDe("MAD", "28079")).nota));
+  // Festivo local PENDIENTE (Marbella, 19-10-2026): no traslada, pero avisa
+  const mb = venceHabil("2026-10-19", calendarioDe(null, "29069"));
+  si("31 · local sin cotejar: el plazo no se traslada (regla prudente)", mb.limite === "2026-10-19" && !mb.trasladado);
+  si("31 · local sin cotejar: aviso con la fecha si se confirma", mb.posible && mb.posible.siSeConfirma === "2026-10-20" && /sin cotejar/.test(mb.nota));
+  si("31 · la comunidad sale del código INE (29 → Andalucía)", calendarioDe(null, "29069").ccaa === "AND" && esInhabil("2026-12-07", calendarioDe(null, "29069")));
+  si("31 · municipio sin datos en 2027: «Faltan los festivos locales de Marbella»", /Faltan los festivos locales de Marbella de 2027/.test(infoCalendario(calendarioDe(null, "29069"), 2027).texto));
+  si("31 · art. 30.6: festivo en la sede o en la residencia (lista de calendarios)", esInhabil("2026-04-06", [MAD, { ccaa: "CAT" }]) && !esInhabil("2026-04-06", [MAD, AND]));
+  // Días hábiles: requerimiento de 10 días notificado el viernes 27-11-2026
+  eq("31 · 10 hábiles desde 27-11-2026 sin comunidad: 14-12-2026", sumarHabiles("2026-11-27", 10) === "2026-12-14" ? 1 : 0, 1);
+  eq("31 · 10 hábiles desde 27-11-2026 en Andalucía: 15-12-2026", sumarHabiles("2026-11-27", 10, AND) === "2026-12-15" ? 1 : 0, 1);
+  // Plusvalía por municipio: el calendario del ayuntamiento de cada inmueble; con varios, el más temprano
+  const pmad = plazoPlusvalia("2026-05-09", [{ ine: "28079" }]), pmal = plazoPlusvalia("2026-05-09", [{ ine: "29067" }]), pdos = plazoPlusvalia("2026-05-09", [{ ine: "28079" }, { ine: "29067" }]);
+  si("31 · plusvalía en Madrid: 10-11-2026; en Málaga: 09-11-2026", pmad.limite === "2026-11-10" && pmal.limite === "2026-11-09");
+  si("31 · plusvalía con inmuebles en dos municipios: el más temprano y el detalle", pdos.limite === "2026-11-09" && pdos.porMunicipio.length === 2 && /Madrid 2026-11-10/.test(pdos.nota));
+  si("31 · plusvalía: la comunidad del inmueble, no la del expediente", plazoPlusvalia("2026-06-07", [{ ine: "29067" }]).limite === "2026-12-09" && plazoPlusvalia("2026-06-07", [{ ine: "08019" }]).limite === "2026-12-07");
+  // calcularPlazos y Trámites con comunidad y municipios: misma fecha (barrido)
+  const o = { ccaa: "AND", ine: "29067", inmuebles: [{ ine: "29069" }, { ine: "28079" }] };
+  const PZ = (f, pr) => Object.fromEntries(calcularPlazos(f, { hayInmuebles: true, prorrogaISD: pr, ...o }).map((x) => [x.id, x]));
+  const TRM = (f, pr) => Object.fromEntries(tramitesDe({ fecha: f, inmuebles: 2, nHerederos: 2, situ: {}, ccaa: "AND", ine: "29067", inmueblesMuni: o.inmuebles, prorrogaISD: pr }).map((x) => [x.id, x]));
+  const difs = [];
+  for (let f = "2025-01-01"; f <= "2027-06-30"; f = sumarDias(f, 1)) for (const pr of [false, true]) {
+    const a = PZ(f, pr), b = TRM(f, pr);
+    for (const [x, y] of [["isd", "isd"], ["prorroga_isd", "prorroga"], ["plusvalia", "plusvalia"], ["prescripcion", "prescripcion"]]) if (a[x].limite !== b[y].limite) difs.push(`${f} ${x} ${a[x].limite} ≠ ${b[y].limite}`);
+    if (a.isd.limite !== limiteISD(f, pr, calendarioDe("AND", "29067"))) difs.push(`${f} limiteISD`);
+    if (esInhabil(a.isd.limite, calendarioDe("AND", "29067"))) difs.push(`${f} vence en inhábil`);
+  }
+  if (difs.length) console.log(difs.slice(0, 10).join("\n"));
+  eq("31 · barrido 2025-2027 con Andalucía, Málaga y dos municipios de inmuebles: Diagnóstico y Trámites coinciden", difs.length, 0, 0);
+  si("31 · Trámites: el aviso dice qué calendarios se han contado", /Contados los festivos nacionales, de Andalucía y de Málaga/.test(TRM("2026-06-06").isd.aviso));
+  si("31 · plazoPresentacionISD con comunidad: Andalucía 09-12-2026", plazoPresentacionISD("2026-06-06", { hoy: "2026-07-01", ccaa: "AND" }).limite === "2026-12-09");
+}
+
+// ── 32. G06 · Después de presentar: plazos de las notificaciones y prescripción (arts. 62, 66-68, 135, 223 y 235 LGT) ─────────
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const AND = { ccaa: "AND" };
+  const P = (tipo, f, o) => Object.fromEntries(plazosProcedimiento(tipo, f, o).plazos.map((q) => [q.id, q]));
+  // Requerimiento: diez días hábiles por defecto, con festivos de la comunidad
+  eq("32 · requerimiento notificado el 27-11-2026 en Andalucía: 15-12-2026 (07-12 y 08-12 inhábiles)", P("requerimiento", "2026-11-27", { cal: AND }).atender.limite === "2026-12-15" ? 1 : 0, 1);
+  eq("32 · requerimiento con 15 días hábiles: 21-12-2026 sin comunidad", P("requerimiento", "2026-11-27", { dias: 15 }).atender.limite === "2026-12-21" ? 1 : 0, 1);
+  eq("32 · alegaciones a la propuesta: 10 días hábiles", P("propuestaLiquidacion", "2026-03-02", {}).alegaciones.limite === "2026-03-16" ? 1 : 0, 1);
+  // Pago en voluntaria de una liquidación (art. 62.2 LGT)
+  eq("32 · liquidación notificada el 15-01-2026: pagar hasta el 20-02-2026", P("liquidacion", "2026-01-15", {}).pago.limite === "2026-02-20" ? 1 : 0, 1);
+  eq("32 · liquidación notificada el 16-01-2026: pagar hasta el 05-03-2026", P("liquidacion", "2026-01-16", {}).pago.limite === "2026-03-05" ? 1 : 0, 1);
+  eq("32 · el 20-06-2026 es sábado: pasa al 22-06-2026", P("liquidacion", "2026-05-10", {}).pago.limite === "2026-06-22" ? 1 : 0, 1);
+  // Recurso: un mes de fecha a fecha, último día del mes si no hay equivalente, y traslado al hábil
+  eq("32 · recurso: notificada el 31-01-2026 → 28-02-2026 (sábado) → 02-03-2026", P("liquidacion", "2026-01-31", {}).recurso.limite === "2026-03-02" ? 1 : 0, 1);
+  eq("32 · recurso: notificada el 07-11-2026 en Andalucía → 07-12 y 08-12 inhábiles → 09-12-2026", P("liquidacion", "2026-11-07", { cal: AND }).recurso.limite === "2026-12-09" ? 1 : 0, 1);
+  si("32 · reposición o reclamación (arts. 223 y 235 LGT)", /223\.1 y 235\.1 LGT/.test(P("liquidacion", "2026-01-15", {}).recurso.norma));
+  // Comprobación de valores: tasación pericial contradictoria en el plazo del primer recurso
+  const cv = P("comprobacionValores", "2026-11-30", { cal: AND });
+  si("32 · comprobación de valores: TPC en el mismo plazo que el recurso (art. 135.1 LGT)", cv.tpc && cv.tpc.limite === cv.recurso.limite && /135\.1/.test(cv.tpc.norma) && cv.recurso.limite === "2026-12-30");
+  si("32 · comprobación de valores: pago hasta el 05-01-2027", cv.pago.limite === "2027-01-05");
+  // Plusvalía: reposición obligatoria (art. 14.2 TRLRHL), sin tasación pericial
+  const pl = P("liquidacion", "2026-04-15", { tributo: "IIVTNU" });
+  si("32 · plusvalía: reposición previa obligatoria ante el ayuntamiento", /14\.2 TRLRHL/.test(pl.recurso.norma) && !pl.tpc);
+  // Sanción: reducción del 25 % por pronto pago; suspensión automática si se recurre
+  const sa = plazosProcedimiento("sancion", "2026-02-03", {});
+  si("32 · sanción: pago con reducción del 25 % (art. 188.3 LGT) y aviso del art. 212.3", sa.plazos.some((q) => q.id === "pago" && /188\.3/.test(q.norma)) && sa.avisos.some((a) => /212\.3/.test(a)));
+  // Providencia de apremio (art. 62.5 LGT)
+  eq("32 · apremio notificado el 10-03-2026: pagar hasta el 20-03-2026", P("providenciaApremio", "2026-03-10", {}).pago.limite === "2026-03-20" ? 1 : 0, 1);
+  eq("32 · apremio notificado el 16-03-2026: 05-04 domingo → 06-04-2026", P("providenciaApremio", "2026-03-16", {}).pago.limite === "2026-04-06" ? 1 : 0, 1);
+  eq("32 · apremio notificado el 16-03-2026 en Cataluña: 06-04 lunes de Pascua → 07-04-2026", P("providenciaApremio", "2026-03-16", { cal: { ccaa: "CAT" } }).pago.limite === "2026-04-07" ? 1 : 0, 1);
+  si("32 · tipo desconocido o fecha mala: null", plazosProcedimiento("otro", "2026-01-01") === null && plazosProcedimiento("liquidacion", "2026-13") === null);
+  si("32 · seis tipos de notificación", PROC_TIPOS.length === 6 && PROC_TIPOS.every(([k]) => plazosProcedimiento(k, "2026-05-04", {})));
+  // Prescripción (arts. 66-68 LGT)
+  const p1 = prescripcionTributo({ finPlazo: "2026-12-09", presentacion: "2026-11-20", pago: "2026-11-20" });
+  si("32 · prescripción: presentada en plazo, cuatro años desde el fin del plazo", p1.liquidar.hasta === "2030-12-09" && p1.devolucion.hasta === "2030-12-09");
+  const p2 = prescripcionTributo({ finPlazo: "2026-12-09", presentacion: "2027-02-15", pago: "2027-02-15" });
+  si("32 · prescripción: presentada fuera de plazo, desde la presentación (art. 68.1.c LGT)", p2.liquidar.hasta === "2031-02-15" && p2.devolucion.hasta === "2031-02-15");
+  const p3 = prescripcionTributo({ finPlazo: "2026-12-09", presentacion: "2026-11-20", interrupciones: ["2028-03-01", "2027-05-10"] });
+  si("32 · prescripción: la última actuación notificada reinicia el cómputo (art. 68.6 LGT)", p3.liquidar.hasta === "2032-03-01" && p3.liquidar.motivo === "última actuación notificada");
+  si("32 · prescripción sin fin de plazo: null", prescripcionTributo({}) === null);
+}
+
+// ── 33. G08 · Aplazamiento y fraccionamiento del ISD (art. 65 LGT; arts. 44-54 RGR; art. 38 LISD) ─────────
+{
+  const si = (n, c) => eq(n, c ? 1 : 0, 1, 0);
+  const a1 = simularAplazamiento({ importe: 20000, finVoluntario: "2026-12-09", regimen: "isd38", modo: "aplazamiento", primerVencimiento: "2027-12-09" });
+  // 20.000 × 4,0625 % × 365 / 365 = 812,50
+  eq("33 · aplazamiento de un año: intereses de demora 812,50 €", a1.intereses, 812.5);
+  si("33 · aplazamiento: un solo vencimiento, sin garantía (≤ 50.000 €)", a1.filas.length === 1 && a1.dispensa && a1.importeGarantia === 0 && a1.avisos.length === 0);
+  const f1 = simularAplazamiento({ importe: 24000.05, finVoluntario: "2026-12-09", modo: "fraccionamiento", plazos: 12, periodicidad: 1 });
+  si("33 · fraccionamiento: los plazos suman el importe exacto", Math.abs(f1.filas.reduce((s, f) => s + f.principal, 0) - 24000.05) < 0.001 && f1.filas.length === 12);
+  si("33 · fraccionamiento: cada fracción con sus días desde el fin del periodo voluntario (art. 53 RGR)", f1.filas[0].vencimiento === "2027-01-20" && f1.filas[0].dias === 42 && f1.filas[11].vencimiento === "2027-12-20");
+  eq("33 · fraccionamiento: interés de la primera fracción (2.000 × 4,0625 % × 42 / 365)", f1.filas[0].interes, 9.35);
+  const g1 = simularAplazamiento({ importe: 50000, finVoluntario: "2026-12-09", modo: "aplazamiento" }), g2 = simularAplazamiento({ importe: 50000.01, finVoluntario: "2026-12-09", modo: "aplazamiento" });
+  si("33 · 50.000 € exactos: sin garantía; 50.000,01 €: con garantía (Orden HFP/583/2023)", g1.dispensa && !g2.dispensa && g2.avisos.some((a) => /garantía/.test(a)));
+  eq("33 · garantía: deuda + intereses + 25 % (art. 48.3 RGR)", g2.importeGarantia, Math.round((g2.importe + g2.intereses) * 1.25 * 100) / 100);
+  si("33 · las demás deudas pendientes cuentan para el límite", !simularAplazamiento({ importe: 30000, otrasDeudas: 25000, finVoluntario: "2026-12-09" }).dispensa);
+  const av = simularAplazamiento({ importe: 80000, finVoluntario: "2026-12-09", modo: "aplazamiento", garantia: "aval", primerVencimiento: "2027-12-09" });
+  eq("33 · con aval bancario: interés legal del dinero (3,25 %, art. 26.6 LGT)", av.intereses, 2600);
+  si("33 · régimen de un año: aviso si el último plazo lo supera", simularAplazamiento({ importe: 10000, finVoluntario: "2026-12-09", regimen: "isd38", modo: "fraccionamiento", plazos: 18, periodicidad: 1 }).avisos.some((a) => /supera el máximo/.test(a)));
+  si("33 · regímenes especiales sin cotejar marcados PENDIENTE", APLAZ_REGIMENES.filter((r) => r.estado === "PENDIENTE").length === 2 && simularAplazamiento({ importe: 10000, finVoluntario: "2026-12-09", regimen: "isdVivienda" }).estado === "PENDIENTE");
+  si("33 · interés legal 2026 3,25 % e interés de demora 4,0625 %", INTERES_LEGAL === 0.0325 && INTERES_DEMORA === 0.040625);
+  si("33 · sin importe o sin fecha: null", simularAplazamiento({ importe: 0, finVoluntario: "2026-12-09" }) === null && simularAplazamiento({ importe: 100 }) === null);
 }
 
 console.log(`\n${ok} correctas · ${ko} fallidas`);

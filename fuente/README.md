@@ -21,6 +21,8 @@ El alojamiento es GitHub Pages (GitHub, Inc.): es el que figura en la política 
 - `src/app/` — interfaz (`shell.html` diseño, `ui.js` pantallas, `logic.js` cálculos de la app y módulos). `cine.css` (y `cine.js`, si existe) es la capa visual «cine»: build.py la pone en `<style id="hereda-cine">` (y `<script id="hereda-cine-js">`) justo después de la hoja de estilos principal de la app.
 - `src/tramites.mjs` — catálogo de trámites de una herencia.
 - `src/motor.mjs` — el motor de cálculo (Derecho civil, impuestos, plazos). Pruebas: `node src/test.mjs`.
+- `src/festivos.mjs` — calendario de días inhábiles 2025-2027 (nacionales, autonómicos y locales, con fuente y estado) que usa el motor en todos los plazos; build.py lo pone delante del motor.
+- `src/app/fiscal.js` — Impuestos › Presentaciones y notificaciones (registro de presentaciones y pagos, notificaciones con sus plazos, prescripción) y Aplazamiento (simulador y escrito). Prueba de navegador: `tools/qa/fiscal.mjs`.
 - `tools/` — licencias, facturas y plantillas de correo para el cobro por transferencia (ver `tools/README.md`).
 - `manifest.webmanifest`, `sw.js`, `icons/` — lo que la hace instalable y usable sin conexión. `icons/hereda-marca.svg` es el monograma; los PNG salen de él con `tools/marca/generar-iconos.mjs`.
 - `img/` (imágenes de la portada) y `video/` (demostración de dos minutos y sus pósteres): se copian tal cual a la web.
