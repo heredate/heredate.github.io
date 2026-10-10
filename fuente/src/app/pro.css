@@ -683,6 +683,28 @@ button.rd-sg:hover{color:var(--label)}
 .vf-f2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .vf-f3{display:grid;grid-template-columns:1.5fr 1.15fr .85fr;gap:8px}
 .vf-f4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 8px}
+/* G05 · declaración de herederos (abintestato.js): misma tarjeta de datos que «Listo para firmar» */
+.ab-card{margin-bottom:18px}
+.ab-card .ab-nota{margin:6px 0 0}
+.ab-card .ab-sep{height:10px}
+.ab-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px}
+/* G07 · defensa tributaria (defensa.js): actos notificados con sus plazos, simulador de tasación pericial y escritos */
+.df-card{padding:14px 18px}
+.df-proc{padding:4px 0 14px;margin-bottom:12px;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-h{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+.df-h .t,.df-pl .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.df-h .t small,.df-pl .t small{color:var(--label-2);font-size:12.5px}
+.df-pls{margin-top:10px;border-radius:10px;background:var(--fill-2);padding:4px 12px}
+.df-pl{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-pl:last-child{box-shadow:none}
+.df-pl .t b{font-size:14px;font-weight:600}
+.df-pl .chip{flex:none}
+.df-av{margin:8px 0 0}
+.df-sim{margin-top:10px;padding:10px 12px;border-radius:10px;box-shadow:inset 0 0 0 .5px var(--hair)}
+.df-sim .kv{margin:8px 0 6px}
+.df-sim .caption{margin:0}
+.df-docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media (max-width:600px){.df-card{padding:12px 14px}.df-h{flex-direction:column}.df-docs .btn{flex:1 1 auto}}
 .vf-fl{display:flex;flex-direction:column;gap:3px;min-width:0;margin-bottom:8px;border-radius:9px}
 .vf-f2 .vf-fl,.vf-f3 .vf-fl{margin-bottom:0}
 .vf-f2 + .vf-fl,.vf-f3 + .vf-fl,.vf-f2 + .vf-f2,.vf-f2 + .vf-f3,.vf-f3 + .vf-f2,.vf-f3 + .vf-f3{margin-top:8px}
