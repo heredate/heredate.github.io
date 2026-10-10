@@ -421,14 +421,136 @@ export function pctUsufructoTemporal(anios) { return Math.min(0.70, 0.02 * anios
 const NORMA_NUDA = "art. 26.a Ley 29/1987 y art. 51.2 RD 1629/1991";
 const FORALES_ISD = ["NAV", "BIZ", "GIP", "ALA"];
 
-export function valorBien(b) {
-  const base = b.tipo === "inmueble" ? Math.max(b.valorReferencia || 0, b.valor || 0) : (b.valor || 0); // art. 9.3
-  return base;
+// ─────────────────────────── Inventario y avalúo (G03, 10-10-2026) ───────────────────────────
+// Cada clase de bien con su regla de valoración y su tratamiento en el ISD. El valor que cuenta es siempre el que fija el abogado (b.valor; en
+// inmuebles, el mayor con el de referencia). Con los datos de la ficha, el motor propone un valor «sugerido» (unidades × precio, tabla de Hacienda,
+// art. 16 Ley 19/1991…) y solo lo usa si falta b.valor: los expedientes guardados antes de la 1.8 dan exactamente las mismas cifras.
+// Base: art. 9 Ley 29/1987 (valor de mercado; inmuebles, valor de referencia, art. 9.3), art. 24 (devengo: día del fallecimiento) y art. 26
+// (usufructo y nuda propiedad). Las reglas de la Ley 19/1991 (Impuesto sobre el Patrimonio) se usan como referencia, no como norma del ISD:
+// la media del cuarto trimestre (art. 15 Ley 19/1991) es del Patrimonio; en Sucesiones los valores cotizados se toman a la fecha del devengo.
+export const TIPOS_BIEN = {
+  inmueble: { nombre: "Inmueble", regla: "El mayor entre el valor de mercado declarado y el valor de referencia del Catastro a la fecha del devengo.", norma: "art. 9.3 Ley 29/1987", estado: V },
+  cuenta: { nombre: "Cuenta o depósito", regla: "Saldo a la fecha del fallecimiento, con los intereses devengados hasta ese día. Lo que se disponga después no reduce el valor. En una cuenta indistinta el saldo es de quien aportó el dinero; sin prueba, por partes iguales (marca «Una parte»).", norma: "arts. 9 y 24 Ley 29/1987", estado: V },
+  valores: { nombre: "Acciones o fondos", regla: "Cotizados: número de títulos × cotización del día del fallecimiento, con la fuente. Fondos (IIC): participaciones × valor liquidativo de ese día. No cotizados: valor de mercado; como referencia, el art. 16.Uno Ley 19/1991.", norma: "arts. 9 y 24 Ley 29/1987 (art. 15 y 16 Ley 19/1991 como referencia)", estado: P },
+  vehiculo: { nombre: "Vehículo", regla: "Precio medio de venta de la Orden de Hacienda del año del devengo (marca, modelo y versión) × porcentaje de su anexo según los años de uso.", norma: "art. 9 Ley 29/1987 · Orden de precios medios de venta del año del devengo", estado: P },
+  empresa: { nombre: "Empresa o negocio", regla: "Negocio individual: valor de los elementos afectos menos las deudas de la actividad, según la contabilidad. Participaciones no cotizadas: valor de mercado; como referencia, valor teórico del último balance si está auditado y, si no, el mayor entre nominal, valor teórico y capitalización al 20 % de la media de beneficios de tres ejercicios.", norma: "art. 9 Ley 29/1987 (arts. 11 y 16.Uno Ley 19/1991 como referencia)", estado: P },
+  cripto: { nombre: "Criptoactivo", regla: "Unidades × precio de cierre del día del fallecimiento en un mercado o índice identificado (anota la fuente y la hora de referencia).", norma: "arts. 9 y 24 Ley 29/1987", estado: P },
+  arte: { nombre: "Arte, joyas y colecciones", regla: "Valor de mercado por tasación pericial. No forma parte del ajuar doméstico: va aparte en la relación de bienes.", norma: "art. 9 Ley 29/1987 · art. 15 Ley 29/1987 y art. 4.Cuatro Ley 19/1991 (fuera del ajuar)", estado: V },
+  credito: { nombre: "Crédito a favor del causante", regla: "Nominal pendiente más los intereses devengados y no cobrados al fallecimiento. Si el cobro es dudoso, se documenta la causa para justificar un valor menor.", norma: "art. 9 Ley 29/1987", estado: P },
+  derechoReal: { nombre: "Derecho real del causante", regla: "Según el derecho. El usufructo, el uso y la habitación del causante se extinguen con su muerte y no se heredan. La nuda propiedad se valora por diferencia con el usufructo que la grava (edad del usufructuario o plazo). Superficie, censos, opción o hipoteca como acreedor: valor de mercado del derecho.", norma: "art. 26 Ley 29/1987 · arts. 513.1 y 529 CC", estado: V },
+  renta: { nombre: "Renta o pensión", regla: "La renta vitalicia sobre la vida del causante se extingue con él. Las cuotas vencidas y no cobradas son un crédito. La renta temporal o sobre la vida de otra persona se transmite por su valor actual.", norma: "art. 9 Ley 29/1987 · arts. 1802 y 1806 CC", estado: P },
+  explotacion: { nombre: "Explotación agraria", regla: "Valor de mercado de las fincas, maquinaria, ganado y derechos (las fincas, con el valor de referencia si lo tienen). Puede tener reducción como empresa familiar (art. 20.2.c Ley 29/1987) o por la Ley 19/1995.", norma: "art. 9 Ley 29/1987 · art. 20.2.c Ley 29/1987 · arts. 9-11 Ley 19/1995", estado: P },
+  embarcacion: { nombre: "Embarcación o aeronave", regla: "Embarcaciones de recreo: precio medio de la Orden de Hacienda × porcentaje por años de uso, si están en la tabla; si no, tasación. Aeronaves: tasación.", norma: "art. 9 Ley 29/1987 · Orden de precios medios de venta", estado: P },
+  intelectual: { nombre: "Propiedad intelectual o industrial", regla: "Valor actual de los rendimientos esperados durante el plazo de protección que queda (70 años desde la muerte del autor en la intelectual), por tasación.", norma: "art. 9 Ley 29/1987 · art. 26 TRLPI", estado: P },
+  seguroAhorro: { nombre: "Seguro sin vencer del causante", regla: "Seguro en el que el causante era tomador y no asegurado (o de ahorro aún no vencido): forma parte de la herencia por su valor de rescate al fallecimiento. Si el causante era el asegurado, no es un bien: lo cobra el beneficiario (ficha de la persona).", norma: "art. 9 Ley 29/1987 (art. 17 Ley 19/1991 como referencia)", estado: P },
+  otro: { nombre: "Otro bien", regla: "Valor de mercado a la fecha del fallecimiento.", norma: "art. 9 Ley 29/1987", estado: V },
+};
+// Subtipos con efecto en la valoración
+export const SUBTIPOS_BIEN = {
+  valores: [["cotizado", "Acciones cotizadas"], ["iic", "Fondo de inversión (IIC)"], ["noCotizado", "Participaciones no cotizadas"]],
+  empresa: [["individual", "Negocio individual"], ["participaciones", "Participaciones en sociedad no cotizada"]],
+  derechoReal: [["nudaPropiedad", "Nuda propiedad"], ["usufructo", "Usufructo del causante"], ["uso", "Uso o habitación del causante"], ["superficie", "Derecho de superficie"], ["censo", "Censo o pensión"], ["opcion", "Opción de compra"], ["hipotecaAcreedor", "Hipoteca a su favor (acreedor)"], ["servidumbre", "Servidumbre"], ["concesion", "Concesión administrativa"]],
+  renta: [["vitaliciaCausante", "Vitalicia sobre la vida del causante"], ["temporal", "Temporal"], ["vitaliciaTercero", "Vitalicia sobre la vida de otra persona"]],
+  embarcacion: [["recreo", "Embarcación de recreo o moto náutica"], ["aeronave", "Aeronave"]],
+};
+// Tabla de depreciación de las Órdenes anuales de precios medios de venta (anexo): % del precio medio por años completos de uso (0 = hasta un año;
+// 12 o más = 10 %). Igual en las Órdenes de los últimos años; la del año del devengo debe confirmarse (estado PENDIENTE en la valoración).
+export const DEPREC_VEHICULOS = [100, 84, 67, 56, 47, 39, 34, 28, 24, 19, 17, 13, 10];
+export function aniosUsoVehiculo(desde, hasta) {
+  if (!desde || !hasta) return null;
+  const [a, m, d] = String(desde).split("-").map(Number), [A, M, D] = String(hasta).split("-").map(Number);
+  if (!a || !A) return null;
+  let n = A - a; if (M < m || (M === m && D < d)) n--;
+  return Math.max(0, n);
 }
+export const pctDepreciacion = (anios) => DEPREC_VEHICULOS[clamp(Math.floor(anios || 0), 0, 12)];
+// Participaciones no cotizadas: art. 16.Uno Ley 19/1991 como referencia. Auditado con informe favorable: valor teórico del último balance;
+// si no: el mayor entre nominal, valor teórico y capitalización al 20 % de la media de beneficios de los tres ejercicios anteriores.
+export function valorParticipacionesLIP(o = {}) {
+  const pct = clamp((Number(o.pct) || 0) / 100, 0, 1), teorico = r2((Number(o.fondosPropios) || 0) * pct), nominal = r2(Number(o.nominal) || 0);
+  const capitalizacion = r2(Math.max(0, Number(o.beneficioMedio) || 0) / 0.20 * pct);
+  const valor = o.auditado ? teorico : Math.max(nominal, teorico, capitalizacion);
+  return { valor: r2(valor), teorico, nominal, capitalizacion, regla: o.auditado ? "balance auditado: valor teórico" : "sin auditar: el mayor de nominal, valor teórico y capitalización al 20 %", norma: "art. 16.Uno Ley 19/1991 (referencia)" };
+}
+const numV = (v) => { const n = Number(v); return isFinite(n) ? n : 0; };
+const EXTINGUE = { derechoReal: ["usufructo", "uso"], renta: ["vitaliciaCausante"] };
+export const bienExtinguido = (b) => !!(b && EXTINGUE[b.tipo] && EXTINGUE[b.tipo].includes(b.subtipo));
+// Valoración propuesta para la ficha («Cómo se valora»): regla, norma, valor sugerido con su cálculo y notas
+export function valoracionBien(b, fecha) {
+  const T = TIPOS_BIEN[b && b.tipo] || TIPOS_BIEN.otro, notas = [];
+  let sugerido = null, calculo = "", estado = T.estado, norma = T.norma;
+  const st = b.subtipo;
+  if (bienExtinguido(b)) { sugerido = 0; calculo = b.tipo === "renta" ? "La renta vitalicia se extingue con la vida del causante (art. 1802 CC): las pensiones vencidas y no cobradas, si las hay, se declaran como crédito." : "El usufructo, el uso y la habitación se extinguen por la muerte del titular (arts. 513.1 y 529 CC): consolidan en el nudo propietario y no se heredan."; norma = b.tipo === "renta" ? "arts. 1802 y 1806 CC" : "arts. 513.1 y 529 CC"; estado = V; }
+  else if (b.tipo === "cripto" && numV(b.unidades) > 0 && numV(b.precioUnidad) > 0) { sugerido = r2(numV(b.unidades) * numV(b.precioUnidad)); calculo = `${numV(b.unidades).toLocaleString("es-ES", { maximumFractionDigits: 8 })} unidades × ${numV(b.precioUnidad).toLocaleString("es-ES", { maximumFractionDigits: 8 })} €`; if (!String(b.fuentePrecio || "").trim()) notas.push("Anota la fuente del precio (mercado o índice y hora de cierre) para justificar el valor ante la Administración."); }
+  else if (b.tipo === "valores" && st === "cotizado" && numV(b.titulos) > 0 && numV(b.cotizacion) > 0) { sugerido = r2(numV(b.titulos) * numV(b.cotizacion)); calculo = `${numV(b.titulos).toLocaleString("es-ES")} títulos × ${numV(b.cotizacion).toLocaleString("es-ES", { maximumFractionDigits: 4 })} € de cotización del día del fallecimiento`; norma = "arts. 9 y 24 Ley 29/1987"; notas.push("La media del cuarto trimestre (art. 15 Ley 19/1991) es la regla del Impuesto sobre el Patrimonio: en Sucesiones se usa el valor del día del devengo."); }
+  else if (b.tipo === "valores" && st === "iic" && numV(b.titulos) > 0 && numV(b.cotizacion) > 0) { sugerido = r2(numV(b.titulos) * numV(b.cotizacion)); calculo = `${numV(b.titulos).toLocaleString("es-ES", { maximumFractionDigits: 6 })} participaciones × ${numV(b.cotizacion).toLocaleString("es-ES", { maximumFractionDigits: 6 })} € de valor liquidativo`; norma = "arts. 9 y 24 Ley 29/1987"; }
+  else if ((b.tipo === "valores" && st === "noCotizado") || (b.tipo === "empresa" && st === "participaciones")) {
+    if (numV(b.fondosPropios) || numV(b.nominal) || numV(b.beneficioMedio)) { const q = valorParticipacionesLIP({ fondosPropios: b.fondosPropios, pct: b.pctParticipacion, nominal: b.nominal, beneficioMedio: b.beneficioMedio, auditado: !!b.auditado }); sugerido = q.valor; calculo = `Valor teórico ${q.teorico.toLocaleString("es-ES")} €${b.auditado ? "" : ` · nominal ${q.nominal.toLocaleString("es-ES")} € · capitalización ${q.capitalizacion.toLocaleString("es-ES")} €`} → ${q.regla}`; }
+    notas.push("Si cumple los requisitos de exención en el Impuesto sobre el Patrimonio (art. 4.Ocho Ley 19/1991), puede tener la reducción por empresa familiar (art. 20.2.c Ley 29/1987)."); }
+  else if ((b.tipo === "vehiculo" || (b.tipo === "embarcacion" && st !== "aeronave")) && numV(b.precioMedio) > 0) {
+    const n = b.fechaMatriculacion ? aniosUsoVehiculo(b.fechaMatriculacion, fecha) : numV(b.aniosUso);
+    if (n != null) { const p = pctDepreciacion(n); sugerido = r2(numV(b.precioMedio) * p / 100); calculo = `${numV(b.precioMedio).toLocaleString("es-ES")} € de precio medio × ${p} % (${n} ${n === 1 ? "año" : "años"} de uso)`; }
+  }
+  else if (b.tipo === "derechoReal" && st === "nudaPropiedad" && numV(b.valorPleno) > 0 && (numV(b.edadUsufructuario) > 0 || numV(b.aniosUsufructo) > 0)) {
+    const temp = numV(b.aniosUsufructo) > 0, pu = temp ? pctUsufructoTemporal(numV(b.aniosUsufructo)) : pctUsufructoVitalicio(numV(b.edadUsufructuario));
+    sugerido = r2(numV(b.valorPleno) * (1 - pu)); calculo = `${numV(b.valorPleno).toLocaleString("es-ES")} € del pleno dominio × ${Math.round((1 - pu) * 100)} % (usufructo ${temp ? `temporal de ${numV(b.aniosUsufructo)} años` : `vitalicio, usufructuario de ${numV(b.edadUsufructuario)} años`}: ${Math.round(pu * 100)} %)`; norma = "art. 26.a Ley 29/1987"; estado = V;
+    notas.push("Al extinguirse ese usufructo, los herederos consolidan el pleno dominio sin nueva tributación: el usufructo no nació en esta herencia (el art. 26.c Ley 29/1987 se refiere al desmembramiento hecho en la propia transmisión).");
+  }
+  else if (b.tipo === "credito" && (numV(b.nominal) > 0 || numV(b.intereses) > 0)) { sugerido = r2(numV(b.nominal) + numV(b.intereses)); calculo = `${numV(b.nominal).toLocaleString("es-ES")} € de principal pendiente + ${numV(b.intereses).toLocaleString("es-ES")} € de intereses devengados`; }
+  if (b.tipo === "derechoReal" && st === "servidumbre") notas.push("La servidumbre predial va unida a la finca dominante (art. 534 CC): su valor ya está en el de esa finca. No la cuentes dos veces.");
+  if (b.tipo === "derechoReal" && st === "hipotecaAcreedor") notas.push("La hipoteca es accesoria del crédito que garantiza (art. 1857 CC): se declara el crédito (principal e intereses pendientes) y se cita la garantía.");
+  if (b.tipo === "arte") { notas.push("Fuera del ajuar doméstico: el art. 15 Ley 29/1987 remite al art. 4.Cuatro Ley 19/1991, que excluye joyas, pieles de carácter suntuario, objetos de arte y antigüedades."); if (b.patrimonioHistorico) notas.push("Bien del Patrimonio Histórico Español o autonómico: el cónyuge y los descendientes tienen una reducción del 95 % si lo conservan diez años (art. 20.2.c Ley 29/1987). Se aplica con la marca de la ficha; los requisitos de permanencia, por comprobar."); }
+  if (b.tipo === "explotacion") notas.push("Se suma a la base de la reducción por empresa familiar cuando el expediente la aplica (art. 20.2.c Ley 29/1987), con los requisitos de ejercicio habitual, personal y directo y de permanencia por comprobar.");
+  if (b.tipo === "cripto" && b.extranjero) notas.push("Criptomonedas custodiadas por un proveedor fuera de España: cada heredero declara las suyas en el modelo 721 si su saldo supera 50.000 € a 31 de diciembre.");
+  return { tipo: b.tipo, nombre: T.nombre, regla: T.regla, norma, estado, sugerido, calculo, notas, extingue: bienExtinguido(b) };
+}
+// Valor del bien entero (antes de la cuota del causante). Inmuebles: el mayor con el de referencia (art. 9.3). El valor de la ficha manda;
+// sin él, el sugerido por la valoración (G03). Derechos que se extinguen con la muerte del causante: 0.
+export function valorBien(b, fecha) {
+  if (b.tipo === "inmueble") return Math.max(b.valorReferencia || 0, b.valor || 0); // art. 9.3
+  if (bienExtinguido(b)) return 0;
+  if (b.valor || !TIPOS_BIEN[b.tipo]) return b.valor || 0;
+  const s = valoracionBien(b, fecha).sugerido;
+  return s > 0 ? s : b.valor || 0;
+}
+// Cuota del causante sin liquidación detallada: ganancial, la mitad; «una parte», su porcentaje; mixto (art. 1354 CC), su parte privativa más la
+// mitad de la parte ganancial. La liquidación del régimen (liquidarRegimen) la sustituye cuando hay reintegros o un régimen foral.
 export function cuotaCausante(b) {
   if (b.titularidad === "ganancial") return 0.5;
   if (b.titularidad === "proindiviso") return clamp((b.porcentaje ?? 100) / 100, 0, 1);
+  if (b.titularidad === "mixto") { const pc = clamp((Number(b.pctPrivCausante) || 0) / 100, 0, 1), pv = clamp((Number(b.pctPrivConyuge) || 0) / 100, 0, 1 - pc); return pc + (1 - pc - pv) / 2; }
   return 1;
+}
+// Bienes que forman la base de la reducción por empresa familiar (art. 20.2.c Ley 29/1987): empresa y explotación agraria
+const esEmpresaRed = (b) => b.tipo === "empresa" || b.tipo === "explotacion";
+
+// Deudas y gastos deducibles (arts. 12-14 Ley 29/1987). Lo no deducible sigue siendo pasivo de la herencia (reduce lo que se reparte) pero no la
+// base del impuesto. Sin tipo ni marca, la deuda o el gasto se deduce, como hasta la 1.7.
+export const TIPOS_DEUDA = {
+  hipoteca: ["Préstamo hipotecario", "La deuda se deduce (art. 13); la hipoteca, como carga, no (art. 12)."],
+  prestamo: ["Préstamo personal o crédito", ""], tarjeta: ["Tarjeta o descubierto", ""],
+  tributaria: ["Impuestos del causante (IRPF, IBI…)", "Deducibles las deudas tributarias del causante aunque se paguen después (art. 13.2)."],
+  seguridadSocial: ["Seguridad Social o mutualidad", "Deducibles (art. 13.2)."],
+  familiar: ["Deuda con un heredero o su familia", "No deducible: deudas a favor de herederos o legatarios de parte alícuota y de sus cónyuges, ascendientes, descendientes o hermanos (art. 13.1)."],
+  aval: ["Aval o fianza prestada", "No deducible mientras sea contingente: solo si el acreedor la reclamó y no cabe repetir contra el deudor."],
+  otra: ["Otra deuda", ""],
+};
+export const TIPOS_GASTO = {
+  funeral: ["Entierro y funeral", "art. 14.b Ley 29/1987: deducible si se justifica y guarda proporción con el caudal."],
+  enfermedad: ["Última enfermedad", "art. 14.b Ley 29/1987: deducible si se justifica."],
+  litigio: ["Litigio en interés común de los herederos", "art. 14.a Ley 29/1987: deducible si la testamentaría es litigiosa (no los de administración del caudal)."],
+  noDeducible: ["Notaría, registro, gestoría, plusvalía o administración", "No deducibles en el impuesto (art. 14 Ley 29/1987 no los incluye); sí son gastos de la partición (art. 1064 CC)."],
+};
+export function deudaDeducible(d) {
+  if (d.tipo === "familiar" || d.acreedorHeredero) return { ok: false, motivo: "deuda con un heredero o su familia", norma: "art. 13.1 Ley 29/1987", estado: V };
+  if (d.tipo === "aval") return { ok: false, motivo: "aval o fianza: deuda contingente", norma: "art. 13.1 Ley 29/1987", estado: P };
+  if (d.acreditada === false) return { ok: false, motivo: "sin documento que la acredite", norma: "art. 13.1 Ley 29/1987 (documento público o privado con fecha fehaciente, art. 1227 CC)", estado: V };
+  if (d.deducible === false) return { ok: false, motivo: d.motivo || "no deducible", norma: d.norma || "art. 13 Ley 29/1987", estado: d.estado || P };
+  return { ok: true, norma: d.tipo === "tributaria" || d.tipo === "seguridadSocial" ? "art. 13.2 Ley 29/1987" : "art. 13.1 Ley 29/1987", estado: V };
+}
+export function gastoDeducible(g) {
+  if (g.tipo === "noDeducible") return { ok: false, motivo: "gasto de los herederos, no del causante", norma: "art. 14 Ley 29/1987", estado: V };
+  return { ok: true, norma: g.tipo === "litigio" ? "art. 14.a Ley 29/1987" : "art. 14.b Ley 29/1987", estado: V };
 }
 
 // ─────────────────────────── Reparto ───────────────────────────
@@ -1275,6 +1397,157 @@ function calcularLegitimas0(caso) {
   return res;
 }
 
+// ─────────────────────────── Régimen económico matrimonial y su liquidación (G04, 10-10-2026) ───────────────────────────
+// Antes de repartir la herencia se liquida el régimen del matrimonio: lo que es del viudo no se hereda. Hasta la 1.7 el motor contaba la mitad
+// de cada bien marcado «ganancial» y la mitad de cada deuda ganancial; eso sigue siendo el resultado cuando no hay más datos (liquidación «por
+// defecto», mismas cifras). Con datos, la liquidación sigue el Código Civil:
+//  · Activo (art. 1397): bienes gananciales existentes, por su valor a la liquidación, y créditos de la sociedad contra cada cónyuge (dinero común
+//    gastado en lo privativo, arts. 1358, 1362 y 1364 inverso).
+//  · Pasivo (art. 1398): deudas de la sociedad y créditos de cada cónyuge contra ella (dinero privativo gastado en lo común, arts. 1358 y 1364),
+//    por su importe actualizado.
+//  · Remanente por mitad (art. 1404); cada cónyuge cobra además sus reintegros y se le imputa lo que debe (art. 1403). Mientras no se adjudican
+//    bienes concretos, la herencia y el viudo son cotitulares de cada bien común en proporción a sus haberes.
+//  · Bienes mixtos (art. 1354; vivienda familiar, art. 1357.2): pro indiviso entre la sociedad y el cónyuge en proporción a lo aportado.
+//  · Participación (arts. 1411-1434): no hay bienes comunes; nace un crédito de participación en las ganancias (arts. 1427-1428).
+//  · Separación (arts. 1435-1444 CC, 231-10 y 232 CCCat, Compilación balear, Ley 10/2007 valenciana): cada uno lo suyo; lo marcado «ganancial» se
+//    trata como cotitularidad por mitad (art. 1441 CC). Compensación por el trabajo para la casa (art. 1438 CC; art. 232-5 CCCat), como deuda.
+//  · Comunicación foral de Bizkaia (Ley 5/2015): con hijos o descendientes comunes se consolida al morir y todos los bienes de los cónyuges, también
+//    los privativos, pertenecen por mitad al viudo y a la herencia; sin hijos comunes se liquida como unos gananciales.
+//  · Consorcio conyugal aragonés y conquistas navarras: comunidad de adquisiciones que se divide por mitad, como los gananciales.
+// Régimen aplicable: el de las capitulaciones; si no, la ley del art. 9.2 CC (al que remite el art. 16.3 CC entre españoles): vecindad civil común
+// de ambos al casarse; ley elegida en documento auténtico antes de casarse; residencia habitual común inmediatamente posterior; lugar de celebración.
+export const REGIMENES = {
+  gananciales: { nombre: "Sociedad de gananciales", comunidad: true, norma: "arts. 1344-1410 CC", estado: V },
+  separacion: { nombre: "Separación de bienes", comunidad: false, compensacion: true, norma: "arts. 1435-1444 CC", estado: V },
+  participacion: { nombre: "Régimen de participación", comunidad: false, participacion: true, norma: "arts. 1411-1434 CC", estado: V },
+  consorcio: { nombre: "Consorcio conyugal aragonés", comunidad: true, norma: "arts. 193 y 210-270 CDFA (división del patrimonio común por mitad)", estado: P },
+  conquistas: { nombre: "Sociedad conyugal de conquistas (Navarra)", comunidad: true, norma: "leyes 82 y siguientes de la Compilación navarra (Ley Foral 21/2019)", estado: P },
+  comunicacion: { nombre: "Comunicación foral de bienes (Bizkaia)", comunidad: true, universal: true, norma: "arts. 127-146 Ley 5/2015 de Derecho Civil Vasco", estado: P },
+  separacionCat: { nombre: "Separación de bienes (Cataluña)", comunidad: false, compensacion: true, norma: "arts. 231-10 y 232-1 a 232-12 CCCat", estado: P },
+  separacionBal: { nombre: "Separación de bienes (Illes Balears)", comunidad: false, norma: "arts. 3 y 67 Compilación balear", estado: P },
+  separacionVal: { nombre: "Separación de bienes (Ley 10/2007 valenciana)", comunidad: false, norma: "Ley 10/2007 de la Generalitat (matrimonios de su vigencia, STC 82/2016)", estado: P },
+};
+// Régimen legal supletorio de cada ley civil
+const SUPLETORIO = {
+  comun: ["gananciales", "art. 1316 CC"], GAL: ["gananciales", "art. 171 Ley 2/2006 de Derecho Civil de Galicia"], CAT: ["separacionCat", "art. 231-10 CCCat"],
+  BAL: ["separacionBal", "art. 3 Compilación balear (art. 67 en Eivissa y Formentera)"], ARA: ["consorcio", "art. 193 CDFA"], NAV: ["conquistas", "ley 82 Compilación navarra"],
+};
+const vecDeTerritorio = (t) => (["ALA", "BIZ", "GIP", "VASCO"].includes(t) ? "VASCO" : t === "VAL" ? "VAL" : TERRITORIOS_FORALES_CIVIL.includes(t) ? t : t ? "comun" : "");
+// Ley que rige el régimen (arts. 9.2 y 16.3 CC). g: datos del matrimonio; vecCaus: vecindad civil del causante (si faltan los datos de la boda)
+export function leyRegimen(g = {}, vecCaus = "comun") {
+  const vc = vecDeTerritorio(g.vecCausante), vv = vecDeTerritorio(g.vecConyuge), norma = "arts. 9.2 y 16.3 CC";
+  if (vc && vv && vc === vv) return { ley: vc, criterio: "vecindad civil común de ambos al casarse", norma };
+  if (g.eleccion) return { ley: vecDeTerritorio(g.eleccion), criterio: "ley elegida por los dos en documento auténtico antes de casarse", norma };
+  if (vc && vv && g.residenciaComun) return { ley: vecDeTerritorio(g.residenciaComun), criterio: "vecindades distintas: residencia habitual común inmediatamente posterior a la boda", norma };
+  if (vc && vv && g.lugarCelebracion) return { ley: vecDeTerritorio(g.lugarCelebracion), criterio: "vecindades distintas y sin residencia común: lugar de celebración del matrimonio", norma };
+  if (vc && vv) return { ley: "comun", criterio: "vecindades distintas sin más datos: indica la residencia común tras la boda o el lugar de celebración (se supone el Código Civil, art. 16.3 CC)", norma, supuesto: true };
+  return { ley: vecCaus || "comun", criterio: "faltan las vecindades de ambos al casarse: se supone la del causante", norma, supuesto: true };
+}
+// Matrimonios con vecindad valenciana en la vigencia de la Ley 10/2007 (desde el 01-07-2008 hasta la publicación de la STC 82/2016): separación
+const VAL_DESDE = "2008-07-01", VAL_HASTA = "2016-05-31";
+export function regimenEconomico(caso) {
+  const g = caso.regimen || {}, ec = caso.estadoCivil, H = caso.herederos || [];
+  const cony = H.find((h) => h.relacion === "conyuge" && !h.separado);
+  const marcados = (caso.bienes || []).some((b) => b.titularidad === "ganancial" || b.titularidad === "mixto");
+  const explicito = g.tipo && g.tipo !== "auto" && REGIMENES[g.tipo];
+  if (!explicito && ec !== "gananciales" && ec !== "separacion" && !(ec == null && cony) && !marcados) return null;
+  const L = leyRegimen(g, vecindadCivil(caso).id), avisos = [];
+  let id, motivo, supuesto = !!L.supuesto, normaLey = "";
+  if (explicito) { id = g.tipo; motivo = "indicado en el expediente (capitulaciones o régimen acreditado)"; supuesto = false; }
+  else {
+    let sup = L.ley === "VASCO" ? (g.aforado ? ["comunicacion", "art. 127 Ley 5/2015 (tierra llana de Bizkaia, Aramaio y Llodio)"] : ["gananciales", "art. 125 Ley 5/2015 (remite al Código Civil)"])
+      : L.ley === "VAL" ? (g.fechaMatrimonio >= VAL_DESDE && g.fechaMatrimonio < VAL_HASTA ? ["separacionVal", "art. 44 Ley 10/2007 (vigencia: STC 82/2016)"] : ["gananciales", "art. 1316 CC (fuera de la vigencia de la Ley 10/2007)"])
+      : SUPLETORIO[L.ley] || SUPLETORIO.comun;
+    normaLey = sup[1];
+    const sepFor = { CAT: "separacionCat", BAL: "separacionBal", VAL: "separacionVal" };
+    if (ec === "separacion") { id = REGIMENES[sup[0]].comunidad ? "separacion" : sup[0]; motivo = REGIMENES[sup[0]].comunidad ? "separación de bienes pactada en capitulaciones" : `régimen legal supletorio (${sup[1]})`; if (id === "separacion" && sepFor[L.ley]) id = sepFor[L.ley]; }
+    else if (!REGIMENES[sup[0]].comunidad) { id = "gananciales"; motivo = "gananciales indicados en el expediente"; avisos.push(`Con la ley ${L.ley === "comun" ? "común" : VECINDADES[L.ley] || "valenciana"} el régimen supletorio es ${REGIMENES[sup[0]].nombre.toLowerCase()} (${sup[1]}): los gananciales tuvieron que pactarse en capitulaciones. Confírmalo.`); }
+    else { id = sup[0]; motivo = id === "gananciales" ? "régimen legal supletorio (" + sup[1] + ")" : `régimen legal supletorio de la ley ${L.ley === "VASCO" ? "vasca" : VECINDADES[L.ley]} (${sup[1]})`; }
+  }
+  if (g.fechaMatrimonio && g.fechaMatrimonio < "1990-11-07" && !explicito) avisos.push("Matrimonio anterior a la Ley 11/1990: el antiguo art. 9.2 CC remitía a la ley del marido, criterio inconstitucional (STC 39/2002). Revisa la ley aplicable con los datos de la boda (PENDIENTE).");
+  return { id, ...REGIMENES[id], motivo, supuesto, ley: L.ley, criterio: L.criterio, normaLey, normaCriterio: L.norma, avisos };
+}
+// Reintegros y reembolsos entre masas (arts. 1358, 1362-1364, 1397.3.ª y 1398.2.ª-3.ª CC). sentido:
+//   privCausante: dinero privativo del causante en lo común → crédito del causante contra la sociedad
+//   privConyuge:  dinero privativo del viudo en lo común → crédito del viudo contra la sociedad
+//   ganCausante:  dinero común en lo privativo del causante (o en sus deudas propias) → crédito de la sociedad contra el causante
+//   ganConyuge:   dinero común en lo privativo del viudo → crédito de la sociedad contra el viudo
+export const SENTIDOS_REINTEGRO = {
+  privCausante: ["Dinero privativo del causante invertido en lo común", "arts. 1358, 1364 y 1398.3.ª CC"],
+  privConyuge: ["Dinero privativo del viudo invertido en lo común", "arts. 1358, 1364 y 1398.3.ª CC"],
+  ganCausante: ["Dinero común invertido en lo privativo del causante", "arts. 1358 y 1397.3.ª CC"],
+  ganConyuge: ["Dinero común invertido en lo privativo del viudo", "arts. 1358 y 1397.3.ª CC"],
+};
+const importeReintegro = (r) => Math.max(0, numV(r.actualizado) || numV(r.importe));
+export function liquidarRegimen(caso) {
+  const RG = regimenEconomico(caso), g = caso.regimen || {}, fecha = caso.fechaFallecimiento, H = caso.herederos || [];
+  const comunidad = RG ? RG.comunidad : true, avisos = RG ? [...RG.avisos] : [], tabla = [];
+  const hayHijos = H.some((h) => linea(h) === "desc");
+  const hijosComunes = g.hijosComunes != null ? !!g.hijosComunes : hayHijos;
+  const universal = !!(RG && RG.universal && hijosComunes);
+  const R = comunidad ? (g.reintegros || []).filter((r) => SENTIDOS_REINTEGRO[r.sentido] && importeReintegro(r) > 0) : [];
+  const suma = (s) => r2(R.filter((r) => r.sentido === s).reduce((a, r) => a + importeReintegro(r), 0));
+  const Rc = suma("privCausante"), Rv = suma("privConyuge"), Dc = suma("ganCausante"), Dv = suma("ganConyuge");
+  const mixtos = (caso.bienes || []).some((b) => b.titularidad === "mixto");
+  // Partes de cada bien: privativa del causante (pc), del viudo (pv), común (pg); el resto es de terceros
+  const partes = (caso.bienes || []).map((b) => {
+    const total = Math.max(0, Number(valorBien(b, fecha)) || 0), t = b.titularidad || "privativo";
+    let pc = 1, pv = 0, pg = 0;
+    if (t === "ganancial") { pc = 0; pg = 1; }
+    else if (t === "proindiviso") pc = clamp((b.porcentaje ?? 100) / 100, 0, 1);
+    else if (t === "mixto") { pc = clamp(numV(b.pctPrivCausante) / 100, 0, 1); pv = clamp(numV(b.pctPrivConyuge) / 100, 0, 1 - pc); pg = 1 - pc - pv; }
+    if (!comunidad && pg) { pc += pg / 2; pv += pg / 2; pg = 0; } // separación o participación: cotitularidad por mitad (art. 1441 CC)
+    if (universal) { pg += pc + pv; pc = 0; pv = 0; } // comunicación foral consolidada: todo común por mitad
+    return { b, total, pc, pv, pg };
+  });
+  const A0 = r2(partes.reduce((s, q) => s + q.total * q.pg, 0));
+  const deudaComun = (d) => (universal ? true : comunidad && !!d.ganancial);
+  const Pt = r2((caso.deudas || []).filter(deudaComun).reduce((s, d) => s + Math.max(0, numV(d.importe)), 0));
+  const remanente = r2(A0 + Dc + Dv - Pt - Rc - Rv), mitad = r2(remanente / 2);
+  let haberC = r2(mitad + Rc - Dc), haberV = r2(mitad + Rv - Dv), k = 0.5;
+  const netoCom = r2(A0 - Pt);
+  if (R.length) {
+    if (netoCom > 0.005) { const kk = haberC / netoCom; k = clamp(kk, 0, 1); if (kk < -1e-9 || kk > 1 + 1e-9) avisos.push("Los reintegros superan lo que queda de la sociedad: se pagan hasta donde alcance el caudal (art. 1403 CC) y el resto es un crédito personal entre la herencia y el viudo. Revisa los importes."); haberC = r2(netoCom * k); haberV = r2(netoCom - haberC); }
+    else avisos.push("La sociedad no tiene remanente (las deudas igualan o superan los bienes comunes): los reintegros no pueden pagarse con bienes comunes (art. 1403 CC). Se reparte por mitad.");
+    const sinJ = R.filter((r) => !r.justificado);
+    if (sinJ.length) avisos.push(`${sinJ.length === 1 ? "Un reintegro o reembolso no está justificado" : sinJ.length + " reintegros o reembolsos no están justificados"} con documentos (escritura, extractos): sin prueba rige la presunción de ganancialidad (art. 1361 CC) y la otra parte puede discutirlo.`);
+    const sinAct = R.filter((r) => !numV(r.actualizado));
+    if (sinAct.length) avisos.push("Hay importes sin actualizar: el reembolso es por el valor actualizado al tiempo de la liquidación (art. 1358 CC). Se ha usado el importe nominal.");
+  }
+  const porBien = {};
+  for (const q of partes) porBien[q.b.id] = { cuotaCausante: q.pc + k * q.pg, cuotaConyuge: q.pv + (1 - k) * q.pg, comun: q.pg, privCausante: q.pc, privConyuge: q.pv, total: q.total };
+  // Participación: crédito en las ganancias (arts. 1427-1428 CC; art. 1429 si se pactó otra proporción)
+  const creditos = [], deudasR = [];
+  let participacion = null;
+  if (RG && RG.participacion) {
+    const p = g.participacion || {};
+    const finalC = p.finalCausante != null && p.finalCausante !== "" ? numV(p.finalCausante)
+      : r2(partes.reduce((s, q) => s + q.total * (porBien[q.b.id].cuotaCausante), 0) - (caso.deudas || []).reduce((s, d) => s + Math.max(0, numV(d.importe)) * (d.ganancial ? 0.5 : 1), 0));
+    const incC = Math.max(0, finalC - numV(p.inicialCausante)), incV = Math.max(0, numV(p.finalConyuge) - numV(p.inicialConyuge));
+    const pct = p.pct != null && p.pct !== "" ? clamp(numV(p.pct), 0, 100) / 100 : 0.5;
+    const importe = r2(pct * Math.abs(incC - incV)), aFavor = incC > incV ? "conyuge" : incV > incC ? "herencia" : null;
+    participacion = { finalC: r2(finalC), inicialC: numV(p.inicialCausante), finalV: numV(p.finalConyuge), inicialV: numV(p.inicialConyuge), incC: r2(incC), incV: r2(incV), pct, importe, aFavor, norma: incC > 0 && incV > 0 ? "art. 1427 CC" : "art. 1428 CC" };
+    if (!(numV(p.finalConyuge) || numV(p.inicialConyuge) || numV(p.inicialCausante))) avisos.push("Participación: faltan los patrimonios inicial y final de los cónyuges (arts. 1418-1424 CC) para calcular el crédito de participación.");
+    else if (aFavor === "conyuge" && importe > 0) deudasR.push({ id: "_participacion", concepto: "Crédito de participación del cónyuge viudo", importe, deducible: false, motivo: "crédito del viudo nacido del régimen", norma: participacion.norma + "; deducibilidad en el ISD: art. 13 Ley 29/1987 (PENDIENTE de criterio)", estado: P });
+    else if (aFavor === "herencia" && importe > 0) creditos.push({ id: "_participacion", concepto: "Crédito de participación contra el cónyuge viudo", importe, norma: participacion.norma });
+  }
+  if (RG && RG.compensacion && numV(g.compensacion) > 0) deudasR.push({ id: "_compensacion", concepto: RG.id === "separacionCat" ? "Compensación económica por razón de trabajo al viudo" : "Compensación por el trabajo para la casa al viudo", importe: r2(numV(g.compensacion)), deducible: false, motivo: "crédito del viudo nacido del régimen", norma: (RG.id === "separacionCat" ? "art. 232-5 CCCat" : "art. 1438 CC") + "; deducibilidad en el ISD PENDIENTE de criterio", estado: P });
+  // Tabla de la liquidación (inventario de la sociedad y haberes)
+  if (comunidad && (A0 || Pt || R.length)) {
+    for (const q of partes.filter((q) => q.pg > 0 && q.total > 0)) tabla.push({ grupo: "activo", concepto: q.b.descripcion || (TIPOS_BIEN[q.b.tipo] || TIPOS_BIEN.otro).nombre, importe: r2(q.total * q.pg), nota: q.pg < 1 ? `parte común ${Math.round(q.pg * 10000) / 100} % (art. 1354 CC)` : universal && (q.b.titularidad || "privativo") !== "ganancial" ? "común por la comunicación foral" : "", norma: "art. 1397.1.ª CC" });
+    for (const r of R.filter((r) => r.sentido === "ganCausante" || r.sentido === "ganConyuge")) tabla.push({ grupo: "activo", concepto: (r.concepto || SENTIDOS_REINTEGRO[r.sentido][0]) + (r.sentido === "ganCausante" ? " (debe la herencia)" : " (debe el viudo)"), importe: importeReintegro(r), norma: "art. 1397.3.ª CC" });
+    for (const d of (caso.deudas || []).filter(deudaComun).filter((d) => numV(d.importe) > 0)) tabla.push({ grupo: "pasivo", concepto: d.concepto || "Deuda común", importe: r2(numV(d.importe)), norma: "art. 1398.1.ª CC" });
+    for (const r of R.filter((r) => r.sentido === "privCausante" || r.sentido === "privConyuge")) tabla.push({ grupo: "pasivo", concepto: (r.concepto || SENTIDOS_REINTEGRO[r.sentido][0]) + (r.sentido === "privCausante" ? " (a favor de la herencia)" : " (a favor del viudo)"), importe: importeReintegro(r), norma: "art. 1398.3.ª CC" });
+  }
+  const mitadViudo = r2(partes.reduce((s, q) => s + q.total * porBien[q.b.id].cuotaConyuge, 0));
+  const defecto = !(RG && (RG.universal || RG.participacion)) && !R.length && !mixtos && !deudasR.length && !creditos.length;
+  return {
+    regimen: RG, comunidad, universal, hijosComunes, k, kDeuda: k, cuotaDeuda: (d) => (deudaComun(d) ? k : d.ganancial ? 0.5 : 1),
+    activo: r2(A0 + Dc + Dv), activoBienes: A0, pasivo: r2(Pt + Rc + Rv), pasivoDeudas: Pt, remanente, mitad, haberCausante: haberC, haberConyuge: haberV,
+    reintegros: { Rc, Rv, Dc, Dv, lista: R }, porBien, mitadViudo, participacion, creditos, deudas: deudasR, tabla, avisos, defecto,
+  };
+}
+
 // ─────────────────────────── Impuesto sobre Sucesiones ───────────────────────────
 export function calcularISD(caso) {
   const R = REGLAS[caso.ccaa];
@@ -1286,17 +1559,24 @@ export function calcularISD(caso) {
   const personas = (caso.herederos || []).filter((h) => !h.renuncia && !h.indigno); // el indigno no adquiere (art. 756 CC)
   const porId = Object.fromEntries((caso.herederos || []).map((h) => [h.id, h]));
 
-  // 1. Inventario y liquidación de gananciales
-  const bienes = (caso.bienes || []).map((b) => {
-    const total = Math.max(0, Number(valorBien(b)) || 0), cuota = cuotaCausante(b); // un valor negativo o no numérico es un error de datos: cuenta 0 (pruebas de robustez, 04-10-2026)
+  // 1. Inventario y liquidación del régimen económico matrimonial (G04: liquidarRegimen; sin más datos, la mitad de lo ganancial, como hasta la 1.7)
+  const LQ = liquidarRegimen(caso);
+  // Créditos que el régimen da a la herencia (participación contra el viudo) entran en el inventario como un bien más
+  const bienes = [...(caso.bienes || []), ...LQ.creditos.map((c) => ({ id: c.id, tipo: "credito", descripcion: c.concepto, valor: c.importe, titularidad: "privativo", regimen: true }))].map((b) => {
+    const total = Math.max(0, Number(valorBien(b, fecha)) || 0), cuota = LQ.porBien[b.id] ? LQ.porBien[b.id].cuotaCausante : cuotaCausante(b); // un valor negativo o no numérico es un error de datos: cuenta 0 (pruebas de robustez, 04-10-2026)
     return { ...b, valorTotal: r2(total), valorHerencia: r2(total * cuota), cuota };
   });
   const brutoTotal = r2(bienes.reduce((s, b) => s + b.valorTotal, 0));
-  const gananciales = r2(bienes.filter((b) => b.titularidad === "ganancial").reduce((s, b) => s + b.valorTotal, 0));
+  const gananciales = r2(LQ.defecto ? bienes.filter((b) => b.titularidad === "ganancial").reduce((s, b) => s + b.valorTotal, 0) : bienes.reduce((s, b) => s + b.valorTotal * (LQ.porBien[b.id] ? LQ.porBien[b.id].comun : 0), 0)); // masa común
+  const mitadViudo = LQ.defecto ? gananciales / 2 : LQ.mitadViudo; // parte del viudo: fuera de la herencia y dentro de su patrimonio preexistente
   const bruto = r2(bienes.reduce((s, b) => s + b.valorHerencia, 0));
   const pos = (v) => Math.max(0, Number(v) || 0);
-  const deudas = r2((caso.deudas || []).reduce((s, d) => s + pos(d.importe) * (d.ganancial ? 0.5 : 1), 0));
-  const gastos = r2((caso.gastos || []).reduce((s, g) => s + pos(g.importe), 0));
+  // Deudas y gastos: lo no deducible (arts. 13-14 Ley 29/1987) es pasivo de la herencia, pero no rebaja la base del impuesto (G03)
+  const deudasL = [...(caso.deudas || []), ...LQ.deudas].map((d) => ({ d, parte: pos(d.importe) * LQ.cuotaDeuda(d), ded: deudaDeducible(d) }));
+  const gastosL = (caso.gastos || []).map((g) => ({ d: g, parte: pos(g.importe), ded: gastoDeducible(g) }));
+  const deudas = r2(deudasL.reduce((s, q) => s + q.parte, 0));
+  const gastos = r2(gastosL.reduce((s, q) => s + q.parte, 0));
+  const noDeducible = r2([...deudasL, ...gastosL].filter((q) => !q.ded.ok).reduce((s, q) => s + q.parte, 0));
   // Legado válido: legatario que existe en el expediente y no renuncia. Si renuncia, el legado se refunde en la masa (art. 888 CC); si ya no
   // está en el expediente (persona quitada), se ignora y se avisa (control de calidad 07-10-2026, I8).
   const legadoValido = (b) => !!(b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia && !porId[b.legatarioId].indigno);
@@ -1305,6 +1585,7 @@ export function calcularISD(caso) {
   const valorLegados = r2(legados.reduce((s, b) => s + b.valorHerencia, 0));
   const netoReparto = r2(Math.max(0, bruto - valorLegados - deudas - gastos)); // los herederos pagan deudas; los legatarios, no
   const neto = r2(Math.max(0, bruto - deudas - gastos));
+  const netoFiscal = noDeducible ? r2(Math.max(0, bruto - valorLegados - (deudas + gastos - noDeducible))) : netoReparto; // porción gravada (G03)
   const vivienda = bienes.find((b) => b.esViviendaHabitual && !legadoValido(b));
   const valorVivienda = vivienda ? vivienda.valorHerencia : 0;
 
@@ -1384,7 +1665,7 @@ export function calcularISD(caso) {
     if (d.tipo === "nuda") { const ev = porId[d.usufructuarioId]?.edad ?? 70; return 1 - (d.temporalAnios ? Math.max(pctUsufructoTemporal(d.temporalAnios), pctUsufructoVitalicio(ev)) : pctUsufructoVitalicio(ev)); }
     return 1;
   };
-  const valorEmpresa = bienes.filter((b) => b.tipo === "empresa" && !legadoValido(b)).reduce((s, b) => s + b.valorHerencia, 0);
+  const valorEmpresa = bienes.filter((b) => esEmpresaRed(b) && !legadoValido(b)).reduce((s, b) => s + b.valorHerencia, 0);
   const valorPH = bienes.filter((b) => b.patrimonioHistorico && !legadoValido(b)).reduce((s, b) => s + b.valorHerencia, 0); // M-11: art. 20.2.c Ley 29/1987
   const porcionDe = (ders, h, neto) => (ders || []).reduce((s, d) => s + neto * d.fraccion * pctDer(d, h), 0);
   const adq = {};
@@ -1393,10 +1674,10 @@ export function calcularISD(caso) {
     for (const d of derechos[h.id] || []) {
       const f = pctDer(d, h);
       if (d.tipo === "nuda") {
-        nudaUsuf += netoReparto * d.fraccion * (1 - f); // valor del usufructo que grava su nuda propiedad (valor íntegro − valor de la nuda)
+        nudaUsuf += netoFiscal * d.fraccion * (1 - f); // valor del usufructo que grava su nuda propiedad (valor íntegro − valor de la nuda)
         if (!nudaDe.includes(d.usufructuarioId)) nudaDe.push(d.usufructuarioId);
       }
-      v += netoReparto * d.fraccion * f;
+      v += netoFiscal * d.fraccion * f;
       vv += (vivienda ? valorVivienda : 0) * d.fraccion * f;
       ve += valorEmpresa * d.fraccion * f;
       vph += valorPH * d.fraccion * f;
@@ -1404,7 +1685,7 @@ export function calcularISD(caso) {
     }
     const leg = legados.filter((b) => b.legatarioId === h.id);
     const vl = leg.reduce((s, b) => s + b.valorHerencia, 0);
-    adq[h.id] = { porcion: v, legados: vl, vivienda: vv + leg.filter((b) => b.esViviendaHabitual).reduce((s, b) => s + b.valorHerencia, 0), empresa: ve + leg.filter((b) => b.tipo === "empresa").reduce((s, b) => s + b.valorHerencia, 0), patrimonioHistorico: vph + leg.filter((b) => b.patrimonioHistorico).reduce((s, b) => s + b.valorHerencia, 0), propiedad: pleno, nudaUsuf, nudaDe };
+    adq[h.id] = { porcion: v, legados: vl, vivienda: vv + leg.filter((b) => b.esViviendaHabitual).reduce((s, b) => s + b.valorHerencia, 0), empresa: ve + leg.filter(esEmpresaRed).reduce((s, b) => s + b.valorHerencia, 0), patrimonioHistorico: vph + leg.filter((b) => b.patrimonioHistorico).reduce((s, b) => s + b.valorHerencia, 0), propiedad: pleno, nudaUsuf, nudaDe };
   }
   // M-7 (auditoría ISD 10-10-2026): renuncia pura, simple y gratuita. Quien recibe la parte renunciada tributa con su propio parentesco, pero con el coeficiente
   // multiplicador del renunciante si es mayor (art. 28.1 Ley 29/1987; art. 58.1 RD 1629/1991). La parte que procede de la renuncia es lo que cada uno recibe de
@@ -1414,7 +1695,7 @@ export function calcularISD(caso) {
   if (renunciantes.length) {
     const rep0 = repartoDe((caso.herederos || []).map((h) => (h.renuncia ? { ...h, renuncia: false } : h)));
     const legRen = r2(bienes.filter((b) => b.legatarioId && porId[b.legatarioId]?.renuncia).reduce((s, b) => s + b.valorHerencia, 0));
-    const neto0 = Math.max(0, netoReparto - legRen);
+    const neto0 = Math.max(0, netoFiscal - legRen); // G03: misma base que la porción
     if (!rep0.bloqueado) {
       if (anosTemp && caso.reparto === "usufructoUniversal") for (const id in rep0.derechos) for (const d of rep0.derechos[id]) if (d.tipo === "usufructo" || d.tipo === "nuda") d.temporalAnios = anosTemp;
       for (const r of renunciantes) valorRen[r.id] = porcionDe(rep0.derechos[r.id], r, neto0) + bienes.filter((b) => b.legatarioId === r.id).reduce((s, b) => s + b.valorHerencia, 0);
@@ -1458,6 +1739,7 @@ export function calcularISD(caso) {
     return { ok: false, motivo: `${h.nombre} no tiene el parentesco exigido para la reducción por empresa (cónyuge o descendientes; a falta de estos, ascendientes y colaterales hasta el tercer grado: art. 20.2.c Ley 29/1987)` };
   };
 
+  const extr = bienes.filter((b) => b.extranjero && b.valorHerencia > 0); // G03: bienes situados fuera de España
   // 5. Cálculo por persona
   // I7 (control de calidad 07-10-2026): quien tiene derechos en el reparto sigue siendo heredero aunque el neto sea 0 € (más deudas que bienes):
   // se muestra con 0 € a pagar, no desaparece. En algunas comunidades hay que presentar la autoliquidación aunque salga 0 €.
@@ -1473,13 +1755,16 @@ export function calcularISD(caso) {
     }
     const add = (paso, valor, norma, estado, nota) => { t.push({ paso, valor: r2(valor), norma, estado, nota }); if (estado === P && norma) pendientes.add(norma); };
     const ajuarH = r2(totalHer > 0 ? ajuar * (a.porcion / totalHer) : ajuar * ((a.porcion + a.legados) / totalAdq));
-    const seguros = r2((caso.seguros || []).filter((s) => s.beneficiarioId === h.id).reduce((s, x) => s + pos(x.importe), 0));
+    // Seguro contratado con cargo a la sociedad de gananciales y cobrado por el cónyuge viudo: solo la mitad integra la base (art. 39.2 RD 1629/1991)
+    const segGan = (x) => !!x.ganancial && linea(h) === "conyuge";
+    const misSeg = (caso.seguros || []).filter((s) => s.beneficiarioId === h.id);
+    const seguros = r2(misSeg.reduce((s, x) => s + pos(x.importe) * (segGan(x) ? 0.5 : 1), 0));
     let pp = h.patrimonioPreexistente || 0;
-    if (linea(h) === "conyuge" && gananciales) { pp += gananciales / 2; }
+    if (linea(h) === "conyuge" && mitadViudo) { pp += mitadViudo; }
     add("Porción hereditaria", a.porcion);
     if (a.legados) add("Legados recibidos", a.legados);
     add("Ajuar doméstico imputado", ajuarH, ajuar ? `${normaAjuar} · imputación: art. 23 RD 1629/1991` : normaAjuar, estadoAjuar);
-    if (seguros) add("Seguros de vida (se acumulan)", seguros, "art. 9.1.c Ley 29/1987", V);
+    if (seguros) add("Seguros de vida (se acumulan)", seguros, "art. 9.1.c Ley 29/1987" + (misSeg.some(segGan) ? " · prima ganancial: la mitad (art. 39.2 RD 1629/1991)" : ""), V);
     const bi = r2(a.porcion + a.legados + ajuarH + seguros);
     add("Base imponible", bi);
 
@@ -1575,7 +1860,7 @@ export function calcularISD(caso) {
       k = R.coef(h, g, pp, ci); kGrupo = k.k;
       // La nota del art. 22.3 solo cuando el coeficiente depende del patrimonio preexistente en este caso (k o cuota distintos de los de patrimonio 0):
       // no en Andalucía (art. 38 Ley 5/2021), territorios forales sin coeficiente o patrimonio dentro del primer tramo.
-      const k0 = linea(h) === "conyuge" && gananciales ? R.coef(h, g, 0, ci) : null;
+      const k0 = linea(h) === "conyuge" && mitadViudo ? R.coef(h, g, 0, ci) : null;
       const nota223 = k0 && (k0.k !== k.k || k0.cuota !== k.cuota) ? " · incluye la mitad de gananciales en su patrimonio previo (art. 22.3 Ley 29/1987)" : "";
       add(`Coeficiente multiplicador ×${k.k}${k.salto ? " (regla de salto de tramo)" : ""}${nota223}`, k.cuota, k.norma, k.estado);
       if (a.nudaUsuf > 0 && bl > 0) { alertas.push(`${h.nombre}: nuda propiedad en territorio foral. Se aplica la tarifa sobre el valor de la nuda; la regla foral equivalente al tipo medio efectivo (${NORMA_NUDA} en régimen común) no está cotejada (PENDIENTE).`); pendientes.add(`${R.norma}: valoración y tipo de la nuda propiedad`); }
@@ -1585,7 +1870,7 @@ export function calcularISD(caso) {
       let peso = 0, acc = 0;
       for (const r of renunciantes) {
         const w = valorRen[r.id] || 0; if (w <= 0) continue;
-        const ppR = (Number(r.patrimonioPreexistente) || 0) + (linea(r) === "conyuge" && gananciales ? gananciales / 2 : 0);
+        const ppR = (Number(r.patrimonioPreexistente) || 0) + (linea(r) === "conyuge" && mitadViudo ? mitadViudo : 0); // G04: parte del viudo según la liquidación
         acc += w * Math.max(kGrupo, R.coef(r, R.grupo(r, fecha), ppR, 1).k); peso += w;
       }
       const kRen = peso ? acc / peso : kGrupo, frac = Math.min(1, parteRen[h.id] / bi);
@@ -1599,22 +1884,30 @@ export function calcularISD(caso) {
       }
     }
     c.cuota = k.cuota;
-    let cuota = k.cuota;
-    // M-11 · Deducción por doble imposición internacional (art. 23 Ley 29/1987): la menor entre lo pagado en el extranjero por un impuesto similar y el resultado de
+    let cuota = k.cuota, dobleImp = 0;
+    // Deducción por doble imposición internacional (art. 23 Ley 29/1987): la menor entre lo pagado en el extranjero por un impuesto similar y el resultado de
     // aplicar el tipo medio efectivo (cuota tributaria / base liquidable) al valor de los bienes situados o derechos ejercitables fuera de España.
-    const pagadoExt = Math.max(0, Number(h.impuestoExtranjero) || 0), valorExt = Math.max(0, Number(h.valorBienesExtranjero) || 0);
+    // Dos fuentes que se suman: los bienes del inventario marcados «en el extranjero» con el impuesto pagado allí (G03; a cada uno en proporción a su
+    // porción hereditaria y los legados a su legatario) y los importes de la ficha del heredero (auditoría ISD, M-11).
+    const pagadoH = Math.max(0, Number(h.impuestoExtranjero) || 0), valorH = Math.max(0, Number(h.valorBienesExtranjero) || 0);
+    let pagadoExt = pagadoH, valorExt = valorH;
+    if (extr.length) {
+      const sh = netoFiscal > 0 ? a.porcion / netoFiscal : 0, parte = (b) => (legadoValido(b) ? (b.legatarioId === h.id ? 1 : 0) : sh);
+      valorExt = r2(valorExt + extr.reduce((s, b) => s + b.valorHerencia * parte(b), 0)); pagadoExt = r2(pagadoExt + extr.reduce((s, b) => s + pos(b.extranjero.impuestoPagado) * parte(b), 0));
+    }
     if (pagadoExt && valorExt && bl > 0 && cuota > 0) {
-      const ded = r2(Math.min(pagadoExt, valorExt * k.cuota / bl, cuota));
-      add("Deducción por doble imposición internacional", -ded, "art. 23 Ley 29/1987 (la menor entre lo pagado en el extranjero y el tipo medio efectivo por el valor de los bienes de fuera; se aplica antes de las bonificaciones autonómicas: orden PENDIENTE de cotejo)", V);
-      cuota = r2(cuota - ded);
-    } else if (pagadoExt && !valorExt) alertas.push(`${h.nombre}: para la deducción por doble imposición internacional falta el valor de los bienes situados fuera de España (art. 23 Ley 29/1987).`);
+      dobleImp = r2(Math.min(pagadoExt, valorExt * k.cuota / bl, cuota));
+      add("Deducción por doble imposición internacional", -dobleImp, "art. 23 Ley 29/1987 (la menor entre lo pagado en el extranjero y el tipo medio efectivo por el valor de los bienes de fuera; se aplica antes de las bonificaciones autonómicas: orden PENDIENTE de cotejo)" + (FORALES_ISD.includes(R.id) ? " · norma foral equivalente PENDIENTE de cotejo" : ""), FORALES_ISD.includes(R.id) ? P : V,
+        `El menor entre ${pagadoExt.toLocaleString("es-ES")} € pagados en el extranjero y ${(k.cuota / bl * 100).toLocaleString("es-ES", { maximumFractionDigits: 2 })} % de tipo medio efectivo × ${valorExt.toLocaleString("es-ES")} € de bienes en el extranjero`);
+      cuota = r2(cuota - dobleImp);
+    } else if (pagadoH && !valorH && !extr.length) alertas.push(`${h.nombre}: para la deducción por doble imposición internacional falta el valor de los bienes situados fuera de España (art. 23 Ley 29/1987).`);
     for (const b of R.bonif(h, g, c)) {
       const imp = r2(cuota * b.pct);
       add(b.pct ? `Bonificación ${(b.pct * 100).toLocaleString("es-ES", { maximumFractionDigits: 2 })} %` : "Bonificación no aplicable", -imp, b.norma, b.estado);
       cuota = r2(cuota - imp);
     }
     add("A pagar", cuota);
-    return { id: h.id, nombre: h.nombre, relacion: h.relacion, grupo: g, territorio: R.nombre, baseImponible: bi, baseLiquidable: bl, cuotaIntegra: ci, cuotaTributaria: k.cuota, aIngresar: cuota, valorAdquirido: r2(a.porcion + a.legados), derechos: derechos[h.id] || [], traza: t, ...(tipoMedio != null ? { tipoMedio, valorUsufructoNuda: r2(a.nudaUsuf), reduccionNoAgotada: r2(Math.max(0, suma - bi)) } : {}) };
+    return { id: h.id, nombre: h.nombre, relacion: h.relacion, grupo: g, territorio: R.nombre, baseImponible: bi, baseLiquidable: bl, cuotaIntegra: ci, cuotaTributaria: k.cuota, ...(dobleImp ? { dobleImposicion: dobleImp } : {}), aIngresar: cuota, valorAdquirido: r2(a.porcion + a.legados), derechos: derechos[h.id] || [], traza: t, ...(tipoMedio != null ? { tipoMedio, valorUsufructoNuda: r2(a.nudaUsuf), reduccionNoAgotada: r2(Math.max(0, suma - bi)) } : {}) };
   });
 
   // 6. Alertas jurídicas
@@ -1675,7 +1968,31 @@ export function calcularISD(caso) {
   // causante y heredero; en la segunda y siguientes adquisiciones solo se aplica lo no consumido (pactos sucesorios, donaciones con reducción previa).
   if (caso.ccaa === "GAL" && fecha >= "2026-01-01") alertas.push(`Galicia: desde el 01-01-2026 las reducciones por parentesco y discapacidad son únicas entre el mismo causante y heredero (art. 6.Cinco D. Leg. 1/2011, Ley 5/2025). ${personas.some((h) => Number(h.reduccionConsumida) > 0) ? "Se ha descontado lo ya consumido que consta en la ficha de cada heredero." : "Si el heredero ya recibió del causante por pacto sucesorio u otra adquisición con reducción, indica en su ficha lo consumido: el cálculo aplica la reducción completa."}`);
   if (caso.aplicarEmpresa && caso.ccaa === "CAT") alertas.push("En Cataluña la reducción por empresa es incompatible con la bonificación de grupos I y II: comparar ambas vías.");
-  if (gananciales) alertas.push(`Se ha liquidado la sociedad de gananciales: ${Math.round(gananciales / 2).toLocaleString("es-ES")} € pertenecen al cónyuge viudo y no forman parte de la herencia (arts. 1344 y 1392 CC).`);
+  if (LQ.defecto && gananciales) alertas.push(`Se ha liquidado la sociedad de gananciales: ${Math.round(gananciales / 2).toLocaleString("es-ES")} € pertenecen al cónyuge viudo y no forman parte de la herencia (arts. 1344 y 1392 CC).`);
+  // G04: liquidación con datos (reintegros, bienes mixtos, régimen foral, participación o compensación)
+  if (!LQ.defecto) {
+    const RG = LQ.regimen, fE = (v) => Math.round(v).toLocaleString("es-ES") + " €";
+    if (mitadViudo > 0.005) alertas.push(`Liquidación del régimen económico (${RG ? RG.nombre.toLowerCase() : "bienes comunes"}): ${fE(mitadViudo)} de los bienes son del cónyuge viudo y no forman parte de la herencia (${LQ.universal ? "comunicación foral consolidada con hijos comunes: todos los bienes por mitad, arts. 127-146 Ley 5/2015" : LQ.reintegros.lista.length ? "remanente por mitad más reintegros y reembolsos, arts. 1358, 1397, 1398, 1403 y 1404 CC" : "arts. 1344, 1354 y 1404 CC"}).${RG && RG.estado === P ? ` Regla foral PENDIENTE de cotejo literal (${RG.norma}).` : ""}`);
+    if (LQ.universal) alertas.push("Comunicación foral: la mitad de los bienes privativos del causante que pasa al viudo es efecto del régimen, no una herencia. Su tributación (o no sujeción) en el impuesto de Bizkaia está PENDIENTE de cotejo con la Norma Foral.");
+    for (const d of LQ.deudas) alertas.push(`${d.concepto}: ${fE(d.importe)}, deuda de la herencia (${d.norma}). No se ha restado de la base del impuesto: su deducción está PENDIENTE de criterio.`);
+    for (const c of LQ.creditos) alertas.push(`${c.concepto}: ${fE(c.importe)}, crédito que forma parte de la herencia (${c.norma}).`);
+  }
+  // G03: inventario y avalúo
+  {
+    const fE = (v) => Math.round(v).toLocaleString("es-ES") + " €", nom = (b) => b.descripcion || (TIPOS_BIEN[b.tipo] || TIPOS_BIEN.otro).nombre;
+    for (const b of bienes.filter(bienExtinguido)) alertas.push(`${nom(b)}: ${b.tipo === "renta" ? "la renta vitalicia sobre la vida del causante se extingue con su muerte (art. 1802 CC)" : "el usufructo, el uso o la habitación del causante se extinguen con su muerte (arts. 513.1 y 529 CC)"}; no forma parte de la herencia y cuenta 0 €.`);
+    for (const b of bienes.filter((b) => !b.valor && b.tipo !== "inmueble" && !bienExtinguido(b) && b.valorTotal > 0 && !b.regimen)) { const q = valoracionBien(b, fecha); if (q.sugerido > 0) alertas.push(`${nom(b)}: sin valor en la ficha, se usa el valor calculado (${q.calculo} = ${fE(q.sugerido)}; ${q.norma}). Confírmalo.`); }
+    const ndR = r2(deudasL.filter((q) => LQ.deudas.includes(q.d)).reduce((s, q) => s + q.parte, 0)); // las del régimen ya tienen su aviso
+    if (noDeducible - ndR > 0.005) { const L = [...deudasL, ...gastosL].filter((q) => !q.ded.ok && q.parte > 0 && !LQ.deudas.includes(q.d)); alertas.push(`No se restan en el impuesto ${fE(noDeducible - ndR)} de deudas y gastos que sí paga la herencia: ${L.map((q) => `${q.d.concepto || (TIPOS_DEUDA[q.d.tipo] || TIPOS_GASTO[q.d.tipo] || ["Partida"])[0]} (${q.ded.motivo}, ${q.ded.norma})`).join("; ")}.`); }
+    if (extr.length) {
+      const cat = (b) => (b.tipo === "inmueble" ? "inmuebles" : b.tipo === "cuenta" ? "cuentas" : b.tipo === "cripto" ? "cripto" : ["valores", "empresa", "seguroAhorro"].includes(b.tipo) ? "valores" : "");
+      const tot = {}; for (const b of extr) { const c = cat(b); if (c) tot[c] = (tot[c] || 0) + b.valorHerencia; }
+      const m720 = Object.entries(tot).filter(([c, v]) => c !== "cripto" && v > 50000).map(([c]) => c), m721 = (tot.cripto || 0) > 50000;
+      alertas.push(`Bienes en el extranjero (${[...new Set(extr.map((b) => b.extranjero.pais).filter(Boolean))].join(", ") || "país sin indicar"}): ${fE(extr.reduce((s, b) => s + b.valorHerencia, 0))}. Tributan aquí si el heredero reside en España (obligación personal, art. 6 Ley 29/1987), con la deducción del art. 23 por el impuesto pagado allí; quien no reside en España solo tributa por lo situado en España (art. 7). Revisa el convenio de doble imposición, si lo hay.${m720.length ? ` Cada heredero residente declara su parte en el modelo 720 si supera 50.000 € por bloque (${m720.join(", ")}; DA 18.ª Ley 58/2003).` : ""}${m721 ? " Criptomonedas custodiadas fuera de España por encima de 50.000 €: modelo 721." : ""}`);
+    }
+  }
+  // Planes de pensiones (G03): no tributan en Sucesiones sino en el IRPF del beneficiario como rendimientos del trabajo (art. 17.2.a.3.ª Ley 35/2006)
+  for (const pp of (caso.planesPensiones || []).filter((q) => pos(q.importe) > 0)) alertas.push(`${(porId[pp.beneficiarioId] || {}).nombre || "El beneficiario"} cobra ${Math.round(pos(pp.importe)).toLocaleString("es-ES")} € de un plan de pensiones: no tributa en Sucesiones, sino en su IRPF como rendimiento del trabajo (art. 17.2.a.3.ª Ley 35/2006), con la reducción del 40 % solo por las aportaciones anteriores a 2007 cobradas en forma de capital en el plazo transitorio. No forma parte de la herencia.`);
 
   const total = r2(res.reduce((s, x) => s + x.aIngresar, 0));
   // C2 (control de calidad 07-10-2026): recargo del art. 27 LGT si se calcula fuera de plazo y el plazo ya venció a la fecha de referencia
@@ -1695,7 +2012,7 @@ export function calcularISD(caso) {
   if (caso.enPlazo === false && !["AND", "MAD", "EXT"].includes(R.id) && sinBonif - total > 1) alertas.push(`Fuera de plazo: no se ha cotejado si las bonificaciones de ${R.nombre} exigen presentar en plazo (PENDIENTE). El cálculo las mantiene; si la norma lo exigiera, Sucesiones sería de ${sinBonif.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € más recargo.`);
   return {
     territorio: R.nombre, norma: R.norma, estadoGlobal: R.estadoGlobal, fecha,
-    masa: { brutoTotal, gananciales, mitadViudo: r2(gananciales / 2), bruto, deudas, gastos, legados: valorLegados, neto, netoReparto, ajuar, notaAjuar, modoAjuar: modo, baseAjuar, pasivoExcede: r2(Math.max(0, pasivo - bruto)) },
+    masa: { brutoTotal, gananciales, mitadViudo: r2(mitadViudo), noDeducible, netoFiscal, liquidacion: LQ, deudasDeducibles: r2(deudasL.filter((q) => q.ded.ok).reduce((s, q) => s + q.parte, 0)), gastosDeducibles: r2(gastosL.filter((q) => q.ded.ok).reduce((s, q) => s + q.parte, 0)), bruto, deudas, gastos, legados: valorLegados, neto, netoReparto, ajuar, notaAjuar, modoAjuar: modo, baseAjuar, pasivoExcede: r2(Math.max(0, pasivo - bruto)) },
     herederos: res, total, alertas, notasReparto: rep.notas, pendientes: [...pendientes], derechos,
     vecindad: vec, regimenReparto: rep.regimen || "comun", leyReparto: caso.reparto === "usufructoUniversal" || caso.reparto === "porcentajes" ? null : LEY_REPARTO[rep.regimen || "comun"] || null, bloqueo: rep.bloqueado || null, plazoISD, recargo, interesesProrroga, interesesProrrogaDias: intP ? intP.dias : 0, totalConRecargo: r2(total + (recargo ? recargo.importe : 0) + interesesProrroga), leyAplicable: leyRUE,
   };
@@ -2936,33 +3253,44 @@ export function modelo650(caso, R, hid, o = {}) {
 // Los totales salen de los mismos bienes y se cuadran con la masa del cálculo (bruto, deudas, gastos y neto).
 export const BLOQUES_660 = [["inmuebles", "Bienes inmuebles", (b) => b.tipo === "inmueble" || b.tipo === "vivienda"], ["cuentas", "Depósitos en cuentas bancarias", (b) => b.tipo === "cuenta"],
   ["valores", "Valores, acciones y fondos de inversión", (b) => b.tipo === "valores"], ["empresa", "Empresas, negocios y participaciones", (b) => b.tipo === "empresa"],
-  ["vehiculos", "Vehículos", (b) => b.tipo === "vehiculo"], ["otros", "Otros bienes y derechos", () => true]];
+  ["explotacion", "Explotaciones agrarias", (b) => b.tipo === "explotacion"], ["vehiculos", "Vehículos, embarcaciones y aeronaves", (b) => b.tipo === "vehiculo" || b.tipo === "embarcacion"],
+  // G03: clases de bien del inventario completo
+  ["cripto", "Monedas virtuales (criptoactivos)", (b) => b.tipo === "cripto"], ["arte", "Objetos de arte, antigüedades y joyas", (b) => b.tipo === "arte"],
+  ["derechos", "Derechos reales, créditos, rentas, seguros y propiedad intelectual", (b) => ["derechoReal", "credito", "renta", "seguroAhorro", "intelectual"].includes(b.tipo)],
+  ["otros", "Otros bienes y derechos", () => true]];
 export const ibanOculto = (s) => { const v = String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return v.length < 12 ? v : `${v.slice(0, 4)} **** **** **** **** ${v.slice(-4)}`; };
 export function relacion660(caso, R) {
   const usados = new Set(), porId = Object.fromEntries((caso.herederos || []).map((h) => [h.id, h]));
   const refs = (b) => [b.refCatastral ? ["Referencia catastral", String(b.refCatastral).toUpperCase().replace(/\s/g, "")] : null, b.municipio && b.municipio !== "OTRO" ? ["Municipio", b.muniNombre || (ORDENANZAS[b.municipio] && ORDENANZAS[b.municipio].nombre) || b.municipio] : null,
     b.valorReferencia ? ["Valor de referencia", eurM(b.valorReferencia)] : null, b.iban ? ["IBAN", ibanOculto(b.iban)] : null, b.entidad ? ["Entidad", b.entidad] : null,
     b.isin ? ["ISIN", String(b.isin).toUpperCase()] : null, b.titulos ? ["Títulos", String(b.titulos)] : null, b.matricula ? ["Matrícula", String(b.matricula).toUpperCase()] : null,
-    b.nifSociedad ? ["NIF de la sociedad", b.nifSociedad] : null].filter(Boolean);
+    b.nifSociedad ? ["NIF de la sociedad", b.nifSociedad] : null, b.unidades ? ["Unidades", String(b.unidades)] : null, b.fuentePrecio ? ["Fuente del precio", b.fuentePrecio] : null,
+    b.subtipo && SUBTIPOS_BIEN[b.tipo] ? ["Clase", (SUBTIPOS_BIEN[b.tipo].find((s) => s[0] === b.subtipo) || ["", b.subtipo])[1]] : null,
+    b.extranjero ? ["Situado en", `${b.extranjero.pais || "el extranjero"}${b.extranjero.impuestoPagado ? ` (impuesto pagado allí: ${eurM(b.extranjero.impuestoPagado)})` : ""}`] : null].filter(Boolean);
+  // G03-G04: valor del motor (con la valoración sugerida si falta el de la ficha) y cuota de la liquidación del régimen económico
+  const LQ = R && R.masa && R.masa.liquidacion, fecha = caso.fechaFallecimiento;
   const bloques = BLOQUES_660.map(([id, titulo, es]) => {
-    const filas = (caso.bienes || []).filter((b) => !usados.has(b) && es(b)).map((b) => {
-      usados.add(b);
-      const total = Math.max(0, Number(valorBien(b)) || 0), cuota = cuotaCausante(b);
+    const filas = [...(caso.bienes || []), ...(LQ ? LQ.creditos.map((c) => ({ id: c.id, tipo: "credito", descripcion: c.concepto, valor: c.importe, titularidad: "privativo" })) : [])].filter((b) => !usados.has(b.id) && es(b)).map((b) => {
+      usados.add(b.id);
+      const total = Math.max(0, Number(valorBien(b, fecha)) || 0), cuota = LQ && LQ.porBien[b.id] ? LQ.porBien[b.id].cuotaCausante : cuotaCausante(b);
       return { id: b.id, desc: b.descripcion || titulo, tipo: b.tipo, refs: refs(b), titularidad: b.titularidad || "privativo", cuota, valorTotal: r2(total), valor: r2(total * cuota),
         vivienda: !!b.esViviendaHabitual, legatario: b.legatarioId && porId[b.legatarioId] && !porId[b.legatarioId].renuncia ? porId[b.legatarioId].nombre : "" };
     });
     return { id, titulo, filas, total: r2(filas.reduce((s, f) => s + f.valor, 0)) };
   }).filter((b) => b.filas.length);
   const pos = (x) => Math.max(0, Number(x) || 0);
-  const deudas = (caso.deudas || []).filter((d) => pos(d.importe) > 0).map((d) => ({ desc: d.concepto || "Deuda", importe: r2(pos(d.importe)), deducible: r2(pos(d.importe) * (d.ganancial ? 0.5 : 1)), ganancial: !!d.ganancial }));
-  const gastos = (caso.gastos || []).filter((g) => pos(g.importe) > 0).map((g) => ({ desc: g.concepto || "Gasto", importe: r2(pos(g.importe)) }));
+  // G03: solo lo deducible (arts. 13-14 Ley 29/1987); la parte común de la deuda según la liquidación del régimen (G04)
+  const deudas = (caso.deudas || []).filter((d) => pos(d.importe) > 0).map((d) => { const q = deudaDeducible(d); return { desc: d.concepto || (TIPOS_DEUDA[d.tipo] || ["Deuda"])[0], importe: r2(pos(d.importe)), deducible: q.ok ? r2(pos(d.importe) * (LQ ? LQ.cuotaDeuda(d) : d.ganancial ? 0.5 : 1)) : 0, ganancial: !!d.ganancial, ...(q.ok ? {} : { noDeducible: `${q.motivo} (${q.norma})` }) }; });
+  const gastos = (caso.gastos || []).filter((g) => pos(g.importe) > 0 && gastoDeducible(g).ok).map((g) => ({ desc: g.concepto || (TIPOS_GASTO[g.tipo] || ["Gasto"])[0], importe: r2(pos(g.importe)) }));
   const seguros = (caso.seguros || []).filter((s) => pos(s.importe) > 0).map((s) => ({ beneficiario: porId[s.beneficiarioId] ? porId[s.beneficiarioId].nombre : "", importe: r2(pos(s.importe)) }));
   const tot = { bienes: r2(bloques.reduce((s, b) => s + b.total, 0)), deudas: r2(deudas.reduce((s, d) => s + d.deducible, 0)), gastos: r2(gastos.reduce((s, g) => s + g.importe, 0)),
     ajuar: R ? R.masa.ajuar : 0, seguros: r2(seguros.reduce((s, x) => s + x.importe, 0)) };
   tot.neto = r2(Math.max(0, tot.bienes - tot.deudas - tot.gastos));
   const M = R ? R.masa : null, regla = (txt, a, b) => ({ regla: txt, a: r2(a), b: r2(b), ok: Math.abs(a - b) <= 0.02 });
-  const cuadre = M ? [regla("Bienes y derechos = caudal del cálculo", tot.bienes, M.bruto), regla("Deudas deducibles = deudas del cálculo", tot.deudas, M.deudas),
-    regla("Gastos deducibles = gastos del cálculo", tot.gastos, M.gastos), regla("Caudal neto = neto del cálculo", tot.neto, M.neto)] : [];
+  // Lo no deducible (G03) y las deudas del régimen (G04) quedan fuera de la relación: el cuadre es con lo deducible del cálculo
+  const ded = M ? { deudas: M.deudasDeducibles ?? M.deudas, gastos: M.gastosDeducibles ?? M.gastos } : null;
+  const cuadre = M ? [regla("Bienes y derechos = caudal del cálculo", tot.bienes, M.bruto), regla("Deudas deducibles = deudas del cálculo", tot.deudas, ded.deudas),
+    regla("Gastos deducibles = gastos del cálculo", tot.gastos, ded.gastos), regla("Caudal neto = neto del cálculo", tot.neto, r2(Math.max(0, M.bruto - ded.deudas - ded.gastos)))] : [];
   return { bloques, deudas, gastos, seguros, ajuar: M ? { valor: M.ajuar, nota: M.notaAjuar, base: M.baseAjuar } : null, totales: tot, cuadre, ok: cuadre.every((c) => c.ok) };
 }
 // Documentos que se acompañan a la autoliquidación y a la relación de bienes, según los datos del expediente
@@ -2984,6 +3312,13 @@ export function documentos650(caso, o = {}) {
   if (B.some((b) => b.tipo === "valores")) add("Certificado de posición de valores y fondos a la fecha del fallecimiento (valor de cotización o liquidativo)", "valores (arts. 15 y 16 Ley 19/1991)");
   if (B.some((b) => b.tipo === "vehiculo")) add("Permiso de circulación o ficha técnica de cada vehículo", "valoración por las tablas de precios medios");
   if (B.some((b) => b.tipo === "empresa")) add("Balance y documentación de la empresa o de las participaciones, y justificación de los requisitos de la reducción", "empresa familiar (art. 20.2.c Ley 29/1987)");
+  // G03: justificantes de las clases de bien del inventario completo
+  if (B.some((b) => b.tipo === "cripto")) add("Certificado del proveedor o extracto del monedero con las unidades a la fecha del fallecimiento y cotización de cierre de ese día con su fuente", "criptoactivos (arts. 9 y 24 Ley 29/1987)");
+  if (B.some((b) => b.tipo === "arte" || b.tipo === "intelectual")) add("Tasación pericial de las obras de arte, joyas, colecciones o derechos de autor", "valor de mercado (art. 9 Ley 29/1987)");
+  if (B.some((b) => b.tipo === "derechoReal" || b.tipo === "renta" || b.tipo === "credito")) add("Título del derecho, la renta o el crédito (escritura, contrato o reconocimiento de deuda) y certificado de lo pendiente a la fecha del fallecimiento", "derechos y créditos (arts. 9 y 26 Ley 29/1987)");
+  if (B.some((b) => b.tipo === "explotacion")) add("Inscripción en el registro de explotaciones agrarias y justificación de la actividad del causante", "explotación agraria (art. 20.2.c Ley 29/1987; Ley 19/1995)");
+  if (B.some((b) => b.tipo === "seguroAhorro")) add("Certificado de la aseguradora con el valor de rescate a la fecha del fallecimiento", "seguro sin vencer");
+  if (B.some((b) => b.extranjero)) add("Justificante del impuesto pagado en el extranjero por esos bienes y su valoración", "deducción por doble imposición internacional (art. 23 Ley 29/1987)");
   if ((caso.deudas || []).some((d) => Number(d.importe) > 0)) add("Certificado de cada deuda pendiente a la fecha del fallecimiento", "deudas deducibles (art. 13 Ley 29/1987)");
   if ((caso.gastos || []).some((g) => Number(g.importe) > 0)) add("Facturas del entierro y funeral y, en su caso, de la última enfermedad", "gastos deducibles (art. 14 Ley 29/1987)");
   if ((caso.seguros || []).some((s) => Number(s.importe) > 0)) add("Certificado de la aseguradora con el capital cobrado por cada beneficiario", "seguros de vida");

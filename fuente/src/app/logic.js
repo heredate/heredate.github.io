@@ -39,9 +39,17 @@ const I = {
   dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
   tick: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>',
   wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 9c3-3 6 3 9 0s6 3 9 0M3 15c3-3 6 3 9 0s6 3 9 0"/></svg>',
+  coin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 8h4a2 2 0 0 1 0 4h-4h4.5a2 2 0 0 1 0 4h-4.5V8M11 6v2M11 16v2"/></svg>',
+  gem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M6 4h12l3 5-9 11L3 9z"/><path d="M3 9h18M9 4l3 16 3-16"/></svg>',
+  receipt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg>',
+  leaf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 19c0-9 5-14 15-14 0 10-5 15-14 15M5 19l7-7"/></svg>',
+  boat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M3 16h18l-3 4H6zM12 3v13M12 4l6 9h-6"/></svg>',
   search: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
 };
-const TIPO_BIEN = { vivienda: ["Vivienda habitual", I.house], inmueble: ["Otro inmueble", I.house], cuenta: ["Cuenta o depósito", I.bank], valores: ["Acciones o fondos", I.chart], vehiculo: ["Vehículo", I.car], empresa: ["Empresa o negocio", I.brief], otro: ["Otro bien", I.box] };
+const TIPO_BIEN = { vivienda: ["Vivienda habitual", I.house], inmueble: ["Otro inmueble", I.house], cuenta: ["Cuenta o depósito", I.bank], valores: ["Acciones o fondos", I.chart], vehiculo: ["Vehículo", I.car], empresa: ["Empresa o negocio", I.brief], cripto: ["Criptoactivo", I.coin], arte: ["Arte, joyas y colecciones", I.gem], credito: ["Crédito a favor", I.receipt], derechoReal: ["Derecho real", I.key], renta: ["Renta o pensión", I.receipt], explotacion: ["Explotación agraria", I.leaf], embarcacion: ["Embarcación o aeronave", I.boat], intelectual: ["Propiedad intelectual", I.doc], seguroAhorro: ["Seguro sin vencer", I.bank], otro: ["Otro bien", I.box] };
+// G03: los siete tipos de siempre van primero en el asistente; el resto, en «Añadir bien» y en la ficha
+const TIPO_BIEN_PRINC = ["vivienda", "inmueble", "cuenta", "valores", "vehiculo", "empresa", "otro"];
 const chipE = (e) => !e ? "" : e === "VERIFICADO" ? '<span class="chip V">VERIFICADO</span>' : e === "PENDIENTE" ? '<span class="chip P">PENDIENTE</span>' : '<span class="chip I">' + esc(e) + "</span>";
 I.spark = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9z"/></svg>';
 I.send = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
@@ -153,13 +161,44 @@ function casoMotor(x) {
     // Auditoría ISD 10-10-2026: DA 2.ª (causante no residente sin bienes en España), usufructo universal temporal y residencia en Ceuta o Melilla
     sinBienesEnEspana: x.ccaa === "EST" && !x.ccaaBienes && x.sinBienesEspana === true, usufructoTemporalAnios: x.testamento === "usufructo" ? num(x.usufructoTemporalAnios) || undefined : undefined,
     residenciaCeutaMelilla5: x.residenciaCeutaMelilla5 == null || x.residenciaCeutaMelilla5 === "" ? undefined : x.residenciaCeutaMelilla5 !== false && x.residenciaCeutaMelilla5 !== "no",
-    bienes: (x.bienes || []).map((b) => ({ id: b.id, tipo: b.tipo === "vivienda" ? "inmueble" : b.tipo, esViviendaHabitual: b.tipo === "vivienda", valor: num(b.valor), valorReferencia: num(b.valorReferencia), titularidad: b.titularidad || "privativo", porcentaje: pctCausante(b.porcentaje), legatarioId: b.legatarioId || undefined, descripcion: b.descripcion, usoResidencial: b.usoResidencial == null ? undefined : !!b.usoResidencial, arrendadoOCedido: !!b.arrendadoOCedido, troncal: !!b.troncal || undefined, lineaTroncal: b.troncal ? b.lineaTroncal || undefined : undefined, patrimonioHistorico: !!b.patrimonioHistorico || undefined })),
-    deudas: (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial })),
-    gastos: (x.gastos || []).map((g) => ({ importe: num(g.importe) })),
-    seguros: (x.personas || []).filter((p) => num(p.seguro) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.seguro) })),
+    bienes: (x.bienes || []).map(bienMotor),
+    // G03: tipo, concepto y deducibilidad (arts. 13-14 Ley 29/1987); sin tipo ni marcas, se deduce como hasta la 1.7
+    deudas: (x.deudas || []).map((d) => ({ importe: num(d.importe), ganancial: !!d.ganancial, ...(d.tipo ? { tipo: d.tipo } : {}), ...(d.concepto ? { concepto: d.concepto } : {}), ...(d.acreditada === false ? { acreditada: false } : {}), ...(d.acreedorHeredero ? { acreedorHeredero: true } : {}) })),
+    gastos: (x.gastos || []).map((g) => ({ importe: num(g.importe), ...(g.tipo ? { tipo: g.tipo } : {}), ...(g.concepto ? { concepto: g.concepto } : {}) })),
+    seguros: (x.personas || []).filter((p) => num(p.seguro) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.seguro), ...(p.seguroGanancial ? { ganancial: true } : {}) })),
+    planesPensiones: (x.personas || []).filter((p) => num(p.planPensiones) > 0).map((p) => ({ beneficiarioId: p.id, importe: num(p.planPensiones) })),
+    // G04: régimen económico matrimonial (estado civil del alta y, si los hay, datos del matrimonio, reintegros, participación…)
+    estadoCivil: x.civil || undefined, regimen: regimenMotor(x.regimen),
     herederos: (x.personas || []).map((p) => ({ id: p.id, nombre: p.nombre || "Sin nombre", relacion: p.relacion, edad: edadNum(p.edad), inscrita: !!p.inscrita, registroPareja: p.registroPareja || undefined, medio: !!p.medio, separado: !!p.separado, requisitoLaboralEmpresa: !!p.requisitoLaboralEmpresa, lineaAsc: p.lineaAsc, discapacidad: num(p.discapacidad), patrimonioPreexistente: num(p.patrimonioPreexistente), convivio2anios: !!p.convivio2anios, renuncia: !!p.renuncia, indigno: !!p.indigno || undefined, pct: num(p.pct), estirpe: p.estirpe, donacionesPreviasBL: num(p.donaciones),
       discapacidadPsiquica: !!p.discapacidadPsiquica, especialVinculacion: !!p.especialVinculacion, reduccionConsumida: num(p.reduccionConsumida), impuestoTransmisionAnterior: num(p.impuestoTransmisionAnterior), impuestoExtranjero: num(p.impuestoExtranjero), valorBienesExtranjero: num(p.valorBienesExtranjero), ccaaResidencia: p.ccaaResidencia || undefined })),
   };
+}
+// G03: bien de la ficha → bien del motor (los campos de valoración solo viajan si existen: un expediente antiguo da el mismo objeto)
+const BIEN_NUM = ["unidades", "precioUnidad", "titulos", "cotizacion", "fondosPropios", "pctParticipacion", "nominal", "beneficioMedio", "precioMedio", "aniosUso", "valorPleno", "edadUsufructuario", "aniosUsufructo", "intereses", "pctPrivCausante", "pctPrivConyuge"];
+function bienMotor(b) {
+  const o = { id: b.id, tipo: b.tipo === "vivienda" ? "inmueble" : b.tipo, esViviendaHabitual: b.tipo === "vivienda", valor: num(b.valor), valorReferencia: num(b.valorReferencia), titularidad: b.titularidad || "privativo", porcentaje: pctCausante(b.porcentaje), legatarioId: b.legatarioId || undefined, descripcion: b.descripcion, usoResidencial: b.usoResidencial == null ? undefined : !!b.usoResidencial, arrendadoOCedido: !!b.arrendadoOCedido, troncal: !!b.troncal || undefined, lineaTroncal: b.troncal ? b.lineaTroncal || undefined : undefined };
+  if (b.subtipo) o.subtipo = b.subtipo;
+  for (const k of BIEN_NUM) if (b[k] != null && String(b[k]).trim() !== "") o[k] = num(b[k]);
+  for (const k of ["fuentePrecio", "fechaMatriculacion"]) if (b[k]) o[k] = b[k];
+  for (const k of ["auditado", "patrimonioHistorico"]) if (b[k]) o[k] = true;
+  if (b.enExtranjero) o.extranjero = { pais: b.extPais || "", moneda: b.extMoneda || "", impuestoPagado: num(b.extImpuesto) }; // art. 23 Ley 29/1987 y modelos 720/721
+  return o;
+}
+// Valor del bien entero según el motor (G03: con el valor sugerido por su valoración si falta el de la ficha)
+const valorFicha = (b, x) => valorBien(bienMotor(b), x && x.fecha);
+// G04: datos del régimen económico para el motor
+function regimenMotor(g) {
+  if (!g || typeof g !== "object") return undefined;
+  const o = { ...g };
+  if (Array.isArray(g.reintegros)) o.reintegros = g.reintegros.map((r) => ({ ...r, importe: num(r.importe), actualizado: num(r.actualizado) }));
+  if (g.participacion) o.participacion = Object.fromEntries(Object.entries(g.participacion).map(([k, v]) => [k, v === "" || v == null ? undefined : num(v)]));
+  if (g.compensacion != null) o.compensacion = num(g.compensacion);
+  return o;
+}
+// Parte del bien que pertenecía al causante: la de la liquidación del régimen (G04) si el expediente se puede calcular; si no, la regla simple
+function cuotaBien(b, x) {
+  const R = x ? calcular(x) : null, q = R && R.isd && R.isd.masa.liquidacion && R.isd.masa.liquidacion.porBien[b.id];
+  return q ? q.cuotaCausante : cuotaCausante({ titularidad: b.titularidad || "privativo", porcentaje: pctCausante(b.porcentaje), pctPrivCausante: num(b.pctPrivCausante), pctPrivConyuge: num(b.pctPrivConyuge) });
 }
 // La pareja de hecho no inscrita se trata como extraño también en la plusvalía (auditoría 01-10-2026, C-5), igual que en el ISD
 const titularPlus = (p) => ({ id: p.id, nombre: p.nombre, relacion: p.relacion === "pareja_hecho" && !p.inscrita ? "pareja_no_inscrita" : p.relacion, inscrita: !!p.inscrita, colectivoVulnerable: !!p.colectivoVulnerable, edad: p.edad, convivio2anios: !!p.convivio2anios, convivio1anio: p.convivio2anios ? true : undefined, empadronadoMunicipio: !!p.empadronado, empadronadoMunicipio1anio: !!p.empadronado, ingresosAnuales: p.ingresos === "" || p.ingresos == null ? null : num(p.ingresos) });
@@ -168,7 +207,7 @@ const tipoManualNum = (v) => (v == null || String(v).trim() === "" ? undefined :
 const ineBien = (b) => b.muniIne || (b.municipio && b.municipio !== "OTRO" && typeof MUNI_CLAVES === "object" ? MUNI_CLAVES[b.municipio] || "" : "");
 // G09: municipio (código INE y nombre) de cada inmueble urbano, para contar los festivos de su ayuntamiento en el plazo de la plusvalía
 function inmueblesMuniExp(x) { return (x.bienes || []).filter((b) => b.tipo === "vivienda" || b.tipo === "inmueble").map((b) => ({ ine: ineBien(b), nombre: b.muniNombre || (ORDENANZAS[b.municipio] || {}).nombre || "" })).filter((b) => b.ine); }
-function datosPlus(x, b, caudal) { return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", usoResidencial: b.tipo === "inmueble" && b.usoResidencial === true, esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
+function datosPlus(x, b, caudal, isd) { const lq = isd && isd.masa.liquidacion && isd.masa.liquidacion.porBien[b.id]; return { municipio: b.municipio || "OTRO", ine: ineBien(b), tipoManual: tipoManualNum(b.tipoManual), bonifManual: Math.min(100, Math.max(0, num(b.bonifManual))), cuota: lq ? lq.cuotaCausante : cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) }), valorCatastralTotal: num(b.valorCatastralTotal), valorCatastralSuelo: num(b.valorCatastralSuelo), adquisicion: { fecha: b.fechaAdq, valor: num(b.valorAdq) }, valorTransmision: Math.max(num(b.valor), num(b.valorReferencia)), esViviendaHabitual: b.tipo === "vivienda", usoResidencial: b.tipo === "inmueble" && b.usoResidencial === true, esLocalAfecto: !!b.localAfecto, causanteEmpadronado: x.causanteEmpadronado === true ? true : undefined }; }
 const plusCompleto = (b) => (b.tipo === "vivienda" || b.tipo === "inmueble") && num(b.valorCatastralTotal) && num(b.valorCatastralSuelo) && b.fechaAdq;
 // ── Copia de los cálculos por expediente (I10). calcular() es una función pura del expediente (y del día): con 200 expedientes,
 // cada pintado de la cartera lo repetía cientos de veces. La clave es la huella del JSON del expediente más la fecha de hoy, así
@@ -207,7 +246,7 @@ function calcularBase(x) {
     const adj = b.adjudicadoA && (x.personas || []).find((p) => p.id === b.adjudicadoA && !p.renuncia && !p.indigno);
     const leg = b.legatarioId && (x.personas || []).find((p) => p.id === b.legatarioId && !p.renuncia && !p.indigno); // I8: legado a persona quitada o que renuncia → vuelve a la masa
     const titulares = leg ? [{ heredero: titularPlus(leg), fraccion: 1 }] : adj ? [{ heredero: titularPlus(adj), fraccion: 1 }] : (x.personas || []).filter((p) => !p.renuncia && !p.indigno).map((p) => ({ heredero: titularPlus(p), fraccion: (isd.derechos[p.id] || []).reduce((s, d) => s + (d.tipo === "pleno" ? d.fraccion : d.tipo === "usufructo" ? d.fraccion * pctUsufructoVitalicio(num(p.edad) || 40) : d.fraccion * (1 - pctUsufructoVitalicio(num(persona(x, d.usufructuarioId).edad) || 40))), 0) })).filter((t) => t.fraccion > 0);
-    const r = calcularPlusvalia({ inmueble: datosPlus(x, b), titulares, fecha: x.fecha, caudalTotal: isd.masa.bruto });
+    const r = calcularPlusvalia({ inmueble: datosPlus(x, b, undefined, isd), titulares, fecha: x.fecha, caudalTotal: isd.masa.bruto });
     if ((b.municipio || "OTRO") === "OTRO") {
       // Municipio sin ordenanza incorporada. Tipo, por orden: el introducido a mano; el que el ayuntamiento comunica a Hacienda para 2026
       // (capitales y municipios de más de 50.000 habitantes); o el máximo legal del 30 % (art. 108.1 TRLRHL). Coeficientes máximos (art. 107.4)

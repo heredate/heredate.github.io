@@ -31,8 +31,8 @@ function pdfInformeBloques(x, R) {
   bl.push({ tipo: "h", numero: "2.", texto: "Masa hereditaria" });
   const bienes = (x.bienes || []).map((b) => {
     const inm = b.tipo === "vivienda" || b.tipo === "inmueble";
-    const v = inm ? Math.max(num(b.valor), num(b.valorReferencia)) : num(b.valor);
-    const cc = cuotaCausante({ titularidad: b.titularidad, porcentaje: pctCausante(b.porcentaje) });
+    const v = inm ? Math.max(num(b.valor), num(b.valorReferencia)) : valorFicha(b, x); // G03: valor sugerido si falta el de la ficha
+    const cc = cuotaBien(b, x); // G04: cuota de la liquidación del régimen
     return [b.descripcion || TIPO_BIEN[b.tipo]?.[0] || "Bien", pdfEur(v), Math.round(cc * 10000) / 100 + " %", pdfEur(v * cc)];
   });
   if (bienes.length) bl.push({ tipo: "tabla", cabecera: ["Bien", "Valor", "Parte del causante", "Computa"], filas: bienes, alinear: ["l", "r", "r", "r"] });

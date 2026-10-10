@@ -1521,5 +1521,32 @@ CARGAS: Libre de cargas.`;
   const pct = Object.fromEntries(x.personas.map((p) => [p.nombre, p.pct || 0]));
   t("r5 H1 · testamento «por partes iguales» en un expediente vacío: 50 % a cada hijo y nada a los legatarios (antes, 0 herederos y 0 € de Sucesiones)", x.testamento === "porcentajes" && pct["Iñaki García O'Connor"] === 50 && pct["María José García O'Connor"] === 50 && !pct["África López-Álvarez Díaz"] && !pct["Lucía García Peña"], pct);
 }
+// G04 (auditoría civil 10-10-2026, hallazgo 10): participación, conquistas, consorcio y comunicación foral ya no se convierten en gananciales
+{
+  const matri = (reg) => `REGISTRO CIVIL DE BILBAO · CERTIFICACIÓN LITERAL DE INSCRIPCIÓN DE MATRIMONIO
+Contrayente 1: DON IÑAKI ETXEBARRIA URIARTE, nacido en Gernika el 2 de noviembre de 1949.
+Contrayente 2: DOÑA MIREN AGIRRE BILBAO, nacida en Bermeo el 8 de mayo de 1951.
+Celebrado el día 23 de septiembre de 1978 en Gernika.
+Régimen económico: ${reg}.`;
+  const rg = (reg) => campo(L.lecAnalizar(matri(reg), "matrimonio.pdf"), "civil");
+  t("G04 lector · participación: casado sin bienes comunes y régimen de participación", rg("participación")?.valor === "separacion" && rg("participación").regimen === "participacion", rg("participación"));
+  t("G04 lector · conquistas: régimen navarro, no gananciales a secas", rg("conquistas")?.valor === "gananciales" && rg("conquistas").regimen === "conquistas" && !/se propone gananciales/.test(rg("conquistas").mostrar), rg("conquistas"));
+  t("G04 lector · consorcio conyugal: régimen aragonés", rg("consorcio conyugal")?.regimen === "consorcio", rg("consorcio conyugal"));
+  t("G04 lector · consorcial: régimen aragonés", rg("consorcial")?.regimen === "consorcio", rg("consorcial"));
+  t("G04 lector · comunicación foral de bienes: régimen vizcaíno", rg("comunicación foral de bienes")?.regimen === "comunicacion", rg("comunicación foral de bienes"));
+  const dc = L.lecAnalizar(matri("comunidad de bienes").replace(/BILBAO|Gernika|Bermeo/g, "MADRID"), "m.pdf"), cc = campo(dc, "civil");
+  t("G04 lector · «comunidad de bienes» sin más: confianza baja y aviso, sin régimen concreto", cc?.conf === 1 && !cc.regimen && dc.avisos.some((a) => /comunidad de bienes/.test(a)), [cc, dc.avisos]);
+  t("G04 lector · gananciales: sin régimen concreto (lo decide la ley aplicable)", rg("gananciales")?.valor === "gananciales" && !rg("gananciales").regimen, rg("gananciales"));
+  // Al aplicar, el régimen concreto pasa al expediente
+  const x = { id: "xg4", nombre: "", personas: [], bienes: [], deudas: [], situ: {} };
+  const tx = matri("conquistas"), datos = L.lecAnalizar(tx, "matrimonio.pdf");
+  const P = L.lecPropuestas(x, [{ nombre: "matrimonio.pdf", tipo: datos.tipo, titulo: datos.titulo, texto: tx, datos }]).propuestas;
+  L.LEC.resultado = { docs: [{ nombre: "matrimonio.pdf", tipo: datos.tipo, titulo: datos.titulo, texto: tx, datos }], propuestas: P }; L.lecAplicar(x, P.filter((p) => p.k === "civil").map((p) => p.id));
+  t("G04 lector · aplicado: gananciales en el estado civil y conquistas en el régimen", x.civil === "gananciales" && x.regimen && x.regimen.tipo === "conquistas", [x.civil, x.regimen]);
+  // Testamento: «casado en régimen de participación con…»
+  const TES = `TESTAMENTO ABIERTO. COMPARECE: DON JUAN PÉREZ LÓPEZ, casado en régimen de participación con DOÑA ANA GIL RUIZ, vecino de Madrid. Instituye herederos a sus hijos.`;
+  const ct = campo(L.lecAnalizar(TES, "testamento.pdf"), "civil");
+  t("G04 lector · testamento con participación", ct?.valor === "separacion" && ct.regimen === "participacion", ct);
+}
 console.log(`\nlector: ${ok} pruebas correctas${ko ? `, ${ko} fallidas` : ""}`);
 if (ko) process.exit(1);
