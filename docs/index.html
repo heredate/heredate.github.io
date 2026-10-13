@@ -125,6 +125,17 @@ h1{font-size:clamp(44px,8vw,92px);line-height:1;margin:0 auto;max-width:11em}
 .vctl svg{flex:none}
 .vctl.grande{right:50%;bottom:50%;transform:translate(50%,50%);min-height:56px;padding:0 24px 0 20px;font-size:16px}
 @media (max-width:520px){.vctl{right:10px;bottom:10px;min-height:36px;font-size:13px}}
+/* Demostración con voz: botón bajo el vídeo y diálogo con el vídeo con locución y subtítulos (pista <track>) */
+.vozbtn{margin:18px auto 0;display:flex}
+.vozdlg{border:0;padding:0;width:min(1200px,calc(100vw - 32px));max-height:calc(100vh - 32px);border-radius:14px;background:var(--surface);color:var(--ink-1);box-shadow:var(--sh-frame);overflow:hidden}
+.vozdlg::backdrop{background:rgba(10,16,26,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.vozdlg .hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 10px 10px 18px;border-bottom:1px solid var(--border)}
+.vozdlg h2{font:600 16px/1.3 var(--font-sans);letter-spacing:0;margin:0;text-align:left;text-wrap:pretty;max-width:none}
+.vozdlg{text-align:left}
+.vozdlg video{display:block;width:100%;height:auto;max-height:calc(100vh - 160px);background:#0b1220}
+.vozdlg p{margin:0;padding:10px 18px 14px;font-size:13.5px;color:var(--ink-3)}
+.vozdlg video::cue{font:500 22px/1.35 var(--font-sans);background:rgba(10,16,26,.82);color:#fff}
+@media (max-width:520px){.vozdlg video::cue{font-size:15px}}
 
 /* Propuesta en tres puntos */
 .tres{display:grid;grid-template-columns:1fr;gap:0;margin:clamp(48px,6vw,72px) auto 0;border-top:1px solid var(--border);text-align:left}
@@ -305,7 +316,15 @@ footer p{margin:0;max-width:42em}
       </div>
       <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos» y el programa los lee en el ordenador. En la revisión, cada dato muestra el documento del que sale (el DNI de un hijo, leído de la foto de su DNI), lo dudoso llega sin marcar y se desmarca un dato antes de cargarlo. El expediente queda calculado; después se escribe a mano el valor de un inmueble que ningún documento traía, el cálculo se rehace y se vincula el legado de una plaza de garaje. Siguen Sucesiones y plusvalía paso a paso, el cuadro de partición con la vivienda adjudicada a la viuda (exceso, compensaciones y su coste), el árbol familiar con el derecho, lo que recibe y lo que paga cada heredero, Mi día, las cifras del modelo 650 de cada heredero y el informe de cálculo en PDF.</p>
     </div>
-    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre a la partición, el árbol familiar y el informe en PDF, en dos minutos y sin sonido. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
+    <button class="btn sec vozbtn" type="button" id="voz-abrir" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.2v9.6L11.6 7z" fill="currentColor"/></svg>Ver la demo con voz · 3:17</button>
+    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre a la partición, el árbol familiar y el informe en PDF, en dos minutos y sin sonido. La demo con voz lo cuenta paso a paso, con subtítulos. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
+    <dialog class="vozdlg" id="voz-dlg" aria-labelledby="voz-tit">
+      <div class="hd"><h2 id="voz-tit">Hereda+ · demostración con voz</h2><button class="btn sec sm" type="button" id="voz-cerrar">Cerrar</button></div>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="video/hereda-demo-poster-1600.webp" data-src="video/hereda-demo-voz.mp4" aria-describedby="voz-desc">
+        <track kind="captions" srclang="es" label="Español" src="video/hereda-demo-voz.es.vtt" default>
+      </video>
+      <p id="voz-desc">Locución con voz sintética en castellano, música compuesta para el vídeo y subtítulos en español. Despacho y datos ficticios. <a class="lnk" href="video/hereda-demo-voz.es.vtt" download>Subtítulos</a> · <a class="lnk" href="video/hereda-demo-vertical-voz.mp4">Versión vertical</a></p>
+    </dialog>
   </div>
   <div class="wrap">
     <div class="tres rv">
@@ -384,14 +403,14 @@ footer p{margin:0;max-width:42em}
 
 <section id="cifras" class="alt" aria-labelledby="t-cifras"><div class="wrap">
   <p class="kicker">En cifras</p>
-  <h2 id="t-cifras">Lo que ya hace la versión 1.7.</h2>
+  <h2 id="t-cifras">Lo que ya hace la versión 1.8.</h2>
   <p class="lead">Cifras del propio programa, comprobables en el despacho de demostración. Las pruebas automáticas se ejecutan antes de cada versión: si una falla, la versión no se publica.</p>
   <div class="cifras prueba rv" role="list">
     <div role="listitem"><b class="num">28</b><span>tipos de documento que el programa lee y entiende</span></div>
     <div role="listitem"><b class="num">22</b><span>normativas del Impuesto sobre Sucesiones, forales incluidas</span></div>
-    <div role="listitem"><b class="num">8.132</b><span>municipios con su plusvalía, 322 con la ordenanza incorporada</span></div>
-    <div role="listitem"><b class="num">183</b><span>trámites con su plazo, su organismo y su enlace oficial</span></div>
-    <div role="listitem"><b class="num">1.677</b><span>pruebas automáticas: 1.235 del cálculo y 442 de la lectura</span></div>
+    <div role="listitem"><b class="num">8.132</b><span>municipios con su plusvalía, 668 con la ordenanza incorporada</span></div>
+    <div role="listitem"><b class="num">194</b><span>trámites con su plazo, su organismo y su enlace oficial</span></div>
+    <div role="listitem"><b class="num">2.230</b><span>pruebas automáticas: 1.788 del cálculo y 442 de la lectura</span></div>
   </div>
   <p class="pie-cifras">Territorios: las 15 comunidades de régimen común, Navarra, Álava, Bizkaia, Gipuzkoa, Ceuta, Melilla y la norma estatal para no residentes. En plusvalía, el tipo oficial de las 48 capitales y de los 100 municipios de más de 50.000 habitantes; en el resto, el máximo legal con un aviso para poner el de su ordenanza.</p>
 </div></section>
@@ -403,8 +422,8 @@ footer p{margin:0;max-width:42em}
 
   <div class="dos">
     <div class="panel rv">
-      <h3>Sucesiones de 22 territorios y plusvalía de 8.132 municipios</h3>
-      <p>Cada heredero con su reducción, su base, su cuota y su bonificación, y cada paso con el artículo de la ley de su comunidad. Cada inmueble con su plusvalía por los dos métodos y la ordenanza que se aplica.</p>
+      <h3>Sucesiones de 22 territorios y plusvalía en toda España</h3>
+      <p>Cada heredero con su reducción, su base, su cuota y su bonificación, y cada paso con el artículo de la ley de su comunidad. Cada inmueble con su plusvalía por los dos métodos y la ordenanza que se aplica; donde la ordenanza aún no está incorporada, se calcula con el tipo máximo legal y se avisa para que compruebes la bonificación.</p>
       <div class="frame"><picture>
         <source media="(prefers-color-scheme: dark)" srcset="img/web/impuestos-osc-800.webp">
         <img src="img/web/impuestos-800.webp" width="800" height="606" loading="lazy" alt="Detalle del Impuesto sobre Sucesiones de un heredero, con la reducción por parentesco, la base liquidable, la cuota y el coeficiente explicados.">
@@ -443,8 +462,8 @@ footer p{margin:0;max-width:42em}
     <tbody>
       <tr><th scope="row">Datos de los documentos</th><td data-c="Excel y Word">Se teclean a mano</td><td data-c="Software genérico">Se archivan; los datos se teclean</td><td class="h" data-c="Hereda+">Se leen en tu ordenador y se proponen, cada uno con su documento de origen</td></tr>
       <tr><th scope="row">Impuesto sobre Sucesiones</th><td data-c="Excel y Word">Una hoja propia que hay que mantener cuando cambia la ley</td><td data-c="Software genérico">Por lo general, no lo calcula</td><td class="h" data-c="Hereda+">22 normativas, paso a paso y con su artículo</td></tr>
-      <tr><th scope="row">Plusvalía municipal</th><td data-c="Excel y Word">Buscar la ordenanza de cada ayuntamiento</td><td data-c="Software genérico">Por lo general, no la calcula</td><td class="h" data-c="Hereda+">8.132 municipios; 322 con su ordenanza incorporada</td></tr>
-      <tr><th scope="row">Plazos de la herencia</th><td data-c="Excel y Word">Agenda y recordatorios a mano</td><td data-c="Software genérico">Agenda general, sin los trámites de una herencia</td><td class="h" data-c="Hereda+">183 trámites con su plazo y su organismo, y Mi día</td></tr>
+      <tr><th scope="row">Plusvalía municipal</th><td data-c="Excel y Word">Buscar la ordenanza de cada ayuntamiento</td><td data-c="Software genérico">Por lo general, no la calcula</td><td class="h" data-c="Hereda+">8.132 municipios; 668 con su ordenanza incorporada y aviso en el resto</td></tr>
+      <tr><th scope="row">Plazos de la herencia</th><td data-c="Excel y Word">Agenda y recordatorios a mano</td><td data-c="Software genérico">Agenda general, sin los trámites de una herencia</td><td class="h" data-c="Hereda+">194 trámites con su plazo y su organismo, y Mi día</td></tr>
       <tr><th scope="row">Escritos</th><td data-c="Excel y Word">Plantillas que se rellenan a mano</td><td data-c="Software genérico">Plantillas generales</td><td class="h" data-c="Hereda+">Solicitudes, prórroga, renuncia y cuaderno particional con los datos del expediente</td></tr>
       <tr><th scope="row">Gestión general del despacho</th><td data-c="Excel y Word">—</td><td data-c="Software genérico">Sí: facturación, agenda y expedientes de todas las materias</td><td class="h" data-c="Hereda+">Solo lo de cada herencia: encargo, fondos, honorarios y tiempos</td></tr>
       <tr><th scope="row">Varios ordenadores con los mismos expedientes</th><td data-c="Excel y Word">Carpeta compartida</td><td data-c="Software genérico">Habitualmente, en la nube</td><td class="h" data-c="Hereda+">Próximamente, como opción. Hoy, cada equipo con sus datos y exportar o importar expedientes</td></tr>
@@ -468,12 +487,12 @@ footer p{margin:0;max-width:42em}
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/></svg></div>
       <h3>RGPD sin encargo del tratamiento</h3>
-      <p>Como no recibimos los datos de tus clientes, en el uso local no somos encargados del tratamiento (cláusula 8.2 de las <a class="lnk" href="/condiciones.html">condiciones</a>). Si algún día activas una función en la nube, antes se firma el contrato de encargo del artículo 28 del RGPD.</p>
+      <p>Como no recibimos los datos de tus clientes, en el uso local no somos encargados del tratamiento (cláusula 8.2 de las <a class="lnk" href="/condiciones.html">condiciones</a>). El despacho es el responsable de sus datos y de sus copias; <a class="lnk" href="/datos.html">así funciona, explicado</a>.</p>
     </div>
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
       <h3>Sin IA, con reglas</h3>
-      <p>No usamos inteligencia artificial: ni para leer los documentos ni para calcular. Reglas escritas y 1.677 pruebas automáticas: el mismo caso da siempre el mismo resultado, y cada cifra enlaza a su norma.</p>
+      <p>No usamos inteligencia artificial: ni para leer los documentos ni para calcular. Reglas escritas y 2.230 pruebas automáticas: el mismo caso da siempre el mismo resultado, y cada cifra enlaza a su norma.</p>
     </div>
     <div class="pilar rv">
       <div class="ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
@@ -534,9 +553,9 @@ footer p{margin:0;max-width:42em}
   <div class="center"><p class="kicker">Preguntas frecuentes</p><h2 id="t-preguntas">Lo que suelen preguntar los socios.</h2></div>
   <div class="faq">
     <details><summary>¿Hay que instalar algo?</summary><div class="r"><p>No. Funciona en el navegador (recomendamos Chrome o Edge actualizados), en Windows y Mac, y se puede instalar como aplicación desde la barra de direcciones. Una vez abierto, funciona también sin conexión.</p><p>Hay además un archivo que se abre con doble clic, sin conexión; en él los documentos se archivan, pero la lectura de documentos necesita la versión web.</p></div></details>
-    <details><summary>¿Dónde se guardan los expedientes y los documentos?</summary><div class="r"><p>En el navegador de cada equipo del despacho. No pasan por nuestros servidores y no podemos verlos. Por eso el programa hace copias automáticas en una carpeta del despacho (por ejemplo, la sincronizada con OneDrive o Dropbox) y permite cifrarlas con contraseña.</p></div></details>
+    <details><summary>¿Dónde se guardan los expedientes y los documentos?</summary><div class="r"><p>En el navegador de cada equipo del despacho. No pasan por nuestros servidores y no podemos verlos. Por eso el programa hace copias automáticas en una carpeta del despacho (por ejemplo, la sincronizada con OneDrive o Dropbox) y permite cifrarlas con contraseña. Más detalle en <a class="lnk" href="/datos.html">Datos y seguridad</a>.</p></div></details>
     <details><summary>¿Podemos usarlo en varios ordenadores, con los mismos expedientes?</summary><div class="r"><p>Sí, y cada persona con su perfil: socio, abogado o administrativo. Con «Despacho en red», los ordenadores del despacho comparten los expedientes y sus documentos a través de una carpeta que el despacho ya tiene: la de OneDrive, Dropbox o Google Drive, o la del servidor de la oficina. Si se pone contraseña, todo lo que se guarda en esa carpeta va cifrado. No pasa por nuestros servidores. El programa avisa si otra persona tiene abierto el mismo expediente y, si dos cambian el mismo dato, guarda las dos versiones y pregunta cuál se queda. Hace falta Chrome o Edge en el ordenador; en el móvil, los expedientes se pasan exportándolos e importándolos. Cada persona tiene su perfil (socio, abogado o administrativo) y el socio ve el panel de todo el despacho.</p></div></details>
-    <details><summary>¿Usa inteligencia artificial?</summary><div class="r"><p>No. El lector reconoce cada tipo de documento con reglas escritas para él, y el cálculo lo hace un motor de reglas con 1.235 pruebas automáticas (y 442 más para la lectura). El mismo caso da siempre el mismo resultado y se puede explicar línea a línea.</p></div></details>
+    <details><summary>¿Usa inteligencia artificial?</summary><div class="r"><p>No. El lector reconoce cada tipo de documento con reglas escritas para él, y el cálculo lo hace un motor de reglas con 1.788 pruebas automáticas (y 442 más para la lectura). El mismo caso da siempre el mismo resultado y se puede explicar línea a línea.</p></div></details>
     <details><summary>¿Y si se equivoca?</summary><div class="r"><p>Está pensado para que el error se vea antes de que cueste. Lo leído entra solo si lo marcas y queda señalado; lo dudoso va sin marcar; cada cifra enlaza a su norma; y el cálculo es prudente cuando falta un dato (por ejemplo, la plusvalía usa el método objetivo, nunca «no sujeto» por falta de datos).</p><p>Los resultados son estimaciones con la normativa cargada y los revisa el abogado antes de presentar. Si encontramos un error de cálculo, lo corregimos y avisamos a los despachos afectados.</p></div></details>
     <details><summary>¿Qué soporte tiene?</summary><div class="r"><p>Por correo electrónico, de lunes a viernes, con la primera respuesta en un día hábil en todos los planes (en Despacho+, con prioridad). Los planes Despacho y Fundador incluyen una sesión de puesta en marcha de 30 minutos por videollamada; Despacho+, de 60. Las actualizaciones del programa y de la normativa están incluidas.</p><p>El soporte no incluye asesoramiento sobre casos concretos.</p></div></details>
     <details><summary>¿Qué contrato se firma? ¿Hay permanencia?</summary><div class="r"><p>Las <a class="lnk" href="/condiciones.html">condiciones generales de la licencia</a>, publicadas en esta web, y la confirmación del plan que elijas. El pago mensual se hace por trimestres o semestres y no tiene permanencia más allá del periodo pagado; el plan anual se renueva salvo que avises con 15 días de antelación.</p><p>Mientras lo uses en local no hace falta contrato de encargo del tratamiento, porque no recibimos los datos de tus clientes.</p></div></details>
@@ -557,11 +576,21 @@ footer p{margin:0;max-width:42em}
 </main>
 
 <footer><div class="wrap">
-  <p>© 2026 Hereda+ · Versión 1.7. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
-  <nav aria-label="Información legal"><a href="/contratar.html">Planes y contratación</a><a href="/condiciones.html">Condiciones</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
+  <p>© 2026 Hereda+ · Versión 1.8. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
+  <nav aria-label="Información legal"><a href="/contratar.html">Planes y contratación</a><a href="/condiciones.html">Condiciones</a><a href="/datos.html">Datos y seguridad</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
 </div></footer>
 
 <script>
+// Demostración con voz: se abre en un diálogo (Esc o «Cerrar» lo cierran y devuelven el foco al botón); el vídeo se descarga al abrirlo.
+// Mientras se ve, el vídeo silencioso de la portada se pausa.
+(() => {
+  const ab = document.getElementById("voz-abrir"), dlg = document.getElementById("voz-dlg"); if (!ab || !dlg || typeof dlg.showModal !== "function") { if (ab) ab.hidden = true; return; }
+  const v = dlg.querySelector("video"), fondo = document.querySelector("#demo video");
+  ab.addEventListener("click", () => { if (!v.src) v.src = v.dataset.src; if (fondo && !fondo.paused) { document.getElementById("demo").dataset.parado = "1"; fondo.pause(); } dlg.showModal(); v.play().catch(() => {}); });
+  document.getElementById("voz-cerrar").addEventListener("click", () => dlg.close());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener("close", () => { v.pause(); ab.focus(); });
+})();
 // Aparición suave de las secciones al entrar en pantalla (sin JavaScript, todo se ve igual).
 (() => {
   const els = document.querySelectorAll(".rv");

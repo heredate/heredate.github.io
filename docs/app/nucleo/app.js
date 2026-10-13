@@ -40,7 +40,7 @@ I.send='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=
 I.stop='<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
 I.dl='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
 I.camera='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
-function ordManualMotivo(k){const d=ORDENANZAS[k]?.datos;if(!d)return"";if(d.bonifDesconocida)return"No hemos podido comprobar la bonificación de esta ordenanza: si la prevé, indica aquí el porcentaje.";const B=(Array.isArray(d.bonif)?d.bonif.find((x)=>x&&(x.condicion||x.viviendaHeredero)):d.bonif)||{};return`La ordenanza da un ${Math.round((Number(B.pct)||0)*100)} % si se cumple: ${[B.condicion,B.viviendaHeredero?"que el inmueble sea la vivienda habitual del heredero":""].filter(Boolean).join("; ")}. Si se cumple, indica aquí el porcentaje.`;}
+function ordManualMotivo(k){const d=ORDENANZAS[k]?.datos;if(!d)return"";if(d.bonifDesconocida)return"No hemos podido comprobar la bonificación de esta ordenanza: si la prevé, indica aquí el porcentaje.";const B=(Array.isArray(d.bonif)?d.bonif.find((x)=>x&&(x.condicion||x.viviendaHeredero||x.escalaCuota)):d.bonif)||{};if(Array.isArray(B.escalaCuota)&&B.escalaCuota.length&&!B.condicion&&!B.viviendaHeredero)return`La bonificación depende de la cuota total de los inmuebles heredados (${B.escalaCuota.map(([l,p])=>`${Math.round(p*100)} %${l==null?" por encima":" hasta "+Number(l).toLocaleString("es-ES")+" €"}`).join(", ")}). Se aplica el porcentaje más bajo; si corresponde otro, indícalo aquí.`;return`La ordenanza da un ${Math.round((Number(B.pct)||0)*100)} % si se cumple: ${[B.condicion,B.viviendaHeredero?"que el inmueble sea la vivienda habitual del heredero":""].filter(Boolean).join("; ")}. Si se cumple, indica aquí el porcentaje.`;}
 const MANUAL_BONIF=["OTRO","HUELVA","ALGECIRAS","ROQUETAS","EL_EJIDO","SAN_FERNANDO","TORREMOLINOS","ESTEPONA","MANRESA"];
 const CCAA_ORD=(k)=>ORDENANZAS[k].ccaa||"Andalucía";
 const ORD_N=Object.keys(ORDENANZAS).length-1,ORD_AND=Object.keys(ORDENANZAS).filter((k)=>k!=="OTRO"&&CCAA_ORD(k)==="Andalucía").length;
@@ -119,18 +119,44 @@ bienes:[{id:"b1",tipo:"vivienda",descripcion:"Piso en El Palo, Málaga",valor:21
 {id:"b2",tipo:"cuenta",descripcion:"Cuenta corriente",valor:36000,titularidad:"privativo"},{id:"b3",tipo:"vehiculo",descripcion:"Turismo",valor:6000,titularidad:"privativo"}],
 gastos:[{concepto:"Funeral",importe:4200}]};
 }
+function noResidenteDe(x){
+if(!x||x.ccaa!=="EST"||typeof normativaNoResidentes!=="function")return null;
+return normativaNoResidentes({causanteResidente:false,bienes:(x.bienes||[]).map((b)=>{
+const inm=b.tipo==="vivienda"||b.tipo==="inmueble";
+const v=(inm?Math.max(num(b.valor),num(b.valorReferencia)):num(b.valor))*cuotaCausante({titularidad:b.titularidad,porcentaje:pctCausante(b.porcentaje)});
+return{valor:v,ccaa:b.ccaaUbicacion||undefined,ine:ineBien(b)||undefined,tipo:b.tipo,descripcion:b.descripcion||(typeof TIPO_BIEN==="object"&&TIPO_BIEN[b.tipo]?TIPO_BIEN[b.tipo][0]:b.tipo)};
+})});
+}
+function terrISD(x){
+if(!x)return undefined;
+if(x.ccaa!=="EST")return x.ccaa;
+if(x.ccaaBienes)return x.ccaaBienes;
+const n=noResidenteDe(x);
+return n?n.ccaa:"EST";
+}
+function noResidenteMotor(x){
+if(!x||x.ccaa!=="EST")return undefined;
+const n=noResidenteDe(x);
+if(!x.ccaaBienes||!n)return n||undefined;
+if(x.ccaaBienes===n.ccaa)return{...n,motivo:"Normativa elegida en el expediente, la misma que resulta de la disposición adicional 2.ª: "+n.motivo};
+return{regla:"manual",ccaa:x.ccaaBienes,estado:"PENDIENTE",norma:n.norma,motivo:`Se aplica la normativa de ${REGLAS[x.ccaaBienes]?REGLAS[x.ccaaBienes].nombre:x.ccaaBienes}, elegida en el expediente. Con los bienes registrados, la disposición adicional 2.ª de la Ley 29/1987 lleva a ${REGLAS[n.ccaa]?REGLAS[n.ccaa].nombre:n.ccaa}: revisa la elección.`};
+}
 function casoMotor(x){
 const reparto=x.testamento==="usufructo"?"usufructoUniversal":x.testamento==="porcentajes"?"porcentajes":"intestado";
 const viv=(x.bienes||[]).find((b)=>b.tipo==="vivienda");
 const casado=x.civil==="gananciales"||x.civil==="separacion";
 return{
-fechaFallecimiento:x.fecha,ccaa:x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa,criterioVivienda:x.criterioVivienda||"DGT",viviendaA:x.viviendaA,noAplicarVivienda:!!x.noAplicarVivienda,ajuar:x.ajuar&&x.ajuar!=="sts"?x.ajuar:undefined,enPlazo:x.enPlazo!==false,conRequerimiento:x.requerimiento===true,aplicarEmpresa:!!x.aplicarEmpresa,reparto,...(typeof casoMotorJur==="function"?casoMotorJur(x):{}),
+fechaFallecimiento:x.fecha,ccaa:terrISD(x),noResidente:noResidenteMotor(x),colacionOrdenada:x.colacionOrdenada===true,criterioVivienda:x.criterioVivienda||"DGT",viviendaA:x.viviendaA,noAplicarVivienda:!!x.noAplicarVivienda,ajuar:x.ajuar&&x.ajuar!=="sts"?x.ajuar:undefined,enPlazo:x.enPlazo!==false,conRequerimiento:x.requerimiento===true,aplicarEmpresa:!!x.aplicarEmpresa,reparto,...(typeof casoMotorJur==="function"?casoMotorJur(x):{}),
 conyugeViviendaCatastral:casado&&viv?num(viv.valorCatastralTotal):0,
-bienes:(x.bienes||[]).map((b)=>({id:b.id,tipo:b.tipo==="vivienda"?"inmueble":b.tipo,esViviendaHabitual:b.tipo==="vivienda",valor:num(b.valor),valorReferencia:num(b.valorReferencia),titularidad:b.titularidad||"privativo",porcentaje:pctCausante(b.porcentaje),legatarioId:b.legatarioId||undefined,descripcion:b.descripcion,usoResidencial:b.usoResidencial==null?undefined:!!b.usoResidencial,arrendadoOCedido:!!b.arrendadoOCedido,troncal:!!b.troncal||undefined,lineaTroncal:b.troncal?b.lineaTroncal||undefined:undefined})),
+bienes:(x.bienes||[]).map((b)=>({id:b.id,tipo:b.tipo==="vivienda"?"inmueble":b.tipo,esViviendaHabitual:b.tipo==="vivienda",valor:num(b.valor),valorReferencia:num(b.valorReferencia),titularidad:b.titularidad||"privativo",porcentaje:pctCausante(b.porcentaje),legatarioId:b.legatarioId||undefined,descripcion:b.descripcion,usoResidencial:b.usoResidencial==null?undefined:!!b.usoResidencial,arrendadoOCedido:!!b.arrendadoOCedido,troncal:!!b.troncal||undefined,lineaTroncal:b.troncal?b.lineaTroncal||undefined:undefined,
+...(b.tipo==="empresa"?{efTipo:b.efTipo||undefined,efPatrimonial:b.efPatrimonial==="si"?true:b.efPatrimonial==="no"?false:undefined,efPctCausante:b.efPctCausante===""||b.efPctCausante==null?undefined:num(b.efPctCausante),efPctGrupo:b.efPctGrupo===""||b.efPctGrupo==null?undefined:num(b.efPctGrupo),efDireccion:b.efDireccion||undefined,efRemuneracion50:b.efRemuneracion50==="si"?true:b.efRemuneracion50==="no"?false:undefined,efPctAfecto:b.efPctAfecto===""||b.efPctAfecto==null?undefined:num(b.efPctAfecto),efHabitual:b.efHabitual==="si"?true:b.efHabitual==="no"?false:undefined,efPrincipalRenta:b.efPrincipalRenta==="si"?true:b.efPrincipalRenta==="no"?false:undefined,efJubilado:!!b.efJubilado}:{}),
+reservable811:!!b.reservable811||undefined,reservaExtinguida:b.reservaTipo&&b.reservatarioId?{tipo:b.reservaTipo,reservatarios:[b.reservatarioId]}:undefined})),
 deudas:(x.deudas||[]).map((d)=>({importe:num(d.importe),ganancial:!!d.ganancial})),
 gastos:(x.gastos||[]).map((g)=>({importe:num(g.importe)})),
 seguros:(x.personas||[]).filter((p)=>num(p.seguro)>0).map((p)=>({beneficiarioId:p.id,importe:num(p.seguro)})),
-herederos:(x.personas||[]).map((p)=>({id:p.id,nombre:p.nombre||"Sin nombre",relacion:p.relacion,edad:edadNum(p.edad),inscrita:!!p.inscrita,registroPareja:p.registroPareja||undefined,medio:!!p.medio,separado:!!p.separado,requisitoLaboralEmpresa:!!p.requisitoLaboralEmpresa,lineaAsc:p.lineaAsc,discapacidad:num(p.discapacidad),patrimonioPreexistente:num(p.patrimonioPreexistente),convivio2anios:!!p.convivio2anios,renuncia:!!p.renuncia,pct:num(p.pct),estirpe:p.estirpe,donacionesPreviasBL:num(p.donaciones)})),
+herederos:(x.personas||[]).map((p)=>({id:p.id,nombre:p.nombre||"Sin nombre",relacion:p.relacion,edad:edadNum(p.edad),inscrita:!!p.inscrita,registroPareja:p.registroPareja||undefined,medio:!!p.medio,separado:!!p.separado,requisitoLaboralEmpresa:!!p.requisitoLaboralEmpresa,lineaAsc:p.lineaAsc,discapacidad:num(p.discapacidad),patrimonioPreexistente:num(p.patrimonioPreexistente),convivio2anios:!!p.convivio2anios,renuncia:!!p.renuncia,pct:num(p.pct),estirpe:p.estirpe,donacionesPreviasBL:num(p.donaciones),
+donacionColacionable:num(p.donacionColacionable),dispensaColacion:!!p.dispensaColacion,fiduciario:!!p.fiduciario,fiduciarioPuedeDisponer:!!p.fiduciarioPuedeDisponer,separacion:p.separado?p.separacion||undefined:undefined,procesoSeparacion:!!p.procesoSeparacion,
+adquisicionesPrevias:p.pactoFecha&&num(p.pactoBL)>0?[{fecha:p.pactoFecha,baseLiquidable:num(p.pactoBL),tipo:"pacto",reduccionParentesco:num(p.pactoReduccion)}]:undefined,reduccionParentescoConsumida:p.pactoFecha&&num(p.pactoBL)>0?0:num(p.pactoReduccion)})),
 };
 }
 const titularPlus=(p)=>({id:p.id,nombre:p.nombre,relacion:p.relacion==="pareja_hecho"&&!p.inscrita?"pareja_no_inscrita":p.relacion,inscrita:!!p.inscrita,colectivoVulnerable:!!p.colectivoVulnerable,edad:p.edad,convivio2anios:!!p.convivio2anios,convivio1anio:p.convivio2anios?true:undefined,empadronadoMunicipio:!!p.empadronado,empadronadoMunicipio1anio:!!p.empadronado,ingresosAnuales:p.ingresos===""||p.ingresos==null?null:num(p.ingresos)});
@@ -374,6 +400,65 @@ return L.join("\n");
 async function copiar(t){try{await navigator.clipboard.writeText(t);toast("Copiado");}catch{const ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;inset:10% 5%;z-index:99;width:90%;height:70%";document.body.appendChild(ta);ta.select();toast("Selecciona y copia el texto");setTimeout(()=>ta.remove(),15000);}}
 let FAMILIA_HTML=null,CALCULADORA_HTML=null,CARPETA_HTML=null;
 const HEREDA_SOPORTE={"email":"","whatsapp":"","horario":"L-V, respuesta en un día hábil"};
+const MODELOS={"actualizado":"2026-10-13","nota":"Catálogo de los modelos oficiales que intervienen en una herencia (ronda 10, docs-r10/modelos.md). Estados: VERIFICADO = leído en el texto o la página oficial (o dos fuentes concordantes); PENDIENTE = una sola fuente secundaria o vigencia sin comprobar; NO LOCALIZADO = no se ha encontrado una fuente legible. Vías: pdf = la Administración publica el impreso en PDF para rellenar, imprimir y presentar; programa = el documento lo genera el programa o formulario web oficial (con su número o código), y Hereda+ prepara los datos para copiarlos; telematico = solo se puede hacer en la sede electrónica.","vias":{"pdf":"PDF oficial rellenado","programa":"Datos listos para el programa oficial","telematico":"Solo telemático: abre el programa"},"limite":"Un documento con número de justificante, número de autoliquidación o código de barras de la Administración solo lo puede generar la Administración (su programa, su sede o su propio PDF). Hereda+ nunca genera ni imita esos números ni esos códigos: rellena el PDF oficial cuando la Administración lo publica para imprimir y presentar, y en los demás casos prepara los datos para el programa oficial y lo abre.","abogados":"Los abogados están obligados a relacionarse por medios electrónicos con las Administraciones en el ejercicio de su profesión (art. 14.2.c Ley 39/2015), y varias comunidades lo exigen expresamente para el 650 cuando se presenta en representación de un tercero. La vía en papel queda, en la práctica, para el heredero que presenta por sí mismo.","territorios":{"EST":{"organismo":"Agencia Tributaria (AEAT) · Oficina Nacional de Gestión Tributaria","modelos":[{"id":"AEAT-650","modelo":"650","nombre":"Autoliquidación del Impuesto sobre Sucesiones (adquisiciones mortis causa)","cuando":"siempre","porHeredero":true,"via":"pdf","pdfOficial":"SÍ","pdf":"https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/mod650.pdf","presentacion":"Tres vías: impreso (se descarga el modelo 650, se rellena y se presenta en la Oficina Nacional de Gestión Tributaria, Paseo de la Castellana 147, Madrid, con el pago hecho si sale a ingresar); predeclaración (formulario de la Sede que imprime el modelo con una carátula con el número de referencia), y presentación electrónica en la Sede.","numeracion":"El PDF oficial lleva su propio código: al abrirlo en Adobe Reader y pulsar «Rellenar formulario» genera el número de justificante y su código de barras. Hereda+ no toca esos campos.","telematicaObligatoria":"La orden admite las tres vías. Para el abogado colegiado que actúa en ejercicio de su profesión rige el art. 14.2.c de la Ley 39/2015.","importacion":"No hay fichero de importación: la predeclaración se rellena a mano en sus pestañas (página de ayuda de la AEAT).","norma":{"texto":"Orden HAP/2488/2014, de 29 de diciembre (modelos 650, 651 y 655)","fecha":"2014-12-31","diario":"BOE 316, 31-12-2014","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2014-13677"},"url":"https://sede.agenciatributaria.gob.es/Sede/impuestos-tasas/impuesto-sobre-sucesiones-donaciones/modelo-650-impue_____iones-autoliquidacion-adquisicion-causa_/descarga-modelo.html","programa":{"nombre":"Sede de la AEAT · modelo 650","url":"https://sede.agenciatributaria.gob.es/Sede/no-residentes/impuesto-sobre-sucesiones-donaciones/adquisiciones-mortis-causa-modelo-650/formas-presentacion.html"},"relacionBienes":"En el modelo estatal la relación de bienes va en las páginas de «Declaración» del propio 650 (8 páginas por ejemplar); no hay un 660 separado.","estado":"VERIFICADO","consultado":"2026-10-13","mapa":"AEAT-650"},{"id":"AEAT-655","modelo":"655","nombre":"Consolidación del dominio por extinción del usufructo","cuando":"usufructo","via":"pdf","pdfOficial":"SÍ","pdf":"https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G704/mod655.pdf","presentacion":"Impreso descargado, predeclaración o presentación electrónica en la Sede. Se presenta cuando se extingue el usufructo (normalmente, al fallecer el usufructuario), no al aceptar la herencia.","norma":{"texto":"Orden HAP/2488/2014, de 29 de diciembre","fecha":"2014-12-31","diario":"BOE 316, 31-12-2014","url":"https://www.boe.es/diario_boe/txt.php?id=BOE-A-2014-13677"},"url":"https://sede.agenciatributaria.gob.es/Sede/eu_es/declaraciones-informativas-otros-impuestos-tasas/impuesto-sobre-sucesiones-donaciones/consolidacion-dominio-extincion-usufructo-modelo-655/formas-presentacion-autoliquidacion.html","nota":"Hereda+ no calcula todavía la consolidación del dominio: el modelo no se rellena desde la aplicación.","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"AEAT-PRORROGA","modelo":"Prórroga","nombre":"Solicitud de prórroga del plazo (no residentes)","cuando":"prorroga","via":"telematico","pdfOficial":"NO","presentacion":"Formulario en la Sede de la AEAT.","programa":{"nombre":"Solicitud de prórroga en la Sede de la AEAT","url":"https://www1.agenciatributaria.gob.es/wlpl/ADSU-LIQU/AltaInternetProrroga"},"norma":{"texto":"art. 68 RD 1629/1991 (Reglamento del Impuesto sobre Sucesiones)","url":"https://www.boe.es/buscar/act.php?id=BOE-A-1991-27678"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"CEU":{"igual":"EST","organismo":"Agencia Tributaria (AEAT) · Delegación de Ceuta","presentacionPapel":"Delegación de la AEAT en Ceuta, con cita previa. Instrucciones específicas de Ceuta y Melilla: https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/Instrucciones_mod650_es_es.pdf"},"MEL":{"igual":"EST","organismo":"Agencia Tributaria (AEAT) · Delegación de Melilla","presentacionPapel":"Delegación de la AEAT en Melilla, con cita previa. Instrucciones específicas de Ceuta y Melilla: https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/Instrucciones_mod650_es_es.pdf"},"AND":{"organismo":"Agencia Tributaria de Andalucía (ATRIAN)","modelos":[{"id":"AND-660","modelo":"660","nombre":"Declaración de datos comunes de la herencia (uno por herencia)","cuando":"siempre","via":"programa","pdfOficial":"NO","presentacion":"Se confecciona en el programa web de la ATRIAN junto con los 650. Presencial con cita previa o telemática en la Oficina Virtual.","telematicaObligatoria":"Desde el 13-03-2020 para quien actúa en representación de terceros como profesional, y para los colegiados en entidades con convenio de colaboración social (art. 92 LGT); para presentar por el cliente hace falta el modelo de representación 230 o 231 o ser colaborador social (Guía del Impuesto sobre Sucesiones de la ATRIAN, 14-06-2023, §12 y §15).","importacion":"NO LOCALIZADO","norma":{"texto":"Orden de 30 de diciembre de 2004 (modelos 660 y 650)","fecha":"2005-01-17","diario":"BOJA 10, 17-01-2005","url":"https://www.juntadeandalucia.es/boja/2005/10/1"},"url":"https://www.juntadeandalucia.es/agenciatributariadeandalucia/impuesto-de-sucesiones-y-donaciones","programa":{"nombre":"Programa de ayuda para la confección web de los modelos 650 y 660 (ATRIAN)","url":"https://www.juntadeandalucia.es/haciendayadministracionpublica/apl/pacweb/modelos/modelo650660/inicio650660.xhtml"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"AND-650","modelo":"650","nombre":"Autoliquidación individual (una por heredero o legatario)","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Mismo programa web que el 660. El pago se hace con tarjeta o domiciliación en la presentación telemática, o con el NRC de una entidad colaboradora.","telematicaObligatoria":"Igual que el 660.","importacion":"NO LOCALIZADO","norma":{"texto":"Orden de 30 de diciembre de 2004 (modelos 660 y 650)","fecha":"2005-01-17","diario":"BOJA 10, 17-01-2005","url":"https://www.juntadeandalucia.es/boja/2005/10/1"},"url":"https://www.juntadeandalucia.es/agenciatributariadeandalucia/impuesto-de-sucesiones-y-donaciones","programa":{"nombre":"Programa de ayuda para la confección web de los modelos 650 y 660 (ATRIAN)","url":"https://www.juntadeandalucia.es/haciendayadministracionpublica/apl/pacweb/modelos/modelo650660/inicio650660.xhtml"},"casillas":"NO LOCALIZADO (la ayuda del modelo es una página web sin numeración de casillas)","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"AND-659","modelo":"659","nombre":"Solicitud de prórroga de sucesiones","cuando":"prorroga","via":"programa","pdfOficial":"NO","presentacion":"Formulario web de la ATRIAN; presentación en el Registro Telemático Tributario o presencial.","numeracion":"El justificante es un número secuencial cuyos tres primeros dígitos son 659 (lo asigna la ATRIAN).","norma":{"texto":"Resolución de 4 de diciembre de 2018, de la Dirección de la Agencia Tributaria de Andalucía","fecha":"2018-12-11","diario":"BOJA 238, 11-12-2018","url":"https://cdn.juntadeandalucia.es/boja/2018/238/BOJA18-238-00018-20065-01_00147297.pdf"},"programa":{"nombre":"Modelo 659 (ATRIAN)","url":"https://www.juntadeandalucia.es/haciendayadministracionpublica/apl/pacweb/modelos/modelo659/inicio659.xhtml"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"ARA":{"organismo":"Hacienda de Aragón (Dirección General de Tributos)","modelos":[{"id":"ARA-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"La orden aprueba un 650 «de confección manual» con el «N.º del código de barras de la autoliquidación» impreso: son impresos numerados que facilita la Administración, no un PDF para descargar y rellenar.","telematicaObligatoria":"NO LOCALIZADO","norma":{"texto":"Orden HAP/153/2016, de 12 de febrero (modelos 650 y 651 de confección manual)","fecha":"2016-02","diario":"BOA","url":"https://legado.elnotario.es/images/pdf/LAUT-N66-06-ARA-Orden-HAP-153-2016.pdf"},"programa":{"nombre":"Programa de ayuda o impreso numerado de Hacienda de Aragón","url":""},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Una sola fuente (texto de la orden recogido por El Notario). Dirección del programa: NO LOCALIZADO."},{"id":"ARA-660","modelo":"660","nombre":"Relación de bienes","cuando":"siempre","via":"programa","pdfOficial":"NO LOCALIZADO","estado":"NO LOCALIZADO","consultado":"2026-10-13"}]},"AST":{"organismo":"Ente Público de Servicios Tributarios del Principado de Asturias","modelos":[{"id":"AST-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Impresos con varios ejemplares que se presentan en las oficinas del Ente, o por medios telemáticos con los programas de ayuda de su web.","norma":{"texto":"Resolución de 4 de abril de 2011 (modelos 600, 620, 650, 651, 652, 653 y 660)","fecha":"2011-04-04","diario":"BOPA","url":"https://sede.tributasenasturias.es/imgvcm/stpa/PDF/Ficheros/Normativa/Resolucion040411modelos.pdf"},"programa":{"nombre":"Programas de ayuda del Ente (sede.tributasenasturias.es)","url":"https://sede.tributasenasturias.es/imgvcm/stpa/PDF/Ficheros/Normativa/Resolucion040411programasayuda.pdf"},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Resolución de 2011: no se ha comprobado si sigue vigente ni si hay obligación telemática para profesionales."},{"id":"AST-660","modelo":"660","nombre":"Declaración de la herencia (opcional, acompaña al 650)","cuando":"siempre","via":"programa","pdfOficial":"NO","norma":{"texto":"Resolución de 4 de abril de 2011","url":"https://sede.tributasenasturias.es/imgvcm/stpa/PDF/Ficheros/Normativa/Resolucion040411modelos.pdf"},"estado":"PENDIENTE","consultado":"2026-10-13"},{"id":"AST-652","modelo":"652","nombre":"Consolidación del dominio","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Resolución de 4 de abril de 2011","url":"https://sede.tributasenasturias.es/imgvcm/stpa/PDF/Ficheros/Normativa/Resolucion040411modelos.pdf"},"estado":"PENDIENTE","consultado":"2026-10-13"}]},"BAL":{"organismo":"Agència Tributària de les Illes Balears (ATIB)","modelos":[{"id":"BAL-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO LOCALIZADO","presentacion":"Según las instrucciones de 2016: pago previo (entidad colaboradora o www.atib.es) y presentación del «ejemplar para la Administración» en sobre, con el 660 o 661. Desde 2018 la ATIB tiene un módulo de presentación telemática de expedientes del impuesto (Acuerdo del Consejo de Gobierno de 9-12-2020, BOIB 206).","norma":{"texto":"Orden de aprobación: NO LOCALIZADO","url":""},"url":"https://www.atib.es/DescargaDocs/MODELO650CASTELLANOInstrucciones2016.pdf","casillas":"Instrucciones de 2016: casillas 219 a 290 (pueden no coincidir con el formulario actual)","estado":"PENDIENTE","consultado":"2026-10-13"},{"id":"BAL-660","modelo":"660","nombre":"Relación de bienes (o 661)","cuando":"siempre","via":"programa","pdfOficial":"NO LOCALIZADO","estado":"PENDIENTE","consultado":"2026-10-13","url":"https://www.atib.es/DescargaDocs/MODELO650CASTELLANOInstrucciones2016.pdf","nota":"Las instrucciones del 650 de 2016 citan el 660 o el 661 como relación de bienes."}]},"CAN":{"organismo":"Agencia Tributaria Canaria","modelos":[{"id":"CAN-660","modelo":"660","nombre":"Declaración de Sucesiones","cuando":"siempre","via":"programa","pdfOficial":"NO","presentacion":"Obligatoria junto con el 650 desde el 26-12-2008. Al cumplimentar el 660 en la aplicación se genera un 650 por cada interviniente. Presencial en las Oficinas de Atención Tributaria o telemática.","telematicaObligatoria":"En general no («Presentación telemática no obligatoria»; presentarlo por el registro electrónico general no vale). Obligatoria para colaboradores sociales y presentadores habituales (Resolución de 22-03-2024, BOC 01-04-2024).","norma":{"texto":"Resolución de 22 de marzo de 2024 (modelos 650, 651, 652, 653 y 660 de presentación telemática)","fecha":"2024-04-01","diario":"BOC 01-04-2024","url":"https://www.fiscal-impuestos.com/modelos-declaracion-autoliquidacion-tributaria-presentar-telematicamente-canarias"},"url":"https://sede.gobiernodecanarias.org/sede/movil/tramites/6095","programa":{"nombre":"Modelo 650/660 · Agencia Tributaria Canaria","url":"https://www3.gobiernodecanarias.org/tributos/atc/w/modelo-650?ida=44668&prnt=942-44634"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CAN-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Lo genera la aplicación a partir del 660.","norma":{"texto":"Resolución de 22 de marzo de 2024","fecha":"2024-04-01","diario":"BOC 01-04-2024","url":"https://www.fiscal-impuestos.com/modelos-declaracion-autoliquidacion-tributaria-presentar-telematicamente-canarias"},"url":"https://sede.gobiernodecanarias.org/sede/movil/tramites/6095","programa":{"nombre":"Modelo 650/660 · Agencia Tributaria Canaria","url":"https://www3.gobiernodecanarias.org/tributos/atc/w/modelo-650?ida=44668&prnt=942-44634"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CAN-653","modelo":"653","nombre":"Consolidación de dominio","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Resolución de 22 de marzo de 2024","url":"https://www.fiscal-impuestos.com/modelos-declaracion-autoliquidacion-tributaria-presentar-telematicamente-canarias"},"estado":"PENDIENTE","consultado":"2026-10-13"}]},"CANT":{"organismo":"Agencia Cántabra de Administración Tributaria","modelos":[{"id":"CANT-650","modelo":"650 WEB","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Modelos normalizados «WEB»: se cumplimentan en la web y pueden imprimirse e ingresarse en la Caja del Gobierno de Cantabria o en las entidades colaboradoras, o pagarse en la oficina virtual; después se presenta la documentación en la unidad competente.","norma":{"texto":"Orden HAC/46/2014, de 22 de septiembre (650 WEB, 660 WEB, 651 WEB, 661 WEB y 652 WEB)","fecha":"2014-09-30","diario":"BOC 30-09-2014","url":"https://laadministracionaldia.inap.es/noticia.asp?id=1132219"},"programa":{"nombre":"Oficina virtual de la Agencia Cántabra","url":""},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Una fuente (INAP). Vigencia de la orden de 2014 y dirección del programa: sin comprobar."},{"id":"CANT-660","modelo":"660 WEB","nombre":"Declaración de Sucesiones","cuando":"siempre","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden HAC/46/2014, de 22 de septiembre","url":"https://laadministracionaldia.inap.es/noticia.asp?id=1132219"},"estado":"PENDIENTE","consultado":"2026-10-13"},{"id":"CANT-652","modelo":"652 WEB","nombre":"Consolidación del dominio por extinción del usufructo","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden HAC/46/2014, de 22 de septiembre","url":"https://laadministracionaldia.inap.es/noticia.asp?id=1132219"},"estado":"PENDIENTE","consultado":"2026-10-13"}]},"CYL":{"organismo":"Dirección General de Tributos y Financiación Autonómica de Castilla y León","modelos":[{"id":"CYL-660","modelo":"660","nombre":"Declaración de la sucesión (o 661 simplificada)","cuando":"siempre","via":"programa","pdfOficial":"NO","presentacion":"Los modelos «podrán obtenerse utilizando el Programa de Ayuda para la Declaración de Impuestos Autonómicos (PADIA) o a través del Portal Tributario». Pago y presentación telemáticos en la Oficina Virtual de Tributos.","telematicaObligatoria":"NO LOCALIZADO","norma":{"texto":"Orden HAC/263/2015, de 30 de marzo (modificada por la Orden EYH/101/2022)","fecha":"2015-04-09","diario":"BOCyL 67, 09-04-2015","url":"https://sirdoc.ccyl.es/Biblioteca/Dosieres/DL196ModificacionJuego/pdfs/CyL-Orden-HAC-263-2015-ModelosTributos.pdf"},"programa":{"nombre":"PADIA y Oficina Virtual de Tributos","url":"https://www.tramitacastillayleon.jcyl.es/web/jcyl/AdministracionElectronica/es/Plantilla100Detalle/1251181050732/1/1250170620095/Tramite"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CYL-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Se presenta junto con la declaración 660 o 661 (art. 7.3).","norma":{"texto":"Orden HAC/263/2015, de 30 de marzo","fecha":"2015-04-09","diario":"BOCyL 67, 09-04-2015","url":"https://sirdoc.ccyl.es/Biblioteca/Dosieres/DL196ModificacionJuego/pdfs/CyL-Orden-HAC-263-2015-ModelosTributos.pdf"},"programa":{"nombre":"PADIA y Oficina Virtual de Tributos","url":"https://www.tramitacastillayleon.jcyl.es/web/jcyl/AdministracionElectronica/es/Plantilla100Detalle/1251181050732/1/1250170620095/Tramite"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CYL-655","modelo":"655","nombre":"Consolidación del dominio por extinción del usufructo","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden HAC/263/2015, de 30 de marzo","url":"https://sirdoc.ccyl.es/Biblioteca/Dosieres/DL196ModificacionJuego/pdfs/CyL-Orden-HAC-263-2015-ModelosTributos.pdf"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"CLM":{"organismo":"Consejería de Hacienda de Castilla-La Mancha","modelos":[{"id":"CLM-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Registro Electrónico Tributario.","telematicaObligatoria":"Sí, para los sujetos del art. 14.2 de la Ley 39/2015 y para quien presenta en representación de terceros por colaboración social. Entra en vigor al mes de su publicación (mayo de 2026).","norma":{"texto":"Orden 43/2026, de 27 de marzo (modelos 650, 651 y 655 y su presentación telemática obligatoria)","fecha":"2026-04-08","diario":"DOCM 65, 08-04-2026","url":"https://laadministracionaldia.inap.es/noticia.asp?id=1264714"},"programa":{"nombre":"Portal Tributario de Castilla-La Mancha (guía de presentación telemática)","url":"https://portaltributario.jccm.es/sites/portaltributario.castillalamancha.es/files/instrucciones/guia_presentacion_telematica_2026_07_02_6.pdf"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CLM-655","modelo":"655","nombre":"Consolidación de dominio","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden 43/2026, de 27 de marzo","fecha":"2026-04-08","diario":"DOCM 65, 08-04-2026","url":"https://laadministracionaldia.inap.es/noticia.asp?id=1264714"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CLM-660","modelo":"660","nombre":"Relación de bienes","cuando":"siempre","via":"programa","pdfOficial":"NO LOCALIZADO","nota":"La Orden 43/2026 no menciona un 660.","estado":"NO LOCALIZADO","consultado":"2026-10-13"}]},"CAT":{"organismo":"Agència Tributària de Catalunya (ATC)","modelos":[{"id":"CAT-660","modelo":"660","nombre":"Declaración de la herencia (relación de bienes)","cuando":"siempre","via":"programa","pdfOficial":"NO","presentacion":"Presencial en las oficinas de la ATC (o en entes locales con convenio), con el pago previo en entidad colaboradora, o electrónica en la sede de la ATC. Los modelos 650, 660 y 653 solo se pueden presentar por vía electrónica si se han hecho con el programa de ayuda.","telematicaObligatoria":"Sí para personas jurídicas, entidades sin personalidad, representantes, intermediarios y colaboradores sociales (art. 7.1).","norma":{"texto":"Ordre ECF/122/2025, de 17 de juliol (models 650, 651, 652, 653 i 660); deroga la Ordre ECF/13/2025","fecha":"2025-07-21","diario":"DOGC 21-07-2025 (en vigor el 22-07-2025)","url":"https://primeralecturaediciones.com/?p=20245910"},"programa":{"nombre":"Programa de ayuda de la ATC (modelos 650 y 660)","url":""},"estado":"VERIFICADO","consultado":"2026-10-13","nota":"Dos fuentes concordantes (Primera Lectura e INAP). Dirección exacta del programa: NO LOCALIZADO."},{"id":"CAT-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","norma":{"texto":"Ordre ECF/122/2025, de 17 de juliol","fecha":"2025-07-21","diario":"DOGC 21-07-2025","url":"https://primeralecturaediciones.com/?p=20245910"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CAT-652","modelo":"652","nombre":"Seguros de vida (adquisición por causa de muerte)","cuando":"seguros","via":"programa","pdfOficial":"NO","presentacion":"Formulario electrónico (sustituye al programa de ayuda).","norma":{"texto":"Ordre ECF/122/2025, de 17 de juliol","fecha":"2025-07-21","diario":"DOGC 21-07-2025","url":"https://primeralecturaediciones.com/?p=20245910"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"CAT-653","modelo":"653","nombre":"Consolidación del dominio","cuando":"usufructo","via":"programa","pdfOficial":"NO","norma":{"texto":"Ordre ECF/122/2025, de 17 de juliol","url":"https://primeralecturaediciones.com/?p=20245910"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"VAL":{"organismo":"Agència Tributària Valenciana (ATV)","modelos":[{"id":"VAL-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"El PDF del modelo lo genera la aplicación de la ATV (Sara2) con su número de autoliquidación; se presenta con la relación de documentos codificados (certificado de defunción, de últimas voluntades, título sucesorio…).","telematicaObligatoria":"Sí para los sujetos que fija la orden, salvo aplazamiento o fraccionamiento, documentación que no se pueda presentar por medios técnicos y solicitud de la autorización del art. 32.4 de la Ley del impuesto. Pago telemático obligatorio desde el 19-01-2026 (docs-r4/fiscal.md).","norma":{"texto":"Orden 10/2025, de 18 de diciembre (presentación telemática obligatoria de los modelos 600, 620, 650, 651 y 045)","fecha":"2025-12","diario":"DOGV (firma 2025/52048); en vigor a los veinte días de su publicación","url":"https://primeralecturaediciones.com/?p=20247879"},"url":"https://atv.gva.es/documents/173852445/177814591/Presentaci%C3%B3n+Inform%C3%A1tica/484d51da-7dc8-42a7-a4e2-bd1b9dc95926","programa":{"nombre":"Aplicación de autoliquidaciones de la ATV","url":""},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Orden leída en Primera Lectura; quiénes son «ciertos sujetos» no se ha podido leer. Dirección del programa: NO LOCALIZADO."},{"id":"VAL-660","modelo":"660","nombre":"Relación de bienes","cuando":"siempre","via":"programa","pdfOficial":"NO LOCALIZADO","estado":"NO LOCALIZADO","consultado":"2026-10-13"}]},"EXT":{"organismo":"Junta de Extremadura · Portal Tributario","modelos":[{"id":"EXT-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Confección en línea: genera un 650 «con un número de documento válido para el pago». Ni la confección en línea ni el pago suponen la presentación: hay que presentarlo en el Servicio Fiscal u Oficina Liquidadora competente.","norma":{"texto":"Orden de aprobación: NO LOCALIZADO","url":""},"url":"https://www.juntaex.es/w/0612522","programa":{"nombre":"Confección en línea del modelo 650","url":"https://modelo650.juntaex.es/modelo650/"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"EXT-660","modelo":"660","nombre":"Relación de bienes","cuando":"siempre","via":"programa","pdfOficial":"NO LOCALIZADO","nota":"La página oficial solo menciona el 650.","estado":"NO LOCALIZADO","consultado":"2026-10-13"}]},"GAL":{"organismo":"Axencia Tributaria de Galicia (Atriga)","modelos":[{"id":"GAL-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Programa de ayuda de la Oficina Virtual Tributaria (OVT), con firma electrónica para presentar. En papel: impreso que se adquiere en las oficinas liquidadoras y estancos autorizados, o copias sin firma impresas desde la OVT; presentación presencial con cita previa. Pago en entidad colaboradora con el propio 650.","telematicaObligatoria":"Solo para los colaboradores sociales (art. 92 LGT); se exceptúan los casos que el programa no admite (herederos desconocidos, usufructo sucesivo).","norma":{"texto":"Orde do 21 de xaneiro de 2021 (modelos do imposto sobre sucesións e doazóns)","fecha":"2021-01-21","diario":"DOG","url":"https://conselleriadefacenda.gal/documents/16561/139608/Orden-20210121-ISD-gl.pdf/10e13a43-a98e-466c-a919-42d20d230951"},"url":"https://conselleriadefacenda.gal/documents/16561/30903650/MK650-instrucciones-gl.pdf/d7c78050-99a3-4f90-a9e0-9dce47e7fef4","programa":{"nombre":"Oficina Virtual Tributaria de Atriga · programa de axuda","url":""},"casillas":"Instrucciones oficiales (MK650-instrucciones-gl.pdf): [20] porción hereditaria individual, [21] seguros de vida, [23] base imponible, [25a] reducción por seguro de vida, [25b] por parentesco, [25c] por discapacidad, [24d] vivienda habitual, [27] base liquidable, [30] cuota íntegra, [31] coeficiente, [32] cuota tributaria, [40] deducción por parentesco, [41] cuota líquida, [42] cuota a ingresar, [38] total a ingresar. No se han pasado a la hoja del 650: falta cotejar que coinciden con el formulario que genera hoy el programa.","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"GAL-660","modelo":"660","nombre":"Relación de bienes","cuando":"siempre","via":"programa","pdfOficial":"NO","url":"https://conselleriadefacenda.gal/documents/16561/30954753/MK660-instrucciones-gl.pdf/9a7f44fd-671b-430f-b0b8-15a306306ad3","norma":{"texto":"Orde do 21 de xaneiro de 2021","url":"https://conselleriadefacenda.gal/documents/16561/139608/Orden-20210121-ISD-gl.pdf/10e13a43-a98e-466c-a919-42d20d230951"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"MAD":{"organismo":"Comunidad de Madrid · Dirección General de Tributos","modelos":[{"id":"MAD-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Se confecciona en la Oficina Virtual Tributaria (pasos: causante, intervinientes, bienes, deudas, reducciones, cálculo, documentación, pago y presentación). Con acceso identificado se paga y presenta en línea y se descarga la autoliquidación con la diligencia de presentación electrónica; sin identificarse, el pago y la presentación son presenciales con cita.","telematicaObligatoria":"Sí para personas jurídicas y para quienes pertenecen a colegios profesionales con convenio de colaboración con la Comunidad (art. 2.1).","relacionBienes":"Los bienes se declaran dentro del propio formulario del 650 (la guía no menciona un 660 separado).","norma":{"texto":"Orden de 5 de abril de 2019, de la Consejería de Economía, Empleo y Hacienda (presentación y pago telemáticos obligatorios de los modelos 650 y 651)","fecha":"2019-04-22","diario":"BOCM 94, 22-04-2019","url":"https://www.bocm.es/boletin/CM_Orden_BOCM/2019/04/22/BOCM-20190422-20.PDF"},"url":"https://comunidad.madrid/sites/default/files/infografia_m650_contribuyente_v2.0.pdf","programa":{"nombre":"Oficina Virtual Tributaria de la Comunidad de Madrid","url":""},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"MUR":{"organismo":"Agencia Tributaria de la Región de Murcia (ATRM)","modelos":[{"id":"MUR-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO LOCALIZADO","presentacion":"Telemática para profesionales y adheridos a convenios con colegios profesionales; presencial en las oficinas de la ATRM. El Defensor del Pueblo recomendó (09-10-2024, queja 23028713, aceptada) facilitar medios para cumplimentarlo y presentarlo en persona.","norma":{"texto":"Orden de aprobación: NO LOCALIZADO","url":""},"url":"https://www.defensordelpueblo.es/resoluciones/facilidades-para-cumplimentar-y-presentar-el-modelo-650-de-forma-presencial","estado":"PENDIENTE","consultado":"2026-10-13"}]},"RIO":{"organismo":"Gobierno de La Rioja · Dirección General de Tributos","modelos":[{"id":"RIO-650","modelo":"650","nombre":"Autoliquidación de Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Plataforma de Sucesiones GRIAR WEB: se confecciona y paga; genera los modelos 650 y 660. También se puede rellenar e imprimir desde «Modelos y formularios». Particulares: presencial en Oficinas Liquidadoras con cita, o telemática.","telematicaObligatoria":"«La confección telemática es obligatoria para los usuarios profesionales.»","norma":{"texto":"Orden de aprobación: NO LOCALIZADO","url":""},"url":"https://www.larioja.org/tributos/fr/asistencia-tributaria-contribuyente/guias-breves/hacer-fallece-familiar","programa":{"nombre":"GRIAR WEB · Plataforma de Sucesiones","url":"https://www.larioja.org/tributos/es/oficina-virtual-tributaria/griar"},"estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"RIO-660","modelo":"660","nombre":"Relación de bienes (la genera GRIAR WEB)","cuando":"siempre","via":"programa","pdfOficial":"NO","programa":{"nombre":"GRIAR WEB · Plataforma de Sucesiones","url":"https://www.larioja.org/tributos/es/oficina-virtual-tributaria/griar"},"estado":"VERIFICADO","consultado":"2026-10-13"}]},"NAV":{"organismo":"Hacienda Foral de Navarra","modelos":[{"id":"NAV-651","modelo":"651","nombre":"Sucesiones · autoliquidación (en Navarra la autoliquidación de sucesiones es el 651)","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO","presentacion":"Presentación telemática habilitada desde 2019 (antes, solo en papel). Es de pago previo: se acredita con el Número de Referencia Completo (NRC). La documentación se entrega en las oficinas de Hacienda Foral salvo que la transmisión conste en documento privado (Orden Foral 45/2020).","norma":{"texto":"Orden Foral 95/2019, de 1 de julio (modelos 651, 660 y 661), modificada por la Orden Foral 45/2020, de 31 de marzo (BON 72, 03-04-2020)","fecha":"2019-07-01","diario":"BON","url":"https://vlex.es/vid/orden-foral-95-2019-807619269"},"programa":{"nombre":"Hacienda Foral de Navarra","url":""},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Resúmenes de vLex; texto del BON no leído. La Orden Foral 345/2012 aprobaba antes los modelos 650, 651, 652 y 660 con otra numeración."},{"id":"NAV-660","modelo":"660","nombre":"Sucesiones · declaración","cuando":"siempre","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden Foral 95/2019, de 1 de julio","url":"https://vlex.es/vid/orden-foral-95-2019-807619269"},"estado":"PENDIENTE","consultado":"2026-10-13"},{"id":"NAV-652","modelo":"652","nombre":"Seguros de vida · autoliquidación","cuando":"seguros","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden Foral 103/2017, de 28 de agosto","url":"https://vlex.es/vid/orden-foral-103-2017-693499073"},"estado":"PENDIENTE","consultado":"2026-10-13"},{"id":"NAV-653","modelo":"653","nombre":"Solicitud de prórroga","cuando":"prorroga","via":"programa","pdfOficial":"NO","norma":{"texto":"Orden Foral 130/2025 (BON 13-01-2026)","url":""},"estado":"PENDIENTE","consultado":"2026-10-08","nota":"Dato de docs-r4/fiscal.md."}]},"ALA":{"organismo":"Diputación Foral de Álava · Hacienda","modelos":[{"id":"ALA-650","modelo":"650 a 655","nombre":"Autoliquidaciones del Impuesto sobre Sucesiones y Donaciones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO LOCALIZADO","presentacion":"La orden fija la forma y el lugar de presentación; la vía telemática se admite para los modelos que designe el diputado foral (Decreto Foral 110/2008).","norma":{"texto":"Orden Foral 547/2009, de 7 de octubre (modelos 650 a 655)","fecha":"2009-10-14","diario":"BOTHA 117, 14-10-2009","url":"https://euskadi.eus/contenidos/informacion/zergak38/es_def/adjuntos/Z38-05-Normativa-Tributaria.pdf"},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Una fuente secundaria (revista Zergak); vigencia sin comprobar."}]},"BIZ":{"organismo":"Diputación Foral de Bizkaia · Hacienda","modelos":[{"id":"BIZ-650","modelo":"650 y 650-V","nombre":"Autoliquidación o declaración del Impuesto sobre Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO LOCALIZADO","presentacion":"Desde el 01-07-2025, presentación electrónica del 650 para todas las autoliquidaciones con documento notarial, salga o no cuota.","norma":{"texto":"Orden Foral 1973/2018 (modelos 650 y 650-V), modificada por la Orden Foral 225/2025, de 4 de junio","fecha":"2025-06-13","diario":"BOB 13-06-2025","url":"https://primeralecturaediciones.com/?p=20245331"},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Qué es el 650-V y si hay obligación electrónica general: NO LOCALIZADO."},{"id":"BIZ-652","modelo":"652","nombre":"Seguros de vida","cuando":"seguros","via":"programa","pdfOficial":"NO LOCALIZADO","norma":{"texto":"Orden Foral 1975/2018, modificada por la Orden Foral 225/2025","url":"https://primeralecturaediciones.com/?p=20245331"},"estado":"PENDIENTE","consultado":"2026-10-13"}]},"GIP":{"organismo":"Diputación Foral de Gipuzkoa · Hacienda","modelos":[{"id":"GIP-650","modelo":"NO LOCALIZADO","nombre":"Autoliquidación del Impuesto sobre Sucesiones","cuando":"siempre","porHeredero":true,"via":"programa","pdfOficial":"NO LOCALIZADO","norma":{"texto":"NO LOCALIZADO","url":""},"estado":"NO LOCALIZADO","consultado":"2026-10-13","nota":"Ninguna búsqueda devolvió la orden foral ni la página del trámite."}]}},"comunes":[{"id":"MJ-790-006","modelo":"790 · código 006","nombre":"Tasa y solicitud de los certificados de últimas voluntades y de contratos de seguros de cobertura de fallecimiento","organismo":"Ministerio de Justicia","cuando":"siempre","via":"telematico","pdfOficial":"NO","presentacion":"El impreso lo genera el formulario de la sede del Ministerio con un número de justificante único por solicitante, que no se puede reutilizar. Sirve en persona o por correo, con el pago en entidad colaboradora. El mismo modelo 790-006 vale para el certificado de últimas voluntades y para el de seguros.","numeracion":"Número de justificante único generado por la sede: Hereda+ no lo genera.","programa":{"nombre":"Formulario 790 del Ministerio de Justicia","url":"https://sede.mjusticia.gob.es/servidorformularios/formularios?idFormulario=790&lang=es_es"},"url":"https://www.mjusticia.gob.es/es/ciudadania/formulario-790","datos":"solicitud790","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"DGC-900D","modelo":"900D","nombre":"Declaración catastral de alteración de titularidad","organismo":"Dirección General del Catastro","cuando":"catastro","via":"pdf","pdfOficial":"SÍ","presentacion":"Preferentemente electrónica en la Sede del Catastro (el asistente genera una predeclaración con un código de referencia). En papel: el modelo que se obtiene en el portal del Catastro, rellenado y firmado (art. 2.3). Si la herencia se formaliza en escritura pública y consta la referencia catastral, la comunica el notario y no hay que declarar (art. 14.a TRLCI). En Navarra y el País Vasco el catastro es foral.","norma":{"texto":"Orden HAC/1293/2018, de 19 de noviembre (modelo 900D)","fecha":"2018-12-05","diario":"BOE 05-12-2018 (en vigor el 06-12-2018)","url":"https://www.boe.es/eli/es/o/2018/11/19/hac1293/con"},"programa":{"nombre":"Sede Electrónica del Catastro · modelo 900D","url":"https://www.sedecatastro.gob.es/administracionelectronica/sec900.aspx"},"pdf":"NO LOCALIZADO (la orden remite al «Portal de la Dirección General del Catastro»; un ayuntamiento lo republica en https://www.ayuntamientoparla.es/RecursosWeb/DOCUMENTOS/1/4_879_1.pdf, que no sirve como fuente oficial)","datos":"catastro","mapa":"DGC-900D","estado":"VERIFICADO","consultado":"2026-10-13"}],"plusvalia":{"regla":"La plusvalía (IIVTNU) se gestiona por el ayuntamiento o por el organismo provincial en el que haya delegado. Cada uno fija si se presenta declaración o autoliquidación y con qué modelo (art. 110 TRLRHL): seis meses desde el fallecimiento, prorrogables hasta un año a solicitud del contribuyente. No hay un modelo estatal.","norma":{"texto":"art. 110 RDLeg 2/2004 (TRLRHL)","url":"https://www.boe.es/buscar/act.php?id=BOE-A-2004-4214#a110"},"gestores":[{"id":"MALAGA-GESTRISAM","ambito":"Málaga (ciudad)","ine":["29067"],"organismo":"GESTRISAM · Ayuntamiento de Málaga","via":"telematico","pdfOficial":"NO","presentacion":"Autoliquidación en la Sede Electrónica (sede.malaga.eu): el formulario genera la autoliquidación y el documento de pago en PDF al firmar y presentar. No hay un modelo en blanco. El representante debe estar dado de alta antes.","programa":{"nombre":"Sede Electrónica del Ayuntamiento de Málaga","url":"https://sede.malaga.eu"},"url":"https://gestrisam.malaga.eu/export/sites/gestrisam/.galleries/Documentos-Plusvalia/Manual-Autoliquidaciones-Sede-Electronica.-plusvalias-v.29032023.pdf","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"MADRID-AYTO","ambito":"Madrid (ciudad)","ine":["28079"],"organismo":"Ayuntamiento de Madrid · Agencia Tributaria Madrid","via":"programa","pdfOficial":"NO","presentacion":"Autoliquidación: el documento de pago se genera en línea con la calculadora de la plusvalía; también presencial en las Oficinas de Atención Integral al Contribuyente.","programa":{"nombre":"Plusvalía · transmisiones mortis causa (sede.madrid.es)","url":"https://sede.madrid.es/portal/site/tramites/menuitem.1f3361415fda829be152e15284f1a5a0/?vgnextoid=a6006fc0948d3110VgnVCM2000000c205a0aRCRD&vgnextchannel=9718a38813180210VgnVCM100000c90da8c0RCRD&vgnextfmt=default&target=presencial"},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Leído en una ficha de papelea.com que enlaza la sede; página municipal no leída."},{"id":"OPAEF","ambito":"Provincia de Sevilla (municipios que delegan en el OPAEF)","provincia":"41","excluye":["41091"],"organismo":"OPAEF · Diputación de Sevilla","via":"telematico","pdfOficial":"NO","presentacion":"Desde septiembre de 2024, autoliquidación «por medios exclusivamente electrónicos» en la Sede del OPAEF, que genera la carta de pago; ya no se admiten declaraciones (salvo inmuebles sin valor catastral). Atención presencial solo con cita.","url":"https://www.umbrete.es/export/sites/umbrete/OFICIO-OPAEF-SOBRE-MODIFICACIONES-EN-LA-GESTION-DE-LA-PLUSVALIA.PDF","estado":"PENDIENTE","consultado":"2026-10-13","nota":"Oficio del OPAEF de 20-08-2024 publicado por el Ayuntamiento de Umbrete. Si el municipio no ha delegado la gestión, se aplica su propio modelo."},{"id":"CADIZ-SPRYGT","ambito":"Provincia de Cádiz (municipios que delegan en el Servicio Provincial de Recaudación)","provincia":"11","organismo":"Servicio Provincial de Recaudación y Gestión Tributaria · Diputación de Cádiz","via":"pdf","pdfOficial":"SÍ","pdf":"https://sprygt.dipucadiz.es/documents/32322/0/Modelo+declaracion+I.I.V.T.N.U.+%28plusvalia%29.pdf/17e89b0e-dd65-82c5-609c-528ee9c8fd3d","presentacion":"Modelo de declaración del IIVTNU en PDF, sin número ni código de barras: sujeto pasivo, representante, documento de origen, transmisión mortis causa, inmueble, valores, beneficios fiscales, prórroga y documentación.","estado":"VERIFICADO","consultado":"2026-10-13","mapa":"CADIZ-IIVTNU","nota":"Si tiene campos rellenables: NO LOCALIZADO (se sabrá al pasarle tools/modelos/mapear.mjs)."},{"id":"CORUNA-094","ambito":"A Coruña (ciudad)","ine":["15030"],"organismo":"Concello da Coruña","via":"pdf","pdfOficial":"SÍ","pdf":"https://sede.coruna.gal/descarga/1453646059312/mod094_Comunicacion_IIVTNU_Plusvalia_2021_campos.pdf","presentacion":"Mod. 094 (11/2021), «Comunicación/declaración de transmisión de inmueble a efectos del IIVTNU», bilingüe, sin número ni código de barras.","estado":"VERIFICADO","consultado":"2026-10-13","mapa":"CORUNA-094"},{"id":"ATRM-PLUSVALIA","ambito":"Región de Murcia (municipios que delegan en la ATRM)","provincia":"30","organismo":"Agencia Tributaria de la Región de Murcia","via":"telematico","pdfOficial":"NO","presentacion":"Modelos aprobados por la Orden de 10 de marzo de 2025 (BORM 73, 29-03-2025). Presentación obligatoria por el procedimiento 1195 de la sede de la CARM para quien deba relacionarse electrónicamente; las personas físicas no obligadas, con asistencia en las oficinas de la ATRM.","programa":{"nombre":"Procedimiento 1195 · sede de la CARM","url":"https://sede.carm.es/documentos/1195/MANUAL%201195%20PLUSVALIAS%202024%20(1).pdf"},"url":"https://agenciatributaria.carm.es/documents/20632/1675724/NOTA+INFORMATIVA.pdf/93b0008d-50f1-4f8a-85cc-996979c428c6","estado":"VERIFICADO","consultado":"2026-10-13"},{"id":"ALICANTE-AYTO","ambito":"Alicante (ciudad)","ine":["03014"],"organismo":"Ayuntamiento de Alicante","via":"programa","pdfOficial":"NO","presentacion":"Autoliquidación en línea con el programa municipal.","programa":{"nombre":"Plusvalía municipal · autoliquidación en línea","url":"https://www.alicante.es/es/tramites/plusvalia-municipal-autoliquidacion-line"},"estado":"PENDIENTE","consultado":"2026-10-13","nota":"Solo el título de la página oficial; contenido no leído."},{"id":"GUADALAJARA-DIP","ambito":"Provincia de Guadalajara (municipios que delegan en la Diputación)","provincia":"19","organismo":"Diputación de Guadalajara","via":"pdf","pdfOficial":"SÍ","pdf":"https://intranet.dguadalajara.es/alfresco/d/a/workspace/SpacesStore/d94e38bc-f01a-4701-9d8b-7023f8031a2b/modelo_declaracion_plusvalia.pdf?guest=true","presentacion":"Modelo de declaración de plusvalía en PDF (contenido no leído).","estado":"PENDIENTE","consultado":"2026-10-13"}],"resto":"Para el resto de municipios el modelo no se ha catalogado (NO LOCALIZADO): Hereda+ prepara la declaración con su escrito propio y los datos del cálculo, y el abogado la pasa al modelo del ayuntamiento o del organismo provincial."},"diccionario":{"causante.nombre":"Nombre y apellidos del causante","causante.nif":"NIF del causante","causante.domicilio":"Último domicilio del causante","causante.fecha":"Fecha de fallecimiento (devengo), dd/mm/aaaa","sujeto.nombre":"Nombre y apellidos del heredero (sujeto pasivo)","sujeto.nif":"NIF del heredero","sujeto.domicilio":"Domicilio del heredero","sujeto.parentesco":"Parentesco con el causante","sujeto.grupo":"Grupo de parentesco (I a IV)","sujeto.edad":"Edad del heredero","sujeto.discapacidad":"Grado de discapacidad","sujeto.patrimonio":"Patrimonio preexistente","documento.notario":"Notario de la escritura o del título","documento.fecha":"Fecha del documento","documento.protocolo":"Número de protocolo","territorio":"Territorio cuya normativa se aplica","isd.porcion":"Valor de la porción hereditaria (con ajuar)","isd.legados":"Valor de los legados","isd.seguros":"Seguros de vida","isd.bi":"Base imponible","isd.red.parentesco":"Reducción por parentesco","isd.red.discapacidad":"Reducción por discapacidad","isd.red.seguros":"Reducción por seguros de vida","isd.red.empresa":"Reducción por empresa o participaciones","isd.red.vivienda":"Reducción por vivienda habitual","isd.red.total":"Total de reducciones","isd.bl":"Base liquidable","isd.ci":"Cuota íntegra","isd.coef":"Coeficiente multiplicador","isd.ct":"Cuota tributaria","isd.bonif":"Bonificaciones","isd.total":"Total a ingresar","presentador.nombre":"Abogado que presenta","inmueble.refCatastral":"Referencia catastral","inmueble.descripcion":"Descripción o dirección del inmueble","inmueble.municipio":"Municipio del inmueble","inmueble.coef":"Porcentaje transmitido","inmueble.fechaAdq":"Fecha de la adquisición anterior","inmueble.valorAdq":"Valor de adquisición","inmueble.valorTrans":"Valor de transmisión","marca.mortisCausa":"Casilla «transmisión mortis causa» (siempre marcada)","plus.cuota":"Cuota de la plusvalía (del cálculo)","plus.aIngresar":"Plusvalía a ingresar por este heredero","lugarFecha":"Lugar y fecha de la firma"},"mapas":{"AEAT-650":{"titulo":"Modelo 650 · Agencia Tributaria","plantilla":"modelos/plantillas/AEAT-650.pdf","origen":"https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/mod650.pdf","porHeredero":true,"estadoMapa":"SIN PLANTILLA","aviso":"Antes de rellenarlo: ábrelo en Adobe Reader, pulsa «Rellenar formulario» para que el propio PDF genere el número de justificante y guárdalo. Después cárgalo aquí: Hereda+ completa las casillas sin tocar el número ni el código de barras.","casillas":{"19":"isd.porcion","20":"isd.legados","21":"isd.seguros","22":"isd.bi","23":"isd.red.parentesco","24":"isd.red.discapacidad","25":"isd.red.seguros","26":"isd.red.empresa","27":"isd.red.vivienda","36":"isd.red.total","37":"isd.bl","38":"isd.ci","39":"isd.coef","40":"isd.ct","63":"isd.total"},"fuenteCasillas":"Instrucciones del modelo 650 (AEAT): https://sede.agenciatributaria.gob.es/static_files/Sede/Procedimiento_ayuda/G702/Instrucciones_mod650_es_es.pdf","noTocarPatron":"justif|barras|codbar|etiqueta|registro|nrc","campos":{},"huella":[],"obligatorios":["sujeto.nif","sujeto.nombre","causante.nif","causante.nombre","causante.fecha","isd.bi","isd.bl","isd.total"]},"DGC-900D":{"titulo":"Modelo 900D · Catastro","plantilla":"modelos/plantillas/DGC-900D.pdf","origen":"Portal de la Dirección General del Catastro (art. 2.3 Orden HAC/1293/2018)","porInmueble":true,"estadoMapa":"SIN PLANTILLA","campos":{},"huella":[],"obligatorios":["inmueble.refCatastral","sujeto.nif","sujeto.nombre","causante.nombre"]},"CADIZ-IIVTNU":{"titulo":"Declaración del IIVTNU · Diputación de Cádiz","plantilla":"modelos/plantillas/CADIZ-IIVTNU.pdf","origen":"https://sprygt.dipucadiz.es/documents/32322/0/Modelo+declaracion+I.I.V.T.N.U.+%28plusvalia%29.pdf/17e89b0e-dd65-82c5-609c-528ee9c8fd3d","porInmueble":true,"estadoMapa":"SIN PLANTILLA","campos":{},"huella":[],"obligatorios":["inmueble.refCatastral","sujeto.nif","sujeto.nombre","causante.nombre","causante.fecha"]},"CORUNA-094":{"titulo":"Mod. 094 · Concello da Coruña","plantilla":"modelos/plantillas/CORUNA-094.pdf","origen":"https://sede.coruna.gal/descarga/1453646059312/mod094_Comunicacion_IIVTNU_Plusvalia_2021_campos.pdf","porInmueble":true,"estadoMapa":"SIN PLANTILLA","campos":{},"huella":[],"obligatorios":["inmueble.refCatastral","sujeto.nif","sujeto.nombre","causante.nombre","causante.fecha"]},"PRUEBA-650":{"titulo":"Formulario de prueba (no es un modelo oficial)","prueba":true,"plantilla":"modelos/plantillas/PRUEBA-650.pdf","origen":"Creado por Hereda+ con tools/modelos/crear-prueba.mjs para probar el circuito. No es un modelo oficial ni se puede presentar.","porHeredero":true,"estadoMapa":"MAPEADO","casillas":{"19":"isd.porcion","20":"isd.legados","21":"isd.seguros","22":"isd.bi","23":"isd.red.parentesco","24":"isd.red.discapacidad","25":"isd.red.seguros","26":"isd.red.empresa","27":"isd.red.vivienda","36":"isd.red.total","37":"isd.bl","38":"isd.ci","39":"isd.coef","40":"isd.ct","63":"isd.total"},"noTocarPatron":"justif|barras","campos":{"SP_NIF":{"dato":"sujeto.nif","por":"palabras clave"},"SP_Nombre":{"dato":"sujeto.nombre","por":"palabras clave"},"SP_Domicilio":{"dato":"sujeto.domicilio","por":"palabras clave"},"SP_Parentesco":{"dato":"sujeto.parentesco","por":"palabras clave"},"CA_NIF":{"dato":"causante.nif","por":"palabras clave"},"CA_Nombre":{"dato":"causante.nombre","por":"palabras clave"},"CA_Fecha":{"dato":"causante.fecha","por":"palabras clave"},"C19":{"dato":"isd.porcion","por":"casilla 19"},"C20":{"dato":"isd.legados","por":"casilla 20"},"C21":{"dato":"isd.seguros","por":"casilla 21"},"C22":{"dato":"isd.bi","por":"casilla 22"},"C23":{"dato":"isd.red.parentesco","por":"casilla 23"},"C24":{"dato":"isd.red.discapacidad","por":"casilla 24"},"C25":{"dato":"isd.red.seguros","por":"casilla 25"},"C26":{"dato":"isd.red.empresa","por":"casilla 26"},"C27":{"dato":"isd.red.vivienda","por":"casilla 27"},"C36":{"dato":"isd.red.total","por":"casilla 36"},"C37":{"dato":"isd.bl","por":"casilla 37"},"C38":{"dato":"isd.ci","por":"casilla 38"},"C39":{"dato":"isd.coef","por":"casilla 39"},"C40":{"dato":"isd.ct","por":"casilla 40"},"C63":{"dato":"isd.total","por":"casilla 63"}},"huella":["C19","C21","C23","C25","C27","C37","C39","C63","CA_NIF","Conforme","SP_Domicilio","SP_Nombre"],"obligatorios":["sujeto.nif","sujeto.nombre","causante.nif","causante.nombre","causante.fecha","isd.bi","isd.bl","isd.total"],"noTocar":["NumJustificante"],"sha256":"0936b815ef86f39f87ea33c371416515a2916fb4038084f9f88f182ab098d817","paginas":1,"xfa":false,"js":false,"sha256Revisado":"0936b815ef86f39f87ea33c371416515a2916fb4038084f9f88f182ab098d817","revisado":"2026-10-12"}},"disponibles":["PRUEBA-650"]};
+const MPO_NO_TOCAR=/justif|barras|codbar|cod_?barr|etiqueta|n[º°o]?\s*registro|registro\s*de\s*entrada|\bnrc\b|referencia\s*completo|sello|uso\s*(exclusivo|interno)|administraci[oó]n\s*$/i;
+const mpoNorm=(s)=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[_\-.[\]()/\\]+/g," ").replace(/\s+/g," ").trim();
+const MPO_REGLAS=[
+[/\b(causante|fallecid|difunt|transmitente)\b.*\b(nif|dni|nie|cif)\b|\b(nif|dni|nie)\b.*\b(causante|fallecid|transmitente)\b/,"causante.nif"],
+[/\b(causante|fallecid|transmitente)\b.*\b(nombre|apellidos)\b|\b(nombre|apellidos)\b.*\b(causante|fallecid|transmitente)\b/,"causante.nombre"],
+[/\b(causante|fallecid)\b.*\bdomicilio\b|\bdomicilio\b.*\b(causante|fallecid)\b/,"causante.domicilio"],
+[/\b(devengo|fallecimiento|defuncion)\b/,"causante.fecha"],
+[/\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente|obligado)\b.*\b(nif|dni|nie)\b|\b(nif|dni|nie)\b.*\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente|obligado)\b/,"sujeto.nif"],
+[/\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente|obligado)\b.*\b(nombre|apellidos|razon social)\b|\b(nombre|apellidos|razon social)\b.*\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente|obligado)\b/,"sujeto.nombre"],
+[/\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente)\b.*\bdomicilio\b|\bdomicilio\b.*\b(sujeto pasivo|declarante|adquirente|heredero|contribuyente)\b/,"sujeto.domicilio"],
+[/\bparentesco\b/,"sujeto.parentesco"],
+[/\bgrupo\b/,"sujeto.grupo"],
+[/\bpatrimonio\b.*\bpreexistente\b/,"sujeto.patrimonio"],
+[/\breferencia catastral\b|\bref catastral\b|\brefcat\b/,"inmueble.refCatastral"],
+[/\bnotari[oa]\b/,"documento.notario"],
+[/\bprotocolo\b/,"documento.protocolo"],
+[/\bmortis\b/,"marca.mortisCausa"],
+[/\bbase imponible\b/,"isd.bi"],
+[/\bbase liquidable\b/,"isd.bl"],
+[/\bcuota integra\b/,"isd.ci"],
+[/\bcoeficiente multiplicador\b/,"isd.coef"],
+[/\bcuota tributaria\b/,"isd.ct"],
+[/\b(total a ingresar|a ingresar|importe a ingresar)\b/,"isd.total"],
+];
+function mpoCasilla(nombre,ayuda,casillas){
+if(!casillas)return null;
+for(const t of[nombre,ayuda]){
+const s=String(t||"");if(!s)continue;
+const m=/(?:^|[^0-9a-z])(?:c|cas|casilla|n|num|campo)?\s*[_\-[]?\s*(\d{1,3})\s*\]?(?![0-9])/i.exec(s);
+if(m&&casillas[String(Number(m[1]))])return{dato:casillas[String(Number(m[1]))],por:`casilla ${Number(m[1])}`};
+}
+return null;
+}
+function proponerMapa(campos,mapa){
+const out={campos:{},noTocar:[],sinDato:[]};
+const patron=mapa&&mapa.noTocarPatron?new RegExp(mapa.noTocarPatron,"i"):null;
+for(const c of campos||[]){
+const nombre=String(c.nombre||""),ayuda=String(c.ayuda||""),t=mpoNorm(nombre+" "+ayuda);
+if(MPO_NO_TOCAR.test(nombre)||MPO_NO_TOCAR.test(ayuda)||(patron&&(patron.test(nombre)||patron.test(ayuda)))){out.noTocar.push(nombre);continue;}
+if(c.tipo==="boton"||c.tipo==="firma"){out.sinDato.push(nombre);continue;}
+const cas=mpoCasilla(nombre,ayuda,mapa&&mapa.casillas);
+if(cas){out.campos[nombre]=cas;continue;}
+const r=MPO_REGLAS.find(([re])=>re.test(t));
+if(r&&!(c.tipo==="marca"&&r[1]!=="marca.mortisCausa")){out.campos[nombre]={dato:r[1],por:"palabras clave"};continue;}
+out.sinDato.push(nombre);
+}
+return out;
+}
+function huellaDe(campos){
+const L=(campos||[]).map((c)=>c.nombre).filter(Boolean).sort();
+if(L.length<=12)return L;
+const paso=L.length/12;return Array.from({length:12},(_,i)=>L[Math.floor(i*paso)]);
+}
+function cuadraHuella(nombres,huella){
+if(!huella||!huella.length)return 0;
+const S=new Set(nombres);return huella.filter((n)=>S.has(n)).length/huella.length;
+}
+const HEREDA_WEB={"web":"https://heredate.github.io","traslado":""};
 const PARTES_LISTAS={
 municipios:()=>MUNI_ES.m.length>0,
 biblioteca:()=>!BIBLIO.pendiente,
@@ -612,7 +697,7 @@ function mapaExp(x,R){
 if(!heredaParteYRepintar("mapas"))return mapaCargando();
 const inm=(x.bienes||[]).filter((b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&b.municipio&&b.municipio!=="OTRO"&&ORDENANZAS[b.municipio]);
 const pins=inm.map((b)=>({k:b.municipio,label:ORDENANZAS[b.municipio].nombre,main:b.tipo==="vivienda"}));
-const terr=x.ccaa==="EST"?x.ccaaBienes:x.ccaa;
+const terr=terrISD(x);
 const soloAND=terr==="AND"&&pins.every((p)=>MAPA_AND.pins[p.k]);
 const plusBy=R?Object.fromEntries(R.plus.map(({b,r})=>[b.id,r])):{};
 const leyenda=inm.length?`<div class="group" style="margin-top:12px;--inset:54px">${inm.map((b)=>{const r=plusBy[b.id];const o=ORDENANZAS[b.municipio];return`<button class="row" data-editb="${b.id}"><span class="ico ${b.tipo==="vivienda"?"gold":"brown"}">${I.house}</span><span class="t"><b>${esc(b.descripcion||TIPO_BIEN[b.tipo][0])}</b><small>${esc(o.nombre)} · tipo ${grp(o.tipo*100,0)} %${o.estadoTipo==="VERIFICADO"?" · ordenanza verificada":" · ordenanza en verificación"}</small></span><span class="v num">${r?eur0(r.total):"—"}</span></button>`;}).join("")}</div><p class="group-foot">A la derecha, la plusvalía municipal estimada de cada inmueble.</p>`:`<p class="caption" style="margin-top:10px">Indica el municipio de cada inmueble para situarlo y calcular su plusvalía.</p>`;
@@ -679,7 +764,7 @@ const EP={LIM_VIV:122606.47,TPO_INM:0.07,TPO_MUE:0.04,AJD_AND:0.012,I_DEMORA:0.0
 const ESCALA_AHORRO=[[6000,0.19],[50000,0.21],[200000,0.23],[300000,0.27],[Infinity,0.30]];
 const irpfAhorro=(g)=>{let prev=0,t=0;for(const[lim,p]of ESCALA_AHORRO){if(g<=prev)break;t+=(Math.min(g,lim)-prev)*p;prev=lim;}return t;};
 const clonX=(x)=>JSON.parse(JSON.stringify(x));
-const terrX=(x)=>(x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa);
+const terrX=(x)=>(terrISD(x));
 const costeX=(x)=>{const R=calcular(x);if(!R)return null;const K=costeExpediente(x,R);return{R,isd:R.isd.total,plus:R.totalPlus,exceso:K?K.exceso:0,total:K?K.total:r2(R.isd.total+R.totalPlus)};};
 const valorBienX=(b)=>Math.max(num(b.valor),num(b.valorReferencia))*cuotaCausante({titularidad:b.titularidad||"privativo",porcentaje:pctCausante(b.porcentaje)});
 const esInm=(b)=>b.tipo==="vivienda"||b.tipo==="inmueble";
@@ -1127,7 +1212,7 @@ const E=R?estrategia(x):null;
 const C=citasExp(x,R,T,E);
 const uniq=(L)=>{const s=new Set();return L.filter((c)=>{const k=c.ctx+"|"+c.f;if(s.has(k))return false;s.add(k);return true;});};
 const est=BIBLIO.estatal.map((n)=>({n,usos:uniq(C.filter((c)=>PATRON_EST[n.id]&&PATRON_EST[n.id].test(c.f)))})).filter((q)=>q.usos.length||BASE_EST.includes(q.n.id));
-const terr=x.ccaa==="EST"?x.ccaaBienes||"EST":x.ccaa;
+const terr=terrISD(x);
 const aut=(BIBLIO.autonomica[terr]||[]).map((n)=>{const k=numLey(n.nombre);return{n,usos:k?uniq(C.filter((c)=>c.f.includes(k))):[]};});
 const munis=[...new Set((x.bienes||[]).filter((b)=>esInm(b)&&b.municipio&&b.municipio!=="OTRO").map((b)=>b.municipio))];
 const mun=munis.flatMap((m)=>(BIBLIO.municipal[m]||[]).map((n)=>({n,muni:m,usos:uniq(C.filter((c)=>c.ctx.startsWith("Plusvalía")&&/OF|ordenanza/i.test(c.f)&&(x.bienes||[]).some((b)=>b.municipio===m&&c.ctx.includes(b.descripcion||"Inmueble"))))})));
@@ -1197,7 +1282,7 @@ if(!abierto(x))return false;
 if(x.fecha&&n.f<x.fecha)return false;
 if(n.rango)return x.fecha&&x.fecha>=n.rango[0]&&x.fecha<=n.rango[1]&&(x.bienes||[]).some(esInm);
 if(n.amb==="municipal")return(x.bienes||[]).some((b)=>esInm(b)&&b.municipio===n.k)&&(!n.desde||!x.fecha||x.fecha>=n.desde);
-if(n.amb==="autonomica")return(x.ccaa==="EST"?x.ccaaBienes:x.ccaa)===n.k;
+if(n.amb==="autonomica")return(terrISD(x))===n.k;
 return true;
 });
 }
@@ -1241,8 +1326,13 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:17,nombre:"Versión 1.7",fecha:"2026-10-08"};
+const VERSION_APP={n:18,nombre:"Versión 1.8",fecha:"2026-10-13"};
 const NOVEDADES=[
+["Tus datos, claros y a salvo","La primera vez se elige dónde se guardan los expedientes (carpeta del despacho para la copia automática, contraseña opcional) y se acepta quién es responsable de los datos. En Ajustes, el panel «Tus datos»: dónde están, última copia, descargar todo, restaurar, borrar y una hoja en PDF para el cliente. Avisos si no hay copia en siete días."],
+["Modelos oficiales","Catálogo de los modelos de cada comunidad, territorio foral y del Catastro. Hereda+ rellena el PDF oficial cuando la Administración lo publica para imprimir, y cuando solo existe su programa de ayuda deja los datos listos y abre el programa. Nunca imita números de justificante ni códigos de barras."],
+["Plusvalía: casi 700 municipios con datos propios","Ordenanzas leídas en boletines y tablas oficiales de diputaciones, y el tipo que cada ayuntamiento comunica a Hacienda en cientos de municipios más. Municipios que no exigen el impuesto, con su fuente. Donde no hay dato, se dice y se calcula con el máximo legal."],
+["Herencias más complejas","Colación en la partición y donaciones previas acumuladas, causantes y herederos no residentes (la comunidad aplicable se propone sola), empresa familiar con su lista de requisitos, pactos sucesorios, reservas, fideicomisos, cautela socini, herencias sin testamento en Eivissa y Formentera, y la ley vigente en la fecha del fallecimiento. Once trámites más."],
+["Demo con voz","En la portada, la demostración narrada en castellano, con subtítulos."],
 ["Nueva identidad: azul notarial","La barra lateral, los botones principales, los títulos y las cifras pasan al azul notarial, con el petróleo como acento para lo activo y lo leído de los documentos, sobre papel marfil. El tema oscuro pasa a azul noche. Monograma H+ nuevo. El mismo color en la web, los PDF y los escritos."],
 ["El árbol familiar enseña el reparto","Cada persona del árbol muestra su derecho (pleno dominio, usufructo o nuda propiedad), lo que recibe, lo que paga de Sucesiones y el bien que se le adjudica o se le lega."],
 ["Legados con usufructo del viudo","Con un testamento de usufructo universal, la ficha del bien ya permite marcarlo como legado. El cuadro de partición con muchos herederos cabe en pantalla."],
@@ -1682,7 +1772,7 @@ const arc=(cls,l,off)=>l?`<circle cx="${cx}" cy="${cx}" r="${r}" class="${cls}" 
 return`<svg class="tring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="Impuestos: ${pct1(tot)} de lo que recibe"><circle cx="${cx}" cy="${cx}" r="${r}" class="bg"/>${arc("s",la,0)}${arc("p",lb,la)}<text x="50%" y="49%" text-anchor="middle" class="t1">${pct1(tot)}</text><text x="50%" y="65%" text-anchor="middle" class="t2">de lo que recibe</text></svg>`;
 }
 function panelHeredero(x,R,h){
-const pp=plusPorHeredero(R)[h.nombre]||0,terr=x.ccaa==="EST"?x.ccaaBienes||"EST":x.ccaa;
+const pp=plusPorHeredero(R)[h.nombre]||0,terr=terrISD(x);
 const tot=h.aIngresar+pp,va=h.valorAdquirido||0;
 return`<div class="hpanel"><div class="hp-top"><div class="hp-id"><div class="kick">${esc(RELACIONES[h.relacion].label)} · grupo ${esc(h.grupo)}</div><h3>${esc(h.nombre)}</h3><p class="hp-nar">${narrativaISD(h,pp)}</p></div>
     <div class="hp-fig">${anilloTipo(va?h.aIngresar/va:0,va?pp/va:0)}<div class="kv sm"><span><i class="kd s"></i>Sucesiones</span><span>${eur(h.aIngresar)}</span><span><i class="kd p"></i>Plusvalía</span><span>${eur(pp)}</span><span class="b">Total</span><span class="b">${eur(tot)}</span></div></div></div>
@@ -1712,7 +1802,7 @@ return`<div class="card fcard"><div class="fc-h"><div><div class="kick">${esc(r.
     <div class="formula">${fx("Valor catastral del suelo",eur0(suelo),cc<1?`el ${pctRegla(cc)} del causante`:"")}${op("×")}${fx("Coeficiente",grp(r.coeficiente,2),esc(r.notaCoef))}${op("=")}${fx("Base objetiva",eur0(r.baseObjetiva),"",r.metodo==="objetivo"?"hi":"")}</div>
     <div class="cmpbars">${cmp("Método objetivo",r.baseObjetiva,r.metodo==="objetivo",`art. 107.4 ${linkNorma("TRLRHL",terr)}`)}${cmp("Método real",r.baseReal,r.metodo==="real",`ganancia ${eur0(Math.max(0,(vt-va)*cc))} × ${pctRegla(prop)} de suelo`)}</div>
     <div class="sr-sec">2. Cuota</div>
-    <div class="formula">${fx("Base",eur0(r.base),r.metodo==="real"?"método real":"método objetivo")}${op("×")}${fx("Tipo",grp(r.tipo*100,r.tipo*100%1?2:0)+" %",r.fuenteTipo==="manual"?"introducido a mano":r.fuenteTipo==="hacienda"?"datos de Hacienda 2026":r.estimacion?"máximo legal":"ordenanza municipal")}${op("=")}${fx("Cuota",eur(r.cuota),"","hi plu")}</div>
+    <div class="formula">${fx("Base",eur0(r.base),r.metodo==="real"?"método real":"método objetivo")}${op("×")}${fx("Tipo",grp(r.tipo*100,r.tipo*100%1?2:0)+" %",r.fuenteTipo==="manual"?"introducido a mano":r.fuenteTipo==="sinImpuesto"?"el municipio no exige el impuesto":r.fuenteTipo==="hacienda"?"datos de Hacienda 2026":r.estimacion?"máximo legal":"ordenanza municipal")}${op("=")}${fx("Cuota",eur(r.cuota),"","hi plu")}</div>
     <div class="sr-sec">3. Bonificación y pago por heredero</div>
     <div class="ptit">${r.porTitular.map((q)=>`<div class="pt"><div class="pt-l"><b>${esc(q.heredero)}</b><small>${pctRegla(q.fraccion)} de la cuota · ${eur(q.cuota)}</small>${q.norma?`<small class="nrm">${linkNorma(q.norma,terr)} ${tagE(q.estado)}</small>`:""}</div><div class="pt-b" title="Bonificación ${pctRegla(q.bonificacionPct)}"><span style="width:${Math.max(1,q.cuota/mq*100)}%"><i class="bon" style="width:${q.bonificacionPct*100}%"></i><i class="pay" style="width:${(1-q.bonificacionPct)*100}%"></i></span></div><div class="pt-v num">${eur(q.aIngresar)}<small>${q.bonificacionPct?`bonificación ${pctRegla(q.bonificacionPct)}`:"sin bonificación"}</small></div></div>`).join("")}</div>`}
     ${(r.estimacion?(r.alertas||[]).slice(1):r.alertas||[]).map((a)=>`<p class="caption" style="margin:10px 0 0">${esc(a)}</p>`).join("")}</div>`;
@@ -1863,7 +1953,7 @@ const cpLista=(L)=>(L.length>1?L.slice(0,-1).join(", ")+" y "+L[L.length-1]:L[0]
 const CP_LIQ=(b)=>b.tipo==="cuenta"||b.tipo==="valores";
 const CP_INDIV=(b)=>!CP_LIQ(b);
 const cpR2=(v)=>Math.round((v+Number.EPSILON)*100)/100;
-const cpTerr=(x)=>(x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa);
+const cpTerr=(x)=>(terrISD(x));
 const cpViudo=(p)=>p&&["conyuge","pareja_hecho"].includes(p.relacion);
 function cpTipos(terr){
 if(terr==="AND")return{ajd:0.012,ajdTxt:"AJD 1,2 %",ajdEstado:"VERIFICADO",ajdNorma:"art. 7.2.B TRLITPAJD · STSJ Andalucía 895/2026",ajdNota:"En Andalucía el exceso inevitable compensado en dinero tributa por AJD al 1,2 % (STSJ Andalucía 895/2026).",tpoInm:0.07,tpoMue:0.04,tpoEstado:"VERIFICADO",tpoNorma:"art. 7.2.B TRLITPAJD · Ley 5/2021 de Andalucía"};
@@ -1963,7 +2053,7 @@ const col=(id)=>COL_H[Math.max(0,PT.cols.findIndex((p)=>p.id===id))%COL_H.length
 const nav=`<nav class="pnav" aria-label="Pasos de la partición">${PASOS_P.map(([id,t],i)=>`<button data-pstep="${i}" class="${i<k?"ok":i===k?"on":""}" aria-current="${i===k?"step":"false"}"><i>${i<k?I.tick:i+1}</i><span>${t}</span></button>`).join("")}</nav>`;
 const pie=`<div class="pfoot">${k>0?`<button class="btn gray" data-pstep="${k-1}">${I.back}${PASOS_P[k-1][1]}</button>`:"<span></span>"}${k<PASOS_P.length-1?`<button class="btn" data-pstep="${k+1}">Siguiente: ${PASOS_P[k+1][1]}<span class="chev-r">${I.chev}</span></button>`:`<button class="btn" data-doc="cuaderno">${I.doc}Cuaderno particional</button>`}</div>`;
 const cab=(t,s)=>`<div class="phead"><div class="kick">Paso ${k+1} de ${PASOS_P.length}</div><h2>${t}</h2><p>${s}</p></div>`;
-const m=R.isd.masa,terr=x.ccaa==="EST"?x.ccaaBienes||"EST":x.ccaa;
+const m=R.isd.masa,terr=terrISD(x);
 const nom=(p)=>esc(p.nombre||RELACIONES[p.relacion].label);
 const dot=(id)=>`<i class="hdot" style="background:${col(id)}"></i>`;
 let body="";
@@ -2130,7 +2220,7 @@ const m=muniPorIne(ine);if(!m)return;
 b.muniIne=ine;b.muniNombre=m.n;b.municipio=muniOrd(ine)||"OTRO";
 }
 const muniHac=(ine)=>(typeof haciendaIIVTNU==="function"?haciendaIIVTNU(ine):null);
-const muniEtiqueta=(key,ine)=>key?(ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?`<span class="mtag ok" title="Tipo, coeficientes y bonificaciones de la ordenanza cotejados con el boletín oficial">Ordenanza incorporada · verificada</span>`:`<span class="mtag rev" title="Ordenanza incorporada; algún dato está pendiente de cotejo con el boletín oficial">Ordenanza incorporada · en revisión</span>`)
+const muniEtiqueta=(key,ine)=>key&&ORDENANZAS[key]?.sinImpuesto?`<span class="mtag ok" title="El ayuntamiento no ha establecido este impuesto (es potestativo): no hay plusvalía que liquidar">No exige el impuesto${ORDENANZAS[key].estadoTipo==="VERIFICADO"?"":" · en revisión"}</span>`:key&&ORDENANZAS[key]?.datos?.origen==="hacienda"?`<span class="mtag rev" title="Tipo de gravamen que el ayuntamiento comunicó al Ministerio de Hacienda para ${ORDENANZAS[key].datos.anioDatos}; coeficientes máximos legales; la bonificación se introduce a mano">Tipo oficial · Hacienda ${ORDENANZAS[key].datos.anioDatos}</span>`:key?(ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?`<span class="mtag ok" title="Tipo, coeficientes y bonificaciones de la ordenanza cotejados con el boletín oficial">Ordenanza incorporada · verificada</span>`:`<span class="mtag rev" title="Ordenanza incorporada; algún dato está pendiente de cotejo con el boletín oficial">Ordenanza incorporada · en revisión</span>`)
 :muniHac(ine)?`<span class="mtag ok" title="Tipo de gravamen que el ayuntamiento comunica al Ministerio de Hacienda para 2026; coeficientes máximos legales; la bonificación se introduce a mano">Tipo oficial · Hacienda 2026</span>`
 :`<span class="mtag no" title="Se calcula el máximo posible: tipo del 30 %, coeficientes máximos y sin bonificación, hasta que introduzcas los de su ordenanza">Sin ordenanza · cálculo máximo</span>`;
 const MUNI_FORAL=["ALA","BIZ","GIP","NAV"];
@@ -3100,7 +3190,7 @@ const score=Math.max(0,100-resta(items));
 const grave=items.some((i)=>i.tipo==="riesgo"&&i.gravedad===3);
 const nivel=score>=80&&!grave?"bien":score>=55?"atencion":"riesgo";
 const areas=DG_AREAS.map(([k,nombre,corto])=>{const L=items.filter((i)=>i.area===k&&i.tipo!=="oportunidad");return{k,nombre,corto,score:Math.max(0,100-resta(L)),n:L.length,op:items.filter((i)=>i.area===k&&i.tipo==="oportunidad").length};});
-return{score,nivel,items,areas,sinCalculo:!R,terr:x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa};
+return{score,nivel,items,areas,sinCalculo:!R,terr:terrISD(x)};
 }
 const dgColorNivel=(n)=>(n==="bien"?"var(--green)":n==="atencion"?"var(--orange)":"var(--red)");
 const dgNivelDe=(s)=>(s>=80?"bien":s>=55?"atencion":"riesgo");
@@ -3200,7 +3290,7 @@ const total=inm?Math.max(num(b.valor),num(b.valorReferencia)):num(b.valor);
 return{legatarioId:b.legatarioId,valor:total*cuotaCausante({titularidad:b.titularidad,porcentaje:pctCausante(b.porcentaje)})};
 });
 return{
-ccaa:x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa,vecindadCivil:x.vecindadCivil,isla:x.isla,
+ccaa:terrISD(x),vecindadCivil:x.vecindadCivil,isla:x.isla,
 reparto:x.testamento==="usufructo"?"usufructoUniversal":x.testamento==="porcentajes"?"porcentajes":"intestado",
 herederos:(x.personas||[]).map((p)=>({id:p.id,separado:!!p.separado,nombre:p.nombre||RELACIONES[p.relacion]?.label||"Sin nombre",relacion:p.relacion==="pareja_hecho"&&!p.inscrita?"pareja_no_inscrita":p.relacion,edad:p.edad===""||p.edad==null?null:num(p.edad),renuncia:!!p.renuncia,desheredado:!!p.desheredado,estirpe:p.estirpe,inscrita:!!p.inscrita,lineaAsc:p.lineaAsc})),
 derechos:R.isd.derechos,masa:R.isd.masa,legados,
@@ -3215,7 +3305,7 @@ try{return calcularLegitimas(lgCaso(x,R));}catch(e){return null;}
 const lgPill=(estado,extra="")=>{const[t,c]=LG_ESTADO[estado]||[estado,"gray"];return`<span class="lg-pill ${c}">${esc(t)}${extra}</span>`;};
 const lgFrac=(f)=>(typeof fracTxt==="function"?fracTxt(f):grp(f*100,0)+" %");
 const lgNorma=(t,terr)=>(typeof linkNorma==="function"?linkNorma(t,terr):esc(t));
-const lgTerr=(x)=>(x.ccaa==="EST"?x.ccaaBienes||"EST":x.ccaa);
+const lgTerr=(x)=>(terrISD(x));
 function lgFranjaViudo(L){
 const v=L.viudo;if(!v||v.valor==null||!v.fraccion)return null;
 const[fe]=L.tercios.fracciones;
@@ -3358,6 +3448,57 @@ function frLeyRepartoHTML(R){
 const L=R&&R.isd&&R.isd.leyReparto;if(!L)return"";
 return`<li><i class="dot gold"></i><span><b>Ley aplicable sin testamento: ${esc(L)}.</b> La decide la vecindad civil del causante.</span></li>`;
 }
+const avSw=(attr,campo,on,t,s)=>`<div class="row toggle"><span class="t"><b>${t}</b>${s?`<small>${s}</small>`:""}</span><label class="switch"><input type="checkbox" ${attr}="${campo}" ${on?"checked":""}><span></span></label></div>`;
+const avSiNo=(attr,campo,val,id,label,hint)=>`<div class="field"><label for="${id}">${label}</label><select id="${id}" ${attr}="${campo}"><option value="">Sin comprobar</option><option value="si" ${val==="si"?"selected":""}>Sí</option><option value="no" ${val==="no"?"selected":""}>No</option></select>${hint?`<span class="hint">${hint}</span>`:""}</div>`;
+function avPersonaHTML(x,p){
+const terr=terrISD(x),l=RELACIONES[p.relacion]?.linea;
+const forzoso=l==="desc"||l==="asc";
+const hayPacto=(x.situ&&x.situ.pactoSucesorio)||p.pactoFecha||num(p.pactoBL)||num(p.pactoReduccion);
+const bal=terr==="BAL"||x.vecindadCivil==="BAL";
+const conDatos=num(p.donacionColacionable)||p.fiduciario||p.pactoFecha||p.separacion;
+let h="";
+if(forzoso)h+=`<div class="field"><label for="p-col">Donación que debe traer a la partición (colación), valor actual (€)</label><input id="p-col" inputmode="decimal" data-p="donacionColacionable" value="${numStr(p.donacionColacionable)}" placeholder="0"><span class="hint">Lo que recibió en vida del fallecido, por lo que vale hoy (art. 1045 CC). Se descuenta de su parte en la partición y cuenta para las legítimas.</span></div>`
++(num(p.donacionColacionable)?avSw("data-p","dispensaColacion",p.dispensaColacion,"El fallecido le dispensó de colacionar","Dispensa expresa en la donación o en el testamento (art. 1036 CC)"):"")
++(num(p.donacionColacionable)&&x.vecindadCivil&&x.vecindadCivil!=="comun"?avSw("data-opt","colacionOrdenada",x.colacionOrdenada,"El causante ordenó la colación","En los derechos forales solo se colaciona si el causante lo ordenó (Cataluña, art. 464-17 CCCat)"):"");
+if(x.testamento==="porcentajes")h+=avSw("data-p","fiduciario",p.fiduciario,"Es fiduciario (sustitución fideicomisaria)","Debe conservar los bienes para otro: tributa solo por el usufructo (art. 53.3 RD 1629/1991)")
++(p.fiduciario?avSw("data-p","fiduciarioPuedeDisponer",p.fiduciarioPuedeDisponer,"Puede disponer de los bienes (fideicomiso de residuo)","Tributa por el pleno dominio, con devolución de la nuda propiedad si llegan al fideicomisario"):"");
+if(p.relacion==="conyuge"&&p.separado&&bal)h+=`<div class="field"><label for="p-sep">Tipo de separación</label><select id="p-sep" data-p="separacion"><option value="">Sin indicar</option><option value="legal" ${p.separacion==="legal"?"selected":""}>Legal (sentencia o escritura)</option><option value="hecho" ${p.separacion==="hecho"?"selected":""}>Solo de hecho</option></select><span class="hint">En Baleares el separado solo de hecho conserva el usufructo del viudo (Compilación, Ley 7/2017).</span></div>`
++avSw("data-p","procesoSeparacion",p.procesoSeparacion,"Había un procedimiento de separación o divorcio iniciado","Lo excluye de la sucesión en Baleares");
+if(hayPacto)h+=`<div class="field"><label for="p-pf">Fecha del pacto sucesorio previo</label><input id="p-pf" type="date" data-p="pactoFecha" value="${esc(p.pactoFecha)}"></div>`
++`<div class="field"><label for="p-pb">Base liquidable del pacto (€)</label><input id="p-pb" inputmode="decimal" data-p="pactoBL" value="${numStr(p.pactoBL)}" placeholder="Según su autoliquidación"><span class="hint">Si es de los cuatro años anteriores al fallecimiento, se suma para calcular el tipo (art. 30 Ley 29/1987).</span></div>`
++`<div class="field"><label for="p-pr">Reducción por parentesco aplicada en el pacto (€)</label><input id="p-pr" inputmode="decimal" data-p="pactoReduccion" value="${numStr(p.pactoReduccion)}" placeholder="0"><span class="hint">En Galicia, desde 2026, se descuenta de la reducción de esta herencia (Ley 5/2025).</span></div>`;
+if(!h)return"";
+return`<details class="fopt" data-fopt="p-avanzado" ${(ui.fopt?.["p-avanzado"]??!!conDatos)?"open":""}><summary><span><b>Partición y casos especiales</b><br>Colación de donaciones${x.testamento==="porcentajes"?", fideicomiso":""}${hayPacto?", pacto sucesorio":""}. Opcional.</span>${conDatos?`<span class="chip info">Con datos</span>`:""}</summary><div class="group">${h}</div></details>`;
+}
+function avBienHTML(x,b){
+let h="";
+const pers=(sel)=>(x.personas||[]).map((p)=>`<option value="${p.id}" ${sel===p.id?"selected":""}>${esc(p.nombre||RELACIONES[p.relacion]?.label||"")}</option>`).join("");
+if(b.tipo==="empresa"){
+const R=REGLAS[terrISD(x)]||REGLAS.EST;
+const q=typeof requisitosEmpresaFamiliar==="function"?requisitosEmpresaFamiliar(casoMotor(x).bienes.find((z)=>z.id===b.id)||{},{R}):null;
+const ind=b.efTipo==="individual";
+h+=`${fsecH("Reducción por empresa familiar","Lista de requisitos. Con todos comprobados, la reducción se aplica sin aviso; si alguno falla, no se aplica.")}<div class="group">
+      <div class="field"><label for="b-eft">Qué se hereda</label><select id="b-eft" data-bn="efTipo"><option value="">Participaciones o acciones de una sociedad</option><option value="individual" ${ind?"selected":""}>Empresa individual o negocio profesional</option></select></div>
+      ${ind?avSiNo("data-bn","efHabitual",b.efHabitual,"b-efh","Actividad habitual, personal y directa del causante")+avSiNo("data-bn","efPrincipalRenta",b.efPrincipalRenta,"b-efr","Era su principal fuente de renta","Más de la mitad de su base imponible del IRPF.")
+:avSiNo("data-bn","efPatrimonial",b.efPatrimonial,"b-efp","La sociedad es patrimonial (gestiona valores o inmuebles)","Más de la mitad del activo en valores o no afecto a la actividad durante más de 90 días del año.")
++`<div class="field"><label for="b-efc">Participación del causante (%)</label><input id="b-efc" inputmode="decimal" data-bn="efPctCausante" value="${numStr(b.efPctCausante)}" placeholder="Ej.: 30"></div>`
++`<div class="field"><label for="b-efg">Participación con su familia (%)</label><input id="b-efg" inputmode="decimal" data-bn="efPctGrupo" value="${numStr(b.efPctGrupo)}" placeholder="Solo si la suya no llega al 5 %"><span class="hint">Cónyuge, ascendientes, descendientes y hermanos${R.id==="AND"?" (en Andalucía, colaterales hasta el sexto grado)":""}.</span></div>`
++`<div class="field"><label for="b-efd">Funciones de dirección</label><select id="b-efd" data-bn="efDireccion"><option value="">Sin comprobar</option><option value="causante" ${b.efDireccion==="causante"?"selected":""}>Las ejercía el causante</option><option value="grupo" ${b.efDireccion==="grupo"?"selected":""}>Las ejerce alguien de su familia</option><option value="no" ${b.efDireccion==="no"?"selected":""}>Nadie de la familia</option></select></div>`
++(R.id==="AND"?"":avSiNo("data-bn","efRemuneracion50",b.efRemuneracion50,"b-efm","Esa remuneración es más de la mitad de sus ingresos del trabajo y de actividades"))
++avSw("data-bn","efJubilado",b.efJubilado,"El causante estaba jubilado o incapacitado","")}
+      <div class="field"><label for="b-efa">Parte del valor afecta a la actividad (%)</label><input id="b-efa" inputmode="decimal" data-bn="efPctAfecto" value="${numStr(b.efPctAfecto)}" placeholder="100"><span class="hint">Activos necesarios para la actividad menos deudas, sobre el patrimonio neto (balance).</span></div>
+      ${q?`<div class="row"><span class="t"><b>${q.estado==="cumple"?"Requisitos comprobados":q.estado==="no cumple"?"No se cumplen los requisitos":"Faltan datos por comprobar"}</b><small>${esc(q.estado==="no cumple"?q.incumple.join(". "):q.estado==="incompleto"?q.faltan.join(". "):`Reducción sobre el ${grp(q.factor*100,0)} % del valor. Mantener ${R.empresa?.permanencia||10} años.`)}</small></span><span class="chip ${q.estado==="cumple"?"ok":q.estado==="no cumple"?"bad":"info"}">${q.estado==="cumple"?"Cumple":q.estado==="no cumple"?"No cumple":"Incompleto"}</span></div>`:""}
+    </div>`;
+}
+const hayAsc=(x.personas||[]).some((p)=>RELACIONES[p.relacion]?.linea==="asc");
+const res=`${hayAsc?avSw("data-bn","reservable811",b.reservable811,"Sujeto a reserva troncal (art. 811 CC)","El fallecido lo recibió gratis de un ascendiente o de un hermano: el ascendiente que lo hereda tributa solo por el usufructo"):""}
+    <div class="field"><label for="b-rt">El fallecido lo tenía como reservista</label><select id="b-rt" data-bn="reservaTipo"><option value="">No</option><option value="viudal" ${b.reservaTipo==="viudal"?"selected":""}>Reserva viudal (arts. 968-980 CC)</option><option value="lineal" ${b.reservaTipo==="lineal"?"selected":""}>Reserva troncal (art. 811 CC)</option></select><span class="hint">No entra en su herencia: pasa a los reservatarios, que tributan según su parentesco con quien dejó el bien (art. 55 RD 1629/1991).</span></div>
+    ${b.reservaTipo?`<div class="field"><label for="b-rr">Reservatario</label><select id="b-rr" data-bn="reservatarioId"><option value="">Elige</option>${pers(b.reservatarioId)}</select></div>`:""}`;
+h+=`<details class="fopt" data-fopt="b-reserva" ${(ui.fopt?.["b-reserva"]??!!(b.reservable811||b.reservaTipo))?"open":""}><summary><span><b>Reservas</b><br>Bienes que la ley reserva a ciertos parientes. Opcional.</span>${b.reservable811||b.reservaTipo?`<span class="chip info">Con datos</span>`:""}</summary><div class="group">${res}</div></details>`;
+const inm=b.tipo==="vivienda"||b.tipo==="inmueble";
+if(x.ccaa==="EST"&&!inm)h+=`${fsecH("Ubicación en España","Para elegir la normativa autonómica de un causante no residente (disposición adicional 2.ª Ley 29/1987).")}<div class="group"><div class="field"><label for="b-ub">Comunidad donde está el bien</label><select id="b-ub" data-bn="ccaaUbicacion"><option value="">Sin indicar</option>${TERRITORIOS.filter(([id])=>id!=="EST").map(([id,n])=>`<option value="${id}" ${b.ccaaUbicacion===id?"selected":""}>${esc(n)}</option>`).join("")}</select><span class="hint">Las cuentas, donde está la oficina.</span></div></div>`;
+return h;
+}
 const SH_ANIOS=[5,10,15,20],SH_REVAL=[0,1,2,3],SH_UMBRAL=50;
 const SH_DESC=["hijo","nieto","bisnieto"];
 const shEsViudo=(p)=>["conyuge","pareja_hecho"].includes(p.relacion);
@@ -3479,7 +3620,7 @@ if(_cacheSH.size>40)_cacheSH.clear();
 _cacheSH.set(key,out);return out;
 }
 function segundaHerencia0(x,R,viudo,hijos,anios,reval,revalPct){
-const terr=x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa;
+const terr=terrISD(x);
 const E=shEscenarios(x,viudo);
 let teo=null;{const y=shClon(x);y.testamento="no";y.personas.find((p)=>p.id===viudo.id).renuncia=true;teo=calcular(y);}
 const escenarios=[];
@@ -3525,7 +3666,7 @@ if(k==="C")return`${n} renuncia pura y simplemente ante notario: ${hs} reciben t
 return`${n} se adjudica la vivienda entera (su mitad de gananciales más la parte del causante) en pago de su haber${P.fUsu||x1.testamento!=="porcentajes"?", conmutando su usufructo (arts. 839-840 CC)":""}; ${hs} reciben el resto. La vivienda completa formará la segunda herencia.`;
 }
 function shTextos(e,S){
-const v=S.viudo.nombre||"el viudo",P=e.patrimonioViudo,x=S.x,terr=x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa;
+const v=S.viudo.nombre||"el viudo",P=e.patrimonioViudo,x=S.x,terr=terrISD(x);
 const conv=S.hijos.some((p)=>p.convivio2anios);
 const implica=[],riesgos=[];
 if(e.k==="A"){
@@ -4052,7 +4193,7 @@ for(const[k,L]of Object.entries(BIBLIO.municipal||{}))for(const n of L)N.push(ro
 grupo("Normas",N,6);
 }
 if(typeof muniBuscar==="function"&&qn.length>=2&&!/^\d+$/.test(qn)){
-grupo("Municipios",muniBuscar(q,5).map((m,i)=>{const key=muniOrd(m.ine);const est=!key?(muniHac(m.ine)?"Tipo oficial · Hacienda 2026":"Sin ordenanza · cálculo máximo"):ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?"Ordenanza verificada":"Ordenanza en revisión";return{s:2.6+Math.min(pkScore(qn,m.n),3)*0.1+i*0.01,raw:true,t:m.n,sub:`${m.pn} · ${est}`,ico:PK_I.pin,hint:key?"Ir":"Ver",tag:key?(ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?"ok":"rev"):"no",run:()=>{ui.bn="municipal";ui.bq=key?ORDENANZAS[key]?.nombre||m.n:m.n;go({vista:"biblio",sheet:null});}};}),7);
+grupo("Municipios",muniBuscar(q,5).map((m,i)=>{const key=muniOrd(m.ine);const est=!key?(muniHac(m.ine)?"Tipo oficial · Hacienda 2026":"Sin ordenanza · cálculo máximo"):ORDENANZAS[key]?.sinImpuesto?"No exige el impuesto":ORDENANZAS[key]?.datos?.origen==="hacienda"?`Tipo oficial · Hacienda ${ORDENANZAS[key].datos.anioDatos}`:ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?"Ordenanza verificada":"Ordenanza en revisión";return{s:2.6+Math.min(pkScore(qn,m.n),3)*0.1+i*0.01,raw:true,t:m.n,sub:`${m.pn} · ${est}`,ico:PK_I.pin,hint:key?"Ir":"Ver",tag:key?(ORDENANZAS[key]?.estadoTipo==="VERIFICADO"?"ok":"rev"):"no",run:()=>{ui.bn="municipal";ui.bq=key?ORDENANZAS[key]?.nombre||m.n:m.n;go({vista:"biblio",sheet:null});}};}),7);
 }
 G.sort((a,b)=>a.best-b.best||a.orden-b.orden);
 return G;
@@ -5399,7 +5540,7 @@ return{listo:!bloqueos.length,bloqueos,avisos,ok,items:L};
 }
 const vfAttrs=(en)=>(en?Object.entries(en).filter(([,v])=>v!=null&&v!=="").map(([k,v])=>`data-${k.replace(/[A-Z]/g,(c)=>"-"+c.toLowerCase())}="${esc(v)}"`).join(" "):"");
 const vfChip=(e)=>(e==="PENDIENTE"?'<span class="tag P">En verificación</span>':e==="VERIFICADO"?'<span class="tag V">Verificado</span>':"");
-function vfNorma(t,x){if(!t)return"";const terr=x&&(x.ccaa==="EST"?x.ccaaBienes:x.ccaa);return typeof linkNorma==="function"?t.split(" · ").map((n)=>linkNorma(n,terr)).join(" · "):esc(t);}
+function vfNorma(t,x){if(!t)return"";const terr=x&&(terrISD(x));return typeof linkNorma==="function"?t.split(" · ").map((n)=>linkNorma(n,terr)).join(" · "):esc(t);}
 function vfFila(it,x){
 const ic=it.sev==="ok"?VF_I.ok:it.sev==="bloqueo"?VF_I.no:VF_I.av;
 const btns=[];
@@ -5436,7 +5577,7 @@ return`<div class="card vf-datos">${cardH("Para la escritura","Datos de identifi
 function tFirma(x,R){
 if(R===undefined)R=calcular(x);
 const V=validarFirma(x,R);
-const vista=ui.vfv==="650"?"650":"check";
+const vista=ui.vfv==="650"?"650":ui.vfv==="modelos"&&typeof tModelos==="function"?"modelos":"check";
 const nB=V.bloqueos.length,nA=V.avisos.length,tot=V.items.length;
 const pct=tot?Math.round((V.ok.length/tot)*100):0;
 const F=vfF(x);
@@ -5449,8 +5590,9 @@ const hero=`<div class="card vf-hero ${nB?"vf-no":"vf-si"}">
       <div class="vf-cnt"><span><i class="vf-d vf-db"></i>${vfPlural(nB,"bloqueo")}</span><span><i class="vf-d vf-da"></i>${vfPlural(nA,"aviso")}</span><span><i class="vf-d vf-do"></i>${V.ok.length} de ${tot} correctas</span></div></div>
     <div class="vf-hacts"><button class="btn sm" data-vf="pdf">${I.dl}Paquete para la notaría</button><button class="btn sm gray" data-doc="escritura">${I.doc}Borrador de escritura</button><button class="btn sm gray" data-vf="texto">${VF_I.cp}Texto del correo</button>${F.email?`<button class="btn sm gray" data-vf="mail">Enviar por correo</button>`:""}</div>
   </div>`;
-const seg=`<div class="seg vf-seg" role="group" aria-label="Vista"><button data-vf="vista" data-v="check" aria-pressed="${vista==="check"}">Comprobación</button><button data-vf="vista" data-v="650" aria-pressed="${vista==="650"}">Hoja del 650</button></div>`;
+const seg=`<div class="seg vf-seg" role="group" aria-label="Vista"><button data-vf="vista" data-v="check" aria-pressed="${vista==="check"}">Comprobación</button><button data-vf="vista" data-v="650" aria-pressed="${vista==="650"}">Hoja del 650</button>${typeof tModelos==="function"?`<button data-vf="vista" data-v="modelos" aria-pressed="${vista==="modelos"}">Modelos oficiales</button>`:""}</div>`;
 if(vista==="650")return`<div class="vf">${hero}${seg}${hoja650(x,R)}</div>`;
+if(vista==="modelos")return`<div class="vf">${hero}${seg}${tModelos(x,R)}</div>`;
 const grupos=VF_GRUPOS.map(([k,t])=>{
 const L=V.items.filter((i)=>i.grupo===k);if(!L.length)return"";
 const b=L.filter((i)=>i.sev==="bloqueo").length,a=L.filter((i)=>i.sev==="aviso").length;
@@ -5472,34 +5614,34 @@ const pp=num(p.patrimonioPreexistente)+(hh.relacion==="conyuge"&&R.isd.masa.gana
 out.datos=[["Sujeto pasivo",hh.nombre],["NIF",p.nif?vfNif(p.nif).v:"[NIF]"],["Parentesco",RELACIONES[hh.relacion]?.label||hh.relacion],["Grupo de parentesco",hh.grupo],["Edad",vfEdadVale(p)?num(p.edad)+" años":"[edad]"],["Discapacidad",num(p.discapacidad)?`${num(p.discapacidad)} % o más`:"No"],["Causante",x.nombre||"—"],["NIF del causante",x.nifCausante?vfNif(x.nifCausante).v:"[NIF]"],["Fecha de devengo",fechaLarga(x.fecha)],["Territorio",nombreTerr(x.ccaa)]];
 L("sujeto","Patrimonio preexistente",pp,{norma:hh.relacion==="conyuge"&&R.isd.masa.gananciales?"Incluye la mitad de los gananciales (art. 22.3 Ley 29/1987)":"Declarado en la ficha del heredero"});
 const por=val(/^Porción hereditaria/),aj=val(/^Ajuar/),leg=val(/^Legados recibidos/),seg=val(/^Seguros de vida/),bi=val(/^Base imponible/);
-if(aeat)L("base","Valor de la porción del caudal hereditario (incluye ajuar)",(por?por.valor:0)+(aj?aj.valor:0),{cas:cas("porcion"),norma:aj&&aj.valor?`Ajuar imputado ${eur(aj.valor)} (art. 15 Ley 29/1987)`:""});
-else{if(por)L("base","Porción hereditaria",por.valor);if(aj)L("base","Ajuar doméstico",aj.valor,{norma:aj.norma});}
-if(leg)L("base","Legados",leg.valor,{cas:cas("legados")});
-if(seg)L("base","Seguros de vida",seg.valor,{cas:cas("seguros"),norma:seg.norma});
-if(bi)L("base","Base imponible",bi.valor,{cas:cas("bi"),tot:1});
+if(aeat)L("base","Valor de la porción del caudal hereditario (incluye ajuar)",(por?por.valor:0)+(aj?aj.valor:0),{k:"isd.porcion",cas:cas("porcion"),norma:aj&&aj.valor?`Ajuar imputado ${eur(aj.valor)} (art. 15 Ley 29/1987)`:""});
+else{if(por)L("base","Porción hereditaria",por.valor,{k:"isd.porcion",kSuma:1});if(aj)L("base","Ajuar doméstico",aj.valor,{k:"isd.porcion",kSuma:1,norma:aj.norma});}
+if(leg)L("base","Legados",leg.valor,{k:"isd.legados",cas:cas("legados")});
+if(seg)L("base","Seguros de vida",seg.valor,{k:"isd.seguros",cas:cas("seguros"),norma:seg.norma});
+if(bi)L("base","Base imponible",bi.valor,{k:"isd.bi",cas:cas("bi"),tot:1});
 let sumR=0;
 for(const t of T.filter((q)=>/^Reducción/.test(q.paso))){
 const k=/parentesco/i.test(t.paso)?"parentesco":/discapacidad/i.test(t.paso)?"discapacidad":/seguros/i.test(t.paso)?"redSeguros":/empresa/i.test(t.paso)?"empresa":/vivienda/i.test(t.paso)?"vivienda":"";
 const ap=t.aplicado!=null?Math.abs(t.aplicado):Math.abs(t.valor),leg=Math.abs(t.valor);
-sumR+=ap;L("red",t.paso,ap,{cas:k?cas(k):null,norma:[t.norma,ap<leg-0.005?`Se aplican ${eur(ap)} de un máximo legal de ${eur(leg)}: la reducción no puede superar la base que queda`:""].filter(Boolean).join(" · "),estado:t.estado});
+sumR+=ap;L("red",t.paso,ap,{k:k?"isd.red."+{parentesco:"parentesco",discapacidad:"discapacidad",redSeguros:"seguros",empresa:"empresa",vivienda:"vivienda"}[k]:null,kSuma:1,cas:k?cas(k):null,norma:[t.norma,ap<leg-0.005?`Se aplican ${eur(ap)} de un máximo legal de ${eur(leg)}: la reducción no puede superar la base que queda`:""].filter(Boolean).join(" · "),estado:t.estado});
 }
 if(!T.some((q)=>/^Reducción/.test(q.paso)))L("red","Sin reducciones",0);
-L("red","Total reducciones",sumR,{cas:cas("totalRed"),tot:1,norma:bi&&sumR>bi.valor?`Las reducciones superan la base imponible (${eur(bi.valor)}): la base liquidable queda en 0`:""});
+L("red","Total reducciones",sumR,{k:"isd.red.total",cas:cas("totalRed"),tot:1,norma:bi&&sumR>bi.valor?`Las reducciones superan la base imponible (${eur(bi.valor)}): la base liquidable queda en 0`:""});
 const bl=val(/^Base liquidable/),ci=val(/^Cuota íntegra/),co=val(/^Coeficiente multiplicador/),ap=val(/^A pagar/);
-if(bl)L("liq","Base liquidable",bl.valor,{cas:cas("bl"),tot:1});
-if(ci)L("liq","Cuota íntegra",ci.valor,{cas:cas("ci"),norma:ci.norma,estado:ci.estado});
-if(co){const m=/×\s*([\d.,]+)/.exec(co.paso);const k=m?Number(m[1].replace(",",".")):1;L("liq","Coeficiente multiplicador",k,{cas:cas("coef"),coef:1,norma:co.norma,estado:co.estado});L("liq","Cuota tributaria",co.valor,{cas:cas("ct"),tot:1});}
-for(const t of T.filter((q)=>/^Bonificación/.test(q.paso)))L("liq",t.paso,Math.abs(t.valor),{cas:aeat&&["CEU","MEL"].includes(x.ccaa)?VF_CAS.bonifCM:null,norma:t.norma,estado:t.estado});
+if(bl)L("liq","Base liquidable",bl.valor,{k:"isd.bl",cas:cas("bl"),tot:1});
+if(ci)L("liq","Cuota íntegra",ci.valor,{k:"isd.ci",cas:cas("ci"),norma:ci.norma,estado:ci.estado});
+if(co){const m=/×\s*([\d.,]+)/.exec(co.paso);const k=m?Number(m[1].replace(",",".")):1;L("liq","Coeficiente multiplicador",k,{k:"isd.coef",cas:cas("coef"),coef:1,norma:co.norma,estado:co.estado});L("liq","Cuota tributaria",co.valor,{k:"isd.ct",cas:cas("ct"),tot:1});}
+for(const t of T.filter((q)=>/^Bonificación/.test(q.paso)))L("liq",t.paso,Math.abs(t.valor),{k:"isd.bonif",kSuma:1,cas:aeat&&["CEU","MEL"].includes(x.ccaa)?VF_CAS.bonifCM:null,norma:t.norma,estado:t.estado});
 const otros=T.filter((q)=>!/^(Porción|Ajuar|Legados recibidos|Seguros de vida|Base imponible|Reducción|Base liquidable|Cuota íntegra|Coeficiente|Bonificación|A pagar)/.test(q.paso));
 for(const t of otros)L("liq",t.paso,t.valor,{norma:t.norma,estado:t.estado});
-L("liq","A ingresar",ap?ap.valor:hh.aIngresar,{cas:cas("total"),tot:2});
+L("liq","A ingresar",ap?ap.valor:hh.aIngresar,{k:"isd.total",cas:cas("total"),tot:2});
 return out;
 }
 function hoja650(x,R){
 if(R===undefined)R=calcular(x);
 if(!R)return`<div class="card empty" style="margin-top:14px"><b>Sin cálculo</b>Completa los datos del expediente para preparar las fichas del 650.</div>`;
 const aeat=VF_AEAT.includes(x.ccaa);
-const intro=`<div class="infobar vf-650i"><span class="ico gold">${I.info}</span><span>${x.ccaa==="AND"?"Modelo 650 de la Agencia Tributaria de Andalucía: uno por heredero, con el 660 de relación de bienes. Para presentarlo por el cliente hace falta ser colaborador social y conservar el modelo de representación firmado.":aeat?"Modelo 650 de la Agencia Tributaria: uno por heredero, con el 660 de relación de bienes.":`Modelo 650 de ${esc(nombreTerr(x.ccaa))}: uno por heredero, con el 660 de relación de bienes.`} Las cifras siguen el orden del formulario; «Copiar» las deja como las pide el programa (1234,56, sin puntos de miles).${aeat?` <b>Casillas</b> del modelo 650 estatal: verificadas con las ${VF_FUENTE_CAS}.`:` No se indican números de casilla: el formulario de ${esc(nombreTerr(x.ccaa))} aún no se ha cotejado. Comprueba cada casilla en su programa de ayuda.`}</span></div>`;
+const intro=`<div class="infobar vf-650i"><span class="ico gold">${I.info}</span><span>${x.ccaa==="AND"?"Modelo 650 de la Agencia Tributaria de Andalucía: uno por heredero, con el 660 de relación de bienes. Para presentarlo por el cliente hace falta ser colaborador social y conservar el modelo de representación firmado.":aeat?"Modelo 650 de la Agencia Tributaria: uno por heredero; la relación de bienes va en las hojas de declaración del propio 650.":`Modelo 650 de ${esc(nombreTerr(x.ccaa))}: uno por heredero, con el 660 de relación de bienes.`} Las cifras siguen el orden del formulario; «Copiar» las deja como las pide el programa (1234,56, sin puntos de miles).${aeat?` <b>Casillas</b> del modelo 650 estatal: verificadas con las ${VF_FUENTE_CAS}.`:` No se indican números de casilla: el formulario de ${esc(nombreTerr(x.ccaa))} aún no se ha cotejado. Comprueba cada casilla en su programa de ayuda.`}</span></div>`;
 const fila=(l,hid)=>{
 const v=l.coef?vfFmtK(l.v):vfFmt(l.v),vis=l.coef?"×"+(l.v%1?grp(l.v,4).replace(/0+$/,""):grp(l.v,0)):eur(l.v);
 return`<div class="vf-l ${l.tot?"t"+l.tot:""}">${l.cas?`<span class="vf-cas" title="Casilla del modelo 650 estatal · VERIFICADO">${l.cas}</span>`:`<span class="vf-cas e"></span>`}<span class="vf-lab">${esc(l.lab)}${l.norma?`<small>${esc(l.norma)}${l.estado==="PENDIENTE"?" · en verificación":""}</small>`:""}</span><b class="num">${vis}</b><button class="vf-cp" data-vf="cp" data-v="${esc(v)}" data-l="${esc(l.lab)}" aria-label="Copiar ${esc(l.lab)}">${VF_I.cp}<span>Copiar</span></button></div>`;
@@ -5538,7 +5680,7 @@ bl.push({tipo:"fila",etiqueta:"NIF",valor:x.nifCausante?vfNif(x.nifCausante).v:"
 bl.push({tipo:"fila",etiqueta:"Estado civil",valor:({gananciales:gnEC(gnCaus(x),"casado_gananciales"),separacion:gnEC(gnCaus(x),"casado_separacion"),pareja:"pareja de hecho",viudo:gnEC(gnCaus(x),"viudo"),soltero:gnEC(gnCaus(x),"soltero"),divorciado:gnEC(gnCaus(x),"divorciado")})[x.civil]||"[estado civil]"});
 bl.push({tipo:"fila",etiqueta:"Último domicilio",valor:vfPh(x.domicilioCausante,"último domicilio")});
 bl.push({tipo:"fila",etiqueta:"Fecha del fallecimiento",valor:fechaLarga(x.fecha)});
-bl.push({tipo:"fila",etiqueta:"Residencia fiscal",valor:nombreTerr(x.ccaa)+(x.ccaa==="EST"&&x.ccaaBienes?` (bienes en ${nombreTerr(x.ccaaBienes)})`:"")});
+bl.push({tipo:"fila",etiqueta:"Residencia fiscal",valor:nombreTerr(x.ccaa)+(x.ccaa==="EST"&&terrISD(x)!=="EST"?` (normativa de ${nombreTerr(terrISD(x))})`:"")});
 bl.push({tipo:"h",numero:"2.",texto:"Herederos y legatarios"});
 const filasP=pers.map((p)=>[`${vfNomP(p)}, NIF ${p.nif?vfNif(p.nif).v:"[NIF]"}`,`${gnCap(gnRel(p))}; ${p.estadoCivil?gnEC(p,p.estadoCivil):"[estado civil]"}`,vfPh(p.domicilio,"domicilio"),p.renuncia?"Renuncia":vfDerechos(R,p.id)||((bienes.some((b)=>b.legatarioId===p.id))?"Legatario":"—")]);
 if(filasP.length)bl.push({tipo:"tabla",cabecera:["Otorgante","Parentesco y estado civil","Domicilio","Cuota o derechos"],filas:filasP,alinear:["l","l","l","l"]});
@@ -5664,7 +5806,7 @@ if(a==="cp"){const v=d.v||"";Promise.resolve(copiar(v)).then(()=>toast(`Copiado 
 if(!x)return;
 if(a==="cpall"){const R=calcular(x);if(!R)return;const h=R.isd.herederos.find((q)=>q.id===d.id);Promise.resolve(copiar(vf650Texto(x,R,d.id))).then(()=>toast(`Copiadas las cifras de ${h?h.nombre:"la ficha"}`));return;}
 if(a==="foco"){
-if(ui.vfv==="650"){ui.vfv="check";render();}
+if(ui.vfv==="650"||ui.vfv==="modelos"){ui.vfv="check";render();}
 const n=document.getElementById(d.id);if(!n)return;
 n.scrollIntoView({behavior:"smooth",block:"center"});
 setTimeout(()=>{try{n.focus({preventScroll:true});}catch(er){n.focus();}const w=n.closest(".vf-fl")||n;w.classList.remove("vf-flash");void w.offsetWidth;w.classList.add("vf-flash");},250);
@@ -6175,6 +6317,262 @@ return zip([
 }
 const esrDocxOpts=(x,titulo)=>({titulo,ref:(x&&x.despacho&&x.despacho.ref)||"",expediente:x&&x.nombre?`Herencia de ${x.nombre}`:""});
 const esrHuecos=(t)=>String(t||"").split(/(⟦REVISI[^⟧]*⟧)/).map((sg,k)=>(k%2?sg:sg.replace(/\[([^\[\]\n]{1,200})\]/g,"⟦$1⟧").replace(/\[([^\[\]\n⟦⟧]*⟦[^⟧\n]*⟧[^\[\]\n⟦⟧]*)\]/g,(m,a)=>"⟦"+a.replace(/[⟦⟧]/g,"")+"⟧"))).join("");
+const MOD={lib:null,cargadas:{},gen:{},plantillas:{},mini:{}};
+if(typeof MODELOS==="object"&&MODELOS)for(const id of Object.keys(MODELOS.mapas||{}))MOD.plantillas[id]=(MODELOS.disponibles||[]).includes(id)?undefined:false;
+const MOD_ESTADO={pdf:["PDF oficial rellenado","ok"],pdfFalta:["PDF oficial: falta la plantilla","warn"],programa:["Datos listos para el programa oficial","info"],telematico:["Solo telemático: abre el programa",""]};
+const MOD_I={
+pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>',
+ext:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5M19 5l-8 8M18 14v5H5V6h5"/></svg>',
+};
+const modDatos=()=>(typeof MODELOS==="object"&&MODELOS?MODELOS:{territorios:{},comunes:[],plusvalia:{gestores:[]},mapas:{},diccionario:{},vias:{}});
+function modTerr(ccaa){
+const T=modDatos().territorios;let t=T[ccaa];
+if(t&&t.igual){const b=T[t.igual]||{};t={...b,...t,modelos:b.modelos||[]};}
+return t||null;
+}
+const modFechaES=(iso)=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||""));return m?`${m[3]}/${m[2]}/${m[1]}`:"";};
+const modInm=(b)=>b&&(b.tipo==="vivienda"||b.tipo==="inmueble");
+const modHayUsufructo=(R)=>Object.values((R&&R.isd&&R.isd.derechos)||{}).some((L)=>(L||[]).some((d)=>d.tipo==="usufructo"&&d.fraccion>0));
+const modHaySeguros=(x)=>(x.personas||[]).some((p)=>num(p.seguro)>0);
+const modWeb=()=>typeof hayWebPublica==="function"&&hayWebPublica()&&typeof webURL==="function";
+function modGestorPlus(b){
+const P=modDatos().plusvalia||{},ine=typeof ineBien==="function"?ineBien(b):b.muniIne||"";
+if(!ine)return null;
+return(P.gestores||[]).find((g)=>(g.ine||[]).includes(ine))||(P.gestores||[]).find((g)=>g.provincia&&ine.slice(0,2)===g.provincia&&!(g.excluye||[]).includes(ine))||null;
+}
+function modEstado(e){
+if(e.via==="pdf"){const m=e.mapa&&modDatos().mapas[e.mapa];return m&&(MOD.cargadas[e.mapa]||MOD.plantillas[e.mapa]===true||(modWeb()&&(modDatos().disponibles||[]).includes(e.mapa)))?"pdf":"pdfFalta";}
+return e.via==="telematico"?"telematico":"programa";
+}
+function modLista(x,R){
+if(R===undefined)R=calcular(x);
+const L=[],t=modTerr(x.ccaa),usuf=modHayUsufructo(R),seg=modHaySeguros(x);
+const add=(grupo,e,o={})=>L.push({grupo,e,key:e.id+(o.bien?"@"+o.bien.id:""),estado:modEstado(e),ahora:true,...o});
+for(const e of(t&&t.modelos)||[]){
+if(e.cuando==="usufructo"){if(usuf)add("despues",e,{motivo:"Cuando se extinga el usufructo (normalmente, al fallecer el usufructuario)."});continue;}
+if(e.cuando==="prorroga"){add("despues",e,{motivo:"Solo si se pide prórroga, dentro de los cinco primeros meses."});continue;}
+if(e.cuando==="seguros"&&!seg)continue;
+add("isd",e,{org:t.organismo});
+}
+const C=modDatos().comunes||[];
+for(const e of C){
+if(e.cuando==="catastro"){if((x.bienes||[]).some(modInm))add("catastro",e,{org:e.organismo,motivo:"Solo si el notario no lo comunica: herencia en documento privado o escritura sin la referencia catastral (art. 14.a TRLCI)."});continue;}
+add("certificados",e,{org:e.organismo});
+}
+const P=modDatos().plusvalia||{};
+for(const b of(x.bienes||[]).filter(modInm)){
+const g=modGestorPlus(b),pr=(R&&R.plus||[]).find((q)=>q.b&&q.b.id===b.id);
+const muni=(pr&&pr.r.municipio)||b.muniNombre||(typeof ORDENANZAS==="object"&&ORDENANZAS[b.municipio]?ORDENANZAS[b.municipio].nombre:"")||"municipio sin indicar";
+const e=g?{...g,modelo:g.via==="pdf"?"Plusvalía · PDF":"Plusvalía",nombre:`Plusvalía de ${b.descripcion||"inmueble"} · ${muni}`,norma:P.norma,datos:"plusvalia"}
+:{id:"PLUS-RESTO",modelo:"Plusvalía",nombre:`Plusvalía de ${b.descripcion||"inmueble"} · ${muni}`,organismo:`Ayuntamiento de ${muni} (o el organismo provincial en el que delegue)`,via:"programa",pdfOficial:"NO LOCALIZADO",presentacion:P.resto,norma:P.norma,estado:"NO LOCALIZADO",datos:"plusvalia"};
+add("plusvalia",e,{org:e.organismo,bien:b,r:pr?pr.r:null});
+}
+if(ui.modPrueba||(typeof location!=="undefined"&&/modelos-prueba/.test(location.hash||"")))add("prueba",{id:"PRUEBA-650",modelo:"Prueba",nombre:"Formulario de prueba (no es un modelo oficial)",via:"pdf",pdfOficial:"PRUEBA",mapa:"PRUEBA-650",porHeredero:true,presentacion:"Sirve para comprobar el circuito de relleno: no se puede presentar.",estado:"PRUEBA"},{org:"Hereda+"});
+return L;
+}
+function modValores(x,R,hId,bienId){
+if(R===undefined)R=calcular(x);
+const v={},F=x.firma||{};
+const nifV=(s)=>{const n=typeof vfNif==="function"?vfNif(s):{v:String(s||"").toUpperCase()};return n.vacio?"":n.v;};
+v["causante.nombre"]=String(x.nombre||"").trim();v["causante.nif"]=nifV(x.nifCausante);v["causante.domicilio"]=String(x.domicilioCausante||"").trim();v["causante.fecha"]=modFechaES(x.fecha);
+v["documento.notario"]=String(F.tNotario||"").trim();v["documento.fecha"]=modFechaES(F.tFecha);v["documento.protocolo"]=String(F.tProtocolo||"").trim();
+v["territorio"]=typeof nombreTerr==="function"?nombreTerr(x.ccaa):x.ccaa;
+{const ab=typeof abogado==="function"?abogado(x.responsable):null;v["presentador.nombre"]=ab&&ab.nombre&&ab.nombre!=="Titular del despacho"?ab.nombre:"";}
+v["marca.mortisCausa"]=true;
+{const KD=typeof despachoContacto==="function"?despachoContacto():{};v["lugarFecha"]=`${KD.localidad||""}${KD.localidad?", ":""}${modFechaES(hoy())}`;}
+const hh=R&&R.isd&&(R.isd.herederos.find((q)=>q.id===hId)||(bienId?null:R.isd.herederos[0]));
+if(hh){
+const p=(x.personas||[]).find((q)=>q.id===hh.id)||{};
+v["sujeto.nombre"]=String(hh.nombre||p.nombre||"").trim();v["sujeto.nif"]=nifV(p.nif);v["sujeto.domicilio"]=String(p.domicilio||"").trim();
+v["sujeto.parentesco"]=(RELACIONES[hh.relacion]&&RELACIONES[hh.relacion].label)||hh.relacion||"";v["sujeto.grupo"]=hh.grupo||"";
+v["sujeto.edad"]=p.edad!==""&&p.edad!=null&&!isNaN(num(p.edad))?String(num(p.edad)):"";v["sujeto.discapacidad"]=num(p.discapacidad)?String(num(p.discapacidad)):"";
+const S=vf650Lineas(x,R,hh);
+for(const l of[...S.sujeto,...S.base,...S.red,...S.liq]){if(!l.k)continue;v[l.k]=l.kSuma&&v[l.k]!=null?Math.round((v[l.k]+l.v)*100)/100:l.v;}
+const pp=S.sujeto.find((l)=>/preexistente/i.test(l.lab));if(pp)v["sujeto.patrimonio"]=pp.v;
+}
+const b=bienId?(x.bienes||[]).find((q)=>q.id===bienId):null;
+if(b){
+const pr=(R&&R.plus||[]).find((q)=>q.b&&q.b.id===b.id);
+v["inmueble.refCatastral"]=String(b.refCatastral||"").toUpperCase().replace(/[\s\-.]/g,"");v["inmueble.descripcion"]=String(b.descripcion||"").trim();
+v["inmueble.municipio"]=(pr&&pr.r.municipio)||b.muniNombre||"";v["inmueble.coef"]=b.titularidad==="proindiviso"?grp(num(b.porcentaje),2)+" %":b.titularidad==="ganancial"?"50 %":"100 %";
+v["inmueble.fechaAdq"]=modFechaES(b.fechaAdq);v["inmueble.valorAdq"]=num(b.valorAdq)||"";v["inmueble.valorTrans"]=Math.max(num(b.valor),num(b.valorReferencia))||"";
+if(pr){v["plus.cuota"]=pr.r.cuota;const t=hh&&pr.r.porTitular.find((q)=>q.heredero===hh.nombre);if(t)v["plus.aIngresar"]=t.aIngresar;}
+}
+return v;
+}
+function modFormato(dato,valor){
+if(valor===true)return"X";
+if(valor==null||valor==="")return"";
+if(dato==="isd.coef")return typeof vfFmtK==="function"?vfFmtK(valor):String(valor).replace(".",",");
+if(/^isd\.|^plus\.|^sujeto\.patrimonio$|^inmueble\.valor/.test(dato)&&typeof valor==="number")return typeof vfFmt==="function"?vfFmt(valor):valor.toFixed(2).replace(".",",");
+return String(valor);
+}
+async function modLib(){
+if(typeof window!=="undefined"&&window.PDFLib)return window.PDFLib;
+if(!modWeb())throw new Error("solo-web");
+if(!MOD.lib)MOD.lib=new Promise((res,rej)=>{const s=document.createElement("script");s.src=webURL("/lib/pdf-lib.min.js");s.async=true;s.onload=()=>res(window.PDFLib);s.onerror=()=>{MOD.lib=null;rej(new Error("no se pudo cargar pdf-lib"));};document.head.appendChild(s);});
+return MOD.lib;
+}
+async function modPlantillaWeb(id){
+const m=modDatos().mapas[id];if(!m||!modWeb()||MOD.plantillas[id]===false)return null;
+try{const r=await fetch(webURL("/"+m.plantilla),{cache:"no-cache"});if(!r.ok){MOD.plantillas[id]=false;return null;}const b=new Uint8Array(await r.arrayBuffer());MOD.plantillas[id]=true;return b;}catch(e){MOD.plantillas[id]=false;return null;}
+}
+const modTipo=(L,c)=>c instanceof L.PDFTextField?"texto":c instanceof L.PDFCheckBox?"marca":c instanceof L.PDFRadioGroup?"radio":c instanceof L.PDFDropdown||c instanceof L.PDFOptionList?"lista":c instanceof L.PDFButton?"boton":c instanceof L.PDFSignature?"firma":"otro";
+async function modGenerar(mapaId,x,o={}){
+const M=modDatos().mapas[mapaId];if(!M)throw new Error("No hay mapa para "+mapaId);
+const L=await modLib(),R=calcular(x);
+let bytes=o.bytes||MOD.cargadas[mapaId]||(await modPlantillaWeb(mapaId));
+if(!bytes)throw new Error("sin-plantilla");
+const doc=await L.PDFDocument.load(bytes,{updateMetadata:false});
+const form=doc.getForm(),campos=form.getFields(),nombres=campos.map((c)=>c.getName());
+const avisos=[];
+if(!campos.length)throw new Error(doc.catalog.lookup(L.PDFName.of("AcroForm"))?"xfa":"sin-campos");
+let mapaCampos=M.campos||{},noTocar=new Set(M.noTocar||[]),automatico=false;
+if(M.huella&&M.huella.length&&cuadraHuella(nombres,M.huella)<0.8)throw new Error("otra-plantilla");
+if(!Object.keys(mapaCampos).length){
+const P=proponerMapa(campos.map((c)=>({nombre:c.getName(),tipo:modTipo(L,c),ayuda:(()=>{try{const t=c.acroField.dict.lookup(L.PDFName.of("TU"));return t?t.decodeText():"";}catch(e){return"";}})()})),M);
+mapaCampos=P.campos;noTocar=new Set(P.noTocar);automatico=true;
+avisos.push("Mapa automático sin revisar: cada casilla se ha asignado por su número o por su nombre. Comprueba el PDF campo a campo antes de presentarlo.");
+}else if(M.estadoMapa!=="MAPEADO")avisos.push("El mapa de este formulario está en borrador: comprueba cada casilla antes de presentarlo.");
+const val=modValores(x,R,o.heredero,o.bien),filas=[],noTocados=[];
+for(const c of campos){
+const n=c.getName();
+if(noTocar.has(n)){noTocados.push(n);continue;}
+const m=mapaCampos[n];if(!m)continue;
+const obligatorio=(M.obligatorios||[]).includes(m.dato);
+let v=val[m.dato];
+if((v===0||v==null||v==="")&&!obligatorio&&/^isd\.|^plus\./.test(m.dato))v="";
+else if(v==null)v="";
+const tipo=modTipo(L,c);
+try{
+if(tipo==="texto"){
+const s=modFormato(m.dato,v),max=c.getMaxLength();
+if(max&&s.length>max){avisos.push(`«${n}»: el dato (${s}) no cabe en ${max} caracteres; se deja en blanco.`);c.setText("");filas.push({campo:n,dato:m.dato,valor:"",error:"no cabe"});continue;}
+c.setText(s);filas.push({campo:n,dato:m.dato,valor:s});
+}else if(tipo==="marca"){if(v)c.check();else c.uncheck();filas.push({campo:n,dato:m.dato,valor:v?"marcada":""});}
+else if(tipo==="lista"||tipo==="radio"){const s=String(v);if(s&&c.getOptions().includes(s))c.select(s);filas.push({campo:n,dato:m.dato,valor:s});}
+}catch(e){avisos.push(`«${n}»: no se pudo rellenar (${e.message}).`);}
+}
+const conValor=new Set(filas.filter((f)=>f.valor!=="").map((f)=>f.dato));
+const vacios=(M.obligatorios||[]).filter((d)=>Object.values(mapaCampos).some((m)=>m.dato===d)&&!conValor.has(d)).map((d)=>modDatos().diccionario[d]||d);
+try{form.updateFieldAppearances(await doc.embedFont(L.StandardFonts.Helvetica));}catch(e){avisos.push("El visor recalculará el aspecto de los campos al abrirlo.");}
+const out=await doc.save({updateFieldAppearances:false});
+return{bytes:out,filas,vacios,noTocados,avisos,automatico,titulo:M.titulo,prueba:!!M.prueba};
+}
+async function modMiniatura(key,bytes){
+try{
+if(typeof lecPdfLib!=="function")return;
+const pdfjs=await lecPdfLib(),d=await pdfjs.getDocument({data:bytes.slice(0)}).promise,p=await d.getPage(1);
+const vp=p.getViewport({scale:1}),esc2=520/vp.width,v2=p.getViewport({scale:esc2});
+const c=document.createElement("canvas");c.width=Math.round(v2.width);c.height=Math.round(v2.height);
+await p.render({canvasContext:c.getContext("2d"),viewport:v2}).promise;
+MOD.mini[key]=c.toDataURL("image/png");render();
+}catch(e){}
+}
+const modNombreArchivo=(x,it,gid)=>{
+const h=it.e.porHeredero&&gid?((calcular(x)||{isd:{herederos:[]}}).isd.herederos.find((q)=>q.id===gid)||{}).nombre:"";
+return[it.e.mapa||it.e.id,h,it.bien?it.bien.descripcion:"",x.despacho&&x.despacho.ref].filter(Boolean).join(" ").replace(/\s+/g,"-")+".pdf";
+};
+function modTexto660(x,R){
+const L=[`Relación de bienes · herencia de ${x.nombre||"—"}`,`Fecha de devengo\t${modFechaES(x.fecha)}`,""];
+for(const b of x.bienes||[]){
+const val=Math.max(num(b.valor),num(b.valorReferencia));
+L.push([TIPO_BIEN[b.tipo]?TIPO_BIEN[b.tipo][0]:"Bien",b.descripcion||"",modInm(b)&&b.refCatastral?"Ref. catastral "+b.refCatastral:"",b.titularidad==="proindiviso"?`${grp(num(b.porcentaje),2)} % del causante`:b.titularidad==="ganancial"?"ganancial (50 % del causante)":"",typeof vfFmt==="function"?vfFmt(val):String(val)].filter(Boolean).join("\t"));
+}
+const m=R&&R.isd&&R.isd.masa;
+if(m)L.push("",`Deudas\t${vfFmt(m.deudas||0)}`,`Gastos deducibles\t${vfFmt(m.gastos||0)}`,`Caudal neto\t${vfFmt(m.neto||0)}`);
+return L.join("\n");
+}
+const MOD_GRUPOS=[["isd","Impuesto sobre Sucesiones"],["certificados","Certificados"],["plusvalia","Plusvalía municipal"],["catastro","Catastro"],["despues","Más adelante o solo si hace falta"],["prueba","Prueba del circuito"]];
+function modNorma(e){
+const n=e.norma;if(!n||!n.texto)return"";
+const t=esc(n.texto)+(n.diario?` · ${esc(n.diario)}`:"");
+return`<div class="md-norma">${n.url?`<a href="${esc(n.url)}" target="_blank" rel="noopener">${t}</a>`:t}${e.estado?` ${typeof chipE==="function"?chipE(e.estado==="PRUEBA"?"":e.estado):""}`:""}</div>`;
+}
+function modTarjeta(x,R,it){
+const e=it.e,est=it.estado,[etq,cls]=MOD_ESTADO[est]||["",""];
+const M=e.mapa?modDatos().mapas[e.mapa]:null;
+const hs=(R&&R.isd&&R.isd.herederos)||[];
+const acts=[],extra=[];
+if(e.via==="pdf"&&M){
+const destinos=M.porInmueble?[{id:"",nombre:"Generar el PDF"}]:(M.porHeredero?hs:[{id:"",nombre:""}]).map((h)=>({id:h.id,nombre:h.nombre?"PDF de "+h.nombre:"Generar el PDF"}));
+for(const d of destinos)acts.push(`<button class="btn sm${est==="pdf"?"":" gray"}" data-md="gen" data-id="${esc(it.key)}" data-h="${esc(d.id)}"${est==="pdf"?"":" disabled"}>${MOD_I.pdf}${esc(d.nombre)}</button>`);
+acts.push(`<label class="btn sm gray md-file">${MOD_I.up}${est==="pdf"&&MOD.cargadas[e.mapa]?"Cambiar el PDF oficial":"Cargar el PDF oficial"}<input type="file" accept="application/pdf,.pdf" data-md-cargar="${esc(e.mapa)}" data-id="${esc(it.key)}"></label>`);
+if(e.pdf&&/^https?:/.test(e.pdf)||M.origen&&/^https?:/.test(M.origen))acts.push(`<a class="btn sm gray" href="${esc(/^https?:/.test(e.pdf||"")?e.pdf:M.origen)}" target="_blank" rel="noopener">Modelo en blanco ${MOD_I.ext}</a>`);
+if(M.aviso)extra.push(`<p class="md-aviso">${esc(M.aviso)}</p>`);
+if(est==="pdfFalta")extra.push(`<p class="caption">La plantilla oficial aún no está en la aplicación${M.estadoMapa==="SIN PLANTILLA"?"":""}. Descárgala de la web oficial y cárgala aquí; ${Object.keys(M.campos||{}).length?"su mapa de casillas ya está preparado":"Hereda+ propondrá cada casilla por su número o su nombre, y tendrás que revisarla"}.</p>`);
+}
+if(e.programa&&e.programa.url)acts.push(`<a class="btn sm${e.via==="pdf"?" gray":""}" href="${esc(e.programa.url)}" target="_blank" rel="noopener">${e.via==="pdf"?"Sede oficial":"Abrir el programa oficial"} ${MOD_I.ext}</a>`);
+else if(e.via!=="pdf")extra.push(`<p class="caption">Dirección del programa: no localizada. Entra desde la web de ${esc(it.org||"la Administración")}.</p>`);
+if(/^\d/.test(String(e.modelo))&&/650|651/.test(String(e.modelo))&&it.grupo==="isd"){acts.push(`<button class="btn sm gray" data-vf="vista" data-v="650">Hoja del 650</button>`);if(e.via!=="pdf")for(const h of hs)acts.push(`<button class="btn sm gray" data-vf="cpall" data-id="${esc(h.id)}">${VF_I.cp}Copiar cifras de ${esc(h.nombre)}</button>`);}
+if(/660/.test(String(e.modelo))&&it.grupo==="isd")acts.push(`<button class="btn sm gray" data-md="cp660">${VF_I.cp}Copiar la relación de bienes</button>`);
+if(e.datos==="solicitud790")acts.push(`<button class="btn sm gray" data-doc="solicitud790">Datos para el 790</button>`);
+if(e.datos==="catastro")acts.push(`<button class="btn sm gray" data-doc="catastro">Escrito para el Catastro</button>`);
+if(e.datos==="plusvalia")acts.push(`<button class="btn sm gray" data-doc="plusvalia">Declaración con los datos</button>`);
+const g=MOD.gen[it.key];
+const res=g?`<div class="md-gen" role="status"><div class="md-genh"><b>${g.error?"No se ha podido rellenar":`PDF oficial rellenado${g.prueba?" · prueba":""}`}</b>${g.heredero?`<span>${esc(g.heredero)}</span>`:""}</div>
+      ${g.error?`<p class="md-err">${esc(g.error)}</p>`:`${MOD.mini[it.key+"|"+(g.h||"")]?`<img class="md-mini" src="${MOD.mini[it.key+"|"+(g.h||"")]}" alt="Primera página del PDF rellenado">`:""}
+      <p class="caption">${g.filas.filter((f)=>f.valor!=="").length} campos rellenados${g.noTocados.length?` · sin tocar: ${esc(g.noTocados.join(", "))} (los pone la Administración)`:""}.</p>
+      ${g.vacios.length?`<p class="md-err">Datos obligatorios sin valor: ${esc(g.vacios.join(", "))}. Complétalos en el expediente y vuelve a generarlo.</p>`:""}
+      ${g.avisos.map((a)=>`<p class="md-aviso">${esc(a)}</p>`).join("")}
+      <details class="md-det"><summary>Ver campo a campo</summary><table class="md-t"><thead><tr><th scope="col">Campo del PDF</th><th scope="col">Dato</th><th scope="col">Valor</th></tr></thead><tbody>${g.filas.map((f)=>`<tr><td>${esc(f.campo)}</td><td>${esc(modDatos().diccionario[f.dato]||f.dato)}</td><td class="num">${esc(f.valor||"—")}</td></tr>`).join("")}</tbody></table></details>
+      <div class="md-acts"><button class="btn sm" data-md="dl" data-id="${esc(it.key)}">Descargar el PDF</button><button class="btn sm gray" data-md="ver" data-id="${esc(it.key)}">Abrir</button><button class="btn sm gray" data-md="arch" data-id="${esc(it.key)}">Guardar en el expediente</button></div>`}</div>`:"";
+return`<section class="card md-c" id="md-${esc(it.key.replace(/[^\w-]/g,"_"))}" data-md-estado="${est}"><div class="md-h"><span class="vf-cas md-n">${esc(e.modelo)}</span><div class="md-ht"><h3>${esc(e.nombre)}</h3><small>${esc(it.org||e.organismo||"")}</small></div><span class="chip ${cls}">${esc(etq)}</span></div>
+    ${it.motivo?`<p class="md-cuando">${esc(it.motivo)}</p>`:""}
+    ${e.presentacion?`<p class="md-p">${esc(e.presentacion)}</p>`:""}${e.telematicaObligatoria?`<p class="md-p"><b>Presentación electrónica:</b> ${esc(e.telematicaObligatoria)}</p>`:""}${e.numeracion?`<p class="md-p"><b>Número oficial:</b> ${esc(e.numeracion)}</p>`:""}${e.nota?`<p class="caption">${esc(e.nota)}</p>`:""}
+    ${modNorma(e)}${extra.join("")}<div class="md-acts">${acts.join("")}</div>${res}</section>`;
+}
+function tModelos(x,R){
+if(R===undefined)R=calcular(x);
+if(!R)return`<div class="card empty" style="margin-top:14px"><b>Sin cálculo</b>Completa los datos del expediente para ver los modelos oficiales.</div>`;
+const L=modLista(x,R);
+const cuenta=(k)=>L.filter((i)=>i.estado===k).length;
+const intro=`<div class="infobar md-intro"><span class="ico gold">${I.info}</span><span>Hereda+ rellena el <b>PDF oficial</b> cuando la Administración lo publica para imprimirlo y presentarlo. Cuando el documento lo genera su programa o su sede, con número de justificante o código de barras, deja los <b>datos listos</b> para copiarlos y abre el programa: esos números solo los pone la Administración, y Hereda+ no los genera ni los imita.${modWeb()?"":" Para rellenar PDF hace falta la aplicación abierta desde la web o instalada."}</span></div>`;
+const resumen=`<div class="md-res">${[["pdf",cuenta("pdf")],["pdfFalta",cuenta("pdfFalta")],["programa",cuenta("programa")],["telematico",cuenta("telematico")]].filter(([,n])=>n).map(([k,n])=>`<span class="chip ${MOD_ESTADO[k][1]}">${n} · ${esc(MOD_ESTADO[k][0])}</span>`).join("")}</div>`;
+const grupos=MOD_GRUPOS.map(([k,t])=>{const G=L.filter((i)=>i.grupo===k);if(!G.length)return"";return`<div class="sectitle md-sec"><b>${t}${k==="isd"?` · ${esc(nombreTerr(x.ccaa))}`:""}</b></div><div class="md-grid">${G.map((i)=>modTarjeta(x,R,i)).join("")}</div>`;}).join("");
+return`<div class="md">${intro}${resumen}${grupos}<p class="foot-note">Catálogo comprobado el ${esc(fechaLarga(modDatos().actualizado||hoy()))} en las páginas y normas oficiales (estado de cada fuente junto a su norma). Los PDF rellenados llevan las cifras del cálculo del expediente: revísalos antes de firmarlos y presentarlos.</p></div>`;
+}
+const modItem=(x,key)=>modLista(x,calcular(x)).find((i)=>i.key===key);
+async function modAccionGenerar(x,key,hId){
+const it=modItem(x,key);if(!it)return;
+const R=calcular(x),hh=R&&R.isd.herederos.find((q)=>q.id===hId);
+try{
+const g=await modGenerar(it.e.mapa,x,{heredero:hId||undefined,bien:it.bien?it.bien.id:undefined});
+MOD.gen[key]={...g,h:hId||"",heredero:hh?hh.nombre:"",nombre:modNombreArchivo(x,it,hId)};
+anotar(x,`Modelos oficiales: ${g.titulo}${hh?" de "+hh.nombre:""} rellenado en PDF`,"doc");guardar();
+render();modMiniatura(key+"|"+(hId||""),g.bytes);
+toast(g.vacios.length?"PDF rellenado: faltan datos obligatorios":"PDF oficial rellenado");
+}catch(e){
+const m=String(e&&e.message||e);
+const txt=m==="solo-web"?"Para rellenar PDF hace falta la aplicación abierta desde la web o instalada (este archivo único no lleva pdf-lib).":m==="sin-plantilla"?"Falta la plantilla oficial: descárgala de la web oficial y cárgala con «Cargar el PDF oficial».":m==="otra-plantilla"?"El PDF cargado no es la plantilla de este modelo (sus campos no coinciden).":m==="xfa"?"Este PDF es un formulario dinámico (XFA): solo se puede rellenar con el programa de la Administración.":m==="sin-campos"?"Este PDF no tiene campos rellenables: no se puede rellenar desde la aplicación.":"No se pudo rellenar el PDF: "+m;
+MOD.gen[key]={error:txt,filas:[],vacios:[],noTocados:[],avisos:[]};render();toast("No se pudo rellenar el PDF");
+}
+}
+function modBlob(g){return new Blob([g.bytes],{type:"application/pdf"});}
+function modClick(e){
+const t=e.target&&e.target.closest?e.target.closest("[data-md]"):null;if(!t)return;
+e.stopPropagation();e.preventDefault();
+const x=typeof exp==="function"?exp():null;if(!x)return;
+const d=t.dataset,a=d.md,g=d.id?MOD.gen[d.id]:null;
+if(a==="gen"){modAccionGenerar(x,d.id,d.h);return;}
+if(a==="cp660"){Promise.resolve(copiar(modTexto660(x,calcular(x)))).then(()=>toast("Relación de bienes copiada"));return;}
+if(!g||!g.bytes)return;
+if(a==="dl"){descargar(g.nombre||"modelo.pdf",modBlob(g));anotar(x,`Modelos oficiales: ${g.nombre} descargado`,"doc");guardar();return;}
+if(a==="ver"){const u=URL.createObjectURL(modBlob(g));if(typeof abrirExterno==="function")abrirExterno(u);else window.open(u);setTimeout(()=>URL.revokeObjectURL(u),60000);return;}
+if(a==="arch"){const f=new File([g.bytes],g.nombre||"modelo.pdf",{type:"application/pdf"});const it=modItem(x,d.id);archivoGuardar([f],x.id,it&&it.grupo==="plusvalia"?"plusvalia":it&&it.grupo==="catastro"?"catastro":it&&it.grupo==="certificados"?"ultimas":"isd");return;}
+}
+async function modChange(e){
+const t=e.target;if(!t||!t.dataset||!t.dataset.mdCargar)return;
+e.stopPropagation();
+const f=t.files&&t.files[0];if(!f)return;
+if(f.size>25*1024*1024){toast("El PDF supera 25 MB");return;}
+const b=new Uint8Array(await f.arrayBuffer());
+if(String.fromCharCode(...b.slice(0,5))!=="%PDF-"){toast("No es un PDF");return;}
+MOD.cargadas[t.dataset.mdCargar]=b;delete MOD.gen[t.dataset.id];
+toast("PDF oficial cargado: ya se puede rellenar");render();
+}
+if(typeof document!=="undefined"){document.addEventListener("click",modClick,true);document.addEventListener("change",modChange,true);}
 const TM_CATS=[["reunion","Reuniones y llamadas"],["documentacion","Documentación e inventario"],["tramites","Trámites"],["particion","Partición"],["impuestos","Impuestos y estrategia"],["escritos","Escritos e informes"],["otro","Otras tareas"]];
 const TM_PRESETS=[["Reunión con la familia","reunion"],["Llamada con el cliente","reunion"],["Revisión de documentación","documentacion"],["Inventario y valoración de bienes","documentacion"],["Partición","particion"],["Liquidación del Impuesto sobre Sucesiones","impuestos"],["Plusvalía municipal","impuestos"],["Estrategia fiscal","impuestos"],["Preparación de la escritura","escritos"],["Escritos e informes","escritos"],["Firma en notaría","tramites"],["Inscripción en el Registro","tramites"],["Desplazamiento","otro"]];
 const TM_SEC={resumen:["Revisión del expediente","otro"],tramites:["Trámites","tramites"],herencia:["Herederos y bienes","documentacion"],particion:["Partición","particion"],impuestos:["Impuestos","impuestos"],estrategia:["Estrategia fiscal","impuestos"],segunda:["Dos herencias","impuestos"],diagnostico:["Revisión del expediente","otro"],normativa:["Estudio de normativa","otro"],documentos:["Documentos y escritos","escritos"]};
@@ -7997,7 +8395,10 @@ if(SG.carpeta&&SG.carpetaPermiso&&SG.carpetaPermiso!=="granted")return b("warn",
 if(sgUsoLS()>0.8)return b("warn",SG_IC.disk,`<b>El espacio para expedientes está casi lleno</b><span class='sg-sub'> · ${Math.round(sgUsoLS()*100)} % usado${SG.cifrado?" (datos cifrados)":""}</span>`,`<button class="sg-bb" data-sg="descargar">Descargar copia</button><button class="sg-bb" data-sg="ajustes">Ver opciones</button>`);
 if(SG.almacen==="idb"&&sgUsoDisco()>0.8)return b("warn",SG_IC.disk,`<b>El disco de este equipo está casi lleno para Hereda+</b><span class='sg-sub'> · ${Math.round(sgUsoDisco()*100)} % de lo que el navegador permite</span>`,`<button class="sg-bb" data-sg="descargar">Descargar copia</button><button class="sg-bb" data-sg="ajustes">Ver espacio</button>`);
 const reales=(DB.expedientes||[]).filter((x)=>!x.demo&&!x.ejemplo).length;
-if((typeof ui!=="object"||ui.vista==="inicio")&&reales&&!(SG.carpeta&&SG.carpetaPermiso==="granted")&&sgDiasDesde(DB.ultimaCopia)>=7&&c.posponer!==hoy())
+const enInicio=typeof ui!=="object"||ui.vista==="inicio"||ui.vista==="radar",autoOK=SG.carpeta&&SG.carpetaPermiso==="granted";
+if(enInicio&&reales&&autoOK&&sgDiasDesde(DB.ultimaCopia)>=7&&c.posponer!==hoy())
+return b("warn",SG_IC.folder,`<b>La copia automática no se ha hecho en 7 días</b> · ${DB.ultimaCopia?`última copia: ${sgHace(DB.ultimaCopia)}`:"aún no hay ninguna"}${SG.copiaError?`<span class='sg-sub'> · ${sgHtml(SG.copiaError)}</span>`:""}`,`<button class="sg-bb sg-pri" data-sg="copiarYa">Copiar ahora</button><button class="sg-bb" data-sg="descargar">Descargar</button><button class="sg-bb" data-sg="posponer">Más tarde</button>`);
+if(enInicio&&reales&&!autoOK&&sgDiasDesde(DB.ultimaCopia)>=7&&c.posponer!==hoy())
 return b("warn",SG_IC.folder,`<b>Descarga tu copia de seguridad</b> · ${DB.ultimaCopia?`última copia: ${sgHace(DB.ultimaCopia)}`:"aún no has hecho ninguna"}`,`<button class="sg-bb sg-pri" data-sg="descargar">Descargar</button>${sgFSA()?`<button class="sg-bb" data-sg="carpeta">Copia automática</button>`:""}<button class="sg-bb" data-sg="posponer">Más tarde</button>`);
 return"";
 }
@@ -8421,7 +8822,8 @@ b:["En Ajustes › Compartir › **Calculadora de herencias para tu web** genera
 ir:[["Calculadora para tu web","calculadora"]]},
 {id:"donde",s:"datos",t:"Dónde se guardan los datos",d:"En este equipo y en este navegador. Nada pasa por un servidor.",kw:"datos donde guardan almacenamiento local navegador servidor nube privacidad rgpd espacio persistente incognito",
 b:["Los expedientes, el equipo, los ajustes y los documentos adjuntos se guardan **en este equipo**, dentro del navegador. Hereda+ no los envía a ningún servidor.",
-"Por eso cada ordenador, cada navegador y cada perfil del navegador tienen sus propios datos, salvo que uséis **Despacho en red** (una carpeta compartida del despacho). Las ventanas privadas o de incógnito los pierden al cerrarse: no las uses.",
+"Por eso cada ordenador, cada navegador y cada perfil del navegador tienen sus propios datos, salvo que uséis **Despacho en red** (una carpeta compartida del despacho). Las ventanas privadas o de incógnito los pierden al cerrarse: no las uses. Safari borra los datos de un sitio si pasan 7 días sin abrirlo: mejor Chrome o Edge.",
+"El despacho es el **responsable** de esos datos y de sus copias; Hereda+ no los recibe ni puede verlos. En Ajustes › **Tus datos** ves dónde están, la última copia y si hay algún riesgo, y descargas una hoja en PDF que lo explica para tu archivo o para tu cliente.",
 "Al abrirse, Hereda+ pide al navegador que proteja los datos contra el borrado automático por falta de espacio. En Ajustes › Almacenamiento y versión ves si lo ha concedido y cuánto ocupan (unos 5 MB para los expedientes; los documentos van aparte).",
 "Cada cambio se guarda al momento. Si un guardado falla, por ejemplo por falta de espacio, aparece una franja roja: descarga una copia.",
 {aviso:"Como los datos están en el equipo, la copia de seguridad la hace el despacho. Activa la copia automática."}],
@@ -8973,7 +9375,7 @@ const GU_GUIAS=[
 {t:"Liquidación y cuaderno",txt:"El último paso resume lo que recibe y paga cada uno y genera el cuaderno particional y el recibí, listos para la notaría, desde Documentos › Escritos.",sel:".pfoot"},
 ]},
 {id:"tramites",t:"Trámites, plazos y agenda",d:"Marcar trámites, ver el cronograma y pasar los plazos a tu calendario.",min:3,pasos:[
-{t:"Los trámites del caso",txt:"De los 183 del catálogo, solo los que aplican a esta herencia, por fases. Cada uno con su plazo, el organismo y enlaces a la sede oficial.",sel:".tram-head",ir:()=>guIrExp("tramites",{tv:"lista"})},
+{t:"Los trámites del caso",txt:"De los 194 del catálogo, solo los que aplican a esta herencia, por fases. Cada uno con su plazo, el organismo y enlaces a la sede oficial.",sel:".tram-head",ir:()=>guIrExp("tramites",{tv:"lista"})},
 {t:"Ajustar al caso",txt:"Si el fallecido era autónomo, pensionista, tenía alquileres o seguros… márcalo aquí y aparecen o desaparecen trámites.",sel:'[data-act="situ"]'},
 {t:"Marcar y abrir",txt:"El círculo de la izquierda marca hecho, en curso o no aplica. Pulsando el título se abre la ficha del trámite: qué es, cómo se hace, documentos y enlaces.",sel:".phase-h + .group .row"},
 {t:"Cronograma",txt:"Los mismos trámites en el tiempo, con la línea de hoy: se ve de un vistazo qué vence y qué va tarde.",sel:'[data-tv="crono"]',hecho:()=>ui.tv==="crono",hacer:()=>go({tv:"crono"}),accion:"Ver el cronograma"},
@@ -13302,6 +13704,264 @@ if(e.key!=="Enter"||!e.target||!e.target.closest||!e.target.closest(".sg-modal")
 const id=e.target.id,m={"red-equipo":RED.cfg&&RED.asis==null?"guardarNombre":"paso3","red-pj":RED.asis?"unirse":"reclaveSi","red-p2":"crear"}[id];
 if(m){e.preventDefault();const b=document.querySelector(`.sg-modal [data-red="${m}"]`);if(b)b.click();}
 },true);
+const DT_COND_V="1.2";
+const DT_TEXTO_V=1;
+const DT={el:null,marcado:false,clave:false,borrar:0,traslado:false,avisadoCierre:false,prueba:Object.assign({},window.__dtPrueba)};
+const dtPrueba=(o)=>{Object.assign(DT.prueba,o||{});return DT;};
+const dtCfg=()=>{DB.datos=DB.datos&&typeof DB.datos==="object"?DB.datos:{};return DB.datos;};
+const dtH=(s)=>esc(s);
+const dtWeb=()=>(typeof HEREDA_WEB==="object"&&HEREDA_WEB&&HEREDA_WEB.web)||"https://heredate.github.io";
+const dtLegal=(pag)=>(typeof hayWebPublica==="function"&&hayWebPublica()&&typeof webURL==="function"?webURL("/"+pag):dtWeb().replace(/\/$/,"")+"/"+pag);
+const dtReales=()=>(DB.expedientes||[]).filter((x)=>x&&!x.demo&&!x.ejemplo);
+const dtFechaHora=(iso)=>(typeof sgFechaHora==="function"?sgFechaHora(iso):String(iso||"").slice(0,16));
+function dtAceptado(){const a=dtCfg().aceptacion;return!!(a&&a.fecha&&a.condiciones===DT_COND_V);}
+function dtDebePedir(){
+try{
+if(dtAceptado()||DT.el)return false;
+if(typeof SG==="object"&&SG.bloqueado)return false;
+if(typeof DB_BLOQUEO!=="undefined"&&DB_BLOQUEO)return false;
+if(document.querySelector(".bv-over,.sg-lock"))return false;
+if(typeof bvDebeMostrar==="function"&&bvDebeMostrar())return false;
+if(typeof dmActivo==="function"&&dmActivo())return false;
+if(navigator.webdriver&&!DT.prueba.forzar)return false;
+return true;
+}catch(e){return false;}
+}
+function dtVigilar(){
+if(DT.el){if(dtAceptado())dtCerrar();else if(!document.querySelector(".sg-modal"))dtRefrescar();return;}
+if(dtDebePedir())dtAbrir();
+}
+function dtRefrescar(){const n=dtPasoHTML();if(DT.ultimoPaso!==n){DT.ultimoPaso=n;dtPintar();}}
+function dtNavegador(){
+const u=navigator.userAgent||"";
+const n=/Edg\//.test(u)?"Edge":/OPR\//.test(u)?"Opera":/Firefox\//.test(u)?"Firefox":/Chrome\//.test(u)?"Chrome":/Safari\//.test(u)?"Safari":"otro navegador";
+const so=/Windows/.test(u)?"Windows":/Mac OS X|Macintosh/.test(u)&&!/iPhone|iPad/.test(u)?"macOS":/iPhone|iPad/.test(u)?"iOS":/Android/.test(u)?"Android":/Linux/.test(u)?"Linux":"";
+return n+(so?" en "+so:"");
+}
+function dtAceptar(){
+if(!DT.marcado)return;
+const C=dtCfg(),D=typeof despachoCfg==="function"?despachoCfg():{},yo=(D.abogados||[]).find((a)=>a.id===D.yo);
+const reg={fecha:new Date().toISOString(),condiciones:DT_COND_V,texto:DT_TEXTO_V,despacho:D.nombre||"",persona:(yo&&yo.nombre)||"",
+equipo:dtNavegador(),origen:location.protocol==="file:"?"archivo en este equipo":location.origin,
+copiaCarpeta:!!(SG.carpeta&&SG.carpetaPermiso==="granted"),contrasena:!!SG.cifrado||DT.clave};
+C.historial=Array.isArray(C.historial)?C.historial:[];
+if(C.aceptacion)C.historial.push(C.aceptacion);
+C.aceptacion=reg;guardar();
+dtPedirPersistencia();
+const clave=DT.clave&&!SG.cifrado&&typeof sgCryptoOK==="function"&&sgCryptoOK();
+dtCerrar();
+if(clave&&typeof sgModalClave==="function")sgModalClave("activar");
+else toast("Listo. Lo tienes siempre en Ajustes, en «Tus datos».");
+try{render();}catch(e){}
+}
+async function dtPedirPersistencia(){
+try{if(navigator.storage&&navigator.storage.persist){const ya=await navigator.storage.persisted();if(!ya)await navigator.storage.persist();}}catch(e){}
+try{if(typeof sgPersistir==="function")await sgPersistir();}catch(e){}
+try{render();}catch(e){}
+}
+function dtEsSafari(){const u=navigator.userAgent||"";return/Safari\//.test(u)&&!/Chrome\/|Chromium\/|Edg\/|OPR\/|Firefox\/|CriOS\/|FxiOS\//.test(u);}
+function dtInstalada(){try{return window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;}catch(e){return false;}}
+function dtRiesgos(){
+const R=[],q=SG.estimate&&SG.estimate.quota;
+if(q&&q<(DT.prueba.cuotaPrivada||150*1048576))R.push({k:"privada",t:"Parece una ventana privada (o el disco está casi lleno)",s:"En una ventana privada el navegador borra todo al cerrarla. Abre Hereda+ en una ventana normal."});
+if(dtEsSafari()&&!dtInstalada())R.push({k:"safari",t:"Safari puede borrar estos datos si pasan 7 días sin abrir Hereda+",s:"Es una regla de Safari para los sitios web. Usa Chrome o Edge, o ten activada la copia automática."});
+if(SG.persist==="no")R.push({k:"persist",t:"El navegador puede borrar los datos si falta espacio",s:"Instala Hereda+ como aplicación (icono de instalar en la barra de direcciones) o añádelo a marcadores: así el navegador lo protege."});
+if(SG.persist==="na")R.push({k:"persist",t:"Este navegador no permite proteger el almacenamiento",s:"Haz copias con regularidad o usa Chrome o Edge."});
+return R;
+}
+const dtEsquema=()=>`<div class="dt-esq" role="list" aria-label="Dónde están los datos">
+  <div role="listitem"><span class="ico blue">${SG_IC.disk}</span><b>Este navegador</b><small>Los expedientes y documentos, en este ordenador</small></div>
+  <div role="listitem"><span class="ico green">${SG_IC.folder}</span><b>Carpeta del despacho</b><small>La copia de cada día, donde tú elijas</small></div>
+  <div role="listitem"><span class="ico q">${SG_IC.shield}</span><b>Hereda+</b><small>Solo el programa. No recibe ni ve tus datos</small></div></div>`;
+function dtPasoHTML(){
+const fsa=typeof sgFSA==="function"&&sgFSA(),car=SG.carpeta&&SG.carpetaPermiso==="granted";
+const carpeta=!fsa?sgFila(SG_IC.folder,"q","Copia de seguridad","Este navegador no puede guardar en una carpeta. Cada semana te recordaremos descargar una copia; en Chrome o Edge se hace sola.","")
+:car?sgFila(SG_IC.folder,"green","Copia automática activada",`En «${dtH(SG.carpeta.name)}»${SG.carpetaPadre?" dentro de «"+dtH(SG.carpetaPadre)+"»":""}. Una copia cada día.`,`<span class="sg-acts"><button class="btn sm gray" data-sg="carpeta">Cambiar</button></span>`)
+:sgFila(SG_IC.folder,"blue","Elegir la carpeta de copias","Mejor dentro de OneDrive, Dropbox, Google Drive o el servidor del despacho. Hereda+ dejará allí una copia cada día.",I.chev,'data-sg="carpeta"');
+const pw=typeof sgCryptoOK==="function"&&sgCryptoOK()&&!SG.cifrado
+?`<button class="row sg-row" data-dt="clave" role="switch" aria-checked="${DT.clave}"><span class="ico indigo">${SG_IC.lock}</span><span class="t"><b>Proteger con contraseña</b><small>Opcional. Cifra los expedientes en este equipo; se pedirá al abrir Hereda+</small></span><span class="sg-sw" aria-hidden="true"></span></button>`:"";
+const rest=`<label class="row sg-row" style="cursor:pointer;position:relative;overflow:hidden"><span class="ico q">${SG_IC.restore}</span><span class="t"><b>¿Ya usabas Hereda+ en otro equipo o en otra dirección?</b><small>Restaura tu copia y sigue donde lo dejaste</small></span>${I.chev}<input type="file" data-sgf="restaurar" accept=".json,.enc,application/json" class="sg-file" aria-label="Elegir una copia para restaurar"></label>`;
+const btn=car||!fsa?"Aceptar y empezar":"Aceptar sin copia automática";
+return`<p class="sg-lead dt-lead">Tus expedientes y sus documentos se guardan en este ordenador, dentro del navegador, y en la carpeta del despacho que elijas para las copias. Hereda+ no tiene servidor de datos: no los recibe ni puede verlos. Por eso el despacho es el responsable de esos datos y de sus copias, igual que de sus archivos en papel o en el ordenador.</p>
+    ${dtEsquema()}
+    <div class="group sg-g dt-g" style="--inset:60px">${carpeta}${pw}${rest}</div>
+    ${!car&&fsa?`<p class="group-foot">Sin copia, si este ordenador se estropea o alguien borra los datos del navegador, los expedientes se pierden. Puedes activarla después en Ajustes.</p>`:""}
+    <label class="dt-acepto"><input type="checkbox" id="dt-acepto" ${DT.marcado?"checked":""}><span>Entiendo y acepto que el despacho es el responsable de estos datos y de sus copias, y que Hereda+ no los recibe.</span></label>
+    <p class="dt-links"><a href="${dtH(dtLegal("datos.html"))}" target="_blank" rel="noopener">Datos y seguridad, explicado</a> · <a href="${dtH(dtLegal("condiciones.html"))}#c8" target="_blank" rel="noopener">Condiciones, versión ${DT_COND_V}</a></p>
+    <div class="sg-mfoot"><button class="btn" data-dt="aceptar" ${DT.marcado?"":"disabled"}>${btn}</button></div>`;
+}
+function dtAbrir(){
+if(DT.el){dtPintar();return;}
+const m=document.createElement("div");m.className="dt-modal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");m.setAttribute("aria-labelledby","dt-h");
+DT.el=m;DT.marcado=false;DT.ultimoPaso=dtPasoHTML();document.body.appendChild(m);
+for(const n of document.querySelectorAll("#app,#tm-root"))n.setAttribute("inert","");
+dtPintar();
+setTimeout(()=>{try{(m.querySelector("[data-sg],[data-dt],input")||m).focus();}catch(e){}},40);
+}
+function dtPintar(){
+const m=DT.el;if(!m)return;
+const f=document.activeElement&&m.contains(document.activeElement)?(document.activeElement.dataset.dt||document.activeElement.dataset.sg||document.activeElement.id):"";
+m.innerHTML=`<div class="sg-scrim"></div><div class="sg-mcard sg-wide"><header><h2 id="dt-h">Dónde se guardan tus expedientes</h2></header><div class="sg-mbody">${dtPasoHTML()}</div></div>`;
+if(f){const n=m.querySelector(`[data-dt="${f}"],[data-sg="${f}"],#${CSS.escape(f)}`);try{n&&n.focus();}catch(e){}}
+}
+function dtCerrar(){
+if(DT.el)DT.el.remove();DT.el=null;
+if(!document.querySelector(".sheet"))for(const n of document.querySelectorAll("#app,#tm-root"))n.removeAttribute("inert");
+}
+function dtLugares(){
+const car=SG.carpeta,perm=SG.carpetaPermiso,red=typeof RED==="object"&&RED.activo&&RED.cfg;
+const n=(DB.expedientes||[]).length,tam=(SG.lsTam||0)+(SG.docsTam||0);
+const L=[];
+L.push({ic:SG_IC.disk,c:"blue",t:"En este navegador",s:`${plural(n,"expediente")} · ${sgMB(tam)} con los documentos · ${SG.cifrado?"cifrado con contraseña":"sin contraseña"} · ${location.protocol==="file:"?"archivo abierto en este equipo":dtH(location.host)}`});
+L.push(car?{ic:SG_IC.folder,c:perm==="granted"?"green":"orange",t:"Copia automática en la carpeta del despacho",s:`«${dtH(car.name)}»${SG.carpetaPadre?" dentro de «"+dtH(SG.carpetaPadre)+"»":""} · ${perm==="granted"?"última "+sgHace(sgCfg().ultimaAuto):"en pausa: falta permiso"}${sgCifrarCopias()?" · copias cifradas":""}`}
+:{ic:SG_IC.folder,c:"orange",t:"Sin copia automática",s:typeof sgFSA==="function"&&sgFSA()?"Actívala abajo, en «Copias de seguridad».":"Este navegador no puede: descarga una copia cada semana."});
+if(red)L.push({ic:I.people||SG_IC.folder,c:"green",t:"Despacho en red",s:`Carpeta compartida «${dtH(RED.cfg.padre||"hereda-red")}»${RED.cfg.cifrado?", cifrada":""}. La gestiona el proveedor que elija el despacho.`});
+return L;
+}
+function dtAjustesHTML(){
+const a=dtCfg().aceptacion,R=dtRiesgos(),ult=DB.ultimaCopia;
+const per=SG.persist==="si"?["green","Protegidos contra el borrado automático del navegador"]:["orange",R.length?R[0].t:"Comprobando el almacenamiento…"];
+const filas=dtLugares().map((l)=>sgFila(l.ic,l.c,l.t,l.s,"")).join("");
+const riesgos=[sgFila(SG_IC.shield,per[0],per[1],SG.persist==="si"?"El navegador no los borra aunque falte espacio. Si alguien borra los datos de navegación de este sitio, sí se pierden: para eso está la copia.":(R[0]&&R[0].s)||"",""),
+...R.slice(SG.persist==="si"?0:1).map((r)=>sgFila(SG_IC.warn,"orange",r.t,r.s,""))].join("");
+const copia=sgFila(SG_IC.restore,sgDiasDesde(ult)>=7?"orange":"q","Última copia",ult?`${sgFechaHora(ult)} (${sgHace(ult)})`:"Aún no hay ninguna copia","");
+const resp=sgFila(I.person||SG_IC.shield,"q","Responsable de los datos: el despacho",a?`Aceptado el ${dtFechaHora(a.fecha)}${a.persona?" por "+dtH(a.persona):""} · condiciones ${dtH(a.condiciones)}`:"Pendiente de aceptar","");
+const conf=DT.borrar===1?`<div class="zona-peligro conf" role="alertdialog" aria-label="Confirmar el borrado de este equipo"><p><b>¿Borrar todo de este equipo?</b> Se quitan de este navegador los expedientes, los documentos, los ajustes, la contraseña y el permiso de las carpetas. No se tocan las copias de la carpeta del despacho ni la carpeta del despacho en red. No se puede deshacer${DB.ultimaCopia?`; tu última copia es de ${sgHace(DB.ultimaCopia)}`:" y no tienes ninguna copia"}.</p><span class="zp-acts"><button class="btn sm gray" data-dt="borrarNo">Cancelar</button><button class="btn sm gray" data-sg="descargar">Descargar copia</button><button class="btn sm danger-solid" data-dt="borrarSi">Sí, borrar todo</button></span></div>`
+:`<div class="zona-peligro"><p>Para dejar este equipo sin ningún dato de Hereda+ (por ejemplo, si cambia de manos). Las copias de la carpeta del despacho no se tocan.</p><button class="btn sm danger" data-dt="borrar">${I.trash||""}Borrar todo de este equipo</button></div>`;
+return`<div class="sectitle" id="dt-tus-datos">Tus datos</div>
+    <div class="group sg-g" style="--inset:60px">${filas}${copia}${riesgos}${resp}</div>
+    <div class="dt-acts"><button class="btn sm" data-sg="descargar">${I.dl}Descargar todo</button><label class="btn sm gray dt-file">Restaurar<input type="file" data-sgf="restaurar" accept=".json,.enc,application/json" class="sg-file" aria-label="Elegir una copia para restaurar"></label><button class="btn sm gray" data-dt="certificado">Hoja de datos en PDF</button><button class="btn sm gray" data-dt="traslado" aria-expanded="${DT.traslado}">Cambiar de equipo o de dirección</button></div>
+    ${DT.traslado?dtTrasladoHTML():""}
+    <p class="group-foot dt-foot">Hereda+ no tiene servidor de datos: no recibe ni puede ver tus expedientes, ni siquiera para darte soporte. El despacho decide dónde guardar las copias y quién accede a ellas. <a href="${dtH(dtLegal("datos.html"))}" target="_blank" rel="noopener">Datos y seguridad, explicado</a></p>
+    ${conf}`;
+}
+function dtTrasladoHTML(){
+return`<div class="group dt-tras"><div class="field"><b>Para pasar los expedientes a otro ordenador, a otro navegador o a una dirección nueva de Hereda+</b>
+    <ol class="dt-pasos"><li>Aquí, pulsa <b>Descargar todo</b>: un solo archivo con los expedientes, el equipo, los ajustes y los documentos${sgCifrarCopias()?" (cifrado con tu contraseña)":""}.</li>
+    <li>En el otro sitio, abre Hereda+ y, en «Dónde se guardan tus expedientes» o en Ajustes › Tus datos, pulsa <b>Restaurar</b> y elige ese archivo. Verás qué contiene antes de aplicar nada.</li>
+    <li>Si usas la copia automática, en el otro equipo basta con «Restaurar desde la carpeta de copias» (en Copias de seguridad): trae también los documentos.</li>
+    <li>Cuando compruebes que está todo, borra este equipo si ya no lo vas a usar (abajo).</li></ol>
+    <span class="hint">Cada dirección web y cada navegador guardan sus datos por separado: los expedientes no pasan solos de uno a otro.</span></div></div>`;
+}
+function dtCertificadoBloques(){
+const D=despachoCfg(),a=dtCfg().aceptacion,c=sgCfg(),car=SG.carpeta,red=typeof RED==="object"&&RED.activo&&RED.cfg;
+const si=(b)=>(b?"Sí":"No");
+const docs=typeof ARCH==="object"?(ARCH.lista||[]).length:0;
+return[
+{tipo:"h",numero:"1.",texto:"Quién es el responsable"},
+{tipo:"p",texto:`${D.nombre||"El despacho"} es el responsable del tratamiento de los datos personales de sus clientes y de terceros que guarda en ${"Hereda+"}: decide para qué se usan, quién accede, dónde se guardan las copias y cuánto tiempo se conservan.`},
+{tipo:"p",texto:`${"Hereda+"} es un programa que se ejecuta en los ordenadores del despacho. No tiene servidor de datos: no recibe, no guarda y no puede ver los expedientes ni los documentos. Por eso su proveedor no es encargado del tratamiento de esos datos.`},
+{tipo:"h",numero:"2.",texto:"Dónde están los datos de este equipo"},
+{tipo:"fila",etiqueta:"Navegador",valor:dtNavegador()},
+{tipo:"fila",etiqueta:"Dirección de la aplicación",valor:location.protocol==="file:"?"Archivo abierto en este equipo":location.origin},
+{tipo:"fila",etiqueta:"Almacenamiento",valor:SG.almacen==="idb"?"Base de datos del navegador (IndexedDB) de este equipo":"Almacenamiento local del navegador de este equipo; documentos en IndexedDB"},
+{tipo:"fila",etiqueta:"Expedientes",valor:String((DB.expedientes||[]).length)},
+{tipo:"fila",etiqueta:"Documentos adjuntos",valor:String(docs)},
+{tipo:"fila",etiqueta:"Copia automática",valor:car?`Carpeta «${car.name}»${SG.carpetaPadre?" dentro de «"+SG.carpetaPadre+"»":""}, elegida por el despacho; se conservan 30 copias diarias`:"No activada"},
+{tipo:"fila",etiqueta:"Despacho en red",valor:red?`Carpeta compartida «${RED.cfg.padre||"hereda-red"}» elegida por el despacho${RED.cfg.cifrado?", cifrada":""}`:"No activado"},
+{tipo:"fila",etiqueta:"Última copia",valor:DB.ultimaCopia?dtFechaHora(DB.ultimaCopia):"Ninguna"},
+{tipo:"h",numero:"3.",texto:"Medidas activas en este equipo"},
+{tipo:"fila",etiqueta:"Contraseña y cifrado",valor:SG.cifrado?`Sí: AES-GCM de 256 bits; clave derivada de la contraseña con PBKDF2-SHA256 (600.000 iteraciones); bloqueo tras ${num(c.bloqueoMin)||15} minutos sin uso`:"No"},
+{tipo:"fila",etiqueta:"Copias cifradas",valor:si(sgCifrarCopias())},
+{tipo:"fila",etiqueta:"Protección frente al borrado automático",valor:SG.persist==="si"?"Sí (almacenamiento persistente concedido por el navegador)":SG.persist==="no"?"No concedida por el navegador":"No disponible en este navegador"},
+{tipo:"fila",etiqueta:"Envío de datos a terceros",valor:"Ninguno. Sin analítica, sin informes de errores, sin publicidad y sin inteligencia artificial"},
+{tipo:"h",numero:"4.",texto:`Qué hace y qué no hace ${"Hereda+"}`},
+{tipo:"lista",items:[
+"Calcula, lee los documentos y prepara los escritos en este ordenador, sin enviarlos a ningún sitio.",
+"Las actualizaciones del programa se descargan de su dirección web; esa descarga no lleva datos de expedientes.",
+"No tiene cuentas de usuario, ni acceso remoto, ni copia propia de los datos.",
+"Si el despacho pide soporte, no se le piden datos reales de expedientes; si los envía, se usan solo para esa incidencia y se borran al cerrarla.",
+"Las carpetas de copias y de despacho en red las elige el despacho (su servidor, OneDrive, Dropbox, Google Drive…): su proveedor lo contrata el despacho y es encargado del despacho, no de Hereda+.",
+]},
+{tipo:"h",numero:"5.",texto:"Aceptación registrada en este equipo"},
+a?{tipo:"fila",etiqueta:"Fecha",valor:dtFechaHora(a.fecha)}:{tipo:"p",texto:"No consta aceptación en este equipo."},
+...(a?[{tipo:"fila",etiqueta:"Condiciones",valor:"Versión "+a.condiciones},{tipo:"fila",etiqueta:"Persona",valor:a.persona||"—"}]:[]),
+{tipo:"nota",texto:`Esta hoja la genera ${"Hereda+"} en este equipo, sin conexión, con su configuración en la fecha indicada. Describe cómo funciona el programa; no es una auditoría ni sustituye el registro de actividades de tratamiento ni las demás obligaciones del despacho como responsable.`},
+];
+}
+function dtCertificado(){
+try{
+const D=despachoCfg();
+const bytes=pdfDocumento({titulo:"Cómo se guardan y protegen los datos",subtitulo:`Hoja informativa de ${"Hereda+"} · ${D.nombre||"este despacho"}`,despacho:{nombre:D.nombre,colegio:D.colegio,localidad:D.localidad},bloques:dtCertificadoBloques()});
+DT.ultimoPdf=bytes.length;
+const n=pdfDescargar(`Hereda datos ${hoy()}`,bytes);
+toast("Hoja descargada: "+n);
+}catch(e){console.error(e);toast("No se pudo preparar el PDF");}
+}
+function dtBorrarBD(nombre){
+return new Promise((res)=>{
+let hecho=false;const fin=(r)=>{if(!hecho){hecho=true;res(r);}};
+try{
+const q=indexedDB.deleteDatabase(nombre);
+q.onsuccess=()=>fin("borrada");q.onerror=()=>fin("error");
+q.onblocked=()=>setTimeout(async()=>{if(hecho)return;try{const r=indexedDB.open(nombre);r.onsuccess=()=>{const db=r.result;const st=[...db.objectStoreNames];if(!st.length){db.close();fin("vacía");return;}const t=db.transaction(st,"readwrite");st.forEach((s)=>t.objectStore(s).clear());t.oncomplete=()=>{db.close();fin("vaciada");};t.onerror=()=>{db.close();fin("error");};};r.onerror=()=>fin("error");}catch(e){fin("error");}},1500);
+}catch(e){fin("error");}
+});
+}
+async function dtBorrarTodo(){
+try{if(typeof sgEsperarEscrituras==="function")await sgEsperarEscrituras();}catch(e){}
+SG.bloqueado=true;try{if(typeof RED==="object"){RED.activo=false;clearTimeout(RED.t);}}catch(e){}
+try{if(typeof ARCH==="object"&&ARCH.db){ARCH.db.close();ARCH.db=null;}}catch(e){}
+const r={};
+for(const n of["hereda-datos","sosiego-archivo","hereda-seguridad"])r[n]=await dtBorrarBD(n);
+try{for(const k of Object.keys(localStorage))if(/^(cauce|hereda|sosiego)/i.test(k))localStorage.removeItem(k);}catch(e){}
+try{sessionStorage.clear();sessionStorage.setItem("hereda.aviso","Datos borrados de este equipo. Las copias de la carpeta del despacho siguen donde estaban.");}catch(e){}
+DT.borrado=r;
+if(!DT.prueba.sinRecargar)location.reload();
+return r;
+}
+function dtCambiosSinCopia(){
+const ult=Date.parse(DB.ultimaCopia||"")||0;
+return dtReales().some((x)=>(typeof sgFecha==="function"?sgFecha(x):0)>ult);
+}
+function dtAvisarAlCerrar(){
+try{
+if(SG.bloqueado||DT.avisadoCierre||!dtReales().length)return false;
+if(SG.carpeta&&SG.carpetaPermiso==="granted")return false;
+if(typeof RED==="object"&&RED.activo&&RED.permiso==="granted")return false;
+if(sgDiasDesde(DB.ultimaCopia)<1&&DB.ultimaCopia)return false;
+if(sgCfg().avisoCierre===hoy())return false;
+return dtCambiosSinCopia();
+}catch(e){return false;}
+}
+function dtBanner(){
+const T=typeof HEREDA_WEB==="object"&&HEREDA_WEB&&HEREDA_WEB.traslado;
+if(!T||SG.bloqueado||location.protocol==="file:")return"";
+let destino;try{destino=new URL(T);}catch(e){return"";}
+if(destino.origin===location.origin||!(DB.expedientes||[]).length)return"";
+return`<div class="sg-banner info" role="status"><span class="sg-bi">${SG_IC.up}</span><span class="sg-bt"><b>Hereda+ se muda a ${dtH(destino.host)}.</b><span class="sg-sub"> Descarga la copia de traslado y ábrela allí con «Restaurar». Tus datos no pasan solos.</span></span><span class="sg-sp"></span><button class="sg-bb sg-pri" data-sg="descargar">Descargar copia</button><a class="sg-bb" href="${dtH(destino.href)}" target="_blank" rel="noopener">Abrir la nueva dirección</a></div>`;
+}
+function dtAccion(a,b){
+if(a==="aceptar"){dtAceptar();return;}
+if(a==="clave"){DT.clave=!DT.clave;dtPintar();return;}
+if(a==="certificado"){dtCertificado();return;}
+if(a==="traslado"){DT.traslado=!DT.traslado;render();return;}
+if(a==="borrar"){DT.borrar=1;render();setTimeout(()=>document.querySelector('[data-dt="borrarNo"]')?.focus(),30);return;}
+if(a==="borrarNo"){DT.borrar=0;render();return;}
+if(a==="borrarSi"){b.disabled=true;b.textContent="Borrando…";dtBorrarTodo();return;}
+}
+document.addEventListener("click",(e)=>{
+const b=e.target.closest&&e.target.closest("[data-dt]");if(!b)return;
+e.preventDefault();e.stopPropagation();dtAccion(b.dataset.dt,b);
+},true);
+document.addEventListener("change",(e)=>{
+if(e.target&&e.target.id==="dt-acepto"){DT.marcado=!!e.target.checked;const k=DT.el&&DT.el.querySelector('[data-dt="aceptar"]');if(k)k.disabled=!DT.marcado;}
+},true);
+document.addEventListener("keydown",(e)=>{
+if(!DT.el||document.querySelector(".sg-modal"))return;
+if(e.key==="Escape"){e.preventDefault();e.stopPropagation();return;}
+if(e.key==="Tab"){
+const F=[...DT.el.querySelectorAll("button:not([disabled]),input,a[href]")].filter((n)=>n.offsetParent!==null||n.type==="file");
+if(!F.length)return;const i=F.indexOf(document.activeElement);
+if(e.shiftKey&&i<=0){e.preventDefault();F[F.length-1].focus();}else if(!e.shiftKey&&(i===F.length-1||i<0)){e.preventDefault();F[0].focus();}
+}
+},true);
+window.addEventListener("beforeunload",(e)=>{
+if(!dtAvisarAlCerrar())return;
+DT.avisadoCierre=true;try{sgCfg().avisoCierre=hoy();guardar();}catch(er){}
+e.preventDefault();e.returnValue="";
+});
+setInterval(()=>{try{if(DT.el||document.querySelector(".shell"))dtVigilar();}catch(e){}},1200);
 function rbFechaValida(s){if(typeof s!=="string"||!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;const d=new Date(s+"T12:00:00Z");return!isNaN(d)&&d.toISOString().slice(0,10)===s;}
 function rbFechaLeer(v){
 const s=String(v??"").trim();if(rbFechaValida(s))return s;
@@ -13557,7 +14217,7 @@ function aplicarTema(){const t=DB.tema||"grafito";const light=t==="claro"||(t===
 function ctxTramites(x,R){
 const bienes=x.bienes||[],pers=x.personas||[],vivos=pers.filter((p)=>!p.renuncia);
 const viv=R&&R.isd.herederos.some((h)=>h.traza.some((t)=>/vivienda habitual/i.test(t.paso)));
-const reg=REGLAS[x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa];
+const reg=REGLAS[terrISD(x)];
 return{
 fecha:x.fecha,ccaa:x.ccaa,testamento:x.testamento,civil:x.civil,
 nHerederos:R?R.isd.herederos.length:vivos.length,
@@ -13692,7 +14352,7 @@ return`${top}<div class="page wide view">
     <div class="kpis kpis3" style="margin-top:14px">${kpi("En curso",act.length,`${est.length-act.length} archivados`)}${kpi("Vencen en 30 días",pronto,"expedientes con un plazo próximo",pronto?"warn":"")}${kpi("Vencidos",venc,"expedientes con plazos vencidos",venc?"bad":"")}</div>
     ${bloqueVigilancia()}
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 12px"><div class="seg"><button data-cv="tabla" aria-pressed="${vista==="tabla"}">Tabla</button><button data-cv="tablero" aria-pressed="${vista==="tablero"}">Por fase</button><button data-cv="plazos" aria-pressed="${vista==="plazos"}">Plazos y mapa</button></div><button class="btn sm gray desk-only" data-act="ics">${I.calplus}Plazos al calendario</button></div>
-    ${vista==="tablero"?tableroCartera(lista):vista==="plazos"?`<div class="grid g2"><div class="card">${cardH("Próximos 90 días","Vencimientos por expediente")}${carriles(act)}</div><div class="card">${cardH("Inmuebles","Situación de la cartera")}${(()=>{const heat={},pins=[];for(const e of act){const k=e.x.ccaa==="EST"?e.x.ccaaBienes:e.x.ccaa;if(k)heat[k]=(heat[k]||0)+1;for(const b of e.x.bienes||[])if(b.municipio&&b.municipio!=="OTRO"&&esInm(b))pins.push({k:b.municipio,label:ORDENANZAS[b.municipio]?.nombre});}const todoAND=pins.length&&MAPA_AND&&pins.every((p)=>MAPA_AND.pins[p.k])&&Object.keys(heat).every((k)=>k==="AND");return todoAND?mapaAND({pins}):mapaES({heat,pins});})()}</div></div>`:tablaCartera(lista)}
+    ${vista==="tablero"?tableroCartera(lista):vista==="plazos"?`<div class="grid g2"><div class="card">${cardH("Próximos 90 días","Vencimientos por expediente")}${carriles(act)}</div><div class="card">${cardH("Inmuebles","Situación de la cartera")}${(()=>{const heat={},pins=[];for(const e of act){const k=terrISD(e.x);if(k)heat[k]=(heat[k]||0)+1;for(const b of e.x.bienes||[])if(b.municipio&&b.municipio!=="OTRO"&&esInm(b))pins.push({k:b.municipio,label:ORDENANZAS[b.municipio]?.nombre});}const todoAND=pins.length&&MAPA_AND&&pins.every((p)=>MAPA_AND.pins[p.k])&&Object.keys(heat).every((k)=>k==="AND");return todoAND?mapaAND({pins}):mapaES({heat,pins});})()}</div></div>`:tablaCartera(lista)}
     ${prox.length?`<div class="sectitle flex"><b>Próximos vencimientos</b><button class="link" data-act="agenda">Agenda ›</button></div><div class="group" style="--inset:74px">${prox.map(({t,x})=>{const v=vence(t);return`<button class="row" data-open="${x.id}" data-go-t="${t.id}"><span class="datebox"><b class="num">${Number(t.limite.slice(8))}</b><small>${mes(t.limite)}</small></span><span class="t"><b>${esc(t.titulo)}</b><small><span class="due ${v.cls}">${esc(v.txt)}</span> · ${esc(nombreExp(x))}${x.despacho?.ref?` · <span class="mono">${esc(x.despacho.ref)}</span>`:""}</small></span>${avatar(x.responsable)}${I.chev}</button>`;}).join("")}</div>`:""}
     <p class="foot-note">${notaDatos()} Hereda+ calcula y prepara; el criterio es del abogado. Motor ${VERSION}. <button class="link" data-act="ejemplos" style="font-size:12.5px">Cargar casos de ejemplo</button></p>
   </div>`;
@@ -13857,7 +14517,7 @@ const E=estrategia(x),K=costeExpediente(x,R);
 const HH=R.isd.herederos;const hs=HH.find((h)=>h.id===ui.hsel)||HH[0];
 return`${typeof bloqueoRepartoHTML==="function"?bloqueoRepartoHTML(x,R):""}<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${kpi("Sucesiones",eur0(R.isd.total),R.isd.recargo&&R.isd.recargo.importe?`${esc(R.isd.territorio)} · más recargo ${eur0(R.isd.recargo.importe)}`:esc(R.isd.territorio),"suc")}${kpi("Plusvalía",eur0(R.totalPlus),plural(R.plus.length,"inmueble"),"plu")}${K&&K.exceso?kpi("Exceso de adjudicación",eur0(K.exceso),"AJD/TPO · ver Partición","",'data-sec="particion"'):""}${kpi("Total",eur0(K?K.total:R.isd.total+R.totalPlus),"coste fiscal de la herencia")}${E?kpi("Ahorro fiscal hoy",eur0(E.seguro),"ver estrategia","gold",'data-sec="estrategia"'):""}</div>
     ${x.ccaa==="AND"?`<div class="infobar" style="margin-top:14px"><span class="ico gold">${I.info}</span><span>Andalucía: un <b>modelo 650</b> por heredero y el <b>660</b> con la relación de bienes, en seis meses. Prórroga con el modelo 659 en los cinco primeros. Se presenta aunque salga 0 €. <a href="${SEDES.ata650}" target="_blank" rel="noopener">Programa de ayuda ${I.ext.replace("<svg",'<svg width="13" height="13"')}</a></span></div>`:""}
-    ${x.ccaa==="EST"?`<div class="infobar" style="margin-top:12px"><span class="ico teal">${I.info}</span><span>${x.ccaaBienes?`No residente: se aplica la normativa de <b>${esc(nombreTerr(x.ccaaBienes))}</b>, donde está la mayor parte de los bienes (disposición adicional 2.ª Ley 29/1987).`:"No residente: se aplica la ley estatal. Si la mayoría de los bienes está en una comunidad, puede aplicarse su normativa: indícalo en el asistente."}</span></div>`:""}
+    ${x.ccaa==="EST"?(()=>{const n=noResidenteMotor(x);return`<div class="infobar" style="margin-top:12px"><span class="ico teal">${I.info}</span><span>${n?esc(n.motivo)+(n.estado==="PENDIENTE"?" <small>PENDIENTE</small>":""):"No residente: se aplica la ley estatal."} Se puede elegir otra en el asistente (Residencia).</span></div>`;})():""}
     <div class="pdfbar"><span><b>Informe de cálculo</b><small>Masa, reparto, Sucesiones paso a paso, plusvalía, partición y totales, con el membrete del despacho.</small></span><button class="btn sm" data-act="informePdf">${I.dl}Descargar PDF</button></div>
     <div class="sectitle flex"><b>Sucesiones, paso a paso</b><span>${esc(R.isd.territorio)}</span></div>
     ${HH.length>1?`<div class="hpills" role="tablist" aria-label="Sucesiones por heredero">${HH.map((h)=>`<button role="tab" data-hsel="${h.id}" aria-selected="${h.id===hs.id}"><span>${esc(h.nombre)}</span><b class="num">${eur0(h.aIngresar)}</b></button>`).join("")}</div>`:""}
@@ -13869,9 +14529,9 @@ return`${typeof bloqueoRepartoHTML==="function"?bloqueoRepartoHTML(x,R):""}<div 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn" data-doc="liquidacion">${I.law}Propuesta de liquidación</button><button class="btn gray" data-sec="estrategia">${I.scale}Estrategia fiscal</button></div>
     <div class="sectitle">Opciones del cálculo</div>
     <div class="group">
-      ${(()=>{const terr=x.ccaa==="EST"&&x.ccaaBienes?x.ccaaBienes:x.ccaa,cur=R.isd.masa.modoAjuar;const ops=[["residencial","Solo viviendas"],...(terr==="AND"?[["ata","Criterio ATA"]]:[]),["3pct","3 % de todo"],["cero","Sin ajuar"]];const hint={residencial:"3 % de las viviendas de uso residencial no alquiladas ni cedidas (STS 499/2020; TEAC 30-05-2025).",ata:"Criterio de la Agencia Tributaria de Andalucía: bienes de uso personal. Práctica real pendiente de confirmar.","3pct":"Opción manual: el Supremo excluye dinero, valores e inmuebles no residenciales.",cero:"Se declara o prueba que no hay ajuar."}[cur]||"";return`<div class="field"><label>Ajuar doméstico</label><div class="seg" style="margin-top:6px">${ops.map(([k,t])=>`<button data-ajuar="${k}" aria-pressed="${cur===k}">${t}</button>`).join("")}</div><span class="hint">${hint}</span></div>`;})()}
-      ${x.ccaa==="AND"||x.ccaaBienes==="AND"?`<div class="field"><label>Reducción por vivienda habitual</label><div class="seg" style="margin-top:6px"><button data-cviv="DGT" aria-pressed="${(x.criterioVivienda||"DGT")!=="TSJA2026"}">Por cuotas (ATA)</button><button data-cviv="TSJA2026" aria-pressed="${x.criterioVivienda==="TSJA2026"}" ${x.viviendaA?"":"disabled"}>Al adjudicatario (TSJA)</button></div>${x.viviendaA?"":`<span class="hint">El criterio del adjudicatario se activa desde Estrategia.</span>`}</div>`:""}
-      ${x.ccaa==="MAD"||x.ccaaBienes==="MAD"?`<div class="row toggle"><span class="t"><b>Se ha recibido requerimiento de la Administración</b><small>En Madrid el grupo III pierde la bonificación por lo que se declare después</small></span><label class="switch"><input type="checkbox" data-opt="requerimiento" ${x.requerimiento?"checked":""}><span></span></label></div>`:""}
+      ${(()=>{const terr=terrISD(x),cur=R.isd.masa.modoAjuar;const ops=[["residencial","Solo viviendas"],...(terr==="AND"?[["ata","Criterio ATA"]]:[]),["3pct","3 % de todo"],["cero","Sin ajuar"]];const hint={residencial:"3 % de las viviendas de uso residencial no alquiladas ni cedidas (STS 499/2020; TEAC 30-05-2025).",ata:"Criterio de la Agencia Tributaria de Andalucía: bienes de uso personal. Práctica real pendiente de confirmar.","3pct":"Opción manual: el Supremo excluye dinero, valores e inmuebles no residenciales.",cero:"Se declara o prueba que no hay ajuar."}[cur]||"";return`<div class="field"><label>Ajuar doméstico</label><div class="seg" style="margin-top:6px">${ops.map(([k,t])=>`<button data-ajuar="${k}" aria-pressed="${cur===k}">${t}</button>`).join("")}</div><span class="hint">${hint}</span></div>`;})()}
+      ${terrISD(x)==="AND"?`<div class="field"><label>Reducción por vivienda habitual</label><div class="seg" style="margin-top:6px"><button data-cviv="DGT" aria-pressed="${(x.criterioVivienda||"DGT")!=="TSJA2026"}">Por cuotas (ATA)</button><button data-cviv="TSJA2026" aria-pressed="${x.criterioVivienda==="TSJA2026"}" ${x.viviendaA?"":"disabled"}>Al adjudicatario (TSJA)</button></div>${x.viviendaA?"":`<span class="hint">El criterio del adjudicatario se activa desde Estrategia.</span>`}</div>`:""}
+      ${terrISD(x)==="MAD"?`<div class="row toggle"><span class="t"><b>Se ha recibido requerimiento de la Administración</b><small>En Madrid el grupo III pierde la bonificación por lo que se declare después</small></span><label class="switch"><input type="checkbox" data-opt="requerimiento" ${x.requerimiento?"checked":""}><span></span></label></div>`:""}
       <div class="row toggle"><span class="t"><b>Se presentará dentro de plazo</b>${typeof dgPlazoHint==="function"?`<small>${esc(dgPlazoHint(x,R))}</small>`:""}</span><label class="switch"><input type="checkbox" data-opt="enPlazo" ${(typeof enPlazoExp==="function"?enPlazoExp(x):x.enPlazo!==false)?"checked":""}><span></span></label></div>
       <div class="row toggle"><span class="t"><b>No aplicar la reducción por vivienda</b><small>Si se venderá antes del plazo de mantenimiento</small></span><label class="switch"><input type="checkbox" data-opt="noAplicarVivienda" ${x.noAplicarVivienda?"checked":""}><span></span></label></div>
       <div class="row toggle"><span class="t"><b>Reducción por empresa familiar</b></span><label class="switch"><input type="checkbox" data-opt="aplicarEmpresa" ${x.aplicarEmpresa?"checked":""}><span></span></label></div>
@@ -14025,7 +14685,7 @@ if(p==="encargo"){const D=despachoCfg();x.despacho=x.despacho||{};if(!x.despacho
 if(p==="nombre")body=`<h2 class="q">Nombre del causante</h2><p class="qsub">Aparece en los escritos. Opcional.</p><div class="group"><div class="field"><label for="f-nombre">Nombre y apellidos</label><input id="f-nombre" data-b="nombre" value="${esc(x.nombre)}" autocomplete="off" placeholder="Nombre de la persona fallecida"></div><div class="field"><label for="f-gen">Tratamiento en los escritos</label><select id="f-gen" data-b="generoCausante"><option value="">Sin indicar (redacción neutra)</option><option value="f" ${x.generoCausante==="f"?"selected":""}>Femenino (D.ª, fallecida, viuda)</option><option value="m" ${x.generoCausante==="m"?"selected":""}>Masculino (D., fallecido, viudo)</option></select></div></div>`;
 if(p==="fecha"){body=`<h2 class="q">Fecha del fallecimiento</h2><p class="qsub">Los plazos se cuentan desde ese día y se aplica la ley vigente entonces.</p><div class="group"><div class="field"><label for="f-fecha">Fecha</label><input id="f-fecha" type="date" data-b="fecha" data-valida="fallecimiento" value="${esc(x.fecha)}" max="${hoy()}"></div></div>`;puede=rbFallecimientoOk(x.fecha);}
 if(p==="territorio"){body=`<h2 class="q">Residencia habitual</h2><p class="qsub">Donde vivió más días en los últimos cinco años. Decide la normativa del impuesto.</p><div class="search" style="margin-bottom:12px">${I.search}<input id="f-buscar" placeholder="Buscar comunidad" value="${esc(ui.buscar||"")}" autocomplete="off"></div><div class="group">${TERRITORIOS.filter(([id,n])=>!ui.buscar||n.toLowerCase().includes(ui.buscar.toLowerCase())).map(([id,n])=>`<button class="row" data-terr="${id}">${(()=>{const E=terrEstado(id,x.fecha);return`<span class="t" title="${esc(E.tip)}"><b>${esc(n)}</b><small class="${E.cls}">${esc(E.txt)}</small></span>`;})()}${x.ccaa===id?`<span style="color:var(--accent)">${I.tick.replace("<svg",'<svg width="20" height="20"')}</span>`:""}</button>`).join("")}</div>`;
-if(x.ccaa==="EST")body+=`<div class="sectitle">Bienes en España</div><div class="group"><div class="field"><label for="f-cb">Comunidad con la mayor parte de los bienes</label><select id="f-cb" data-b="ccaaBienes"><option value="">Aplicar la ley estatal</option>${TERRITORIOS.filter(([id])=>id!=="EST").map(([id,n])=>`<option value="${id}" ${x.ccaaBienes===id?"selected":""}>${esc(n)}</option>`).join("")}</select></div></div>`;
+if(x.ccaa==="EST")body+=`<div class="sectitle">Bienes en España</div><div class="group"><div class="field"><label for="f-cb">Normativa que se aplica (disposición adicional 2.ª Ley 29/1987)</label><select id="f-cb" data-b="ccaaBienes"><option value="">${(()=>{const n=noResidenteDe(x);return n?"Propuesta: "+esc(nombreTerr(n.ccaa))+(n.regla==="a"&&n.ccaa!=="EST"?", mayor valor de los bienes en España":""):"Propuesta automática según los bienes";})()}</option><option value="EST" ${x.ccaaBienes==="EST"?"selected":""}>Ley estatal</option>${TERRITORIOS.filter(([id])=>id!=="EST").map(([id,n])=>`<option value="${id}" ${x.ccaaBienes===id?"selected":""}>${esc(n)}</option>`).join("")}</select></div></div>`;
 puede=!!x.ccaa;}
 if(p==="civil"){body=`<h2 class="q">Estado civil</h2><p class="qsub">En gananciales, la mitad de lo común es del viudo y no entra en la herencia.</p>`+opciones("civil","civil",[["gananciales","Casado/a en gananciales","Lo habitual en la mayor parte de España"],["separacion","Casado/a en separación de bienes","Lo habitual en Cataluña y Baleares"],["pareja","Pareja de hecho","Sin testamento no hereda en derecho común; en el impuesto cuenta si está inscrita"],["viudo","Viudo/a",""],["soltero","Soltero/a o divorciado/a",""]]);puede=!!x.civil;}
 if(p==="testamento"){body=`<h2 class="q">Testamento</h2><p class="qsub">Si lo hay, manda lo que diga, respetando las legítimas.</p>`+opciones("testamento","test",[["no","Sin testamento","Reparto legal por órdenes: se calcula solo"],["usufructo","Usufructo universal al cónyuge","El «del uno para el otro»: usufructo al viudo, propiedad a los hijos"],["porcentajes","Otro reparto","Porcentaje de cada heredero y legados"],["nose","Por confirmar","Se sabrá con el certificado de últimas voluntades. Mientras, se calcula sin testamento."]]);puede=!!x.testamento;}
@@ -14129,7 +14789,7 @@ return sheetHTML(p.nombre?`${RELACIONES[p.relacion].label} · ${p.nombre}`:RELAC
       ${p.relacion==="hermano"||p.relacion==="sobrino"?`<div class="row toggle"><span class="t"><b>${p.relacion==="sobrino"?"Hijo/a de un medio hermano del causante":"Medio hermano/a"}</b><small>${p.relacion==="sobrino"?"Su progenitor era hermano del causante solo de padre o solo de madre (art. 951 CC)":"Solo de padre o solo de madre"}</small></span><label class="switch"><input type="checkbox" data-p="medio" ${p.medio?"checked":""}><span></span></label></div>`:""}
       ${p.relacion==="conyuge"?`<div class="row toggle"><span class="t"><b>Separado legalmente o de hecho</b><small>No hereda sin testamento ni tiene legítima (arts. 834 y 945 CC)</small></span><label class="switch"><input type="checkbox" data-p="separado" ${p.separado?"checked":""}><span></span></label></div>`:""}
       ${p.relacion==="pareja_hecho"?`<div class="row toggle"><span class="t"><b>Inscrita en un registro oficial de parejas</b></span><label class="switch"><input type="checkbox" data-p="inscrita" ${p.inscrita?"checked":""}><span></span></label></div>`:""}
-      ${p.relacion==="pareja_hecho"&&p.inscrita&&(x.ccaa==="MAD"||x.ccaaBienes==="MAD")?`<div class="field"><label for="p-reg">Registro de la inscripción</label><select id="p-reg" data-p="registroPareja"><option value="">Sin indicar</option><option value="MAD" ${p.registroPareja==="MAD"?"selected":""}>Comunidad de Madrid (Ley 11/2001)</option><option value="OTRO" ${p.registroPareja==="OTRO"?"selected":""}>Otro registro</option></select></div>`:""}
+      ${p.relacion==="pareja_hecho"&&p.inscrita&&(terrISD(x)==="MAD")?`<div class="field"><label for="p-reg">Registro de la inscripción</label><select id="p-reg" data-p="registroPareja"><option value="">Sin indicar</option><option value="MAD" ${p.registroPareja==="MAD"?"selected":""}>Comunidad de Madrid (Ley 11/2001)</option><option value="OTRO" ${p.registroPareja==="OTRO"?"selected":""}>Otro registro</option></select></div>`:""}
       ${x.aplicarEmpresa&&["extrano","pareja_hecho"].includes(p.relacion)?`<div class="row toggle"><span class="t"><b>Trabaja en la empresa del causante</b><small>Contrato de 5 años y 3 en funciones de dirección (reducción por empresa sin parentesco en Andalucía)</small></span><label class="switch"><input type="checkbox" data-p="requisitoLaboralEmpresa" ${p.requisitoLaboralEmpresa?"checked":""}><span></span></label></div>`:""}
       <div class="row toggle"><span class="t"><b>Empadronado en el municipio del inmueble</b><small>Al menos un año; lo piden algunos ayuntamientos</small></span><label class="switch"><input type="checkbox" data-p="empadronado" ${p.empadronado?"checked":""}><span></span></label></div>
       <div class="field"><label for="p-d">Discapacidad reconocida</label><select id="p-d" data-p="discapacidad"><option value="0">No</option><option value="33" ${num(p.discapacidad)===33?"selected":""}>Del 33 % al 49 %</option><option value="50" ${num(p.discapacidad)===50?"selected":""}>Del 50 % al 64 %</option><option value="65" ${num(p.discapacidad)===65?"selected":""}>65 % o más</option></select><span class="hint">Dato sensible: solo se usa para las reducciones y se guarda en este dispositivo.</span></div>
@@ -14141,6 +14801,7 @@ return sheetHTML(p.nombre?`${RELACIONES[p.relacion].label} · ${p.nombre}`:RELAC
       <div class="field"><label for="p-do">Donaciones del causante en los 4 años anteriores (€)</label><input id="p-do" inputmode="decimal" data-p="donaciones" value="${numStr(p.donaciones)}" placeholder="0"></div>
       ${esDespacho()?`<div class="field"><label for="p-in">Ingresos de la unidad de convivencia, sin el fallecido (€)</label><input id="p-in" inputmode="decimal" data-p="ingresos" value="${numStr(p.ingresos)}" placeholder="Solo si la ordenanza lo exige"></div><div class="row toggle"><span class="t"><b>Colectivo vulnerable</b><small>Pensionista, desempleado, menor de 30 años, gran incapacidad o víctima de violencia de género (Málaga, art. 9.C)</small></span><label class="switch"><input type="checkbox" data-p="colectivoVulnerable" ${p.colectivoVulnerable?"checked":""}><span></span></label></div>`:""}
     </div></details>
+    ${typeof avPersonaHTML==="function"?avPersonaHTML(x,p):""}
     ${zonaPeligro("p:"+p.id,`Quitar a esta persona la saca del reparto, de los impuestos y de los escritos.`,`¿Quitar a ${esc(p.nombre||"esta persona")}? Sus datos no se pueden recuperar.`,"Quitar a esta persona","Sí, quitar",`data-delp="${p.id}"`)}`,"Hecho");
 }
 if(s.tipo==="bien"){
@@ -14175,6 +14836,7 @@ return sheetHTML(b.descripcion?`${TIPO_BIEN[b.tipo][0]} · ${b.descripcion}`:TIP
       <div class="field"><label for="b-fa">Fecha de adquisición</label><input id="b-fa" type="date" data-bn="fechaAdq" value="${esc(b.fechaAdq)}"></div>
       <div class="field"><label for="b-va">Precio de adquisición (€)</label><input id="b-va" inputmode="decimal" data-bn="valorAdq" value="${numStr(b.valorAdq)}" placeholder="Según escritura"></div>
     </div>`:""}
+    ${typeof avBienHTML==="function"?avBienHTML(x,b):""}
     ${zonaPeligro("b:"+b.id,`Quitar este bien lo saca del inventario, del cálculo y de la partición.`,`¿Quitar ${esc(b.descripcion||"este bien")}? Sus datos no se pueden recuperar.`,"Quitar este bien","Sí, quitar",`data-delb="${b.id}"`)}`,"Hecho");
 }
 if(s.tipo==="tramite"){
@@ -14249,10 +14911,11 @@ return sheetHTML("Despacho y ajustes",`<div class="sectitle" style="margin-top:4
       <div class="group"><div class="field"><div class="seg block"><button data-tema="grafito" aria-pressed="${tm==="grafito"||tm==="oscuro"}">Grafito</button><button data-tema="claro" aria-pressed="${tm==="claro"}">Claro</button><button data-tema="sistema" aria-pressed="${tm==="sistema"}">Como el sistema</button></div></div></div>
       ${licSeccionHTML()}
       ${dmAjustesHTML()}
+      ${typeof dtAjustesHTML==="function"?dtAjustesHTML():""}
       ${typeof redAjustesHTML==="function"?redAjustesHTML():""}
       ${sgAjustesHTML()}
       <div class="sectitle">Datos</div><div class="group" style="--inset:60px"><label class="row" style="cursor:pointer;position:relative;overflow:hidden"><span class="ico blue">${I.box}</span><span class="t"><b>Importar un archivo</b><small>Expediente exportado, datos de la familia o copia de seguridad</small></span>${I.chev}<input type="file" id="f-restore" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="row" data-act="impAbrir"><span class="ico green">${I.list}</span><span class="t"><b>Traer la cartera desde una hoja (Excel / CSV)</b><small>Para empezar con las herencias que ya tienes abiertas, sin teclearlas</small></span>${I.chev}</button><button class="row" data-act="ics"><span class="ico gold">${I.calplus}</span><span class="t"><b>Plazos de la cartera al calendario</b></span>${I.chev}</button><button class="row" data-act="ejemplos"><span class="ico q">${I.doc}</span><span class="t"><b>Cargar casos de ejemplo</b></span>${I.chev}</button></div>
-      <p class="group-foot">Los datos y los documentos se guardan en este equipo, en este navegador; no se envían a ningún servidor. Activa la copia automática (arriba, en «Copias de seguridad») para no depender de un solo ordenador. Para trabajar varios ordenadores con los mismos expedientes, usa «Despacho en red» (arriba); en el móvil, o en un navegador sin esa opción, los expedientes se pasan con «Exportar» o con una copia.</p>${hayWebPublica()?`<p class="group-foot"><a href="/condiciones.html" target="_blank" rel="noopener">Condiciones</a> · <a href="/privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="/aviso-legal.html" target="_blank" rel="noopener">Aviso legal</a></p>`:""}
+      <p class="group-foot">Los datos y los documentos se guardan en este equipo, en este navegador; no se envían a ningún servidor. El despacho es el responsable de ellos y de sus copias (arriba, en «Tus datos»). Activa la copia automática (arriba, en «Copias de seguridad») para no depender de un solo ordenador. Para trabajar varios ordenadores con los mismos expedientes, usa «Despacho en red» (arriba); en el móvil, o en un navegador sin esa opción, los expedientes se pasan con «Exportar» o con una copia.</p>${hayWebPublica()?`<p class="group-foot"><a href="/condiciones.html" target="_blank" rel="noopener">Condiciones</a> · <a href="/privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="/aviso-legal.html" target="_blank" rel="noopener">Aviso legal</a> · <a href="/datos.html" target="_blank" rel="noopener">Datos y seguridad</a></p>`:""}
       <div class="sectitle">Acerca de</div><div class="group"><div class="row"><span class="t"><b>Motor de cálculo</b></span><span class="v">${VERSION}</span></div><div class="row"><span class="t"><b>Trámites en el catálogo</b></span><span class="v">${TR_TOTAL}</span></div><div class="row"><span class="t"><b>Enlaces oficiales</b></span><span class="v">${Object.values(ENLACES).reduce((s,e)=>s+e.accion.length+e.norma.length,0)}</span></div><div class="row"><span class="t"><b>Normativas del impuesto</b></span><span class="v">${TERRITORIOS.length}</span></div><div class="row"><span class="t"><b>Ordenanzas de plusvalía</b></span><span class="v">${Object.keys(ORDENANZAS).length-1}</span></div></div>`,"Hecho");
 }
 return"";
@@ -14339,6 +15002,7 @@ try{hojaFoco();}catch(e){}
 try{vfTodo();}catch(e){}
 moDespues();
 bvTips();
+try{if(typeof dtVigilar==="function")dtVigilar();}catch(e){}
 try{const t=document.querySelector(".secnav [aria-current=\"page\"]"),n=t&&t.parentElement;if(n&&n.scrollWidth>n.clientWidth)n.scrollLeft=Math.max(0,t.offsetLeft-n.clientWidth/2+t.offsetWidth/2);}catch(e){}
 try{snFlechas();}catch(e){}
 navProgramar();
@@ -14352,7 +15016,7 @@ if(ui.sheet&&!hoja)ui.sheet=null;
 if(ui.vista==="asist")$app.innerHTML=vAsistente()+hoja;
 else{
 const main=ui.vista==="exp"?vExp():ui.vista==="radar"?vRadar():ui.vista==="socio"&&typeof vSocio==="function"?vSocio():ui.vista==="rent"?vRentabilidad():ui.vista==="agenda"?vAgenda():ui.vista==="biblio"?vBiblio():vHome();
-$app.innerHTML=`<button type="button" class="mo-salto" data-mo-salto>Ir al contenido</button><div class="shell">${vSide()}<main class="main">${dmBanner()}${sgBanner()}${typeof redBanner==="function"?redBanner():""}${licBannerHTML()}${main}</main></div>`+hoja;
+$app.innerHTML=`<button type="button" class="mo-salto" data-mo-salto>Ir al contenido</button><div class="shell">${vSide()}<main class="main">${dmBanner()}${typeof dtBanner==="function"?dtBanner():""}${sgBanner()}${typeof redBanner==="function"?redBanner():""}${licBannerHTML()}${main}</main></div>`+hoja;
 }
 if(ui.sheet){for(const n of $app.children)if(!n.matches(".sheet,.scrim"))n.setAttribute("inert","");}
 {const tm=document.getElementById("tm-root");if(tm)tm.toggleAttribute("inert",!!ui.sheet);}

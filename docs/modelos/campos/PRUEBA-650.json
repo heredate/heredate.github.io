@@ -1,0 +1,445 @@
+{
+ "archivo": "PRUEBA-650.pdf",
+ "sha256": "0936b815ef86f39f87ea33c371416515a2916fb4038084f9f88f182ab098d817",
+ "fecha": "2026-10-12",
+ "paginas": 1,
+ "xfa": false,
+ "js": false,
+ "firmado": false,
+ "campos": [
+  {
+   "nombre": "NumJustificante",
+   "tipo": "texto",
+   "ayuda": "Número de justificante (lo genera la Administración)",
+   "max": null,
+   "soloLectura": true,
+   "pagina": 1,
+   "rect": [
+    250,
+    734,
+    201,
+    16
+   ]
+  },
+  {
+   "nombre": "SP_NIF",
+   "tipo": "texto",
+   "ayuda": "Sujeto pasivo: NIF",
+   "max": 9,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    697,
+    201,
+    16
+   ]
+  },
+  {
+   "nombre": "SP_Nombre",
+   "tipo": "texto",
+   "ayuda": "Sujeto pasivo: apellidos y nombre",
+   "max": null,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    678,
+    301,
+    16
+   ]
+  },
+  {
+   "nombre": "SP_Domicilio",
+   "tipo": "texto",
+   "ayuda": "Sujeto pasivo: domicilio",
+   "max": null,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    659,
+    301,
+    16
+   ]
+  },
+  {
+   "nombre": "SP_Parentesco",
+   "tipo": "texto",
+   "ayuda": "Parentesco",
+   "max": null,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    640,
+    201,
+    16
+   ]
+  },
+  {
+   "nombre": "CA_NIF",
+   "tipo": "texto",
+   "ayuda": "Causante: NIF",
+   "max": 9,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    603,
+    201,
+    16
+   ]
+  },
+  {
+   "nombre": "CA_Nombre",
+   "tipo": "texto",
+   "ayuda": "Causante: apellidos y nombre",
+   "max": null,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    584,
+    301,
+    16
+   ]
+  },
+  {
+   "nombre": "CA_Fecha",
+   "tipo": "texto",
+   "ayuda": "Fecha de devengo",
+   "max": 10,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    565,
+    201,
+    16
+   ]
+  },
+  {
+   "nombre": "C19",
+   "tipo": "texto",
+   "ayuda": "[19] Valor porción caudal hereditario",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    528,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C20",
+   "tipo": "texto",
+   "ayuda": "[20] Valor legados",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    509,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C21",
+   "tipo": "texto",
+   "ayuda": "[21] Valor seguros de vida",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    490,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C22",
+   "tipo": "texto",
+   "ayuda": "[22] Base imponible",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    471,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C23",
+   "tipo": "texto",
+   "ayuda": "[23] Reducción por parentesco",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    452,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C24",
+   "tipo": "texto",
+   "ayuda": "[24] Reducción por discapacidad",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    433,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C25",
+   "tipo": "texto",
+   "ayuda": "[25] Reducción por seguros de vida",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    414,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C26",
+   "tipo": "texto",
+   "ayuda": "[26] Reducción por empresa o participaciones",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    395,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C27",
+   "tipo": "texto",
+   "ayuda": "[27] Reducción por vivienda habitual",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    376,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C36",
+   "tipo": "texto",
+   "ayuda": "[36] Total reducciones",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    357,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C37",
+   "tipo": "texto",
+   "ayuda": "[37] Base liquidable",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    338,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C38",
+   "tipo": "texto",
+   "ayuda": "[38] Cuota íntegra",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    319,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C39",
+   "tipo": "texto",
+   "ayuda": "[39] Coeficiente multiplicador",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    300,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C40",
+   "tipo": "texto",
+   "ayuda": "[40] Cuota tributaria",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    281,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "C63",
+   "tipo": "texto",
+   "ayuda": "[63] Total a ingresar",
+   "max": 16,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    262,
+    121,
+    16
+   ]
+  },
+  {
+   "nombre": "Conforme",
+   "tipo": "marca",
+   "ayuda": "",
+   "max": null,
+   "soloLectura": false,
+   "pagina": 1,
+   "rect": [
+    250,
+    225,
+    13,
+    13
+   ]
+  }
+ ],
+ "propuesta": {
+  "campos": {
+   "SP_NIF": {
+    "dato": "sujeto.nif",
+    "por": "palabras clave"
+   },
+   "SP_Nombre": {
+    "dato": "sujeto.nombre",
+    "por": "palabras clave"
+   },
+   "SP_Domicilio": {
+    "dato": "sujeto.domicilio",
+    "por": "palabras clave"
+   },
+   "SP_Parentesco": {
+    "dato": "sujeto.parentesco",
+    "por": "palabras clave"
+   },
+   "CA_NIF": {
+    "dato": "causante.nif",
+    "por": "palabras clave"
+   },
+   "CA_Nombre": {
+    "dato": "causante.nombre",
+    "por": "palabras clave"
+   },
+   "CA_Fecha": {
+    "dato": "causante.fecha",
+    "por": "palabras clave"
+   },
+   "C19": {
+    "dato": "isd.porcion",
+    "por": "casilla 19"
+   },
+   "C20": {
+    "dato": "isd.legados",
+    "por": "casilla 20"
+   },
+   "C21": {
+    "dato": "isd.seguros",
+    "por": "casilla 21"
+   },
+   "C22": {
+    "dato": "isd.bi",
+    "por": "casilla 22"
+   },
+   "C23": {
+    "dato": "isd.red.parentesco",
+    "por": "casilla 23"
+   },
+   "C24": {
+    "dato": "isd.red.discapacidad",
+    "por": "casilla 24"
+   },
+   "C25": {
+    "dato": "isd.red.seguros",
+    "por": "casilla 25"
+   },
+   "C26": {
+    "dato": "isd.red.empresa",
+    "por": "casilla 26"
+   },
+   "C27": {
+    "dato": "isd.red.vivienda",
+    "por": "casilla 27"
+   },
+   "C36": {
+    "dato": "isd.red.total",
+    "por": "casilla 36"
+   },
+   "C37": {
+    "dato": "isd.bl",
+    "por": "casilla 37"
+   },
+   "C38": {
+    "dato": "isd.ci",
+    "por": "casilla 38"
+   },
+   "C39": {
+    "dato": "isd.coef",
+    "por": "casilla 39"
+   },
+   "C40": {
+    "dato": "isd.ct",
+    "por": "casilla 40"
+   },
+   "C63": {
+    "dato": "isd.total",
+    "por": "casilla 63"
+   }
+  },
+  "noTocar": [
+   "NumJustificante"
+  ],
+  "sinDato": [
+   "Conforme"
+  ]
+ }
+}

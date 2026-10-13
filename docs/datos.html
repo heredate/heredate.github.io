@@ -1,0 +1,332 @@
+<!doctype html>
+<!-- Borrador pendiente de revisión: texto preparado para su revisión por el titular antes de publicarse. No es la versión definitiva. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Datos y seguridad · Hereda+</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
+<meta name="description" content="Dónde se guardan los expedientes de Hereda+, quién es responsable de ellos y qué hace y qué no hace Hereda+ con los datos. Explicado para el despacho.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+/* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
+:root{--bg:#F4F2EC;--bg-2:#EBE9E2;--surface:#FFFEFB;--surface-2:#FAF9F5;--border:#E0DCD2;--border-2:#CBC5B8;
+  --ink-1:#121C2A;--ink-2:#434C59;--ink-3:#5C6470;--brand:#0F2B4C;--brand-tint:rgba(15,43,76,.07);--on-brand:#FFFFFF;
+  --success:#1F6E6B;--warning:#875A1A;--warning-bg:#F5EDDD;--danger:#9E3B2B;--btn:#0F2B4C;--on-btn:#FFFFFF;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
+  --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink-1);font:16px/1.6 var(--font-sans);letter-spacing:-.006em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:100;background:var(--btn);color:var(--on-btn);padding:10px 14px;border-radius:8px}
+.skip:focus{top:12px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+@media (max-width:520px){.wrap{padding:0 16px}}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 84%,transparent);-webkit-backdrop-filter:saturate(170%) blur(18px);backdrop-filter:saturate(170%) blur(18px);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:16px;color:var(--ink-1)}
+.brand:hover{text-decoration:none}
+.logo{width:26px;height:26px;display:block;flex:none}
+.links{display:flex;gap:26px;font-size:14px}
+.links a{color:var(--ink-2)}
+.links a:hover,.links a[aria-current]{color:var(--ink-1);text-decoration:none}
+.links a[aria-current]{font-weight:650}
+@media (max-width:860px){.links{display:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 18px;border-radius:999px;font:600 15px/1 var(--font-sans);border:0;cursor:pointer;transition:opacity .2s,background-color .2s}
+.btn:hover{text-decoration:none}
+.btn.pri{background:var(--btn);color:var(--on-btn)}
+.btn.pri:hover{opacity:.86}
+.btn.sec{background:transparent;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border-2)}
+.btn.sec:hover{background:var(--surface)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:14px}
+.btn.big{min-height:48px;padding:0 24px;font-size:16px}
+.head{padding:clamp(48px,7vw,88px) 0 12px}
+.eyebrow{display:inline-block;font-size:14px;font-weight:650;color:var(--brand);margin-bottom:14px}
+h1,h2{font-family:var(--font-display);font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+h1{font-size:clamp(36px,5.4vw,60px);line-height:1.04;margin:0;max-width:16em}
+.lead{font-size:clamp(17px,1.7vw,19px);color:var(--ink-2);max-width:42em;margin:18px 0 0}
+.meta{font-size:14px;color:var(--ink-3);margin-top:14px}
+section{padding:clamp(48px,6vw,72px) 0;border-top:1px solid var(--border);scroll-margin-top:60px}
+h2{font-size:clamp(26px,3.2vw,36px);line-height:1.12;margin:0 0 14px;max-width:22em}
+.grid3{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--surface);border-radius:18px;padding:26px;box-shadow:var(--sh-1)}
+.card h3,.card h4{margin:0 0 8px;font-size:16.5px;font-weight:650;font-family:var(--font-sans);letter-spacing:-.01em}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+p a,li a,td a,dd a,.lead a,label a,details a{text-decoration:underline;text-underline-offset:2px;text-decoration-thickness:1px}
+.card p{margin:0;color:var(--ink-2);font-size:15px}
+.card .k{font-size:13px;font-weight:650;color:var(--brand);margin-bottom:12px}
+.plans{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:640px){.plans{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1000px){.plans{grid-template-columns:repeat(3,1fr)}}
+.plan{background:var(--surface);border-radius:18px;padding:28px 26px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.plan.hi{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.plan .n{font-size:16px;font-weight:650}
+.plan .p{font:600 46px/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.plan .p small{font:500 15px/1 var(--font-sans);color:var(--ink-2);letter-spacing:0}
+.plan .iva{font-size:14px;color:var(--ink-3)}
+.plan ul{list-style:none;padding:0;margin:8px 0 16px;display:flex;flex-direction:column;gap:9px;font-size:15px;color:var(--ink-2)}
+.plan li::before{content:"✓";color:var(--success);margin-right:8px;font-weight:700}
+.plan .btn{margin-top:auto}
+.fine{font-size:14px;color:var(--ink-3);margin-top:18px}
+footer{padding:36px 0 56px;color:var(--ink-3);font-size:13.5px;border-top:1px solid var(--border)}
+footer .wrap{display:flex;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+footer a{color:var(--ink-2)}
+/* Documento legal */
+.doc{display:grid;grid-template-columns:1fr;gap:40px;padding-top:40px;padding-bottom:80px}
+@media (min-width:1000px){.doc{grid-template-columns:240px minmax(0,740px);justify-content:start;gap:72px}}
+.toc{font-size:14px}
+.toc b{display:block;font-size:13px;font-weight:650;color:var(--ink-3);margin-bottom:10px}
+.toc ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.toc a,.toc li a{color:var(--ink-2);text-decoration:none}
+.toc li a:hover{color:var(--ink-1);text-decoration:underline}
+@media (min-width:1000px){.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto}}
+@media (max-width:999px){.toc{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1)}}
+.prose{min-width:0}
+.prose h2{font-size:clamp(22px,2.4vw,26px);margin:48px 0 12px;scroll-margin-top:80px}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:17px;margin:26px 0 6px}
+.prose p,.prose li{color:var(--ink-1);overflow-wrap:anywhere}
+.prose p{margin:0 0 12px}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:0 0 6px}
+.prose .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:6px}
+.box{background:var(--surface);border-radius:14px;padding:18px 20px;box-shadow:var(--sh-1);margin:0 0 18px}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.box.note{background:var(--brand-tint);box-shadow:none}
+.ph{background:var(--warning-bg);color:var(--warning);border-radius:4px;padding:0 3px;font-weight:650}
+.tbl{width:100%;overflow-x:auto;margin:0 0 18px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--border)}
+thead th{font-size:13px;color:var(--ink-3);font-weight:650;background:var(--surface)}
+tbody th{font-weight:600}
+table.cmp{table-layout:fixed;min-width:620px}
+table.cmp td,table.cmp th{text-align:center}
+table.cmp thead th:first-child{width:30%}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left}
+table.cmp .hi{background:var(--brand-tint)}
+dl.id{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:8px 16px;margin:0}
+dl.id dt{color:var(--ink-3)}
+dl.id dd{margin:0;overflow-wrap:anywhere}
+@media (max-width:480px){dl.id{grid-template-columns:1fr;gap:2px}dl.id dd{margin-bottom:8px}}
+/* Pasos y formulario */
+.steps{counter-reset:s;display:grid;grid-template-columns:1fr;gap:14px;list-style:none;padding:0;margin:0}
+@media (min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.steps li{counter-increment:s}
+.steps li .k::before{content:"Paso " counter(s)}
+.form{display:grid;grid-template-columns:1fr;gap:16px;max-width:760px}
+@media (min-width:700px){.form{grid-template-columns:1fr 1fr}.form .full{grid-column:1/-1}}
+.form label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+.form label span.opt{font-weight:400;color:var(--ink-3)}
+.form input,.form select,.form textarea{font:15px/1.4 var(--font-sans);color:var(--ink-1);background:var(--surface);border:1px solid var(--border-2);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.form textarea{min-height:96px;resize:vertical}
+.form input:focus,.form select:focus,.form textarea:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:var(--brand)}
+.form .check{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}
+.form .check input{width:18px;min-height:18px;height:18px;margin:3px 0 0;flex:none}
+.form .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-size:14px;color:var(--ink-2)}
+.msg.err{color:var(--danger)}
+.oferta{display:flex;gap:18px 28px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:16px;padding:26px 28px;border-radius:18px;background:var(--brand);color:var(--on-brand)}
+.oferta h3{margin:4px 0 6px;font:600 24px/1.2 var(--font-display)}.oferta p{margin:0;opacity:.9;max-width:640px}.oferta .k{font-size:13px;font-weight:650;opacity:.85}
+.oferta .btn.pri{background:var(--on-brand);color:var(--brand)}
+.pagoinfo{font-size:14px;color:var(--ink-2);background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--sh-1)}
+.sinmail{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--warning-bg);color:var(--warning);font-size:14.5px}
+details.faq{border-bottom:1px solid var(--border);padding:16px 0}
+details.faq summary{cursor:pointer;font-weight:600;font-size:16.5px}
+details.faq p{color:var(--ink-2);margin:10px 0 0}
+@media print{.nav,.toc,footer nav,.skip{display:none}.doc{display:block;padding:0}body{font-size:11pt;background:#fff;color:#000}section{border:0}}
+/* Datos y seguridad · esquema */
+.mapa{display:grid;grid-template-columns:1fr;gap:14px;margin:8px 0 22px}
+@media (min-width:760px){.mapa{grid-template-columns:1.25fr 1fr 1fr}}
+.zona{background:var(--surface);border-radius:18px;padding:20px 20px 18px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:10px}
+.zona.desp{box-shadow:inset 0 0 0 2px var(--brand),var(--sh-1)}
+.zona .k{font-size:13px;font-weight:650;color:var(--brand)}
+.zona h3{margin:0;font:600 19px/1.2 var(--font-display);letter-spacing:-.01em}
+.zona ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.zona li{background:var(--surface-2);border-radius:10px;padding:9px 12px;font-size:14.5px;line-height:1.45;color:var(--ink-1);box-shadow:inset 0 0 0 1px var(--border)}
+.zona li small{display:block;color:var(--ink-3);font-size:13px}
+.zona .pie{font-size:13.5px;color:var(--ink-2);margin:auto 0 0}
+.zona.no li{background:transparent}
+.flecha{font-size:13.5px;color:var(--ink-3);margin:-6px 0 18px}
+.dos{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 18px}
+@media (min-width:700px){.dos{grid-template-columns:1fr 1fr}}
+.dos .card ul{margin:8px 0 0;padding-left:20px;color:var(--ink-2);font-size:15px}
+.dos .card li{margin:0 0 6px}
+.frase{font:600 clamp(20px,2.2vw,24px)/1.3 var(--font-display);letter-spacing:-.01em;margin:0 0 12px;max-width:30em}
+</style>
+</head>
+<body>
+<a class="skip" href="#contenido">Saltar al contenido</a>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="/"><img class="logo" src="icons/hereda-marca.svg" alt="" width="26" height="26">Hereda+</a>
+  <nav class="links" aria-label="Información legal"><a href="datos.html" aria-current="page">Datos y seguridad</a><a href="condiciones.html">Condiciones</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Planes y contratación</a></nav>
+  <a class="btn pri sm" href="contratar.html">Contratar</a>
+</div></header>
+<main id="contenido">
+<div class="head"><div class="wrap">
+  <span class="eyebrow">Datos y seguridad</span>
+  <h1>Los expedientes son del despacho y se quedan en el despacho</h1>
+  <p class="lead">Dónde se guardan los datos de sus clientes cuando usa Hereda+, quién responde de ellos y qué hace y qué no hace Hereda+. Explicado para el socio que tiene que decidir, sin jerga.</p>
+  <p class="meta">Versión 1.0 · 4 de octubre de 2026 · Complementa las <a href="condiciones.html#c8">condiciones de licencia (cláusula 8)</a> y la <a href="privacidad.html">política de privacidad</a></p>
+</div></div>
+
+<div class="wrap doc">
+<nav class="toc" aria-label="Índice">
+  <b>Índice</b>
+  <ol>
+    <li><a href="#d0">En cinco frases</a></li>
+    <li><a href="#d1">Dónde están los datos</a></li>
+    <li><a href="#d2">Quién responde de qué</a></li>
+    <li><a href="#d3">Qué hace y qué no hace Hereda+</a></li>
+    <li><a href="#d4">Cerrar hoy, abrir mañana</a></li>
+    <li><a href="#d5">Cómo no perder nada</a></li>
+    <li><a href="#d6">Cambiar de ordenador o de dirección</a></li>
+    <li><a href="#d7">Lo que le toca al despacho</a></li>
+    <li><a href="#d8">Preguntas frecuentes</a></li>
+  </ol>
+</nav>
+
+<article class="prose">
+<h2 id="d0">En cinco frases</h2>
+<div class="box note">
+<ol>
+  <li>Hereda+ es un programa que funciona en los ordenadores del despacho, dentro del navegador; no tiene servidor de datos.</li>
+  <li>Los expedientes y documentos se guardan en ese navegador y en las carpetas que el despacho elija para las copias (su servidor, OneDrive, Dropbox o Google Drive).</li>
+  <li>Hereda+ no recibe, no guarda y no puede ver esos datos: ni para darle soporte, ni para estadísticas, ni para nada.</li>
+  <li>Por eso el despacho es el responsable de esos datos y de sus copias, como lo es de sus archivos en papel o en Word, y Hereda+ no es su encargado del tratamiento.</li>
+  <li>El programa le ayuda a cumplir: copia diaria automática, contraseña y cifrado, avisos si algo está en riesgo y una hoja en PDF que explica todo esto para su archivo.</li>
+</ol>
+</div>
+
+<h2 id="d1">Dónde están los datos</h2>
+<div class="mapa" role="group" aria-label="Esquema: dónde están los datos">
+  <div class="zona desp">
+    <span class="k">En el despacho · responsable: el despacho</span>
+    <h3>Sus ordenadores y sus carpetas</h3>
+    <ul>
+      <li>Navegador de cada ordenador<small>Los expedientes, los documentos y los ajustes. Con contraseña, cifrados.</small></li>
+      <li>Carpeta de copias<small>Una copia cada día, donde el despacho decida. Se conservan 30 días.</small></li>
+      <li>Carpeta del «despacho en red» (si se usa)<small>Para trabajar varios ordenadores con los mismos expedientes. Se puede cifrar.</small></li>
+      <li>Lo que se descarga<small>Copias, informes en PDF, escritos en Word.</small></li>
+    </ul>
+  </div>
+  <div class="zona">
+    <span class="k">Proveedores que elige el despacho</span>
+    <h3>Su nube o su servidor</h3>
+    <ul>
+      <li>Servidor o disco del despacho</li>
+      <li>Microsoft OneDrive</li>
+      <li>Dropbox</li>
+      <li>Google Drive</li>
+    </ul>
+    <p class="pie">Solo si el despacho pone ahí la carpeta de copias o de red. Los contrata el despacho y trabajan para el despacho, con sus propias condiciones de protección de datos.</p>
+  </div>
+  <div class="zona no">
+    <span class="k">Hereda+</span>
+    <h3>Solo el programa</h3>
+    <ul>
+      <li>Publica el programa y sus actualizaciones en su dirección web</li>
+      <li>Ningún expediente, documento ni dato de clientes</li>
+      <li>Sin cuentas de usuario, sin analítica, sin informes de errores</li>
+      <li>Sin acceso remoto a sus equipos</li>
+    </ul>
+    <p class="pie">Al abrir el programa, el servidor web que lo publica (GitHub) registra la dirección IP del ordenador, como cualquier web. No recibe datos de expedientes. Ver la <a href="privacidad.html#p3">política de privacidad</a>.</p>
+  </div>
+</div>
+<p class="flecha">Los datos van del navegador a las carpetas del despacho, y de vuelta. Nunca hacia Hereda+. La aplicación tiene, además, una regla técnica del navegador que solo le permite conectarse con su propia dirección: aunque alguien añadiera un envío de datos a otro sitio, el navegador lo bloquearía.</p>
+
+<h2 id="d2">Quién responde de qué</h2>
+<div class="tbl" tabindex="0" role="region" aria-label="Quién responde de qué"><table>
+  <thead><tr><th>Asunto</th><th>Quién responde</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><th>Los datos de los clientes y de las familias</th><td>El despacho, como <b>responsable del tratamiento</b></td><td>Decide para qué se usan, dónde se guardan y quién accede (artículo 4.7 del Reglamento General de Protección de Datos)</td></tr>
+    <tr><th>Las copias y la carpeta compartida</th><td>El despacho, con el proveedor que elija como su encargado</td><td>Es el despacho quien elige y contrata esa nube o ese servidor</td></tr>
+    <tr><th>Proteger los ordenadores y las contraseñas</th><td>El despacho</td><td>Los datos están en sus equipos</td></tr>
+    <tr><th>Avisar a la Agencia de Protección de Datos si hay una brecha (un portátil robado, por ejemplo)</th><td>El despacho</td><td>Es una obligación del responsable (artículo 33 del Reglamento)</td></tr>
+    <tr><th>Que el programa funcione como se describe</th><td>Hereda+</td><td>Es lo que vende: garantía y soporte de las <a href="condiciones.html#c15">condiciones 15 y 16</a></td></tr>
+    <tr><th>Revisar cada cálculo y escrito antes de firmarlo</th><td>El abogado</td><td>El programa prepara; el profesional decide y firma (<a href="condiciones.html#c7">cláusula 7</a>)</td></tr>
+  </tbody>
+</table></div>
+<p>Hereda+ <b>no es encargado del tratamiento</b> porque no hace ninguna operación con los datos del despacho: no los recibe, no los guarda y no puede consultarlos. Por eso no hay que firmar con Hereda+ un contrato de encargo del tratamiento. Si algún día Hereda+ ofreciera funciones en servidores (copias o sincronización en la nube) y el despacho las activara, sí lo sería, y antes se firmaría ese contrato (<a href="condiciones.html#c9">cláusula 9</a>).</p>
+
+<h2 id="d3">Qué hace y qué no hace Hereda+</h2>
+<div class="dos">
+  <div class="card"><h3>Hace</h3><ul>
+    <li>Calcula, lee los documentos y prepara los escritos en su ordenador.</li>
+    <li>Guarda una copia diaria en la carpeta que usted elija.</li>
+    <li>Cifra los expedientes si pone contraseña (AES de 256 bits).</li>
+    <li>Pide al navegador que no borre los datos y le avisa si hay riesgo.</li>
+    <li>Le avisa si lleva una semana sin copia.</li>
+    <li>Genera una hoja en PDF que explica cómo se guardan los datos en su despacho.</li>
+  </ul></div>
+  <div class="card"><h3>No hace</h3><ul>
+    <li>No envía expedientes, documentos ni cálculos a ningún servidor.</li>
+    <li>No usa inteligencia artificial ni servicios externos.</li>
+    <li>No tiene analítica, cookies de seguimiento ni informes de errores.</li>
+    <li>No guarda una copia propia: si usted no tiene copia, nadie la tiene.</li>
+    <li>No accede a sus equipos para el soporte ni le pide datos reales.</li>
+    <li>No puede recuperar una contraseña olvidada.</li>
+  </ul></div>
+</div>
+
+<h2 id="d4">Cerrar hoy, abrir mañana</h2>
+<p>Hereda+ guarda cada cambio al momento en el navegador; no hay botón de guardar. Al cerrar la ventana o apagar el ordenador, los expedientes se quedan en ese navegador. Mañana, al abrir Hereda+ en el mismo ordenador, con el mismo navegador y desde la misma dirección, aparecen tal como los dejó. Con la copia automática activada, además, ya hay una copia del día en la carpeta del despacho.</p>
+<p>Si cierra con cambios y sin ninguna copia reciente, el navegador le preguntará si quiere salir (como mucho, una vez al día). Si ha puesto contraseña, Hereda+ se la pedirá al abrir.</p>
+
+<h2 id="d5">Cómo no perder nada</h2>
+<p>Los datos de un navegador se pueden perder si alguien borra los «datos de navegación» del sitio, si se usa una ventana privada, si se reinstala el navegador o el ordenador, o en Safari si pasan 7 días sin abrir Hereda+. Hereda+ detecta los casos que puede y lo avisa, pero la protección real es la copia:</p>
+<ol>
+  <li>Use Chrome o Edge en el ordenador y active la <b>copia automática</b> en una carpeta del servidor o de OneDrive, Dropbox o Google Drive. Se hace sola cada día.</li>
+  <li>Instale Hereda+ como aplicación (icono de instalar de la barra de direcciones): el navegador lo protege frente al borrado automático.</li>
+  <li>Si su navegador no permite la copia automática, descargue una copia cada semana (Hereda+ se lo recordará).</li>
+  <li>Ponga contraseña si el ordenador sale del despacho o lo usan otras personas.</li>
+</ol>
+
+<h2 id="d6">Cambiar de ordenador, de navegador o de dirección</h2>
+<p>Cada ordenador, cada navegador y cada dirección web guardan sus datos por separado: los expedientes no pasan solos de uno a otro. Para llevarlos: en el origen, Ajustes › Tus datos › <b>Descargar todo</b>; en el destino, <b>Restaurar</b> y elegir ese archivo (verá qué contiene antes de aplicar nada). Con la copia automática, en el destino basta con «Restaurar desde la carpeta de copias». Si Hereda+ cambiara de dirección web, la aplicación se lo avisaría con tiempo y le guiaría para hacer esa copia.</p>
+
+<h2 id="d7">Lo que le toca al despacho</h2>
+<ul>
+  <li>Incluir este tratamiento en su registro de actividades y en la información que da a sus clientes (como ya hace con sus otros programas).</li>
+  <li>Elegir dónde guarda las copias y comprobar que ese proveedor tiene sus condiciones de protección de datos (Microsoft, Dropbox y Google las incluyen en sus contratos profesionales).</li>
+  <li>Proteger los ordenadores: sesión con contraseña, disco cifrado si es portátil y, si hace falta, la contraseña de Hereda+.</li>
+  <li>Retirar el acceso a quien deje el despacho y borrar los datos de un ordenador antes de darle otro uso (Ajustes › Tus datos › Borrar todo de este equipo).</li>
+  <li>Guardar la hoja en PDF «Cómo se guardan y protegen los datos» que genera Hereda+ (Ajustes › Tus datos) como parte de su documentación.</li>
+</ul>
+<p>Al empezar a usar Hereda+, el programa pide confirmar en una pantalla que el despacho es el responsable de los datos y de sus copias, y guarda en el propio equipo la fecha, la persona y la versión de las condiciones aceptadas.</p>
+
+<h2 id="d8">Preguntas frecuentes</h2>
+<details class="faq"><summary>¿Puede alguien de Hereda+ ver mis expedientes?</summary><p>No. No hay ningún servidor donde estén, ni cuentas, ni acceso remoto. Tampoco para el soporte: le pediremos que nos describa el problema o que lo reproduzca con el despacho de demostración.</p></details>
+<details class="faq"><summary>¿Tengo que firmar con Hereda+ un contrato de encargado del tratamiento?</summary><p>No, porque Hereda+ no trata los datos de sus expedientes. Si en el futuro se ofrecieran funciones en servidores y usted las activara, se firmaría antes.</p></details>
+<details class="faq"><summary>¿Y con Microsoft, Dropbox o Google?</summary><p>Si pone allí la carpeta de copias o la de red, ellos sí guardan esos archivos y son encargados del despacho. Sus contratos profesionales ya incluyen las condiciones de encargo del tratamiento; compruebe que tiene una versión profesional del servicio. Si prefiere que no puedan leer nada, active la contraseña y el cifrado de las copias.</p></details>
+<details class="faq"><summary>¿Qué pasa con el secreto profesional?</summary><p>Hereda+ no da acceso a los expedientes a ningún tercero, tampoco a Hereda+. Quién más puede ver los datos lo decide el despacho al elegir dónde guarda las copias.</p></details>
+<details class="faq"><summary>¿Qué pasa si dejo de pagar la licencia?</summary><p>Hereda+ pasa a solo lectura: puede consultar, imprimir y exportar todo. Los datos nunca se bloquean ni se borran (<a href="condiciones.html#c11">cláusula 11.4</a>).</p></details>
+<details class="faq"><summary>¿Qué pasa si olvido la contraseña?</summary><p>Nadie puede descifrar los datos sin ella, tampoco Hereda+. Solo se recuperan desde una copia. Guárdela en un lugar seguro.</p></details>
+<details class="faq"><summary>¿Qué le digo a mi cliente si me pregunta?</summary><p>Algo así: «Su expediente se guarda en los ordenadores del despacho y en nuestras copias de seguridad, bajo nuestra responsabilidad. El programa que usamos para calcular la herencia funciona en nuestros equipos y no envía sus datos a nadie.» Si quiere, entréguele la hoja en PDF que genera Hereda+.</p></details>
+</article>
+</div>
+</main>
+
+<footer><div class="wrap">
+  <span>© 2026 Hereda+ · <span class="ph">[RAZÓN SOCIAL]</span> · <span class="ph">[NIF]</span></span>
+  <nav aria-label="Enlaces legales"><a href="datos.html">Datos y seguridad</a><a href="condiciones.html">Condiciones de licencia</a><a href="privacidad.html">Privacidad</a><a href="aviso-legal.html">Aviso legal</a><a href="contratar.html">Contratar</a></nav>
+</div></footer>
+</body>
+</html>
