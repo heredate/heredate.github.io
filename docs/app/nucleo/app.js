@@ -1326,8 +1326,12 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:19,nombre:"Versión 1.9",fecha:"2026-10-13"};
+const VERSION_APP={n:20,nombre:"Versión 2.0",fecha:"2026-10-13"};
 const NOVEDADES=[
+["De dónde sale cada dato","Cada dato leído de un documento lleva su origen: documento, página y la frase exacta, y al pulsarlo se abre la página con el dato resaltado. Confianza alta, media o baja con su motivo; lo dudoso sale primero. Comprobaciones entre documentos: mismo causante y DNI, fecha del fallecimiento, testamento que no es el último, letra del NIF, control de la referencia catastral y del IBAN, saldos e hijos que el testamento no nombra."],
+["Revisión del expediente","184 comprobaciones civiles, fiscales, documentales y aritméticas: legítimas, preterición, gananciales sin liquidar, plazos, valor de referencia, seguros, reducciones sin requisitos, certificados que faltan o caducan y repartos que no suman. Cada una con su artículo y un clic que lleva al dato. Aviso antes de los escritos y los modelos."],
+["Hoja de casillas","Junto a Modelos oficiales: cada casilla del modelo con su cifra por heredero, lista para copiar en el programa de la Administración, y el inventario en el orden del modelo. Cuadra sola con el cálculo. Numeración oficial donde está publicada (AEAT y Galicia) y nombre del concepto en el resto. En PDF, Word y CSV."],
+["Planificación sucesoria","Para el cliente que aún vive: siete escenarios comparados (sin testamento, uno para el otro, legado de usufructo, tercio libre, donación, seguro y cambio de residencia) y el pacto sucesorio donde la ley lo admite, con el coste de las dos herencias, quién recibe qué y las legítimas. Borradores de instrucciones de testamento, donación y pacto sucesorio."],
 ["Plusvalía: el tipo de 2026 en más de 1.800 municipios","El tipo de gravamen que cada ayuntamiento comunica a Hacienda para 2026 entra en el cálculo en 1.510 municipios nuevos y actualiza otros 326, con el año desde el que se mantiene. Si el fallecimiento es anterior, se calcula con el máximo legal y se avisa. Las bonificaciones siguen saliendo de la ordenanza de cada municipio, con su cita."],
 ["Tus datos, claros y a salvo","La primera vez se elige dónde se guardan los expedientes (carpeta del despacho para la copia automática, contraseña opcional) y se acepta quién es responsable de los datos. En Ajustes, el panel «Tus datos»: dónde están, última copia, descargar todo, restaurar, borrar y una hoja en PDF para el cliente. Avisos si no hay copia en siete días."],
 ["Modelos oficiales","Catálogo de los modelos de cada comunidad, territorio foral y del Catastro. Hereda+ rellena el PDF oficial cuando la Administración lo publica para imprimir, y cuando solo existe su programa de ayuda deja los datos listos y abre el programa. Nunca imita números de justificante ni códigos de barras."],
@@ -5578,7 +5582,7 @@ return`<div class="card vf-datos">${cardH("Para la escritura","Datos de identifi
 function tFirma(x,R){
 if(R===undefined)R=calcular(x);
 const V=validarFirma(x,R);
-const vista=ui.vfv==="650"?"650":ui.vfv==="modelos"&&typeof tModelos==="function"?"modelos":"check";
+const vista=ui.vfv==="650"?"650":ui.vfv==="modelos"&&typeof tModelos==="function"?"modelos":ui.vfv==="casillas"&&typeof tCasillas==="function"?"casillas":"check";
 const nB=V.bloqueos.length,nA=V.avisos.length,tot=V.items.length;
 const pct=tot?Math.round((V.ok.length/tot)*100):0;
 const F=vfF(x);
@@ -5591,9 +5595,10 @@ const hero=`<div class="card vf-hero ${nB?"vf-no":"vf-si"}">
       <div class="vf-cnt"><span><i class="vf-d vf-db"></i>${vfPlural(nB,"bloqueo")}</span><span><i class="vf-d vf-da"></i>${vfPlural(nA,"aviso")}</span><span><i class="vf-d vf-do"></i>${V.ok.length} de ${tot} correctas</span></div></div>
     <div class="vf-hacts"><button class="btn sm" data-vf="pdf">${I.dl}Paquete para la notaría</button><button class="btn sm gray" data-doc="escritura">${I.doc}Borrador de escritura</button><button class="btn sm gray" data-vf="texto">${VF_I.cp}Texto del correo</button>${F.email?`<button class="btn sm gray" data-vf="mail">Enviar por correo</button>`:""}</div>
   </div>`;
-const seg=`<div class="seg vf-seg" role="group" aria-label="Vista"><button data-vf="vista" data-v="check" aria-pressed="${vista==="check"}">Comprobación</button><button data-vf="vista" data-v="650" aria-pressed="${vista==="650"}">Hoja del 650</button>${typeof tModelos==="function"?`<button data-vf="vista" data-v="modelos" aria-pressed="${vista==="modelos"}">Modelos oficiales</button>`:""}</div>`;
-if(vista==="650")return`<div class="vf">${hero}${seg}${hoja650(x,R)}</div>`;
-if(vista==="modelos")return`<div class="vf">${hero}${seg}${tModelos(x,R)}</div>`;
+const seg=`<div class="seg vf-seg" role="group" aria-label="Vista"><button data-vf="vista" data-v="check" aria-pressed="${vista==="check"}">Comprobación</button><button data-vf="vista" data-v="650" aria-pressed="${vista==="650"}">Hoja del 650</button>${typeof tModelos==="function"?`<button data-vf="vista" data-v="modelos" aria-pressed="${vista==="modelos"}">Modelos oficiales</button>`:""}${typeof tCasillas==="function"?`<button data-vf="vista" data-v="casillas" aria-pressed="${vista==="casillas"}">Hoja de casillas</button>`:""}</div>`;
+if(vista==="650")return`<div class="vf">${hero}${seg}${typeof rvAviso==="function"?rvAviso(x,"la hoja del 650"):""}${hoja650(x,R)}</div>`;
+if(vista==="modelos")return`<div class="vf">${hero}${seg}${typeof rvAviso==="function"?rvAviso(x,"los modelos"):""}${tModelos(x,R)}</div>`;
+if(vista==="casillas")return`<div class="vf">${hero}${seg}${typeof rvAviso==="function"?rvAviso(x,"la hoja de casillas"):""}${tCasillas(x,R)}</div>`;
 const grupos=VF_GRUPOS.map(([k,t])=>{
 const L=V.items.filter((i)=>i.grupo===k);if(!L.length)return"";
 const b=L.filter((i)=>i.sev==="bloqueo").length,a=L.filter((i)=>i.sev==="aviso").length;
@@ -5807,7 +5812,7 @@ if(a==="cp"){const v=d.v||"";Promise.resolve(copiar(v)).then(()=>toast(`Copiado 
 if(!x)return;
 if(a==="cpall"){const R=calcular(x);if(!R)return;const h=R.isd.herederos.find((q)=>q.id===d.id);Promise.resolve(copiar(vf650Texto(x,R,d.id))).then(()=>toast(`Copiadas las cifras de ${h?h.nombre:"la ficha"}`));return;}
 if(a==="foco"){
-if(ui.vfv==="650"||ui.vfv==="modelos"){ui.vfv="check";render();}
+if(ui.vfv==="650"||ui.vfv==="modelos"||ui.vfv==="casillas"){ui.vfv="check";render();}
 const n=document.getElementById(d.id);if(!n)return;
 n.scrollIntoView({behavior:"smooth",block:"center"});
 setTimeout(()=>{try{n.focus({preventScroll:true});}catch(er){n.focus();}const w=n.closest(".vf-fl")||n;w.classList.remove("vf-flash");void w.offsetWidth;w.classList.add("vf-flash");},250);
@@ -6318,6 +6323,375 @@ return zip([
 }
 const esrDocxOpts=(x,titulo)=>({titulo,ref:(x&&x.despacho&&x.despacho.ref)||"",expediente:x&&x.nombre?`Herencia de ${x.nombre}`:""});
 const esrHuecos=(t)=>String(t||"").split(/(⟦REVISI[^⟧]*⟧)/).map((sg,k)=>(k%2?sg:sg.replace(/\[([^\[\]\n]{1,200})\]/g,"⟦$1⟧").replace(/\[([^\[\]\n⟦⟧]*⟦[^⟧\n]*⟧[^\[\]\n⟦⟧]*)\]/g,(m,a)=>"⟦"+a.replace(/[⟦⟧]/g,"")+"⟧"))).join("");
+const PLA_VEC=[["comun","Común (Código Civil)"],["CAT","Catalana"],["ARA","Aragonesa"],["NAV","Navarra"],["VASCO","Vasca"],["GAL","Gallega"],["BAL","Balear"]];
+const PLA_TIPOS=[["vivienda","Vivienda habitual"],["inmueble","Otro inmueble"],["cuenta","Dinero en cuentas"],["valores","Acciones o fondos"],["otro","Otros bienes"]];
+const PLA_TIT=[["ganancial","Ganancial"],["titular","Del titular"],["conyuge","Del cónyuge"]];
+const PLA_CIVIL=[["casado","Casado/a"],["viudo","Viudo/a"],["soltero","Soltero/a o divorciado/a"]];
+const PLA_DOCS={estudio:"Estudio comparativo de planificación sucesoria",testamento:"Instrucciones de testamento para el notario",donacion:"Borrador de escritura de donación",pacto:"Borrador de escritura de pacto sucesorio"};
+const PLA_ICO=typeof I==="object"&&I.sliders?I.sliders:"";
+const plaLista=()=>(DB.planes=Array.isArray(DB.planes)?DB.planes:[]);
+const plaActual=()=>plaLista().find((p)=>p.id===ui.planId)||null;
+const plaInm=(b)=>b&&(b.tipo==="vivienda"||b.tipo==="inmueble");
+const plaHijo=(p,id)=>(p.hijos||[]).find((h)=>h.id===id);
+const plaNombreT=(p)=>(p.titular&&p.titular.nombre)||"Titular sin nombre";
+const plaCasado=(p)=>p.civil==="casado";
+function plaNuevo(datos){
+const p=Object.assign({id:"pl"+uid(),creado:hoy(),nombre:"",civil:"casado",regimen:"gananciales",titular:{nombre:"",edad:"",vecindad:"comun",ccaa:(DB.despacho&&DB.despacho.ccaa)||"AND",municipio:""},conyuge:{nombre:"",edad:""},hijos:[],bienes:[],
+supuestos:{horizonte:10,intervalo:10,testamentoBase:"usufructo"},donacion:{},pacto:{},seguro:{},residencia:{}},datos||{});
+plaLista().unshift(p);guardar();
+return p;
+}
+function plaEjemplo(k){
+if(k==="gal")return plaNuevo({nombre:"Planificación de Manuel Vázquez Rey",civil:"viudo",regimen:"separacion",
+titular:{nombre:"Manuel Vázquez Rey",edad:76,vecindad:"GAL",ccaa:"GAL",municipio:"Lugo"},conyuge:{nombre:"",edad:""},
+hijos:[{id:"h1",nombre:"Iria Vázquez Souto",edad:48},{id:"h2",nombre:"Brais Vázquez Souto",edad:45}],
+bienes:[{id:"b1",tipo:"vivienda",descripcion:"Casa familiar en Lugo",valor:240000,titularidad:"titular",adqFecha:"1988-04-20",adqValor:52000,vcTotal:96000,vcSuelo:41000},
+{id:"b2",tipo:"inmueble",descripcion:"Piso en A Coruña",valor:260000,titularidad:"titular",adqFecha:"2004-09-01",adqValor:180000,vcTotal:105000,vcSuelo:47000},{id:"b3",tipo:"cuenta",descripcion:"Cuentas",valor:120000,titularidad:"titular"}],
+supuestos:{horizonte:8,intervalo:0,testamentoBase:"intestada"},donacion:{bienId:"b2",a:"h1"},pacto:{bienId:"b2",a:"h1",figura:"mejora"},seguro:{},residencia:{}});
+return plaNuevo({nombre:"Planificación de Anselmo Briceño Lahoz",civil:"casado",regimen:"gananciales",
+titular:{nombre:"Anselmo Briceño Lahoz",edad:71,vecindad:"comun",ccaa:"AND",municipio:"Málaga"},conyuge:{nombre:"Pilar Cebrián Olmedo",edad:69},
+hijos:[{id:"h1",nombre:"Elena Briceño Cebrián",edad:42,patrimonio:60000},{id:"h2",nombre:"Jorge Briceño Cebrián",edad:38,patrimonio:20000}],
+bienes:[{id:"b1",tipo:"vivienda",descripcion:"Vivienda familiar en Málaga",valor:320000,valorReferencia:290000,titularidad:"ganancial",adqFecha:"1996-06-14",adqValor:96000,vcTotal:128000,vcSuelo:61000},
+{id:"b2",tipo:"inmueble",descripcion:"Apartamento en Torremolinos",valor:210000,valorReferencia:0,titularidad:"titular",adqFecha:"2008-03-03",adqValor:165000,vcTotal:82000,vcSuelo:35000},
+{id:"b3",tipo:"cuenta",descripcion:"Cuentas y depósitos",valor:180000,titularidad:"ganancial"},{id:"b4",tipo:"valores",descripcion:"Fondos de inversión",valor:90000,titularidad:"titular",adqValor:60000}],
+supuestos:{horizonte:10,intervalo:8,testamentoBase:"usufructo"},donacion:{bienId:"b2",a:"todos"},pacto:{},seguro:{capital:60000,a:"C",bienId:"b3"},residencia:{destino:"MAD",fecha:hoy()}});
+}
+function plaMotor(p){
+const T=p.titular||{};
+let muni=null;
+try{const ine=T.municipio&&typeof muniDesdeTexto==="function"?muniDesdeTexto(T.municipio):"";if(ine)muni={ine,key:typeof muniOrd==="function"?muniOrd(ine):""};}catch(e){}
+const casado=plaCasado(p);
+return{
+fecha:hoy(),titular:{nombre:T.nombre||"",edad:num(T.edad)||70,vecindad:T.vecindad||"comun",ccaa:T.ccaa||"AND",municipio:muni},
+conyuge:casado?{nombre:(p.conyuge&&p.conyuge.nombre)||"",edad:num(p.conyuge&&p.conyuge.edad)||68}:null,regimen:casado?p.regimen||"gananciales":"separacion",
+hijos:(p.hijos||[]).map((h)=>({id:h.id,nombre:h.nombre||"Hijo sin nombre",edad:h.edad===""||h.edad==null?40:num(h.edad),discapacidad:num(h.discapacidad),patrimonio:num(h.patrimonio)})),
+bienes:(p.bienes||[]).map((b)=>({id:b.id,tipo:b.tipo,descripcion:b.descripcion||(PLA_TIPOS.find((t)=>t[0]===b.tipo)||["","Bien"])[1],valor:num(b.valor),valorReferencia:num(b.valorReferencia),titularidad:casado?b.titularidad||"ganancial":"titular",adqFecha:b.adqFecha||"",adqValor:num(b.adqValor),vcTotal:num(b.vcTotal),vcSuelo:num(b.vcSuelo)})),
+supuestos:{horizonte:num((p.supuestos||{}).horizonte),intervalo:num((p.supuestos||{}).intervalo),testamentoBase:(p.supuestos||{}).testamentoBase||"usufructo",otrasRentasAhorro:num((p.supuestos||{}).otrasRentasAhorro)},
+donacion:{a:"todos",...(p.donacion||{}),importe:num((p.donacion||{}).importe)},
+pacto:{a:((p.hijos||[])[0]||{}).id||"todos",figura:((PL_PACTOS[plVecindadPacto(T.vecindad)]||{}).figuras||[[""]])[0][0],...(p.pacto||{}),importe:num((p.pacto||{}).importe)},
+seguro:{a:casado?"C":((p.hijos||[])[0]||{}).id||"",...(p.seguro||{}),bienId:(p.seguro||{}).bienId||((p.bienes||[]).find((b)=>!plaInm(b))||{}).id||"",capital:num((p.seguro||{}).capital)},residencia:{...(p.residencia||{})},
+};
+}
+function plaCalc(p){
+const f=()=>{try{return planEscenarios(plaMotor(p));}catch(e){console.error("planificación",e);return{escenarios:[],avisos:["No se ha podido calcular con estos datos: "+String((e&&e.message)||e)],error:true};}};
+return typeof calcMemo==="function"?calcMemo("plan",p,f):f();
+}
+function plSideItem(){
+const n=plaLista().length;
+return`<button class="sitem" data-pl="abrir" aria-current="${ui.vista==="plan"}"><span class="ic">${PLA_ICO}</span><span class="t"><b>Planificación</b></span><span class="cnt">${n||""}</span></button>`;
+}
+const plaId=(k)=>"pl-"+String(k).replace(/[^A-Za-z0-9]/g,"-");
+const plaOpts=(L,v)=>L.map(([k,t])=>`<option value="${esc(k)}" ${String(v??"")===String(k)?"selected":""}>${esc(t)}</option>`).join("");
+function plaF(lbl,k,v,o={}){
+const id=plaId(k);
+const ctl=o.sel?`<select id="${id}" data-plk="${esc(k)}">${plaOpts(o.sel,v)}</select>`
+:`<input id="${id}" data-plk="${esc(k)}" ${o.num?'inputmode="decimal" data-pln="1"':""} ${o.type?`type="${o.type}"`:""} value="${esc(o.num?(typeof numStr==="function"?numStr(v):v??""):v??"")}" ${o.ph?`placeholder="${esc(o.ph)}"`:""} autocomplete="off">`;
+return`<div class="field${o.cls?" "+o.cls:""}"><label for="${id}">${lbl}</label>${ctl}${o.hint?`<small class="hint">${o.hint}</small>`:""}</div>`;
+}
+const plaTerrs=()=>TERRITORIOS.filter(([k])=>k!=="EST");
+function plaFamiliaHTML(p){
+const T=p.titular||{},C=p.conyuge||{};
+const hijos=(p.hijos||[]).map((h,i)=>`<div class="psu-bien" role="group" aria-label="Hijo ${i+1}">
+      <div class="psu-f">${plaF("Nombre",`hijos.${i}.nombre`,h.nombre,{ph:"Nombre y apellidos",cls:"psu-w2"})}${plaF("Edad",`hijos.${i}.edad`,h.edad,{num:1})}${plaF("Discapacidad %",`hijos.${i}.discapacidad`,h.discapacidad,{num:1})}${plaF("Patrimonio propio",`hijos.${i}.patrimonio`,h.patrimonio,{num:1,cls:"psu-w2",hint:"Para el coeficiente multiplicador"})}</div>
+      <button class="tbtn psu-del" data-pl="delHijo" data-i="${i}" aria-label="Quitar a ${esc(h.nombre||"este hijo")}">${I.trash}</button></div>`).join("");
+return`<div class="card psu-card">${cardH("Cliente y familia","Quién planifica y quién heredaría")}
+    <div class="psu-f">${plaF("Titular","titular.nombre",T.nombre,{ph:"Nombre y apellidos",cls:"psu-w2"})}${plaF("Edad","titular.edad",T.edad,{num:1})}
+      ${plaF("Vecindad civil","titular.vecindad",T.vecindad||"comun",{sel:PLA_VEC,hint:"Decide legítimas y pactos"})}${plaF("Residencia","titular.ccaa",T.ccaa||"AND",{sel:plaTerrs(),hint:"Decide el impuesto"})}
+      ${plaF("Municipio de la vivienda","titular.municipio",T.municipio,{ph:"Málaga",hint:"Para la plusvalía"})}${plaF("Estado civil","civil",p.civil||"casado",{sel:PLA_CIVIL})}
+      ${plaCasado(p)?plaF("Régimen económico","regimen",p.regimen||"gananciales",{sel:[["gananciales","Gananciales"],["separacion","Separación de bienes"]]})+plaF("Cónyuge","conyuge.nombre",C.nombre,{ph:"Nombre y apellidos",cls:"psu-w2"})+plaF("Edad del cónyuge","conyuge.edad",C.edad,{num:1}):""}</div>
+    <div class="psu-sub"><b>Hijos</b><button class="btn sm gray" data-pl="addHijo">${I.plus}Añadir hijo</button></div>
+    ${hijos||`<p class="psu-vacio">Sin hijos en el estudio.</p>`}</div>`;
+}
+function plaBienesHTML(p){
+const casado=plaCasado(p);
+const filas=(p.bienes||[]).map((b,i)=>{
+const k=(c)=>`bienes.${i}.${c}`;
+return`<div class="psu-bien" role="group" aria-label="${esc(b.descripcion||"Bien "+(i+1))}"><div class="psu-f">
+      ${plaF("Tipo",k("tipo"),b.tipo,{sel:PLA_TIPOS})}${plaF("Descripción",k("descripcion"),b.descripcion,{ph:"Vivienda en…",cls:"psu-w2"})}${plaF("Valor de mercado",k("valor"),b.valor,{num:1})}
+      ${casado?plaF("Titularidad",k("titularidad"),b.titularidad||"ganancial",{sel:PLA_TIT}):""}
+      ${plaInm(b)?plaF("Valor de referencia",k("valorReferencia"),b.valorReferencia,{num:1,hint:"Catastro; si es mayor, manda"})+plaF("Fecha de compra",k("adqFecha"),b.adqFecha,{type:"date"})+plaF("Precio de compra",k("adqValor"),b.adqValor,{num:1,hint:"Para el IRPF y la plusvalía"})+plaF("Valor catastral",k("vcTotal"),b.vcTotal,{num:1})+plaF("Valor catastral del suelo",k("vcSuelo"),b.vcSuelo,{num:1,hint:"Recibo del IBI"})
+:b.tipo==="valores"?plaF("Precio de compra",k("adqValor"),b.adqValor,{num:1,hint:"Para el IRPF si se donan"}):""}
+      </div><button class="tbtn psu-del" data-pl="delBien" data-i="${i}" aria-label="Quitar ${esc(b.descripcion||"este bien")}">${I.trash}</button></div>`;
+}).join("");
+const tot=(p.bienes||[]).reduce((s,b)=>s+num(b.valor),0);
+return`<div class="card psu-card">${cardH("Patrimonio",tot?`${eur0(tot)} en total`:"Lo que tiene hoy",`<button class="btn sm gray" data-pl="addBien">${I.plus}Añadir bien</button>`)}${filas||`<p class="psu-vacio">Añade la vivienda, otros inmuebles, cuentas y valores.</p>`}</div>`;
+}
+function plaOpcionesHTML(p,R){
+const casado=plaCasado(p),hijosOpt=[["todos","Los hijos por partes iguales"],...(p.hijos||[]).map((h)=>[h.id,h.nombre||"Hijo sin nombre"])];
+const bienesOpt=[["","Elegir…"],...(p.bienes||[]).map((b)=>[b.id,b.descripcion||(PLA_TIPOS.find((t)=>t[0]===b.tipo)||["","Bien"])[1]])];
+const cuentas=[["","Elegir…"],...(p.bienes||[]).filter((b)=>!plaInm(b)).map((b)=>[b.id,b.descripcion||"Cuenta"])];
+const D=p.donacion||{},Pa=p.pacto||{},S=p.seguro||{},Rs=p.residencia||{},Su=p.supuestos||{};
+const bD=(p.bienes||[]).find((b)=>b.id===D.bienId),bP=(p.bienes||[]).find((b)=>b.id===Pa.bienId);
+const vp=plVecindadPacto((p.titular||{}).vecindad),PT=PL_PACTOS[vp]||PL_PACTOS.comun;
+const formas=casado&&(p.hijos||[]).length?Object.entries(plFormas()).map(([k,f])=>[k,f.titulo.replace(/«|»/g,"")]):[["intestada","Sin testamento (reparto legal)"]];
+return`<div class="card psu-card">${cardH("Opciones a comparar","Lo que se puede hacer en vida")}
+    <div class="psu-sub"><b>Supuestos</b></div><div class="psu-f">
+      ${plaF("Fallece el titular dentro de","supuestos.horizonte",Su.horizonte??10,{num:1,hint:"años (supuesto)"})}${casado?plaF("Y el cónyuge, después","supuestos.intervalo",Su.intervalo??10,{num:1,hint:"años más tarde"}):""}
+      ${plaF("Testamento para el resto","supuestos.testamentoBase",Su.testamentoBase||formas[0][0],{sel:formas,cls:"psu-w2",hint:"Se combina con donación, pacto, seguro y residencia"})}</div>
+    <div class="psu-sub"><b>Donación en vida</b></div><div class="psu-f">
+      ${plaF("Qué se dona","donacion.bienId",D.bienId||"",{sel:bienesOpt,cls:"psu-w2"})}${bD&&!plaInm(bD)?plaF("Importe","donacion.importe",D.importe,{num:1,hint:"Vacío: todo"}):""}${plaF("A quién","donacion.a",D.a||"todos",{sel:hijosOpt})}
+      ${plaF("Colación","donacion.colacion",D.colacion||"",{sel:[["","A decidir"],["computa","Se trae a la herencia (art. 1035 CC)"],["dispensa","Con dispensa de colación"]]})}</div>
+    <div class="psu-sub"><b>Pacto sucesorio</b>${PT.permite?tagE(PT.estado):""}</div>${PT.permite?`<div class="psu-f">
+      ${plaF("Figura","pacto.figura",Pa.figura||PT.figuras[0][0],{sel:PT.figuras.map((f)=>[f[0],f[1]]),cls:"psu-w2"})}${plaF("Qué se transmite","pacto.bienId",Pa.bienId||"",{sel:bienesOpt})}${bP&&!plaInm(bP)?plaF("Importe","pacto.importe",Pa.importe,{num:1}):""}${plaF("A quién","pacto.a",Pa.a||((p.hijos||[])[0]||{}).id||"todos",{sel:hijosOpt})}</div><p class="psu-nota">${esc(PT.nota)}</p>`
+:`<p class="psu-nota">${esc(PL_PACTOS.comun.nota)} <span class="psu-cita">${esc(PL_PACTOS.comun.norma)}</span></p>`}
+    <div class="psu-sub"><b>Seguro de vida</b></div><div class="psu-f">
+      ${plaF("Capital","seguro.capital",S.capital,{num:1})}${plaF("Beneficiario","seguro.a",S.a||(casado?"C":((p.hijos||[])[0]||{}).id||""),{sel:[...(casado?[["C",(p.conyuge&&p.conyuge.nombre)||"Cónyuge"]]:[]),...(p.hijos||[]).map((h)=>[h.id,h.nombre||"Hijo sin nombre"])]})}${plaF("Prima pagada con","seguro.bienId",S.bienId||((p.bienes||[]).find((b)=>!plaInm(b))||{}).id||"",{sel:cuentas})}</div>
+    <div class="psu-sub"><b>Cambio de residencia</b></div><div class="psu-f">
+      ${plaF("Destino","residencia.destino",Rs.destino||"",{sel:[["","Sin traslado"],...plaTerrs().filter(([k])=>k!==(p.titular||{}).ccaa)]})}${plaF("Fecha prevista del traslado","residencia.fecha",Rs.fecha||"",{type:"date"})}</div>
+  </div>`;
+}
+const plaEstadoLeg=(e)=>(e==="respetadas"?`<span class="status ok">Respetadas</span>`:e==="con cautela"?`<span class="status warn">Con cautela socini</span>`:e==="en riesgo"?`<span class="status bad">En riesgo</span>`:`<span class="status neutral">Sin verificar</span>`);
+function plaTablaHTML(R){
+const L=R.escenarios.filter((e)=>e.aplicable);
+const filas=L.map((e)=>`<tr class="${R.mejor===e.id?"on":""}"><th scope="row"><b>${esc(e.titulo)}</b>${R.mejor===e.id?' <span class="tag V">Menor coste</span>':""}</th>
+    <td class="n">${eur0(e.ahora.prudente)}</td><td class="n">${eur0(e.primera.prudente)}</td><td class="n">${eur0(e.segunda.prudente)}</td>
+    <td class="n"><b>${eur0(e.prudente)}</b>${e.pendiente?`<small>${eur0(e.total)} si se confirma lo pendiente</small>`:""}</td><td>${plaEstadoLeg(e.legitimas.estado)}</td></tr>`).join("");
+return`<div class="tablewrap psu-tw"><table class="psu-t"><caption class="psu-cap">Coste fiscal de la familia por escenario (cifra prudente)</caption><thead><tr><th scope="col">Escenario</th><th scope="col" class="n">Ahora</th><th scope="col" class="n">1.er fallecimiento</th><th scope="col" class="n">2.º fallecimiento</th><th scope="col" class="n">Total</th><th scope="col">Legítimas</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+}
+function plaGraficoHTML(R){
+const L=R.escenarios.filter((e)=>e.aplicable);
+const max=Math.max(1,...L.map((e)=>e.prudente));
+const seg=(v,c,t)=>(v>0?`<i class="psu-s ${c}" style="width:${(v/max)*100}%" title="${esc(t)}: ${eur0(v)}"></i>`:"");
+return`<figure class="psu-chart" aria-label="Gráfico del coste por escenario"><div class="psu-ley" aria-hidden="true"><span><i class="psu-s s0"></i>Ahora</span><span><i class="psu-s s1"></i>1.er fallecimiento</span><span><i class="psu-s s2"></i>2.º fallecimiento</span></div>
+    ${L.map((e)=>`<div class="psu-bar"><span class="psu-bt">${esc(e.titulo)}</span><span class="psu-bb" role="img" aria-label="${esc(e.titulo)}: ${eur0(e.prudente)} (ahora ${eur0(e.ahora.prudente)}, primer fallecimiento ${eur0(e.primera.prudente)}, segundo ${eur0(e.segunda.prudente)})">${seg(e.ahora.prudente,"s0","Ahora")}${seg(e.primera.prudente,"s1","1.er fallecimiento")}${seg(e.segunda.prudente,"s2","2.º fallecimiento")}</span><span class="psu-bn num">${eur0(e.prudente)}</span></div>`).join("")}
+    <figcaption class="caption">Cifra prudente: solo aplica beneficios fiscales verificados. Los importes son estimaciones con valores de hoy.</figcaption></figure>`;
+}
+function plaPartidasHTML(L){
+if(!L.length)return`<p class="psu-vacio">Sin impuestos en esta fase.</p>`;
+return`<table class="psu-pt"><tbody>${L.map((x)=>`<tr><td>${esc(x.concepto)}<small>${esc(x.norma||"")} ${tagE(x.estado)}</small></td><td class="n">${eur0(x.prudente)}${Math.abs(x.prudente-x.importe)>0.5?`<small>${eur0(x.importe)} si se confirma</small>`:""}</td></tr>`).join("")}</tbody></table>`;
+}
+function plaRecibeHTML(e){
+return`<table class="psu-pt"><thead><tr><th scope="col">Persona</th><th scope="col" class="n">En vida</th><th scope="col" class="n">1.ª herencia</th><th scope="col" class="n">2.ª herencia</th><th scope="col" class="n">Al final, en pleno dominio</th><th scope="col" class="n">Paga</th></tr></thead><tbody>${e.recibe.map((q)=>`<tr><th scope="row">${esc(q.nombre)}<small>${esc(q.relacion)}</small></th><td class="n">${eur0(q.enVida+q.seguro)}</td><td class="n">${eur0(q.pleno1+q.nuda1)}${q.usufructo1?`<small>usufructo de ${eur0(q.usufructo1)}</small>`:q.nuda1?`<small>${eur0(q.nuda1)} en nuda propiedad</small>`:""}</td><td class="n">${eur0(q.segunda)}</td><td class="n"><b>${eur0(q.finalPlenoDominio)}</b></td><td class="n">${eur0(q.paga)}</td></tr>`).join("")}</tbody></table>`;
+}
+function plaDocsBtns(e){
+const t=e.id.startsWith("t-")||["seguro","residencia"].includes(e.id)?"testamento":e.id==="donacion"?"donacion":e.id==="pacto"?"pacto":"";
+const L=[t,e.id==="donacion"||e.id==="pacto"?"testamento":""].filter(Boolean);
+return`<div class="psu-docs">${L.map((k)=>`<span class="psu-doc"><span>${esc(PLA_DOCS[k])}</span><button class="btn sm gray" data-pl="doc" data-doc="${k}" data-esc="${esc(e.id)}" data-fmt="docx">${I.dl}Word</button><button class="btn sm gray" data-pl="doc" data-doc="${k}" data-esc="${esc(e.id)}" data-fmt="pdf">${I.dl}PDF</button></span>`).join("")}</div>`;
+}
+function plaEscHTML(e,R){
+if(!e.aplicable)return`<div class="psu-na"><b>${esc(e.titulo)}</b><span>${esc(e.motivo||"")}${e.norma?` <span class="psu-cita">${esc(e.norma)}</span>`:""}</span>${e.estado?tagE(e.estado):""}</div>`;
+const abierto=ui.plEsc===e.id;
+const rg=e.riesgos.map((r)=>`<li class="psu-r ${r.gravedad||""}">${esc(r.texto)} <span class="psu-cita">${esc(r.norma)}</span> ${tagE(r.estado)}</li>`).join("");
+const av=e.avisos.map((a)=>`<li>${esc(a)}</li>`).join("");
+return`<details class="psu-esc" data-pl-esc="${esc(e.id)}" ${abierto?"open":""}><summary><span class="psu-et"><b>${esc(e.titulo)}</b><small>${esc(e.sub||"")}</small></span><span class="psu-ev num">${eur0(e.prudente)}${e.ahorro?`<small>${e.ahorro>0?"ahorra "+eur0(e.ahorro):"cuesta "+eur0(-e.ahorro)+" más"} que sin testamento</small>`:""}</span></summary>
+    <div class="psu-eb">
+      <div class="psu-fases"><div><h4>Ahora${e.fechas?` · ${esc(fechaLarga(e.fechas.hoy))}`:""}</h4>${plaPartidasHTML(e.ahora.partidas)}</div><div><h4>Primer fallecimiento (supuesto ${esc(fechaLarga(e.fechas.F1))}) · ${esc(nombreTerr(e.territorio.primera))}</h4>${plaPartidasHTML(e.primera.partidas)}</div>${e.recibe.some((q)=>q.id==="C")?`<div><h4>Segundo fallecimiento (supuesto ${esc(fechaLarga(e.fechas.F2))}) · ${esc(nombreTerr(e.territorio.segunda))}</h4>${plaPartidasHTML(e.segunda.partidas)}</div>`:""}</div>
+      <h4>Quién recibe qué</h4><div class="psu-scroll" tabindex="0" role="region" aria-label="Quién recibe qué en ${esc(e.titulo)}">${plaRecibeHTML(e)}</div>
+      <h4>Legítimas</h4><p class="psu-leg">${plaEstadoLeg(e.legitimas.estado)} ${esc(e.legitimas.texto)}${e.legitimas.norma?` <span class="psu-cita">${esc(e.legitimas.norma)}</span>`:""}</p>${e.legitimas.detalle&&e.legitimas.detalle.length?`<ul class="psu-ul">${e.legitimas.detalle.map((t)=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+      ${rg?`<h4>Riesgos</h4><ul class="psu-ul">${rg}</ul>`:""}
+      ${e.requisitos&&e.requisitos.length?`<h4>Requisitos para el beneficio fiscal</h4><ul class="psu-ul">${e.requisitos.map((t)=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+      ${e.normas&&e.normas.length?`<h4>Normas</h4><ul class="psu-ul">${e.normas.map((t)=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
+      ${av?`<h4>Avisos del cálculo</h4><ul class="psu-ul psu-av">${av}</ul>`:""}
+      ${plaDocsBtns(e)}
+    </div></details>`;
+}
+function plaResultadosHTML(p,R){
+if(!R||!R.escenarios.length)return`<div class="card empty psu-card"><b>Faltan datos</b>${esc((R&&R.avisos||[]).join(" ")||"Completa la familia y el patrimonio.")}</div>`;
+const ok=R.escenarios.filter((e)=>e.aplicable),m=ok.find((e)=>e.id===R.mejor),it=ok.find((e)=>e.id==="t-intestada");
+const hero=`<div class="hero-save psu-hero"><div><div class="kick">Sin testamento</div><b>${it?eur0(it.prudente):"—"}</b><small>Coste de la familia en las dos herencias</small></div><div class="g"><div class="kick">Menor coste</div><b>${m?eur0(m.prudente):"—"}</b><small>${m?esc(m.titulo):""}</small></div><div><div class="kick">Diferencia</div><b>${m&&it?eur0(it.prudente-m.prudente):"—"}</b><small>Frente a no hacer nada</small></div></div>`;
+return`${hero}
+    <div class="sectitle flex"><b>Comparativa</b><span>${ok.length} escenarios calculados</span></div>${plaTablaHTML(R)}${plaGraficoHTML(R)}
+    <div class="sectitle flex"><b>Detalle por escenario</b><span>Norma aplicada en cada importe</span></div><div class="psu-escs">${R.escenarios.map((e)=>plaEscHTML(e,R)).join("")}</div>
+    ${R.avisos&&R.avisos.length?`<ul class="psu-ul psu-av">${R.avisos.map((a)=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}
+    <div class="card psu-card psu-sup">${cardH("Supuestos del cálculo","")}<ul class="psu-ul">${(R.supuestos||[]).map((s)=>`<li>${esc(s)}</li>`).join("")}</ul>
+      <p class="psu-nota">Cifra prudente: solo entran los beneficios fiscales verificados en una fuente oficial o en dos fuentes concordantes; «si se confirma» añade los pendientes de cotejo. Fuentes: ${Object.values(PL_FUENTES).map((f)=>`<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.t)}</a>`).join(" · ")}.</p></div>`;
+}
+function vPlan(){
+const p=plaActual();
+if(!p){
+const L=plaLista();
+const filas=L.map((q)=>{let R=null;try{R=plaCalc(q);}catch(e){}const m=R&&R.escenarios.find((e)=>e.id===R.mejor);return`<button class="row" data-pl="ver" data-id="${esc(q.id)}"><span class="t"><b>${esc(q.nombre||plaNombreT(q))}</b><small>${esc([nombreTerr((q.titular||{}).ccaa||"AND"),plural((q.hijos||[]).length,"hijo"),(q.bienes||[]).length?eur0((q.bienes||[]).reduce((s,b)=>s+num(b.valor),0)):"sin patrimonio"].join(" · "))}</small></span>${m?`<span class="psu-lv num">${eur0(m.prudente)}<small>${esc(m.titulo)}</small></span>`:""}${I.chev}</button>`;}).join("");
+return`<div class="topbar"><button class="tbtn back-m" data-act="home">${I.back}Expedientes</button><span class="crumbs"><b>Planificación sucesoria</b></span><span class="mid">Planificación</span><span class="tbtns">${typeof ayBotonHTML==="function"?ayBotonHTML():""}</span></div>
+    <div class="page narrow view psu"><p class="greet">Cliente vivo · sin fallecimiento</p><div class="headrow"><h1 class="ltitle">Planificación</h1><div class="headacts"><button class="btn sm gray" data-pl="ejemplo">Ejemplo: Málaga</button><button class="btn sm gray" data-pl="ejemplo" data-k="gal">Ejemplo: Galicia, con pacto</button><button class="btn sm" data-pl="nuevo">${I.plus}Nuevo estudio</button></div></div>
+      <p class="psu-intro">Compara, con el mismo motor de las herencias, lo que pagaría la familia sin testamento, con testamento «uno para el otro», con legado del usufructo de la vivienda o con el tercio libre, donando en vida, con pacto sucesorio donde la ley lo permite, con un seguro de vida o cambiando de residencia. Cada importe lleva su norma.</p>
+      ${L.length?`<div class="group psu-lista">${filas}</div>`:`<div class="card empty"><b>Ningún estudio todavía</b>Crea uno nuevo o carga uno de los ejemplos (familias ficticias) para ver cómo funciona.</div>`}</div>`;
+}
+const R=plaCalc(p);
+return`<div class="topbar"><button class="tbtn back-m" data-pl="lista">${I.back}Planificación</button><span class="crumbs"><button data-pl="lista">Planificación</button><span>/</span><b>${esc(p.nombre||plaNombreT(p))}</b></span><span class="mid">${esc(p.nombre||plaNombreT(p))}</span><span class="tbtns">${typeof ayBotonHTML==="function"?ayBotonHTML():""}</span></div>
+  <div class="page wide view psu"><p class="greet">Planificación sucesoria · cliente vivo</p>
+    <div class="headrow"><h1 class="ltitle">${esc(p.nombre||plaNombreT(p))}</h1><div class="headacts"><button class="btn sm gray" data-pl="doc" data-doc="estudio" data-fmt="pdf">${I.dl}Estudio en PDF</button><button class="btn sm gray" data-pl="doc" data-doc="estudio" data-fmt="docx">${I.dl}Word</button></div></div>
+    <div class="psu-grid"><div class="psu-datos">${plaF("Nombre del estudio","nombre",p.nombre,{ph:"Planificación de…",cls:"psu-nombre"})}${plaFamiliaHTML(p)}${plaBienesHTML(p)}${plaOpcionesHTML(p,R)}
+      ${ui.conf==="plBorrar"?`<div class="psu-borrar"><span>¿Borrar este estudio? No se puede deshacer.</span><button class="btn sm gray" data-pl="noBorrar">Cancelar</button><button class="btn sm psu-rojo" data-pl="borrar">Borrar</button></div>`:`<button class="link psu-borrar-l" data-pl="pideBorrar">Borrar el estudio</button>`}</div>
+    <div class="psu-res" aria-live="polite">${plaResultadosHTML(p,R)}</div></div>
+    <p class="foot-note">El programa prepara, el abogado decide. Los escenarios son estimaciones con los datos y supuestos indicados; los borradores llevan marcados ⟦así⟧ los datos que faltan y no sustituyen al testamento ni a la escritura que autorice el notario.</p></div>`;
+}
+function plaCtx(p){
+const KD=typeof despachoContacto==="function"?despachoContacto():{nombre:"",linea:"",localidad:""};
+return{KD,membrete:KD.nombre||KD.linea?`${KD.nombre}${KD.nombre&&KD.linea?"\n":""}${KD.linea}\n\n`:"",lugar:KD.localidad||"⟦localidad⟧",hoyL:fechaLarga(hoy())};
+}
+const plaPh=(v,t)=>(typeof esrPh==="function"?esrPh(v,t):v||`⟦${t}⟧`);
+const plaREV=(t)=>`⟦REVISIÓN OBLIGATORIA POR ABOGADO: ${t}⟧`;
+const plaTab=(cab,filas)=>(typeof esrTabla==="function"?esrTabla(cab,filas):[cab,...filas].map((f)=>"| "+f.join(" | ")+" |").join("\n"));
+const plaVecTxt=(v)=>(!v||v==="comun"?"común (Código Civil)":(PLA_VEC.find((x)=>x[0]===plVecindadPacto(v))||["","común (Código Civil)"])[1].toLowerCase());
+const plaY=(L)=>(L.length>1?L.slice(0,-1).join(", ")+" y "+L[L.length-1]:L[0]||"");
+function plaPersonaTxt(nombre,extra){return`${plaPh(nombre,"nombre y apellidos")}, mayor de edad, ${extra?extra+", ":""}con domicilio en ⟦domicilio⟧ y DNI/NIF ⟦número⟧`;}
+function plaFamiliaTxt(p){
+const T=p.titular||{},C=p.conyuge||{},hs=p.hijos||[];
+const ec=plaCasado(p)?`casado/a con ${plaPh(C.nombre,"nombre del cónyuge")} en régimen de ${p.regimen==="separacion"?"separación de bienes":"gananciales"}`:p.civil==="viudo"?"viudo/a":"soltero/a o divorciado/a ⟦confirmar⟧";
+return{ec,hijos:hs.length?hs.map((h,i)=>`${i+1}. ${plaPh(h.nombre,"nombre del hijo")}${h.edad!==""&&h.edad!=null?`, de ${num(h.edad)} años`:""}.`).join("\n"):"No tiene descendientes ⟦confirmar⟧.",vec:plaVecTxt(T.vecindad),res:nombreTerr(T.ccaa||"AND")};
+}
+function plaResumenTxt(e){
+return plaTab(["Fase","Coste prudente","Si se confirma lo pendiente"],[["Ahora",eur0(e.ahora.prudente),eur0(e.ahora.total)],["Primer fallecimiento",eur0(e.primera.prudente),eur0(e.primera.total)],["Segundo fallecimiento",eur0(e.segunda.prudente),eur0(e.segunda.total)],["Total de la familia",eur0(e.prudente),eur0(e.total)]]);
+}
+function plaDocEstudio(p,R){
+const c=plaCtx(p),F=plaFamiliaTxt(p),ok=R.escenarios.filter((e)=>e.aplicable);
+const L=[c.membrete+"ESTUDIO COMPARATIVO DE PLANIFICACIÓN SUCESORIA","",`Cliente: ${plaPh((p.titular||{}).nombre,"nombre del cliente")}. Fecha: ${c.hoyL}.`,`Situación: ${F.ec}; vecindad civil ${F.vec}; residencia en ${F.res}.`,"","I. FAMILIA",F.hijos,"","II. PATRIMONIO",
+plaTab(["Bien","Valor","Titularidad"],(p.bienes||[]).map((b)=>[b.descripcion||(PLA_TIPOS.find((t)=>t[0]===b.tipo)||["","Bien"])[1],eur0(num(b.valor)),plaCasado(p)?(PLA_TIT.find((t)=>t[0]===b.titularidad)||["","Ganancial"])[1]:"Del titular"])),"",
+"III. COMPARATIVA (coste fiscal de toda la familia, cifra prudente)",plaTab(["Escenario","Ahora","1.er fallecimiento","2.º fallecimiento","Total","Legítimas"],ok.map((e)=>[e.titulo+(R.mejor===e.id?" (menor coste)":""),eur0(e.ahora.prudente),eur0(e.primera.prudente),eur0(e.segunda.prudente),eur0(e.prudente),e.legitimas.estado])),""];
+let n=0;
+L.push("IV. DETALLE DE CADA ESCENARIO");
+for(const e of ok){
+L.push("",`${++n}. ${e.titulo}. ${e.sub||""}`,plaResumenTxt(e));
+const part=[...e.ahora.partidas,...e.primera.partidas,...e.segunda.partidas];
+if(part.length)L.push(plaTab(["Concepto","Importe","Norma","Estado"],part.map((x)=>[x.concepto,eur0(x.prudente),x.norma||"",x.estado||""])));
+L.push(`Quién recibe qué: ${e.recibe.map((q)=>`${q.nombre}, ${eur0(q.finalPlenoDominio)} en pleno dominio al final${q.usufructo1?` (y el usufructo de ${eur0(q.usufructo1)} mientras viva)`:""}`).join("; ")}.`);
+L.push(`Legítimas: ${e.legitimas.texto}${(e.legitimas.detalle||[]).length?" "+e.legitimas.detalle.join(" "):""}`);
+if(e.riesgos.length)L.push("Riesgos: "+e.riesgos.map((r)=>`${r.texto} (${r.norma}${r.estado!=="VERIFICADO"?", "+r.estado:""})`).join(" "));
+}
+const na=R.escenarios.filter((e)=>!e.aplicable);
+if(na.length)L.push("","No calculados: "+na.map((e)=>`${e.titulo}: ${e.motivo}`).join(" "));
+L.push("","V. SUPUESTOS",...(R.supuestos||[]).map((s)=>"- "+s),"","VI. FUENTES CONSULTADAS",...Object.values(PL_FUENTES).map((f)=>`- ${f.t}: ${f.url}`),"",
+plaREV("estimación con valores de hoy y las reglas vigentes; las cifras «si se confirma» dependen de beneficios pendientes de cotejo. Revisar antes de entregar al cliente."),"",`En ${c.lugar}, a ${c.hoyL}.`);
+return L.join("\n");
+}
+function plaDocTestamento(p,R,e){
+const c=plaCtx(p),F=plaFamiliaTxt(p),T=p.titular||{},C=p.conyuge||{},hs=p.hijos||[];
+const forma=e&&e.forma?e.forma:(p.supuestos||{}).testamentoBase||"intestada";
+const nomC=plaPh(C.nombre,"nombre del cónyuge"),hijosN=plaY(hs.map((h)=>plaPh(h.nombre,"nombre del hijo")))||"⟦herederos⟧";
+const viv=(p.bienes||[]).find((b)=>b.tipo==="vivienda");
+const cl=[];
+const her=`Instituye herederos por partes iguales a ${hs.length>1?"sus hijos":"su hijo/a"} ${hijosN}, sustituidos vulgarmente por sus respectivos descendientes y, en su defecto, con derecho de acrecer entre ellos.`;
+if(plaCasado(p)&&hs.length&&forma==="usufructo"){
+cl.push(`Lega a su cónyuge, ${nomC}, el usufructo universal y vitalicio de su herencia, con relevación de inventario y fianza.`,her,
+"Cautela socini: si alguno de los legitimarios no aceptara el legado de usufructo universal o impugnara este testamento, recibirá únicamente su legítima estricta, libre de toda carga, y la parte de la que el testador puede disponer libremente acrecerá a los demás herederos que lo acepten (art. 820.3 del Código Civil).");
+}else if(plaCasado(p)&&hs.length&&forma==="legado"){
+cl.push(`Lega a su cónyuge, ${nomC}, el usufructo vitalicio de la vivienda ${viv?`«${viv.descripcion||"vivienda habitual"}»`:"habitual"}, sita en ⟦dirección y datos registrales⟧, en pago de su cuota legal usufructuaria y, en lo que exceda, con cargo al tercio de libre disposición.`,her);
+}else if(plaCasado(p)&&hs.length&&forma==="tercio"){
+cl.push(`Lega a su cónyuge, ${nomC}, el pleno dominio del tercio de libre disposición, además de la cuota legal usufructuaria que le corresponde sobre el tercio de mejora (art. 834 CC).`,her);
+}else if(hs.length)cl.push(her);
+else cl.push(`Instituye heredero/a universal a ${plaCasado(p)?nomC:"⟦heredero⟧"}.`);
+cl.push("Revoca cualquier testamento anterior.","⟦Nombramiento de contador-partidor, en su caso (art. 1057 CC)⟧.");
+if(e&&e.id==="donacion"&&e.acto)cl.push(`Ordena que la donación de ${plDescActo(plaMotor(p),e.acto)} ${(p.donacion||{}).colacion==="dispensa"?"se entienda hecha con dispensa de colación e imputada al tercio de libre disposición en lo que exceda de la legítima del donatario (arts. 1036 y 825 CC)":"se traiga a la herencia e impute a la legítima del donatario (arts. 819 y 1035 CC)"} ⟦confirmar⟧.`);
+const ord=(typeof ESR_ORD==="object"?ESR_ORD:["PRIMERA","SEGUNDA","TERCERA","CUARTA","QUINTA","SEXTA","SÉPTIMA"]);
+const L=[c.membrete+"INSTRUCCIONES PARA EL OTORGAMIENTO DE TESTAMENTO ABIERTO","",`Notaría: ⟦nombre del notario y notaría⟧. Remite: ${c.KD.nombre||"⟦despacho⟧"}. Fecha: ${c.hoyL}.`,"",
+"I. TESTADOR",`${plaPersonaTxt(T.nombre,F.ec)}. Vecindad civil ${F.vec} ⟦acreditar con el certificado de nacimiento o de empadronamiento⟧; residencia habitual en ${F.res}.`,"","Hijos:",F.hijos,"",
+"II. DISPOSICIONES QUE SE PROPONEN",...cl.map((t,i)=>`${ord[i]||i+1+"."}. ${t}`),""];
+if((T.vecindad||"comun")!=="comun")L.push(plaREV(`el testador tiene vecindad civil ${F.vec}: las legítimas y los derechos del viudo son los de su derecho civil propio (${PL_VIUDO_TXT(T.vecindad)}). Adaptar las disposiciones con el notario.`),"");
+if(forma==="usufructo")L.push(plaREV("valorar con el cliente la facultad del cónyuge de disponer de bienes concretos, la conmutación del usufructo y la cautela si hay hijos de otra relación."),"");
+if(e)L.push("III. NOTA PARA EL DESPACHO (no forma parte del testamento)",`Escenario del estudio: ${e.titulo}. Coste fiscal estimado de la familia: ${eur0(e.prudente)} (cifra prudente).`,plaResumenTxt(e),`Legítimas: ${e.legitimas.texto}`,"");
+L.push("IV. DOCUMENTACIÓN PARA LA NOTARÍA","- DNI del testador.","- Nombres completos de los herederos y legatarios, con su DNI si es posible.",viv?"- Datos de la vivienda (escritura o nota simple) para identificar el legado.":"","- Libro de familia o datos del matrimonio.","",`En ${c.lugar}, a ${c.hoyL}.`,"","Fdo.: ⟦abogado/a⟧");
+return L.filter((x)=>x!=="").join("\n").replace(/\n(I+\.|IV\.|III\.)/g,"\n\n$1");
+}
+const PL_VIUDO_TXT=(v)=>({CAT:"arts. 442-3 y 451-5 CCCat",ARA:"arts. 283 y 486 CDFA",NAV:"leyes 253 y 267 del Fuero Nuevo",VASCO:"arts. 49 y 52 Ley 5/2015",GAL:"arts. 243 y 253 Ley 2/2006",BAL:"arts. 42 y 45 Compilación balear"}[plVecindadPacto(v)]||"Código Civil");
+function plaActoTxt(p,A){
+const P=plaMotor(p),b=(p.bienes||[]).find((q)=>q.id===A.bienId);
+if(!b)return{b:null};
+const dest=A.a==="todos"||!A.a?(p.hijos||[]):[(p.hijos||[]).find((h)=>h.id===A.a)].filter(Boolean);
+const gan=plaCasado(p)&&(b.titularidad||"ganancial")==="ganancial",delC=plaCasado(p)&&b.titularidad==="conyuge";
+const otorg=gan?[plaPh((p.titular||{}).nombre,"nombre del titular"),plaPh((p.conyuge||{}).nombre,"nombre del cónyuge")]:[delC?plaPh((p.conyuge||{}).nombre,"nombre del cónyuge"):plaPh((p.titular||{}).nombre,"nombre del titular")];
+const dinero=!plaInm(b),imp=dinero?Math.min(num(b.valor),num(A.importe)||num(b.valor)):num(b.valor);
+const desc=dinero?`la cantidad de ${eur0(imp)} (${grp(imp,2)} euros), depositada en la cuenta ⟦IBAN⟧ de ⟦entidad⟧ («${b.descripcion||"cuenta"}»)`:`la finca «${b.descripcion||"inmueble"}»: ⟦descripción registral: situación, superficie y linderos⟧; referencia catastral ⟦número⟧; inscrita en el Registro de la Propiedad de ⟦⟧, tomo ⟦⟧, libro ⟦⟧, folio ⟦⟧, finca ⟦⟧; título: ⟦escritura de adquisición⟧; cargas: ⟦libre de cargas, según nota simple⟧; situación arrendaticia: ⟦libre de arrendatarios⟧`;
+return{b,P,dest,gan,otorg,dinero,imp,desc};
+}
+function plaDocDonacion(p,R,e){
+const c=plaCtx(p),A=p.donacion||{},X=plaActoTxt(p,A);
+if(!X.b)return"Elige en el estudio qué se dona y a quién.";
+const cc=nombreTerr((p.titular||{}).ccaa||"AND"),dons=X.otorg,recs=X.dest.map((h)=>plaPh(h.nombre,"nombre del donatario"));
+const isd=e?e.ahora.partidas.filter((x)=>/^Donaciones/.test(x.concepto)):[],irpf=e?e.ahora.partidas.filter((x)=>/^IRPF/.test(x.concepto)):[],plus=e?e.ahora.partidas.filter((x)=>/^Plusvalía/.test(x.concepto)):[];
+const col=A.colacion==="dispensa"?"La donación se hace con dispensa de colación: no se traerá a la herencia de los donantes y se imputará a su tercio de libre disposición en lo que exceda de la legítima del donatario (arts. 825, 1035 y 1036 CC).":A.colacion==="computa"?"La donación es colacionable: el donatario la traerá a la masa hereditaria de los donantes por su valor al tiempo de la partición (arts. 1035 y 1045 CC).":"⟦Colación: indicar si se dispensa (art. 1036 CC) o si el donatario deberá traerla a la herencia (art. 1035 CC)⟧.";
+const L=[c.membrete+"BORRADOR DE ESCRITURA DE DONACIÓN","","NÚMERO ⟦número de protocolo⟧",`En ${c.lugar}, a ⟦fecha de otorgamiento⟧.`,"Ante mí, ⟦nombre del notario⟧, Notario del Ilustre Colegio de ⟦colegio⟧,","","COMPARECEN","",
+`De una parte, como ${dons.length>1?"donantes":"donante"}:`,...dons.map((n,i)=>`${i+1}. ${plaPersonaTxt(n)}.`),"",`De otra parte, como ${recs.length>1?"donatarios":"donatario"}:`,...recs.map((n,i)=>`${i+1}. ${plaPersonaTxt(n)}.`),"",
+"Intervienen en su propio nombre y derecho. Tienen, a mi juicio, la capacidad legal necesaria para otorgar esta escritura de donación, y","","EXPONEN","",
+`I. Que ${dons.length>1?"los donantes son dueños, con carácter ganancial,":"el donante es dueño, con carácter privativo,"} de ${X.desc}.`,
+X.dinero?"II. Origen de los fondos: ⟦procedencia del dinero: ahorro de rentas del trabajo, venta de un bien, etc., con el documento que lo acredita⟧. Se hace constar a efectos de los beneficios fiscales que lo exigen.":`II. Valor: ${eur0(num(X.b.valor))}${num(X.b.valorReferencia)?`; valor de referencia catastral ${eur0(num(X.b.valorReferencia))}`:"; valor de referencia catastral ⟦importe⟧"}.`,
+"","OTORGAN","",
+`PRIMERO. Donación. ${dons.length>1?"Los donantes donan":"El donante dona"} ${recs.length>1?`por partes iguales y proindiviso a ${recs.join(" y ")}`:`a ${recs[0]||"⟦donatario⟧"}`} ${X.dinero?"la cantidad descrita":"la finca descrita"}, que ${recs.length>1?"aceptan":"acepta"} en este acto con agradecimiento (arts. 618, 623, 629 y 633 CC).`,
+`SEGUNDO. Entrega. ${X.dinero?"La entrega se hace mediante transferencia a la cuenta del donatario ⟦IBAN del donatario⟧, el ⟦fecha⟧, cuyo justificante se incorpora.":"El otorgamiento de esta escritura equivale a la entrega de la finca (art. 1462.2 CC)."}`,
+`TERCERO. Colación. ${col}`,`CUARTO. ${dons.length>1?"Los donantes manifiestan":"El donante manifiesta"} que se ${dons.length>1?"reservan":"reserva"} bienes suficientes para vivir en un estado correspondiente a sus circunstancias (art. 634 CC).`,
+`QUINTO. Impuestos. Impuesto sobre Donaciones: autoliquidación (modelo 651) en ${cc}, en el plazo de treinta días hábiles desde el día siguiente a esta escritura (art. 67.1.b RD 1629/1991). ${isd.length?`Cuota estimada: ${isd.map((x)=>`${x.concepto.replace(/^Donaciones · /,"")}, ${eur0(x.prudente)}`).join("; ")}.`:""}${e&&e.requisitos&&e.requisitos.filter((t)=>X.dinero||!/^Dinero/.test(t)).length?" Requisitos de los beneficios autonómicos: "+e.requisitos.filter((t)=>X.dinero||!/^Dinero/.test(t)).join(" "):""}`,
+X.dinero?"":`IRPF ${dons.length>1?"de los donantes":"del donante"}: la donación produce una ganancia o pérdida patrimonial (arts. 33-36 Ley 35/2006); las pérdidas no se computan (art. 33.5.c). ${irpf.length?`Estimación: ${irpf.map((x)=>`${x.concepto.replace(/^IRPF de /,"")}, ${eur0(x.prudente)}`).join("; ")}.`:""}`,
+X.dinero?"":`Plusvalía municipal: la paga el donatario (art. 106.1.a TRLRHL) y se declara en el Ayuntamiento en treinta días hábiles (art. 110.2.a TRLRHL)${plus.length?`; estimación ${eur0(plus[0].prudente)}`:""}.`,
+"SEXTO. Gastos: ⟦a cargo de los donatarios, salvo pacto distinto⟧.","",plaREV("comprobar las cargas y la situación registral, la conveniencia de reservarse el usufructo o la facultad de disponer, la cláusula de reversión (art. 641 CC) y el efecto en las legítimas de los demás hijos (arts. 818-820 CC)."),"",
+"Así lo dicen y otorgan.","",...dons.map((n)=>`Fdo.: ${n}`),...recs.map((n)=>`Fdo.: ${n}`)];
+return L.filter((x)=>x!=="").join("\n").replace(/\n(COMPARECEN|EXPONEN|OTORGAN)\n/g,"\n\n$1\n\n");
+}
+function plaDocPacto(p,R,e){
+const c=plaCtx(p),A=p.pacto||{},X=plaActoTxt(p,A);
+const vp=plVecindadPacto((p.titular||{}).vecindad),PT=PL_PACTOS[vp]||PL_PACTOS.comun;
+if(!PT.permite)return[c.membrete+"NOTA SOBRE EL PACTO SUCESORIO","",`Cliente: ${plaPh((p.titular||{}).nombre,"nombre del cliente")}. Vecindad civil: ${plaVecTxt((p.titular||{}).vecindad)}.`,"",
+`No cabe pacto sucesorio con vecindad civil común: ${PL_PACTOS.comun.norma}. La residencia en Galicia, Baleares, Aragón, Navarra, el País Vasco o Cataluña no basta; decide la vecindad civil, que solo cambia por residencia continuada de dos años con declaración o de diez sin ella (art. 14.5 CC).`,"",
+"Alternativas que el estudio compara:","- Donación en vida, con o sin dispensa de colación (arts. 618 y siguientes y 1035-1036 CC): tributa como donación y el donante declara la ganancia en el IRPF.","- Testamento con legado o mejora a favor del hijo (arts. 823-833 CC).","- Partición hecha por el testador en vida o en testamento (art. 1056 CC).","",
+plaREV("si el cliente pudiera tener otra vecindad civil (por nacimiento o por residencia), comprobarlo con el certificado de nacimiento y el padrón antes de descartar el pacto."),"",`En ${c.lugar}, a ${c.hoyL}.`].join("\n");
+if(!X.b)return"Elige en el estudio qué se transmite y a quién.";
+const fig=PT.figuras.find((f)=>f[0]===A.figura)||PT.figuras[0];
+const trans=X.otorg,recs=X.dest.map((h)=>plaPh(h.nombre,"nombre del beneficiario")),rec=recs.join(" y ");
+const disp={
+mejora:`${trans.join(" y ")} ${trans.length>1?"mejoran":"mejora"} a ${rec} con entrega de presente de ${X.dinero?"la cantidad":"la finca"} descrita, que ${recs.length>1?"aceptan":"acepta"}, en concepto de pacto sucesorio de mejora (arts. 214 a 218 de la Ley 2/2006, de Derecho Civil de Galicia).`,
+apartacion:`${trans.join(" y ")} ${trans.length>1?"apartan":"aparta"} a ${rec} de su condición de legitimario, adjudicándole en pago ${X.dinero?"la cantidad":"la finca"} descrita, que acepta, quedando excluido de la legítima en la herencia de ${trans.length>1?"ambos":"quien le aparta"} (arts. 224 a 227 de la Ley 2/2006).`,
+definicion:`${rec} ${recs.length>1?"definen":"define"} sus derechos sucesorios en la herencia de ${trans.join(" y ")}, recibiendo en este acto ${X.dinero?"la cantidad":"la finca"} descrita (arts. 50 y 51 de la Compilación de Derecho Civil de las Illes Balears; en Eivissa y Formentera, finiquito de legítima, arts. 77 y 78) ⟦comprobar la isla y la vecindad⟧.`,
+donacionUniversal:`${trans.join(" y ")} ${trans.length>1?"otorgan":"otorga"} donación universal a favor de ${rec} (arts. 8 a 13 de la Compilación balear) ⟦delimitar los bienes presentes y futuros⟧.`,
+pacto:`${trans.join(" y ")} ${trans.length>1?"instituyen":"instituye"} a ${rec} ${vp==="ARA"?"legatario de presente":"beneficiario con transmisión de presente"} de ${X.dinero?"la cantidad":"la finca"} descrita, que acepta (${fig[2]}).`,
+atribucion:`${trans.join(" y ")} ${trans.length>1?"atribuyen":"atribuye"} a ${rec}, en pacto sucesorio de atribución particular con transmisión de presente, ${X.dinero?"la cantidad":"la finca"} descrita, que acepta (arts. 431-29 y siguientes del Código civil de Cataluña).`,
+heretament:`${trans.join(" y ")} ${trans.length>1?"instituyen":"instituye"} heredero/a a ${rec} en heretament cumulativo (arts. 431-19 y siguientes del Código civil de Cataluña) ⟦definir los bienes que se transmiten de presente⟧.`,
+}[fig[0]]||`Pacto sucesorio a favor de ${rec} (${fig[2]}).`;
+const isd=e?e.ahora.partidas.filter((x)=>/^Sucesiones|^Donaciones/.test(x.concepto)):[];
+const L=[c.membrete+`BORRADOR DE ESCRITURA DE PACTO SUCESORIO · ${fig[1].toUpperCase()}`,"","NÚMERO ⟦número de protocolo⟧",`En ${c.lugar}, a ⟦fecha de otorgamiento⟧.`,"Ante mí, ⟦nombre del notario⟧, Notario del Ilustre Colegio de ⟦colegio⟧,","","COMPARECEN","",
+...trans.map((n,i)=>`${i+1}. ${plaPersonaTxt(n,`de vecindad civil ${plaVecTxt((p.titular||{}).vecindad)}`)}.`),...recs.map((n,i)=>`${trans.length+i+1}. ${plaPersonaTxt(n)}.`),"",
+"EXPONEN","",`I. Que ${trans.length>1?"los otorgantes tienen":"el otorgante tiene"} vecindad civil ${plaVecTxt((p.titular||{}).vecindad)}, ⟦acreditada con⟧, requisito para otorgar este pacto. ${PT.nota}`,`II. Que ${trans.length>1?"son dueños":"es dueño"} de ${X.desc}.`,"","OTORGAN","",
+`PRIMERO. ${disp}`,"SEGUNDO. Imputación: ⟦a la legítima del beneficiario / al tercio de libre disposición / como pago de su parte en la herencia⟧.","TERCERO. Causas de revocación o resolución: ⟦las de la ley aplicable y las que se pacten⟧.",
+`CUARTO. Impuestos. ${PT.fiscal==="donacion"?"La Dirección General de Tributos trata esta figura como donación: Impuesto sobre Donaciones e IRPF del que transmite (criterio PENDIENTE de cotejo).":"Impuesto sobre Sucesiones como adquisición por causa de muerte, con devengo el día de esta escritura (art. 11.b RD 1629/1991; art. 24.1 Ley 29/1987): autoliquidación en seis meses. El que transmite no tributa en el IRPF por la ganancia (art. 33.3.b Ley 35/2006); si el beneficiario vende los bienes antes de que pasen cinco años o antes de la muerte del que transmite, si esta llega antes, se subroga en su valor y fecha de adquisición (art. 36 Ley 35/2006)."}${isd.length?` Estimación: ${isd.map((x)=>`${x.concepto.replace(/ \(de [^)]*\)$/,"")}, ${eur0(x.prudente)}`).join("; ")}.`:""} Plusvalía municipal: la paga el beneficiario; comprobar en la ordenanza si la bonificación por causa de muerte alcanza al pacto.`,"",
+plaREV(`figura y redacción según ${fig[2]}; estado de la fuente: ${PT.estado}. Comprobar la vecindad civil de todos los otorgantes y el régimen económico del matrimonio.`),"","Así lo dicen y otorgan.","",...trans.map((n)=>`Fdo.: ${n}`),...recs.map((n)=>`Fdo.: ${n}`)];
+return L.filter((x)=>x!=="").join("\n").replace(/\n(COMPARECEN|EXPONEN|OTORGAN)\n/g,"\n\n$1\n\n");
+}
+function plaTexto(p,tipo,escId){
+const R=plaCalc(p),e=escId?R.escenarios.find((q)=>q.id===escId&&q.aplicable):null;
+if(tipo==="estudio")return plaDocEstudio(p,R);
+if(tipo==="testamento")return plaDocTestamento(p,R,e||R.escenarios.find((q)=>q.aplicable&&q.forma===(p.supuestos||{}).testamentoBase&&q.id.startsWith("t-")));
+if(tipo==="donacion")return plaDocDonacion(p,R,e||R.escenarios.find((q)=>q.id==="donacion"&&q.aplicable));
+if(tipo==="pacto")return plaDocPacto(p,R,e||R.escenarios.find((q)=>q.id==="pacto"&&q.aplicable));
+return"";
+}
+function plaDescargar(p,tipo,escId,fmt){
+const tit=PLA_DOCS[tipo]||"Documento",texto=plaTexto(p,tipo,escId),nom=`${tit} - ${(p.titular||{}).nombre||p.nombre||"cliente"}`.replace(/[\\/:*?"<>|]/g,"");
+if(fmt==="pdf"){const bytes=pdfDocumento({titulo:tit,subtitulo:(p.titular||{}).nombre||"",despacho:typeof pdfDespacho==="function"?pdfDespacho(null):{nombre:""},ref:p.ref||"",texto,marcaAgua:/⟦/.test(texto)?"Borrador":""});return pdfDescargar(nom,bytes);}
+return descargar(nom+".docx",esrDocx(texto,{titulo:tit,ref:p.ref||"",expediente:`Planificación de ${(p.titular||{}).nombre||"cliente"}`}));
+}
+function plaPoner(obj,ruta,v){
+const k=ruta.split(".");let o=obj;
+for(let i=0;i<k.length-1;i++){const n=/^\d+$/.test(k[i+1])?[]:{};if(o[k[i]]==null||typeof o[k[i]]!=="object")o[k[i]]=n;o=o[k[i]];}
+o[k[k.length-1]]=v;
+}
+if(typeof document!=="undefined"){
+document.addEventListener("click",(ev)=>{
+const b=ev.target&&ev.target.closest?ev.target.closest("[data-pl]"):null;if(!b)return;
+const app=document.getElementById("app");if(!app||!app.contains(b))return;
+ev.preventDefault();ev.stopPropagation();
+const d=b.dataset,p=plaActual();
+if(d.pl==="abrir"||d.pl==="lista"){ui.planId=null;ui.conf="";go({vista:"plan",sheet:null});return;}
+if(d.pl==="nuevo"){const n=plaNuevo();ui.planId=n.id;go({vista:"plan",sheet:null});return;}
+if(d.pl==="ejemplo"){const n=plaEjemplo(d.k);ui.planId=n.id;go({vista:"plan",sheet:null});toast("Estudio de ejemplo creado con una familia ficticia");return;}
+if(d.pl==="ver"){ui.planId=d.id;ui.plEsc=null;go({vista:"plan",sheet:null});return;}
+if(!p)return;
+if(d.pl==="addHijo"){p.hijos=p.hijos||[];p.hijos.push({id:"h"+uid(),nombre:"",edad:""});guardar();render();return;}
+if(d.pl==="delHijo"){p.hijos.splice(Number(d.i),1);guardar();render();return;}
+if(d.pl==="addBien"){p.bienes=p.bienes||[];p.bienes.push({id:"b"+uid(),tipo:(p.bienes||[]).some((q)=>q.tipo==="vivienda")?"cuenta":"vivienda",descripcion:"",valor:"",titularidad:plaCasado(p)?"ganancial":"titular"});guardar();render();return;}
+if(d.pl==="delBien"){const q=p.bienes.splice(Number(d.i),1)[0];for(const k of["donacion","pacto","seguro"])if(p[k]&&q&&p[k].bienId===q.id)p[k].bienId="";guardar();render();return;}
+if(d.pl==="pideBorrar"){ui.conf="plBorrar";render();return;}
+if(d.pl==="noBorrar"){ui.conf="";render();return;}
+if(d.pl==="borrar"){DB.planes=plaLista().filter((q)=>q.id!==p.id);ui.planId=null;ui.conf="";guardar();render();toast("Estudio borrado");return;}
+if(d.pl==="doc"){try{plaDescargar(p,d.doc,d.esc,d.fmt);}catch(er){console.error(er);toast("No se pudo preparar el documento");}return;}
+},true);
+document.addEventListener("toggle",(ev)=>{const t=ev.target;if(t&&t.dataset&&t.dataset.plEsc){if(t.open)ui.plEsc=t.dataset.plEsc;else if(ui.plEsc===t.dataset.plEsc)ui.plEsc=null;}},true);
+document.addEventListener("change",(ev)=>{
+const t=ev.target;if(!t||!t.dataset||!t.dataset.plk)return;
+const p=plaActual();if(!p)return;
+ev.stopPropagation();
+const v=t.dataset.pln?(String(t.value).trim()===""?"":num(t.value)):t.value;
+plaPoner(p,t.dataset.plk,v);
+if(t.dataset.plk==="civil"&&v==="casado"&&!p.conyuge)p.conyuge={nombre:"",edad:""};
+p.actualizado=hoy();guardar();render();
+},true);
+}
 const MOD={lib:null,cargadas:{},gen:{},plantillas:{},mini:{}};
 if(typeof MODELOS==="object"&&MODELOS)for(const id of Object.keys(MODELOS.mapas||{}))MOD.plantillas[id]=(MODELOS.disponibles||[]).includes(id)?undefined:false;
 const MOD_ESTADO={pdf:["PDF oficial rellenado","ok"],pdfFalta:["PDF oficial: falta la plantilla","warn"],programa:["Datos listos para el programa oficial","info"],telematico:["Solo telemático: abre el programa",""]};
@@ -6507,6 +6881,7 @@ if(est==="pdfFalta")extra.push(`<p class="caption">La plantilla oficial aún no 
 if(e.programa&&e.programa.url)acts.push(`<a class="btn sm${e.via==="pdf"?" gray":""}" href="${esc(e.programa.url)}" target="_blank" rel="noopener">${e.via==="pdf"?"Sede oficial":"Abrir el programa oficial"} ${MOD_I.ext}</a>`);
 else if(e.via!=="pdf")extra.push(`<p class="caption">Dirección del programa: no localizada. Entra desde la web de ${esc(it.org||"la Administración")}.</p>`);
 if(/^\d/.test(String(e.modelo))&&/650|651/.test(String(e.modelo))&&it.grupo==="isd"){acts.push(`<button class="btn sm gray" data-vf="vista" data-v="650">Hoja del 650</button>`);if(e.via!=="pdf")for(const h of hs)acts.push(`<button class="btn sm gray" data-vf="cpall" data-id="${esc(h.id)}">${VF_I.cp}Copiar cifras de ${esc(h.nombre)}</button>`);}
+if(it.grupo==="isd"&&/^6[56]\d/.test(String(e.modelo))&&typeof tCasillas==="function")acts.push(`<button class="btn sm gray" data-vf="vista" data-v="casillas">Hoja de casillas</button>`);
 if(/660/.test(String(e.modelo))&&it.grupo==="isd")acts.push(`<button class="btn sm gray" data-md="cp660">${VF_I.cp}Copiar la relación de bienes</button>`);
 if(e.datos==="solicitud790")acts.push(`<button class="btn sm gray" data-doc="solicitud790">Datos para el 790</button>`);
 if(e.datos==="catastro")acts.push(`<button class="btn sm gray" data-doc="catastro">Escrito para el Catastro</button>`);
@@ -6574,6 +6949,657 @@ MOD.cargadas[t.dataset.mdCargar]=b;delete MOD.gen[t.dataset.id];
 toast("PDF oficial cargado: ya se puede rellenar");render();
 }
 if(typeof document!=="undefined"){document.addEventListener("click",modClick,true);document.addEventListener("change",modChange,true);}
+const CS={memo:new WeakMap()};
+const CS_ESTADO={VERIFICADO:["Numeración verificada","ok"],PENDIENTE:["Numeración por cotejar","warn"],"NO LOCALIZADO":["Sin numeración oficial localizada",""]};
+function csCaso(x){
+const c=casoMotor(x),B=Object.fromEntries((x.bienes||[]).map((b)=>[b.id,b]));
+c.bienes=(c.bienes||[]).map((b)=>{const o=B[b.id]||{};return{...b,refCatastral:o.refCatastral||"",direccion:o.direccion||"",entidad:o.entidad||"",iban:o.iban||""};});
+return c;
+}
+function csHoja(x,R){
+if(R===undefined)R=calcular(x);
+if(!R||!R.isd)return null;
+const m=CS.memo.get(R);if(m&&m.x===x)return m.H;
+const caso=csCaso(x),nifs={};
+for(const p of x.personas||[]){const n=p.nif&&typeof vfNif==="function"?vfNif(p.nif):null;if(n&&!n.vacio)nifs[p.id]=n.v;}
+const catalogo=typeof modTerr==="function"?modTerr(caso.ccaa):null;
+const H=hojaCasillas(caso,R.isd,{ccaa:caso.ccaa,catalogo:catalogo||{},nifs,hoy:hoy()});
+H.organismo=(catalogo&&catalogo.organismo)||"";
+CS.memo.set(R,{x,H});
+return H;
+}
+const csFmtVis=(f)=>(f.valor==null?"—":f.unidad==="coef"?"×"+String(Math.round(f.valor*10000)/10000).replace(".",","):f.unidad==="pct"?grp(f.valor,2)+" %":eur(f.valor));
+const csChipEstado=(e)=>{const[t,c]=CS_ESTADO[e]||[e,""];return`<span class="chip ${c}">${esc(t)}</span>`;};
+function csFila(f,sinNum){
+const v=casFmt(f),mismo=f.concepto&&f.nombre!==f.concepto,nl=!f.cas&&!sinNum;
+return`<div class="vf-l ${f.tot?"t"+f.tot:""}">${f.cas?`<span class="vf-cas" title="Casilla oficial · ${esc(f.estado)}">${esc(f.cas)}</span>`:`<span class="vf-cas cs-sn" title="Número de casilla no localizado">s/n</span>`}<span class="vf-lab">${esc(f.nombre)}${mismo||nl?`<small>${mismo?esc(f.concepto):""}${mismo&&nl?" · ":""}${nl?"número NO LOCALIZADO":""}</small>`:""}</span><b class="num">${csFmtVis(f)}</b><button class="vf-cp" data-vf="cp" data-v="${esc(v)}" data-l="${esc((f.cas?f.cas+" ":"")+f.nombre)}" aria-label="Copiar ${esc(f.nombre)}">${VF_I.cp}<span>Copiar</span></button></div>`;
+}
+function csCuadre(c){
+if(!c||!c.checks.length)return"";
+const n=c.checks.filter((q)=>q.ok).length;
+return`<details class="md-det cs-cuadre"><summary>${c.ok?VF_I.ok:VF_I.no}Cuadre con el cálculo: ${n} de ${c.checks.length} comprobaciones correctas</summary><table class="md-t"><thead><tr><th scope="col">Comprobación</th><th scope="col">Hoja</th><th scope="col">Cálculo</th></tr></thead><tbody>${c.checks.map((q)=>`<tr${q.ok?"":' class="cs-ko"'}><td>${q.ok?"":"<b>Diferencia:</b> "}${esc(q.nombre)}</td><td class="num">${esc(casFmtImporte(q.hoja))}</td><td class="num">${esc(casFmtImporte(q.motor))}</td></tr>`).join("")}</tbody></table></details>`;
+}
+function csSujeto(m,s){
+const tot=s.filas.filter((f)=>f.k==="isd.total").pop();
+return`<section class="card vf-ficha cs-ficha" id="cs-${esc(m.id)}-${esc(s.id)}"><div class="vf-fh"><div><div class="k">${esc((RELACIONES[s.relacion]&&RELACIONES[s.relacion].label)||"")}${s.grupo?` · grupo ${esc(s.grupo)}`:""}${s.nif?` · NIF ${esc(s.nif)}`:""}</div><h3>${esc(s.nombre)}</h3></div>${tot?`<div class="vf-fhr"><span class="vf-tot"><small>A ingresar</small><b class="num">${eur(tot.valor)}</b></span></div>`:""}</div>
+    ${s.filas.map((f)=>csFila(f,m.estado==="NO LOCALIZADO")).join("")}${csCuadre(s.cuadre)}</section>`;
+}
+function csInventario(m){
+const I=m.inventario;
+const det=(l)=>[l.naturaleza,l.refCatastral?"Ref. catastral "+l.refCatastral:"",l.situacion,l.entidad,l.cuenta,l.legatario?"Legatario: "+l.legatario+(l.nifLegatario?" ("+l.nifLegatario+")":""):"",l.tipoLegado?"Tipo de legado "+l.tipoLegado:"",l.beneficiario?"Beneficiario: "+l.beneficiario+(l.nifBeneficiario?" ("+l.nifBeneficiario+")":""):"",l.titulo?"Título "+l.titulo:""].filter(Boolean).join(" · ");
+const ap=I.apartados.map((a)=>`<div class="vf-l t1">${a.cas?`<span class="vf-cas">${esc(a.cas)}</span>`:`<span class="vf-cas cs-sn">s/n</span>`}<span class="vf-lab">${esc(a.id)}. ${esc(a.nombre)}</span><b class="num">${eur(a.total)}</b><button class="vf-cp" data-vf="cp" data-v="${esc(casFmtImporte(a.total))}" data-l="${esc(a.nombre)}" aria-label="Copiar el total de ${esc(a.nombre)}">${VF_I.cp}<span>Copiar</span></button></div>
+    ${a.filas.length?`<table class="md-t cs-t"><thead><tr><th scope="col">Bien o derecho</th><th scope="col">Datos para el modelo</th><th scope="col" class="num">% del causante</th><th scope="col" class="num">Valor</th></tr></thead><tbody>${a.filas.map((l)=>`<tr><td>${esc(l.descripcion||"—")}</td><td>${esc(det(l)||"—")}</td><td class="num">${l.pct!=null?esc(grp(l.pct,2)):""}</td><td class="num">${esc(casFmtImporte(l.valor))}</td></tr>`).join("")}</tbody></table>`:""}`).join("");
+const res=I.resumen.map((r)=>`<div class="vf-l ${r.cas==="18"||r.cas==="11"?"t1":""}">${r.cas?`<span class="vf-cas">${esc(r.cas)}</span>`:`<span class="vf-cas cs-sn">s/n</span>`}<span class="vf-lab">${esc(r.nombre)}${r.nota?`<small>${esc(r.nota)}</small>`:""}</span><b class="num">${r.valor==null?"—":eur(r.valor)}</b>${r.valor==null?"<span></span>":`<button class="vf-cp" data-vf="cp" data-v="${esc(casFmtImporte(r.valor))}" data-l="${esc(r.nombre)}" aria-label="Copiar ${esc(r.nombre)}">${VF_I.cp}<span>Copiar</span></button>`}</div>`).join("");
+return`<section class="card vf-ficha cs-ficha cs-inv"><div class="vf-fh"><div><div class="k">En el orden del modelo</div><h3>Inventario de bienes</h3></div></div>${ap}<div class="vf-sh">Resumen del caudal</div>${res}${csCuadre(m.cuadre)}</section>`;
+}
+function tCasillas(x,R){
+if(R===undefined)R=calcular(x);
+const H=R?csHoja(x,R):null;
+if(!H)return`<div class="card empty" style="margin-top:14px"><b>Sin cálculo</b>Completa los datos del expediente para preparar la hoja de casillas.</div>`;
+const intro=`<div class="infobar cs-intro"><span class="ico gold">${I.info}</span><span>Cada casilla del modelo oficial${H.organismo?` (${esc(H.organismo)})`:""} con la cifra del cálculo, por heredero, y el inventario en el orden del modelo. El número de casilla solo aparece cuando se ha leído en el modelo o en sus instrucciones oficiales; si no, figura <b>s/n</b> y el nombre del concepto. «Copiar» deja la cifra como la pide el programa (1234,56).</span></div>`;
+const ok=H.cuadra;
+const cab=`<div class="card cs-res"><div class="cs-resh"><span class="chip ${ok?"ok":"warn"}">${ok?VF_I.ok:VF_I.av}${ok?"Cuadra con el cálculo":"Hay diferencias con el cálculo"}</span><span class="caption">${H.sujetosCuadran} de ${H.sujetosTotal} sujetos pasivos${H.modelos.some((m)=>m.cuadre)?" y el inventario":""}: base imponible, reducciones, base liquidable, cuota, bonificación y total a ingresar.</span></div>
+    <div class="md-acts"><button class="btn sm" data-cs="pdf">${I.dl}PDF para imprimir</button><button class="btn sm gray" data-cs="word">${I.doc}Word</button><button class="btn sm gray" data-cs="csv">CSV</button><button class="btn sm gray" data-cs="copiar">${VF_I.cp}Copiar todo</button></div></div>`;
+const nav=H.modelos.length>1?`<nav class="vf-jump" aria-label="Modelos">${H.modelos.map((m)=>`<button data-vf="ir" data-id="cs-m-${esc(m.id)}">${esc(m.modelo)}<span>${esc(m.id==="inv"?"bienes":m.id==="cons"?"más adelante":m.id==="652"?"seguros":"por heredero")}</span></button>`).join("")}</nav>`:"";
+const cuerpo=H.modelos.map((m)=>`<div class="sectitle md-sec cs-sec" id="cs-m-${esc(m.id)}"><b>${esc(m.titulo)}</b>${csChipEstado(m.estado)}</div>
+    <p class="caption cs-fuente">${m.fuente?`Numeración: <a href="${esc(m.fuente.url)}" target="_blank" rel="noopener">${esc(m.fuente.texto)}</a>. ${esc(m.fuente.nota||"")}`:"Numeración de casillas NO LOCALIZADO en fuente oficial legible: se indica el nombre de cada concepto. Compruébalo en el programa de ayuda."}</p>
+    ${m.nota?`<p class="md-p">${esc(m.nota)}</p>`:""}
+    ${m.porSujeto?`<div class="vf-fichas">${m.sujetos.map((s)=>csSujeto(m,s)).join("")}</div>`:csInventario(m)}`).join("");
+const imp=`<div class="card cs-imp"><b>Fichero de importación del programa oficial · ${esc(H.importacion.estado)}</b><p class="caption">${esc(H.importacion.texto)}${H.importacion.fuente?` <a href="${esc(H.importacion.fuente)}" target="_blank" rel="noopener">Fuente</a>.`:""} El CSV de esta hoja es para el despacho, no un fichero de la Administración.</p></div>`;
+return`<div class="cs">${intro}${cab}${nav}${cuerpo}${imp}<p class="foot-note">La hoja no es un modelo oficial: el número de justificante y el código de barras solo los pone la Administración. Las cifras salen del cálculo del expediente con la normativa vigente a la fecha del fallecimiento; cotéjalas con el programa de ayuda antes de presentar.</p></div>`;
+}
+const csNombre=(x,ext)=>`Hoja de casillas ${x.nombre||"herencia"}${x.despacho&&x.despacho.ref?" "+x.despacho.ref:""}`.replace(/[\\/:*?"<>|]/g,"")+ext;
+function csClick(e){
+const t=e.target&&e.target.closest?e.target.closest("[data-cs]"):null;if(!t)return;
+e.stopPropagation();e.preventDefault();
+const x=typeof exp==="function"?exp():null;if(!x)return;
+const H=csHoja(x);if(!H){toast("Completa los datos del expediente");return;}
+const a=t.dataset.cs,texto=hojaTexto(H,{causante:x.nombre||""});
+try{
+if(a==="pdf"){const bytes=pdfDocumento({titulo:"Hoja de casillas del Impuesto sobre Sucesiones",subtitulo:x.nombre?`Herencia de ${x.nombre}`:"",despacho:pdfDespacho(x),ref:(x.despacho&&x.despacho.ref)||"",texto});pdfDescargar(csNombre(x,""),bytes);}
+else if(a==="word")descargar(csNombre(x,".docx"),docx(texto,esrDocxOpts(x,"Hoja de casillas")));
+else if(a==="csv")descargar(csNombre(x,".csv"),new Blob([hojaCSV(H)],{type:"text/csv"}));
+else if(a==="copiar"){Promise.resolve(copiar(texto)).then(()=>toast("Hoja de casillas copiada"));return;}
+anotar(x,`Hoja de casillas descargada (${a==="pdf"?"PDF":a==="word"?"Word":"CSV"})`,"doc");guardar();
+}catch(er){console.error(er);toast("No se pudo generar el archivo");}
+}
+if(typeof document!=="undefined")document.addEventListener("click",csClick,true);
+const RV_GRAV=[["bloquea","Bloquea presentar","g3"],["revisar","Revisar","g2"],["consejo","Consejo","g1"]];
+const RV_GN=Object.fromEntries(RV_GRAV.map(([k,t,c],i)=>[k,{t,c,o:i}]));
+const RV_FAM=[["civil","Civil"],["fiscal","Fiscal"],["documental","Documental"],["aritmetica","Aritmética"]];
+const RV_FN=Object.fromEntries(RV_FAM);
+const RV_V="VERIFICADO",RV_P="PENDIENTE";
+const rvArr=(v)=>(Array.isArray(v)?v.filter((q)=>q&&typeof q==="object"):[]);
+const rvNum=(v)=>(typeof num==="function"?num(v):Number(v)||0);
+const rvLeer=(v)=>(typeof numLeer==="function"?numLeer(v):Number(v));
+const rvVacio=(v)=>v==null||String(v).trim()==="";
+const rvIlegible=(v)=>!rvVacio(v)&&isNaN(rvLeer(v));
+const rvFecha=(s)=>(typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(new Date(s+"T12:00:00Z"))&&new Date(s+"T12:00:00Z").toISOString().slice(0,10)===s?s:"");
+const rvDias=(a,b)=>Math.round((new Date(b+"T12:00:00Z")-new Date(a+"T12:00:00Z"))/864e5);
+function rvMasDias(f,n){const d=new Date(f+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function rvMasMeses(f,n){const d=new Date(f+"T12:00:00Z");const dia=d.getUTCDate();d.setUTCMonth(d.getUTCMonth()+n);if(d.getUTCDate()<dia)d.setUTCDate(0);return d.toISOString().slice(0,10);}
+const rvRel=(p)=>(typeof RELACIONES==="object"&&p&&RELACIONES[p.relacion])||null;
+const rvLinea=(p)=>(rvRel(p)?rvRel(p).linea:"");
+const rvNom=(p)=>(p&&String(p.nombre||"").trim())||(rvRel(p)?rvRel(p).label:"Persona");
+const rvNomB=(b)=>(b&&String(b.descripcion||"").trim())||(typeof TIPO_BIEN==="object"&&b&&TIPO_BIEN[b.tipo]?TIPO_BIEN[b.tipo][0]:"Bien");
+const rvInm=(b)=>b.tipo==="vivienda"||b.tipo==="inmueble";
+const rvEdad=(p)=>{if(!p||rvVacio(p.edad))return null;const n=rvLeer(String(p.edad).replace(/\s*años?$/i,""));return isNaN(n)||n<0||n>120?null:n;};
+const rvEur=(n)=>(typeof eur0==="function"?eur0(n):Math.round(n).toLocaleString("es-ES")+" €");
+const rvFC=(s)=>(typeof fechaCorta==="function"?fechaCorta(s):s);
+const rvPl=(n,s,p)=>`${n} ${n===1?s:p||s+"s"}`;
+const rvLista=(L)=>(L.length>1?L.slice(0,-1).join(", ")+" y "+L[L.length-1]:L[0]||"");
+const rvNorm=(t)=>String(t||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const RV_NIF_L="TRWAGMYFPDXBNJZSQVHLCKE";
+function rvNifOk(v){
+const s=String(v||"").toUpperCase().replace(/[\s.\-]/g,"");
+let m=/^(\d{8})([A-Z])$/.exec(s);if(m)return RV_NIF_L[Number(m[1])%23]===m[2];
+m=/^([XYZ])(\d{7})([A-Z])$/.exec(s);if(m)return RV_NIF_L[Number("XYZ".indexOf(m[1])+m[2])%23]===m[3];
+return/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(s);
+}
+function rvIbanOk(v){
+const s=String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"");if(!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)||(s.startsWith("ES")&&s.length!==24))return false;
+let m=0;for(const ch of(s.slice(4)+s.slice(0,4)).replace(/[A-Z]/g,(c)=>String(c.charCodeAt(0)-55)))m=(m*10+Number(ch))%97;return m===1;
+}
+function rvValorB(b){
+const total=rvInm(b)?Math.max(rvNum(b.valor),rvNum(b.valorReferencia)):rvNum(b.valor);
+let cc=1;try{cc=typeof cuotaCausante==="function"?cuotaCausante({titularidad:b.titularidad,porcentaje:typeof pctCausante==="function"?pctCausante(b.porcentaje):rvNum(b.porcentaje)||100}):b.titularidad==="ganancial"?0.5:1;}catch(e){cc=1;}
+return total*cc;
+}
+function rvCtx(x,o={}){
+const h=rvFecha(o.hoy)||(typeof hoy==="function"?hoy():new Date().toISOString().slice(0,10));
+const P=rvArr(x.personas),V=P.filter((p)=>!p.renuncia),B=rvArr(x.bienes);
+const R=o.R||null,L=o.L||null,C=o.C||null;
+let vec={id:"comun",supuesta:true,residencia:"comun"};
+try{if(typeof vecindadCivil==="function")vec=vecindadCivil({ccaa:typeof terrISD==="function"?terrISD(x):x.ccaa,vecindadCivil:x.vecindadCivil});}catch(e){}
+const pl=R&&Array.isArray(R.plazos)?Object.fromEntries(R.plazos.map((p)=>[p.id,p])):{};
+const st=(id)=>(x.tramites&&x.tramites[id]&&x.tramites[id].estado)||"";
+const docs=(x.despacho&&typeof x.despacho.docs==="object"&&x.despacho.docs)||{};
+const porNombre=(n)=>P.find((p)=>rvNorm(p.nombre)&&rvNorm(p.nombre)===rvNorm(n));
+const prorroga=st("prorroga")==="hecho";
+const limISD=pl.isd?(prorroga&&x.fecha?rvMasMeses(x.fecha,12):pl.isd.limite):"";
+const legit=(p)=>["desc","asc","conyuge"].includes(rvLinea(p));
+const derechos=(R&&R.isd&&R.isd.derechos)||{};
+return{
+x,h,P,V,B,R,L,C,vec:vec.id,vecInfo:vec,comun:vec.id==="comun",pl,st,hecho:(id)=>st(id)==="hecho"||st(id)==="na",doc:(id)=>!!docs[id],
+testado:x.testamento==="porcentajes"||x.testamento==="usufructo",intestada:x.testamento==="no",porc:x.testamento==="porcentajes",
+desc:V.filter((p)=>rvLinea(p)==="desc"),hijos:P.filter((p)=>p.relacion==="hijo"),asc:V.filter((p)=>rvLinea(p)==="asc"),
+cony:V.filter((p)=>p.relacion==="conyuge"&&!p.separado),conyAll:P.filter((p)=>p.relacion==="conyuge"),parejas:V.filter((p)=>p.relacion==="pareja_hecho"||p.relacion==="pareja_no_inscrita"),
+inm:B.filter(rvInm),situ:(x.situ&&typeof x.situ==="object"&&x.situ)||{},f:rvFecha(x.fecha),td:(x.testamentoDatos&&typeof x.testamentoDatos==="object"&&x.testamentoDatos)||{},
+casado:x.civil==="gananciales"||x.civil==="separacion",porNombre,prorroga,limISD,presentadoISD:st("isd")==="hecho",legit,derechos,
+heredaAlgo:(p)=>(derechos[p.id]||[]).some((d)=>d.fraccion>0)||B.some((b)=>b.legatarioId===p.id),
+conv:(x.conmutacion&&typeof x.conmutacion==="object"&&x.conmutacion)||{},
+};
+}
+const RV_REGLAS=[];
+function rg(id,fam,g,t,e,n,est,ir,f){RV_REGLAS.push({id,fam,g,t,e,n,est,ir,f});}
+const P_=(p,extra={})=>({s:rvNom(p),ir:{persona:p.id},...extra});
+const B_=(b,extra={})=>({s:rvNomB(b),ir:{bien:b.id},...extra});
+const CAMPO=(id)=>({campo:id});
+const LGN=(c,def)=>(c.L&&c.L.norma)||def;
+const LGE=(c)=>(c.L&&c.L.estado)||RV_V;
+rg("CIV-01","civil","bloquea","Legítima lesionada","Lo que recibe este legitimario (herencia, legados y donaciones imputables) no alcanza su legítima. Puede pedir el complemento y reducir legados o cuotas de los demás. La escritura no debe firmarse sin el complemento o su conformidad expresa.","arts. 806-808, 815 y 817 CC",RV_V,{sec:"particion"},
+(c)=>rvArr(c.L&&c.L.herederos).filter((h)=>h.estado==="vulnerada").map((h)=>({s:h.nombre,d:`Recibe ${rvEur(h.recibe)} y su legítima mínima es de ${rvEur(h.legitimaMinima)}: faltan ${rvEur(h.deficit)}.`,n:h.norma||undefined,est:LGE(c),ir:{sec:"particion"}})));
+rg("CIV-02","civil","revisar","Legítima sin poder comprobarse","Recibe un usufructo y falta su edad: sin ella no se puede valorar el usufructo ni saber si cubre la legítima.","arts. 834-839 CC · art. 26 Ley 29/1987",RV_V,null,
+(c)=>rvArr(c.L&&c.L.herederos).filter((h)=>h.estado==="no verificable").map((h)=>({s:h.nombre,ir:{persona:h.id}})));
+rg("CIV-03","civil","bloquea","Posible preterición de un descendiente","El testamento no le atribuye nada (ni cuota, ni legado, ni consta donación). Si la omisión no fue intencionada, anula la institución de heredero; si lo fue, tiene derecho a su legítima.","art. 814 CC",RV_V,null,
+(c)=>c.porc&&c.comun?c.desc.filter((p)=>!p.desheredado&&rvNum(p.pct)<=0&&!c.B.some((b)=>b.legatarioId===p.id)&&!(rvNum(p.donacionColacionable)>0)&&(p.relacion==="hijo"||!rvVacio(p.estirpe))).map((p)=>P_(p)):false);
+rg("CIV-04","civil","revisar","Descendiente sin nada en el testamento (derecho foral)","Con vecindad civil foral, la omisión de un descendiente tiene efectos propios de cada derecho (legítima formal en Navarra, colectiva en Aragón, preterición en Cataluña, Galicia, Baleares o País Vasco). Comprueba si el testamento lo menciona.","Derecho civil foral aplicable",RV_P,null,
+(c)=>c.porc&&!c.comun?c.desc.filter((p)=>!p.desheredado&&rvNum(p.pct)<=0&&!c.B.some((b)=>b.legatarioId===p.id)).map((p)=>P_(p,{n:LGN(c,"Derecho civil foral aplicable"),est:LGE(c)})):false);
+rg("CIV-05","civil","bloquea","Desheredación sin causa","La desheredación solo vale si el testamento expresa una causa legal y es cierta. Sin causa, es injusta: el desheredado conserva su legítima.","arts. 848, 849 y 851 CC",RV_V,null,
+(c)=>c.testado?c.P.filter((p)=>p.desheredado&&rvVacio(p.causaDesheredacion)).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-causaDesheredacion`)})):false);
+rg("CIV-06","civil","bloquea","Desheredación sin testamento","Consta una persona desheredada, pero el expediente se tramita sin testamento. Solo se puede desheredar en testamento.","art. 849 CC",RV_V,{sec:"herencia"},
+(c)=>!c.testado&&c.P.some((p)=>p.desheredado)?c.P.filter((p)=>p.desheredado).map((p)=>P_(p)):false);
+rg("CIV-07","civil","revisar","Causa de desheredación no prevista en la ley","La causa anotada no está entre las del Código Civil (arts. 852-855). El Tribunal Supremo admite el maltrato psicológico como maltrato de obra, pero no la mera falta de relación.","arts. 848 y 852-855 CC · STS 258/2014",RV_V,null,
+(c)=>c.P.filter((p)=>p.desheredado&&p.causaDesheredacion==="otra").map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-causaDesheredacion`)})));
+const RV_CAUSAS=[["desc-alimentos","Negar alimentos al padre o ascendiente (art. 853.1.ª CC)","desc"],["desc-maltrato","Maltrato de obra o injurias graves, incluido el psicológico (art. 853.2.ª CC)","desc"],["asc-patria","Pérdida de la patria potestad (art. 854.1.ª CC)","asc"],["asc-alimentos","Negar alimentos a los hijos (art. 854.2.ª CC)","asc"],["asc-atentado","Atentar contra la vida del otro progenitor (art. 854.3.ª CC)","asc"],["cony-deberes","Incumplir grave o reiteradamente los deberes conyugales (art. 855.1.ª CC)","conyuge"],["cony-patria","Causas de pérdida de la patria potestad (art. 855.2.ª CC)","conyuge"],["cony-alimentos","Negar alimentos a los hijos o al otro cónyuge (art. 855.3.ª CC)","conyuge"],["cony-atentado","Atentar contra la vida del cónyuge testador (art. 855.4.ª CC)","conyuge"],["indignidad","Causa de indignidad (arts. 756 y 852 CC)",""],["otra","Otra causa",""]];
+rg("CIV-08","civil","bloquea","La causa de desheredación no corresponde al parentesco","Cada causa del Código Civil es para un tipo de legitimario: hijos y descendientes (art. 853), padres y ascendientes (art. 854) o cónyuge (art. 855).","arts. 853-855 CC",RV_V,null,
+(c)=>c.P.filter((p)=>{const k=RV_CAUSAS.find((q)=>q[0]===p.causaDesheredacion);return p.desheredado&&k&&k[2]&&k[2]!==rvLinea(p);}).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-causaDesheredacion`)})));
+rg("CIV-09","civil","revisar","Hijo desheredado: ¿tiene descendientes?","Los hijos y descendientes del desheredado ocupan su lugar y conservan su derecho a la legítima. No figura ninguno en el expediente.","art. 857 CC",RV_V,{sec:"herencia"},
+(c)=>c.P.filter((p)=>p.desheredado&&p.relacion==="hijo"&&!c.P.some((q)=>q!==p&&rvNorm(q.estirpe)&&rvNorm(q.estirpe)===rvNorm(p.nombre))).map((p)=>P_(p)));
+rg("CIV-10","civil","revisar","El testamento deshereda, pero no hay nadie marcado","En la situación del expediente consta una desheredación y ninguna persona está marcada como desheredada: el reparto se calcula como si heredara.","arts. 848-857 CC",RV_V,{sec:"revision"},
+(c)=>!!c.situ.desheredacion&&!c.P.some((p)=>p.desheredado));
+rg("CIV-11","civil","bloquea","La mejora supera el tercio","Entre todos los descendientes, la mejora no puede pasar de un tercio de la herencia.","arts. 808 y 823 CC",RV_V,null,
+(c)=>{if(!c.comun)return false;const s=c.P.reduce((a,p)=>a+rvNum(p.mejoraPct),0);return s>33.34?{d:`Las mejoras anotadas suman el ${Math.round(s*100)/100} %.`,ir:CAMPO(`rv-p-${(c.P.find((p)=>rvNum(p.mejoraPct)>0)||{}).id}-mejoraPct`)}:false;});
+rg("CIV-12","civil","bloquea","Mejora a quien no es descendiente","Solo se puede mejorar a hijos y descendientes. A los demás, lo que se les deje sale del tercio de libre disposición.","art. 823 CC",RV_V,null,
+(c)=>c.P.filter((p)=>rvNum(p.mejoraPct)>0&&rvLinea(p)!=="desc").map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-mejoraPct`)})));
+rg("CIV-13","civil","revisar","Mejora sin testamento","Hay una mejora anotada en una sucesión sin testamento. La mejora tiene que ser expresa, en testamento o en capitulaciones o pacto.","arts. 825 y 826 CC",RV_V,null,
+(c)=>!c.testado?c.P.filter((p)=>rvNum(p.mejoraPct)>0).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-mejoraPct`)})):false);
+rg("CIV-14","civil","revisar","Lo que va a no legitimarios supera la libre disposición","Con descendientes, lo que se deja a otras personas (incluido el cónyuge en propiedad) no puede pasar de la parte de libre disposición. El exceso es inoficioso y se reduce.","arts. 808, 813 y 817 CC",RV_V,{sec:"herencia"},
+(c)=>{if(!c.porc||!c.desc.length||!c.L||!c.L.tercios)return false;const libre=rvNum(c.L.tercios.fracciones&&c.L.tercios.fracciones[2]);const s=c.V.filter((p)=>rvLinea(p)!=="desc").reduce((a,p)=>a+rvNum(p.pct),0)/100;return libre>0&&s>libre+0.005?{d:`Reciben el ${Math.round(s*1000)/10} % y la libre disposición es el ${Math.round(libre*1000)/10} %.`,n:c.L.norma||undefined}:false;});
+rg("CIV-15","civil","revisar","Los legados a no legitimarios superan la libre disposición","El valor de lo legado a personas que no son legitimarias supera la parte de libre disposición: los legados se reducen para pagar las legítimas.","arts. 817 y 820 CC",RV_V,{sec:"particion"},
+(c)=>{if(!c.L||!c.L.tercios||!c.desc.length)return false;const s=c.B.filter((b)=>{const p=c.P.find((q)=>q.id===b.legatarioId);return p&&!p.renuncia&&!c.legit(p);}).reduce((a,b)=>a+rvValorB(b),0);const libre=rvNum(c.L.tercios.libre);return s>libre+1?{d:`Legados a no legitimarios: ${rvEur(s)}; libre disposición: ${rvEur(libre)}.`}:false;});
+rg("CIV-16","civil","consejo","Legado a un legitimario: decidir cómo se imputa","Un legado a un hijo se imputa primero a la libre disposición y no es mejora salvo que el testador lo diga o no quepa en la parte libre. Conviene dejarlo escrito en el cuaderno particional.","arts. 819 y 828 CC",RV_V,null,
+(c)=>c.B.filter((b)=>{const p=c.V.find((q)=>q.id===b.legatarioId);return p&&rvLinea(p)==="desc";}).map((b)=>B_(b)));
+rg("CIV-17","civil","revisar","Usufructo universal del viudo sin cautela socini","Con usufructo universal, los hijos pueden exigir su legítima estricta libre de usufructo. Sin cautela socini en el testamento, la opción es de ellos.","arts. 813.2, 820.3.º y 834 CC",RV_V,null,
+(c)=>c.comun&&c.x.testamento==="usufructo"&&c.desc.length&&c.x.cautelaSocini!=="si"?{ir:CAMPO("rv-x-cautelaSocini")}:false);
+rg("CIV-18","civil","revisar","Conmutación del usufructo por un valor distinto","El valor con el que se conmuta el usufructo del viudo no coincide con el valor de su usufructo. La diferencia es una liberalidad entre el viudo y los herederos o un exceso de adjudicación, con su coste fiscal.","arts. 839-840 CC · art. 26 Ley 29/1987",RV_V,null,
+(c)=>{const v=rvNum(c.conv.valor);if(!c.conv.modo||!v||!c.R||!c.cony.length)return false;const h=rvArr(c.R.isd.herederos).find((q)=>q.id===c.cony[0].id);const ref=h?rvNum(h.valorAdquirido):0;return ref>0&&Math.abs(v-ref)>ref*0.05?{d:`Conmutación por ${rvEur(v)}; su usufructo vale ${rvEur(ref)}.`,ir:CAMPO("rv-x-conmutacion.valor")}:false;});
+rg("CIV-19","civil","bloquea","Conmutación sin acuerdo con el viudo","La conmutación del usufructo se hace de mutuo acuerdo con el cónyuge viudo o, si no lo hay, por mandato judicial.","art. 839 CC",RV_V,null,
+(c)=>c.comun&&c.conv.modo&&c.conv.acuerdo!==true?{ir:CAMPO("rv-x-conmutacion.acuerdo")}:false);
+rg("CIV-20","civil","bloquea","Cataluña: conmutación fuera del año","El viudo o conviviente puede conmutar el usufructo universal dentro del año siguiente al fallecimiento.","art. 442-5 CCCat",RV_P,null,
+(c)=>{const f=rvFecha(c.conv.fecha);return c.vec==="CAT"&&c.x.conmutacionCat&&c.f&&f&&f>rvMasMeses(c.f,12)?{d:`Conmutación del ${rvFC(f)}; el plazo acabó el ${rvFC(rvMasMeses(c.f,12))}.`,ir:CAMPO("rv-x-conmutacion.fecha")}:false;});
+rg("CIV-21","civil","consejo","Cataluña: el plazo para conmutar el usufructo acaba pronto","Sin testamento, el viudo puede cambiar el usufructo universal por la cuarta parte en propiedad más el usufructo de la vivienda familiar, dentro del año siguiente al fallecimiento.","art. 442-5 CCCat",RV_P,{sec:"herencia"},
+(c)=>{if(c.vec!=="CAT"||!c.intestada||!c.cony.length||!c.desc.length||c.x.conmutacionCat||!c.f)return false;const lim=rvMasMeses(c.f,12),q=rvDias(c.h,lim);return q>=0&&q<=60?{d:`Quedan ${rvPl(q,"día")} (hasta el ${rvFC(lim)}).`}:false;});
+rg("CIV-22","civil","revisar","Aragón: derecho de viudedad","El viudo aragonés tiene el usufructo de todos los bienes del fallecido (viudedad foral), salvo renuncia o pacto. Comprueba que el reparto lo recoge.","art. 283 CDFA",RV_V,{sec:"herencia"},
+(c)=>c.vec==="ARA"&&c.cony.length>0);
+rg("CIV-23","civil","revisar","Navarra: usufructo de fidelidad","El cónyuge viudo navarro tiene el usufructo de fidelidad sobre los bienes del premuerto. Comprueba que el reparto lo recoge.","leyes 253-254 Fuero Nuevo",RV_P,{sec:"herencia"},
+(c)=>c.vec==="NAV"&&c.cony.length>0);
+rg("CIV-24","civil","revisar","Cónyuge separado con derechos en la herencia","El cónyuge separado legalmente o de hecho no es legitimario ni hereda sin testamento. Comprueba que el testamento le deja algo de forma expresa (en Cataluña las disposiciones a su favor pierden eficacia).","arts. 834 y 945 CC · art. 422-13 CCCat",RV_P,null,
+(c)=>c.testado?c.P.filter((p)=>p.relacion==="conyuge"&&p.separado&&!p.renuncia&&(rvNum(p.pct)>0||c.x.testamento==="usufructo")).map((p)=>P_(p)):false);
+rg("CIV-25","civil","bloquea","Más de un cónyuge viudo","Figuran dos cónyuges no separados. Solo puede haber un viudo: el otro será excónyuge o pareja.","art. 46.2.º CC",RV_V,{sec:"herencia"},
+(c)=>c.cony.length>1?{d:rvLista(c.cony.map(rvNom))+"."}:false);
+rg("CIV-26","civil","revisar","Cónyuge y pareja de hecho a la vez","Constan un cónyuge no separado y una pareja de hecho. Si el matrimonio estaba roto, marca la separación; si no, la pareja no tiene los derechos del viudo.","arts. 834 y 944 CC",RV_V,{sec:"herencia"},
+(c)=>c.cony.length>0&&c.parejas.length>0);
+rg("CIV-27","civil","bloquea","Gananciales sin cónyuge en el expediente","El régimen es de gananciales pero no figura el cónyuge. La mitad de los bienes comunes es suya y la sociedad se liquida antes de repartir la herencia.","arts. 1344 y 1392.1.º CC",RV_V,{sec:"herencia"},
+(c)=>c.x.civil==="gananciales"&&!c.conyAll.length);
+rg("CIV-28","civil","bloquea","Bienes gananciales sin régimen de gananciales","Hay bienes marcados como gananciales y el estado civil del causante no es de casado en gananciales. Si era viudo, la sociedad se disolvió al morir su cónyuge y hay que liquidarla antes.","arts. 1344, 1392 y 1396 CC",RV_V,null,
+(c)=>c.x.civil!=="gananciales"?c.B.filter((b)=>b.titularidad==="ganancial").map((b)=>B_(b)):false);
+rg("CIV-29","civil","revisar","Deuda ganancial sin gananciales","Una deuda está marcada como ganancial, pero el régimen no es de gananciales: la herencia la soportaría entera.","arts. 1362 y 1365 CC",RV_V,{sec:"herencia"},
+(c)=>c.x.civil!=="gananciales"&&rvArr(c.x.deudas).some((d)=>d.ganancial&&rvNum(d.importe)>0));
+rg("CIV-30","civil","revisar","Bien comprado antes del matrimonio marcado como ganancial","Los bienes que cada cónyuge tenía al empezar la sociedad son privativos, salvo la vivienda familiar pagada en parte con dinero común (proporción ganancial).","arts. 1346.1.º, 1354 y 1357 CC",RV_V,null,
+(c)=>{const m=rvFecha(c.x.matrimonioFecha);return m?c.B.filter((b)=>b.titularidad==="ganancial"&&rvFecha(b.fechaAdq)&&b.fechaAdq<m).map((b)=>B_(b,{d:`Adquirido el ${rvFC(b.fechaAdq)}; matrimonio el ${rvFC(m)}.`})):false;});
+rg("CIV-31","civil","revisar","Bien heredado o donado marcado como ganancial","Lo que un cónyuge adquiere por herencia o donación es privativo.","art. 1346.2.º CC",RV_V,null,
+(c)=>c.B.filter((b)=>b.titularidad==="ganancial"&&["herencia","donacion"].includes(b.adqTitulo)).map((b)=>B_(b)));
+rg("CIV-32","civil","revisar","Capitulaciones con régimen de gananciales","Constan capitulaciones matrimoniales y el expediente dice gananciales. Las capitulaciones suelen pactar separación: comprueba qué régimen regía al fallecer.","arts. 1315, 1325 y 1392.4.º CC",RV_V,{campo:"rv-x-capitulacionesFecha"},
+(c)=>c.x.civil==="gananciales"&&!!rvFecha(c.x.capitulacionesFecha));
+rg("CIV-33","civil","revisar","Bien comprado en gananciales antes de las capitulaciones","El matrimonio empezó en gananciales y después pactó separación. Lo comprado entre la boda y las capitulaciones era ganancial y pudo quedar sin liquidar.","arts. 1392.4.º y 1396 CC",RV_V,null,
+(c)=>{const m=rvFecha(c.x.matrimonioFecha),k=rvFecha(c.x.capitulacionesFecha);return c.x.civil==="separacion"&&m&&k&&k>m?c.B.filter((b)=>b.titularidad!=="ganancial"&&rvFecha(b.fechaAdq)&&b.fechaAdq>=m&&b.fechaAdq<k).map((b)=>B_(b,{d:`Adquirido el ${rvFC(b.fechaAdq)}, entre la boda (${rvFC(m)}) y las capitulaciones (${rvFC(k)}).`})):false;});
+rg("CIV-34","civil","revisar","Régimen económico distinto del legal de su vecindad","Sin capitulaciones, el régimen legal en Cataluña y Baleares es la separación de bienes. El expediente dice gananciales.","art. 231-10 CCCat · art. 3 Compilación de Baleares",RV_P,{campo:"rv-x-capitulacionesFecha"},
+(c)=>["CAT","BAL"].includes(c.vec)&&c.x.civil==="gananciales"&&!rvFecha(c.x.capitulacionesFecha));
+rg("CIV-35","civil","revisar","Separación de bienes sin capitulaciones","En derecho común y en Galicia el régimen legal es el de gananciales: la separación necesita capitulaciones o un régimen anterior de otra vecindad.","arts. 1315 y 1316 CC",RV_V,{campo:"rv-x-capitulacionesFecha"},
+(c)=>["comun","GAL"].includes(c.vec)&&c.x.civil==="separacion"&&!rvFecha(c.x.capitulacionesFecha));
+rg("CIV-36","civil","revisar","Separación conyugal y sociedad de gananciales","El cónyuge está marcado como separado y el régimen sigue en gananciales. La separación judicial disuelve la sociedad; la de hecho de más de un año permite disolverla: lo adquirido después puede ser privativo.","arts. 1392.3.º y 1393.3.º CC",RV_V,{sec:"herencia"},
+(c)=>c.x.civil==="gananciales"&&c.conyAll.some((p)=>p.separado));
+rg("CIV-37","civil","revisar","Personas que no heredan por el orden legal","Sin testamento, la ley llama primero a descendientes, después a ascendientes, al cónyuge y por último a colaterales hasta el cuarto grado. Estas personas no reciben nada con el reparto calculado.","arts. 912-955 CC",RV_V,{sec:"herencia"},
+(c)=>c.intestada&&c.R&&!c.R.isd.bloqueo?c.V.filter((p)=>!c.heredaAlgo(p)).map((p)=>P_(p)):false);
+rg("CIV-38","civil","bloquea","Representación con el progenitor vivo","Un nieto o sobrino solo hereda en lugar de su progenitor si este murió antes, fue desheredado o es indigno. Su progenitor figura en el expediente y acepta.","arts. 924-929 CC",RV_V,null,
+(c)=>c.V.filter((p)=>["nieto","bisnieto","sobrino"].includes(p.relacion)&&rvNorm(p.estirpe)).filter((p)=>{const g=c.porNombre(p.estirpe);return g&&g!==p&&!g.renuncia&&!g.desheredado;}).map((p)=>P_(p,{d:`Desciende de ${p.estirpe}.`})));
+rg("CIV-39","civil","revisar","No hay representación del que renuncia","Los hijos del que renuncia no heredan en su lugar por representación. Solo si renuncian todos los del mismo grado heredan por derecho propio.","arts. 923 y 929 CC",RV_V,null,
+(c)=>c.comun?c.V.filter((p)=>["nieto","bisnieto","sobrino"].includes(p.relacion)&&rvNorm(p.estirpe)).filter((p)=>{const g=c.porNombre(p.estirpe);return g&&g.renuncia;}).map((p)=>P_(p,{d:`${p.estirpe} renuncia.`})):false);
+rg("CIV-40","civil","revisar","Nieto o sobrino sin indicar de quién desciende","Para heredar por estirpes hay que saber en lugar de quién hereda (el hijo o el hermano premuerto del causante).","arts. 924-927 y 931-933 CC",RV_V,null,
+(c)=>c.intestada?c.V.filter((p)=>["nieto","bisnieto","sobrino"].includes(p.relacion)&&!rvNorm(p.estirpe)).map((p)=>P_(p)):false);
+rg("CIV-41","civil","revisar","Pareja de hecho sin testamento en derecho común","En el Código Civil la pareja de hecho no hereda sin testamento (sí en Cataluña, Galicia, Baleares o País Vasco con requisitos).","arts. 913 y 944 CC",RV_V,null,
+(c)=>c.intestada&&c.comun?c.parejas.map((p)=>P_(p)):false);
+rg("CIV-42","civil","bloquea","Sin testamento, pero consta un testamento","El expediente se tramita sin testamento y los datos del certificado de últimas voluntades recogen uno. Hay que pedir copia: el testamento manda sobre la ley.","arts. 658 y 912.1.º CC",RV_V,{sec:"herencia"},
+(c)=>c.intestada&&!!(rvFecha(c.td.fecha)||String(c.td.notario||"").trim()));
+rg("CIV-43","civil","revisar","Testamento y declaración de herederos a la vez","Hay testamento y consta un acta de declaración de herederos. La declaración solo procede si no hay testamento o es ineficaz en parte.","art. 912 CC · arts. 55-56 Ley del Notariado",RV_V,{sec:"herencia"},
+(c)=>c.testado&&!!(c.x.actaHerederos&&(c.x.actaHerederos.fecha||c.x.actaHerederos.notario)));
+rg("CIV-44","civil","revisar","Vecindad civil distinta de la residencia","La vecindad indicada no es la del territorio donde residía. Se adquiere por filiación, opción o residencia de dos años con declaración o diez sin ella: hay que poder acreditarla.","arts. 14 y 15 CC",RV_V,{sec:"herencia"},
+(c)=>!c.vecInfo.supuesta&&c.vecInfo.id!==c.vecInfo.residencia?{d:`Vecindad ${c.vecInfo.id==="comun"?"común":c.vecInfo.id}; residencia en territorio ${c.vecInfo.residencia==="comun"?"de derecho común":c.vecInfo.residencia}.`}:false);
+rg("CIV-45","civil","revisar","Vecindad civil supuesta con vínculo foral","La vecindad se ha supuesto por la residencia y consta que nació o vivió muchos años en un territorio foral. La vecindad decide la ley de la herencia.","arts. 9.8 y 14-16 CC",RV_V,{sec:"herencia"},
+(c)=>c.vecInfo.supuesta&&!!c.situ.vinculoForal);
+rg("CIV-46","civil","revisar","Ley aplicable con elemento extranjero","Si el causante residía fuera de España o tenía otra nacionalidad, la herencia se rige por la ley de su última residencia habitual, salvo que eligiera la de su nacionalidad.","arts. 21 y 22 Reglamento (UE) 650/2012",RV_V,{sec:"normativa"},
+(c)=>c.x.ccaa==="EST"||!!c.situ.nacionalidadExtranjera);
+rg("CIV-47","civil","bloquea","Renuncia con sustituto designado","El testamento nombra un sustituto para quien renuncia: su parte va al sustituto, no acrece a los demás. El cálculo actual no lo recoge: ajusta las cuotas.","arts. 774 y 982 CC",RV_V,null,
+(c)=>c.testado?c.P.filter((p)=>p.renuncia&&p.sustituto&&c.P.some((q)=>q.id===p.sustituto)).map((p)=>P_(p,{d:`Sustituto: ${rvNom(c.P.find((q)=>q.id===p.sustituto))}.`,ir:CAMPO(`rv-p-${p.id}-sustituto`)})):false);
+rg("CIV-48","civil","revisar","Renuncia de un heredero con cuota designada","Si el testamento fija una cuota numérica para cada heredero, no hay derecho de acrecer: la parte del que renuncia (salvo la legítima) va a los herederos sin testamento.","arts. 982-986 CC",RV_V,null,
+(c)=>c.porc&&c.comun?c.P.filter((p)=>p.renuncia&&rvNum(p.pct)>0&&!p.sustituto).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-sustituto`)})):false);
+rg("CIV-49","civil","revisar","Fiduciario sin fideicomisario","En la sustitución fideicomisaria el fiduciario conserva los bienes para otra persona. Identifica al fideicomisario: es quien los recibirá.","arts. 781-785 CC",RV_V,null,
+(c)=>c.P.filter((p)=>p.fiduciario&&rvVacio(p.fideicomisario)).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-fideicomisario`)})));
+rg("CIV-50","civil","revisar","Renuncia en favor de otra persona","La renuncia en favor de alguien concreto, o a cambio de algo, equivale a aceptar y donar: tributa dos veces (Sucesiones y Donaciones).","art. 1000 CC · art. 28 Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>p.renuncia&&p.renunciaAFavor).map((p)=>P_(p)));
+rg("CIV-51","civil","bloquea","Renuncia de un menor sin autorización judicial","Los padres necesitan autorización judicial para renunciar a una herencia en nombre de su hijo menor.","art. 166 CC",RV_V,null,
+(c)=>c.P.filter((p)=>p.renuncia&&rvEdad(p)!=null&&rvEdad(p)<18&&!p.autorizacionJudicial).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-autorizacionJudicial`)})));
+rg("CIV-52","civil","revisar","Renuncia de una persona con medidas de apoyo","Si tiene curador con facultades de representación, la renuncia necesita autorización judicial.","art. 287.5.º CC",RV_P,null,
+(c)=>c.P.filter((p)=>p.renuncia&&(rvNum(p.discapacidad)>=33||c.situ.apoyos)).map((p)=>P_(p)));
+rg("CIV-53","civil","bloquea","Menores que heredan con su progenitor","Si el progenitor también hereda hay conflicto de intereses: hace falta defensor judicial y, después, aprobación judicial de la partición.","arts. 163 y 1060 CC",RV_V,{tramite:"menores"},
+(c)=>{const m=c.V.filter((p)=>rvEdad(p)!=null&&rvEdad(p)<18&&rvLinea(p)==="desc");return m.length&&(c.cony.length||c.parejas.length)?{d:`Menores: ${rvLista(m.map(rvNom))}.`}:false;});
+rg("CIV-54","civil","bloquea","Posible heredero concebido y no nacido","La viuda o pareja está embarazada: la partición se suspende hasta el parto.","arts. 29, 959 y 966 CC",RV_V,{sec:"tramites"},
+(c)=>!!c.situ.embarazo);
+rg("CIV-55","civil","revisar","Un heredero murió sin aceptar ni renunciar","Sus herederos pueden aceptar o renunciar la primera herencia en su lugar (derecho de transmisión).","art. 1006 CC",RV_V,{sec:"herencia"},
+(c)=>!!c.situ.herederoFallecido);
+rg("CIV-56","civil","revisar","Donación a un hijo sin colacionar","Consta una donación a un descendiente (acumulada en el impuesto) y no se ha marcado para colacionar ni su dispensa. Entre herederos forzosos se trae a la partición salvo dispensa.","arts. 1035-1036 CC",RV_V,null,
+(c)=>c.desc.length>1&&!(c.vec==="CAT")?c.desc.filter((p)=>rvNum(p.donaciones)>0&&!(rvNum(p.donacionColacionable)>0)&&!p.dispensaColacion).map((p)=>P_(p)):false);
+rg("CIV-57","civil","revisar","Cataluña: colación sin orden del causante","En Cataluña las donaciones solo se colacionan si el causante lo ordenó expresamente.","art. 464-17 CCCat",RV_P,null,
+(c)=>c.vec==="CAT"&&!c.x.colacionOrdenada?c.P.filter((p)=>rvNum(p.donacionColacionable)>0).map((p)=>P_(p)):false);
+rg("CIV-58","civil","revisar","Colación de una persona que no es heredera forzosa","La colación opera entre herederos forzosos que concurren a la herencia.","art. 1035 CC",RV_V,null,
+(c)=>c.P.filter((p)=>rvNum(p.donacionColacionable)>0&&rvLinea(p)!=="desc").map((p)=>P_(p)));
+rg("CIV-59","civil","revisar","Legado de un bien ganancial","El legado de un bien ganancial solo se cumple entero si el bien se adjudica a la herencia al liquidar la sociedad; si no, se entiende legado su valor.","art. 1380 CC",RV_V,null,
+(c)=>c.B.filter((b)=>b.legatarioId&&b.titularidad==="ganancial").map((b)=>B_(b)));
+rg("CIV-60","civil","bloquea","Bien adjudicado a quien renuncia","Un bien está adjudicado a una persona que renuncia a la herencia: no puede recibir nada en la partición.","arts. 989 y 1068 CC",RV_V,null,
+(c)=>c.B.filter((b)=>b.adjudicadoA&&c.P.some((p)=>p.id===b.adjudicadoA&&p.renuncia)).map((b)=>B_(b)));
+rg("CIV-61","civil","revisar","Bien legado y adjudicado a la vez","El bien figura como legado y además adjudicado en la partición. El legado sale de la masa antes de partir.","arts. 882 y 1068 CC",RV_V,null,
+(c)=>c.B.filter((b)=>b.legatarioId&&b.adjudicadoA).map((b)=>B_(b)));
+rg("CIV-62","civil","bloquea","Testamento mancomunado en derecho común","El Código Civil no admite el testamento de dos personas en el mismo acto (sí algunos derechos forales). Si la vecindad es común, es nulo.","arts. 669 y 733 CC",RV_V,{campo:"rv-x-testamentoDatos.tipo"},
+(c)=>c.comun&&/mancomunado/i.test(String(c.td.tipo||"")));
+rg("CIV-63","civil","bloquea","Testamento ológrafo sin adverar ni protocolizar","El testamento escrito a mano tiene que presentarse ante notario para su adveración y protocolización en los cinco años siguientes al fallecimiento.","arts. 689-693 CC",RV_V,{campo:"rv-x-olografoProtocolizado"},
+(c)=>(/ol[oó]grafo/i.test(String(c.td.tipo||""))||!!c.situ.olografo)&&!c.x.olografoProtocolizado);
+rg("CIV-64","civil","bloquea","Testamento cerrado sin abrir ante notario","El testamento cerrado se abre y protocoliza ante notario antes de poder usarse.","arts. 706-715 CC",RV_V,{campo:"rv-x-cerradoAbierto"},
+(c)=>(/cerrado/i.test(String(c.td.tipo||""))||!!c.situ.testamentoCerrado)&&!c.x.cerradoAbierto);
+rg("CIV-65","civil","revisar","Pacto sucesorio con vecindad común","El Código Civil no admite pactos sobre la herencia futura (salvo excepciones como la mejora en capitulaciones). Los pactos sucesorios son propios de los derechos forales.","arts. 826 y 1271.2 CC",RV_V,{sec:"herencia"},
+(c)=>c.comun&&(!!c.situ.pactoSucesorio||c.P.some((p)=>rvFecha(p.pactoFecha))));
+rg("CIV-66","civil","revisar","Posible reserva lineal","El ascendiente que hereda de su descendiente bienes que este recibió gratis de otro ascendiente o de un hermano debe reservarlos para los parientes del tercer grado de esa línea.","art. 811 CC",RV_V,null,
+(c)=>c.comun&&c.asc.length&&!c.desc.length?c.B.filter((b)=>["herencia","donacion"].includes(b.adqTitulo)||(c.situ.bienesFamiliares&&rvInm(b)&&!b.adqTitulo)).map((b)=>B_(b)):false);
+rg("CIV-67","civil","consejo","Bizkaia: comprueba la troncalidad","Para los vizcaínos de la tierra llana, los bienes raíces son troncales y van a los parientes de la línea de procedencia.","arts. 61-73 Ley 5/2015",RV_V,null,
+(c)=>c.x.ccaa==="BIZ"&&c.vec==="VASCO"?c.inm.filter((b)=>!b.troncal).map((b)=>B_(b)):false);
+rg("CIV-68","civil","revisar","Fiducia sucesoria","El testamento deja el reparto a un fiduciario o comisario: hasta que actúe, el reparto calculado es provisional.","art. 831 CC · derecho foral",RV_V,{sec:"herencia"},
+(c)=>!!c.situ.fiducia);
+rg("CIV-69","civil","consejo","Herederos en desacuerdo","Si no hay acuerdo para la partición, cualquiera puede pedir la división judicial de la herencia.","arts. 1051-1052 CC · arts. 782-805 LEC",RV_V,{sec:"tramites"},
+(c)=>!!c.situ.litigio);
+rg("CIV-70","civil","revisar","Ascendientes junto a descendientes","Con descendientes, los ascendientes no son legitimarios ni herederos sin testamento.","arts. 807 y 930-935 CC",RV_V,{sec:"herencia"},
+(c)=>c.desc.length&&c.asc.length&&!c.testado?c.asc.map((p)=>P_(p)):false);
+rg("FIS-01","fiscal","revisar","Sucesiones fuera de plazo","El plazo para presentar el Impuesto sobre Sucesiones ha vencido. Presentar sin requerimiento lleva recargo del 1 % más 1 % por mes completo (15 % y demora pasados doce meses).","art. 67 RD 1629/1991 · art. 27 LGT",RV_V,{tramite:"isd"},
+(c)=>c.limISD&&!c.presentadoISD&&c.limISD<c.h?{d:`Venció el ${rvFC(c.limISD)}${c.prorroga?" (con prórroga)":""}.`}:false);
+rg("FIS-02","fiscal","revisar","Sucesiones vence en quince días o menos","Cierra la autoliquidación y el pago o, si aún cabe, pide la prórroga.","art. 67 RD 1629/1991",RV_V,{tramite:"isd"},
+(c)=>{if(!c.limISD||c.presentadoISD)return false;const q=rvDias(c.h,c.limISD);return q>=0&&q<=15?{d:`Último día: ${rvFC(c.limISD)}.`}:false;});
+rg("FIS-03","fiscal","bloquea","Prórroga pedida fuera de plazo","La prórroga del Impuesto sobre Sucesiones se pide dentro de los cinco primeros meses. Pedida después no se concede: el plazo sigue siendo de seis meses.","art. 68 RD 1629/1991",RV_V,{campo:"rv-x-prorrogaFecha"},
+(c)=>{const f=rvFecha(c.x.prorrogaFecha);return f&&c.pl.prorroga_isd&&f>c.pl.prorroga_isd.limite?{d:`Pedida el ${rvFC(f)}; el plazo para pedirla acabó el ${rvFC(c.pl.prorroga_isd.limite)}.`}:false;});
+rg("FIS-04","fiscal","consejo","Prórroga concedida sin fecha de solicitud","Anota cuándo se pidió para comprobar que fue dentro de los cinco primeros meses.","art. 68 RD 1629/1991",RV_V,{campo:"rv-x-prorrogaFecha"},
+(c)=>c.prorroga&&!rvFecha(c.x.prorrogaFecha));
+rg("FIS-05","fiscal","bloquea","Se calcula fuera de plazo y aún se está en plazo","El expediente está marcado como presentado fuera de plazo, pero el plazo no ha vencido: el cálculo añade un recargo y quita bonificaciones que no corresponden.","art. 27 LGT · arts. 67-68 RD 1629/1991",RV_V,{sec:"impuestos"},
+(c)=>c.x.enPlazo===false&&c.limISD&&c.limISD>=c.h);
+rg("FIS-06","fiscal","bloquea","Marcado en plazo con el plazo vencido","El interruptor de «dentro de plazo» está fijado a mano y el plazo ya venció sin presentar: el cálculo omite el recargo y puede aplicar bonificaciones que exigen presentar a tiempo.","art. 27 LGT · arts. 67-68 RD 1629/1991",RV_V,{sec:"impuestos"},
+(c)=>c.x.enPlazoManual===true&&c.x.enPlazo!==false&&c.limISD&&c.limISD<c.h&&!c.presentadoISD);
+rg("FIS-07","fiscal","revisar","Presentación tras requerimiento","Con requerimiento previo de Hacienda no hay recargo sino sanción, y algunas bonificaciones se pierden.","arts. 27.1 y 191 LGT",RV_V,{sec:"impuestos"},
+(c)=>c.x.requerimiento===true);
+rg("FIS-08","fiscal","revisar","Valor declarado por debajo del valor de referencia","En Sucesiones la base mínima de un inmueble es su valor de referencia del Catastro. Se liquida por el mayor; declarar menos solo cabe impugnando el valor con tasación.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.inm.filter((b)=>rvNum(b.valor)>0&&rvNum(b.valorReferencia)>rvNum(b.valor)*1.001).map((b)=>B_(b,{d:`Declarado ${rvEur(rvNum(b.valor))}; referencia ${rvEur(rvNum(b.valorReferencia))}.`})));
+rg("FIS-09","fiscal","revisar","Inmueble sin valor de referencia","Consulta el valor de referencia del Catastro a la fecha del fallecimiento: es la base mínima en Sucesiones.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.inm.filter((b)=>!rvNum(b.valorReferencia)).map((b)=>B_(b)));
+rg("FIS-10","fiscal","consejo","Ajuar doméstico sobre todo el caudal","El Tribunal Supremo limita el 3 % del ajuar a los bienes de uso personal y doméstico, no al dinero ni a los valores.","SSTS 342/2020 y 499/2020 · art. 15 Ley 29/1987",RV_V,{sec:"impuestos"},
+(c)=>c.x.ajuar==="3pct");
+rg("FIS-11","fiscal","revisar","Ajuar doméstico en cero","El 3 % es una presunción que admite prueba en contrario: declarar un ajuar menor exige acreditarlo.","art. 15 Ley 29/1987 · art. 34 RD 1629/1991",RV_P,{sec:"impuestos"},
+(c)=>c.x.ajuar==="cero"&&rvNum(c.R&&c.R.isd&&c.R.isd.masa&&c.R.isd.masa.bruto)>0);
+rg("FIS-12","fiscal","consejo","Criterio autonómico del ajuar por confirmar","La comunidad aplica un criterio propio para el ajuar doméstico; conviene confirmarlo antes de presentar.","art. 15 Ley 29/1987",RV_P,{sec:"impuestos"},
+(c)=>c.R&&c.R.isd&&c.R.isd.masa&&c.R.isd.masa.notaAjuar&&/confirmar|verificaci|pendiente/i.test(c.R.isd.masa.notaAjuar)?{d:c.R.isd.masa.notaAjuar}:false);
+rg("FIS-13","fiscal","revisar","Seguro de vida sin autoliquidar","Cada beneficiario de un seguro de vida declara lo cobrado en Sucesiones (modelo 652 o junto con el 650, según la comunidad).","art. 3.1.c Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>rvNum(p.seguro)>0&&!c.hecho("seguros_vida")).map((p)=>P_(p,{d:`Cobra ${rvEur(rvNum(p.seguro))}.`})));
+rg("FIS-14","fiscal","consejo","Seguro de vida sin reducción por parentesco","La reducción por seguros de vida es solo para cónyuge, ascendientes y descendientes.","art. 20.2.b Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>rvNum(p.seguro)>0&&!["desc","asc","conyuge"].includes(rvLinea(p))).map((p)=>P_(p)));
+rg("FIS-15","fiscal","revisar","Donación colacionable sin acumular en el impuesto","Hay una donación a cuenta de la herencia, pero no figura para acumularla. Las donaciones del causante al heredero en los cuatro años anteriores se acumulan en Sucesiones.","art. 30 Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>rvNum(p.donacionColacionable)>0&&!(rvNum(p.donaciones)>0)).map((p)=>P_(p)));
+rg("FIS-16","fiscal","bloquea","Vivienda habitual alquilada o sin uso residencial","Un inmueble marcado como vivienda habitual del causante no puede estar alquilado ni sin uso residencial el día del fallecimiento. La reducción por vivienda habitual no se aplicaría.","art. 20.2.c Ley 29/1987",RV_V,null,
+(c)=>c.B.filter((b)=>b.tipo==="vivienda"&&(b.arrendadoOCedido||b.usoResidencial===false)).map((b)=>B_(b)));
+rg("FIS-17","fiscal","bloquea","Más de una vivienda habitual","Solo puede haber una vivienda habitual del causante. Marca las demás como «otro inmueble».","art. 20.2.c Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>{const L=c.B.filter((b)=>b.tipo==="vivienda");return L.length>1?{d:rvLista(L.map(rvNomB))+"."}:false;});
+rg("FIS-18","fiscal","revisar","Venta de la vivienda con reducción aplicada","La reducción por vivienda habitual exige mantenerla el plazo legal (diez años en la ley estatal; menos en varias comunidades). Si se vende antes, se devuelve con intereses.","art. 20.2.c Ley 29/1987",RV_V,{sec:"estrategia"},
+(c)=>!!c.x.ventaVivienda&&c.B.some((b)=>b.tipo==="vivienda")&&!c.x.noAplicarVivienda);
+rg("FIS-19","fiscal","consejo","Hermano mayor de 65 años: ¿convivía?","El colateral mayor de 65 años que convivió con el causante los dos últimos años tiene la reducción por vivienda habitual.","art. 20.2.c Ley 29/1987",RV_V,null,
+(c)=>c.B.some((b)=>b.tipo==="vivienda")?c.V.filter((p)=>["hermano","sobrino","tio"].includes(p.relacion)&&rvEdad(p)>=65&&!p.convivio2anios).map((p)=>P_(p)):false);
+rg("FIS-20","fiscal","bloquea","Empresa familiar: participación insuficiente","La reducción exige al menos el 5 % del causante o el 20 % con su grupo familiar.","art. 20.2.c Ley 29/1987 · art. 4.Ocho.Dos Ley 19/1991",RV_V,null,
+(c)=>c.x.aplicarEmpresa?c.B.filter((b)=>b.tipo==="empresa"&&!rvVacio(b.efPctCausante)&&rvNum(b.efPctCausante)<5&&(rvVacio(b.efPctGrupo)||rvNum(b.efPctGrupo)<20)).map((b)=>B_(b)):false);
+rg("FIS-21","fiscal","bloquea","Empresa familiar: entidad patrimonial","Las sociedades que gestionan un patrimonio mobiliario o inmobiliario no tienen la reducción por empresa familiar.","art. 20.2.c Ley 29/1987 · art. 4.Ocho.Dos.a Ley 19/1991",RV_V,null,
+(c)=>c.x.aplicarEmpresa?c.B.filter((b)=>b.tipo==="empresa"&&b.efPatrimonial==="si").map((b)=>B_(b)):false);
+rg("FIS-22","fiscal","bloquea","Empresa familiar: sin funciones de dirección retribuidas","Alguien del grupo familiar debe ejercer funciones de dirección con una retribución de más del 50 % de sus rendimientos del trabajo y actividades.","art. 4.Ocho.Dos.c Ley 19/1991",RV_V,null,
+(c)=>c.x.aplicarEmpresa?c.B.filter((b)=>b.tipo==="empresa"&&b.efRemuneracion50==="no").map((b)=>B_(b)):false);
+rg("FIS-23","fiscal","bloquea","Reducción de empresa sin empresa en el inventario","Está activada la reducción por empresa familiar y no hay ningún bien de tipo empresa.","art. 20.2.c Ley 29/1987",RV_V,{sec:"impuestos"},
+(c)=>!!c.x.aplicarEmpresa&&!c.B.some((b)=>b.tipo==="empresa"));
+rg("FIS-24","fiscal","consejo","Empresa en el inventario sin valorar la reducción","Hay una empresa o participaciones: comprueba los requisitos de la reducción del 95 % (o la autonómica).","art. 20.2.c Ley 29/1987",RV_V,{sec:"impuestos"},
+(c)=>!c.x.aplicarEmpresa&&c.B.some((b)=>b.tipo==="empresa"));
+rg("FIS-25","fiscal","consejo","Empresa familiar: mantenimiento","La reducción obliga a mantener la empresa en el patrimonio del adquirente durante el plazo legal (diez años en la ley estatal; menos en varias comunidades).","art. 20.2.c Ley 29/1987",RV_V,{sec:"impuestos"},
+(c)=>!!c.x.aplicarEmpresa&&c.B.some((b)=>b.tipo==="empresa"));
+rg("FIS-26","fiscal","consejo","Causante no residente: normativa aplicable","Si residía fuera de España, la disposición adicional segunda permite aplicar la normativa de la comunidad donde está el mayor valor de los bienes. Confirma la elección.","DA 2.ª Ley 29/1987",RV_V,{act:"editar"},
+(c)=>c.x.ccaa==="EST"&&!c.x.ccaaBienes);
+rg("FIS-27","fiscal","revisar","Heredero no residente","El heredero que no reside en España tributa por obligación real y presenta ante la Agencia Tributaria (no ante la comunidad), aunque puede aplicar la normativa autonómica. Necesita NIE.","arts. 7 y DA 2.ª Ley 29/1987",RV_V,null,
+(c)=>c.V.filter((p)=>p.noResidente).map((p)=>P_(p,{ir:CAMPO(`rv-p-${p.id}-noResidente`)})));
+rg("FIS-28","fiscal","revisar","Heredero en el extranjero sin marcar","Consta que algún heredero reside fuera de España, pero ninguna persona está marcada como no residente.","art. 7 Ley 29/1987",RV_V,{sec:"revision"},
+(c)=>!!c.situ.herederoExtranjero&&!c.P.some((p)=>p.noResidente));
+rg("FIS-29","fiscal","revisar","Bienes en el extranjero","Los residentes tributan por todos los bienes, estén donde estén. Lo pagado fuera se deduce por doble imposición.","arts. 6 y 23 Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>!!c.situ.extranjero);
+rg("FIS-30","fiscal","revisar","Bonificación de plusvalía que hay que pedir","La bonificación municipal por herencia es rogada: si no se solicita en la declaración, se paga la cuota entera.","art. 108.4 TRLRHL",RV_V,{tramite:"plusvalia"},
+(c)=>c.R&&!c.hecho("plusvalia")?rvArr(c.R.plus).filter((q)=>q.r&&rvArr(q.r.porTitular).some((t)=>t.bonificacion>0)).map((q)=>B_(q.b,{d:`Bonificación calculada: ${rvEur(rvArr(q.r.porTitular).reduce((s,t)=>s+(t.bonificacion||0),0))}.`,ir:{tramite:"plusvalia"}})):false);
+rg("FIS-31","fiscal","revisar","Plusvalía municipal fuera de plazo","La plusvalía tiene su propio plazo de seis meses (prorrogable hasta un año si se pide antes). Ha vencido sin declarar.","art. 110.2 TRLRHL · art. 27 LGT",RV_V,{tramite:"plusvalia"},
+(c)=>c.pl.plusvalia&&c.inm.length&&!c.hecho("plusvalia")&&(c.x.prorrogaPlusvalia&&c.f?rvMasMeses(c.f,12):c.pl.plusvalia.limite)<c.h);
+rg("FIS-32","fiscal","revisar","Plusvalía municipal: vence en treinta días o menos","Presenta la declaración en cada ayuntamiento con la solicitud de bonificación, o pide la prórroga antes de que venza.","art. 110.2 TRLRHL",RV_V,{tramite:"plusvalia"},
+(c)=>{if(!c.pl.plusvalia||!c.inm.length||c.hecho("plusvalia"))return false;const lim=c.x.prorrogaPlusvalia&&c.f?rvMasMeses(c.f,12):c.pl.plusvalia.limite,q=rvDias(c.h,lim);return q>=0&&q<=30?{d:`Último día: ${rvFC(lim)}.`}:false;});
+rg("FIS-33","fiscal","revisar","La prórroga de Sucesiones no prorroga la plusvalía","La prórroga del Impuesto sobre Sucesiones no alcanza a la plusvalía municipal: hay que pedirla en cada ayuntamiento dentro de los seis meses.","art. 110.2.b TRLRHL",RV_V,{campo:"rv-x-prorrogaPlusvalia"},
+(c)=>c.prorroga&&c.inm.length&&!c.hecho("plusvalia")&&!c.x.prorrogaPlusvalia);
+rg("FIS-34","fiscal","bloquea","Plusvalía calculada sobre un terreno rústico","Los terrenos rústicos no están sujetos a la plusvalía municipal.","art. 104.2 TRLRHL",RV_V,null,
+(c)=>c.R?rvArr(c.R.plus).filter((q)=>q.b&&q.b.rustico&&q.r&&q.r.total>0).map((q)=>B_(q.b)):false);
+rg("FIS-35","fiscal","consejo","Sin plusvalía, pero hay que declarar","No hubo ganancia y la transmisión no está sujeta, pero hay que declararla en plazo y acreditar los dos valores con las escrituras.","art. 104.5 TRLRHL",RV_V,{tramite:"plusvalia"},
+(c)=>c.R?rvArr(c.R.plus).filter((q)=>q.r&&q.r.noSujeto).map((q)=>B_(q.b,{ir:{tramite:"plusvalia"}})):false);
+rg("FIS-36","fiscal","revisar","Renta del fallecido pendiente","La última declaración del IRPF del causante la presentan los herederos, que responden de su deuda.","art. 96 Ley 35/2006 · art. 39 LGT",RV_V,{tramite:"irpf"},
+(c)=>c.pl.irpf&&!c.hecho("irpf")&&c.h>=(c.pl.irpf.desde||c.pl.irpf.limite));
+rg("FIS-37","fiscal","revisar","Renta del año anterior al fallecimiento","Murió antes del 1 de julio: puede faltar la declaración del IRPF del año anterior, que presentan los herederos.","arts. 96-97 Ley 35/2006 · art. 39 LGT",RV_V,{campo:"rv-x-irpfAnteriorPresentada"},
+(c)=>c.f&&c.f.slice(5)<"07-01"&&!c.hecho("irpf_anterior")&&!c.x.irpfAnteriorPresentada);
+rg("FIS-38","fiscal","consejo","Venta por un heredero no residente","Quien compre a un no residente retiene el 3 % del precio a cuenta de su IRPF de no residentes, y es sustituto en la plusvalía municipal.","art. 25.2 RDLeg 5/2004 (IRNR) · art. 106.2.b TRLRHL",RV_V,null,
+(c)=>c.x.ventaVivienda?c.V.filter((p)=>p.noResidente).map((p)=>P_(p)):false);
+rg("FIS-39","fiscal","consejo","Venta prevista: valor de adquisición en el IRPF","Si se vende, el valor de adquisición es el declarado en Sucesiones más los tributos pagados (Sucesiones y plusvalía de esa parte): conserva los justificantes.","art. 36 Ley 35/2006",RV_V,{sec:"estrategia"},
+(c)=>!!c.x.ventaVivienda&&c.inm.length>0);
+rg("FIS-40","fiscal","consejo","Planes de pensiones","Lo que cobran los beneficiarios de un plan de pensiones tributa en su IRPF como rendimiento del trabajo, no en Sucesiones.","art. 17.2.a.3.ª Ley 35/2006",RV_V,{sec:"tramites"},
+(c)=>!!c.situ.planPensiones||rvArr(c.x.planesPensiones).length>0);
+rg("FIS-41","fiscal","revisar","Descendiente sin edad","La edad decide el grupo (menores de 21, grupo I) y la reducción por parentesco.","art. 20.2.a Ley 29/1987",RV_V,null,
+(c)=>c.V.filter((p)=>rvLinea(p)==="desc"&&rvVacio(p.edad)).map((p)=>P_(p)));
+rg("FIS-42","fiscal","revisar","Pareja de hecho sin inscripción","Sin inscripción en un registro oficial, la pareja tributa como extraña (grupo IV) en la mayoría de comunidades.","art. 20.2.a Ley 29/1987 · normativa autonómica",RV_V,null,
+(c)=>c.V.filter((p)=>(p.relacion==="pareja_hecho"&&!p.inscrita)||p.relacion==="pareja_no_inscrita").map((p)=>P_(p)));
+rg("FIS-43","fiscal","consejo","Saldos bancarios y presentación del impuesto","Las entidades no deben entregar los saldos a los herederos sin que se acredite la presentación del impuesto (responden subsidiariamente).","art. 8.1.a Ley 29/1987",RV_P,{tramite:"isd"},
+(c)=>!c.presentadoISD&&c.B.some((b)=>b.tipo==="cuenta"&&rvNum(b.valor)>0));
+rg("FIS-44","fiscal","revisar","Requerimiento marcado con el plazo abierto","Consta requerimiento de Hacienda, pero el plazo voluntario no ha vencido. Revisa la marca: cambia el recargo por sanción.","arts. 27 y 191 LGT",RV_V,{sec:"impuestos"},
+(c)=>c.x.requerimiento===true&&c.limISD&&c.limISD>=c.h);
+rg("FIS-45","fiscal","consejo","Prescripción: no contar con ella","Hacienda puede liquidar durante cuatro años desde el fin del plazo voluntario y cualquier actuación lo interrumpe.","arts. 66-68 LGT",RV_V,{tramite:"prescripcion"},
+(c)=>c.pl.prescripcion&&!c.presentadoISD&&c.limISD&&c.limISD<c.h);
+rg("DOC-01","documental","bloquea","Falta la fecha del fallecimiento","Sin ella no hay plazos ni cálculo: el impuesto se devenga ese día.","art. 657 CC · art. 24 Ley 29/1987",RV_V,{act:"editar"},
+(c)=>!c.f);
+rg("DOC-02","documental","bloquea","Falta la comunidad de residencia","La residencia de los últimos cinco años decide qué normativa del impuesto se aplica.","art. 28 Ley 22/2009",RV_V,{act:"editar"},
+(c)=>!c.x.ccaa);
+rg("DOC-03","documental","bloquea","No hay herederos","Sin herederos no hay reparto ni impuesto que calcular.","art. 658 CC",RV_V,{sec:"herencia"},
+(c)=>!c.P.length);
+rg("DOC-04","documental","bloquea","No hay bienes","El inventario está vacío: no se puede formar la masa hereditaria.","art. 659 CC",RV_V,{sec:"herencia"},
+(c)=>!c.B.length);
+rg("DOC-05","documental","bloquea","Falta el certificado de defunción","Es el primer título de la sucesión: lo piden la notaría, el Registro y Hacienda.","art. 14 Ley Hipotecaria · arts. 76 y 78 RH",RV_P,{sec:"despacho",sub:"docs"},
+(c)=>!c.doc("defuncion"));
+rg("DOC-06","documental","bloquea","Falta el certificado de últimas voluntades","Acredita si hay testamento y cuál es el último.","art. 14 Ley Hipotecaria · arts. 76 y 78 RH",RV_P,{sec:"despacho",sub:"docs"},
+(c)=>!c.doc("ultimas"));
+rg("DOC-07","documental","revisar","Falta el certificado de seguros de fallecimiento","Dice si el causante tenía seguros de vida o accidentes y con qué entidades.","Ley 20/2005, del Registro de Contratos de Seguros de Cobertura de Fallecimiento",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>!c.doc("seguros"));
+rg("DOC-08","documental","bloquea","Certificado de últimas voluntades pedido antes de tiempo","Se expidió antes de que pasaran quince días hábiles desde el fallecimiento: puede no recoger el último testamento. Pide uno nuevo.","Anexo II Reglamento Notarial",RV_P,{campo:"rv-x-ultimasExpedido"},
+(c)=>{const f=rvFecha(c.x.ultimasExpedido);return f&&c.pl.ultimas_voluntades&&c.pl.ultimas_voluntades.desde&&f<c.pl.ultimas_voluntades.desde&&(!c.f||f>=c.f)?{d:`Expedido el ${rvFC(f)}; no podía pedirse hasta el ${rvFC(c.pl.ultimas_voluntades.desde)}.`}:false;});
+rg("DOC-09","documental","bloquea","Certificado de últimas voluntades anterior al fallecimiento","La fecha de expedición es anterior al fallecimiento: no puede ser el certificado de esta herencia.","Anexo II Reglamento Notarial",RV_P,{campo:"rv-x-ultimasExpedido"},
+(c)=>{const f=rvFecha(c.x.ultimasExpedido);return!!(f&&c.f&&f<c.f);});
+rg("DOC-10","documental","bloquea","El testamento que se usa no es el último","El certificado de últimas voluntades recoge un testamento posterior al que tiene el expediente. El último revoca los anteriores.","art. 739 CC",RV_V,{campo:"rv-x-testamentoCopiaFecha"},
+(c)=>{const u=rvFecha(c.td.fecha),k=rvFecha(c.x.testamentoCopiaFecha);return u&&k&&k<u?{d:`Copia del ${rvFC(k)}; último testamento del ${rvFC(u)}.`}:false;});
+rg("DOC-11","documental","bloquea","Testamento posterior al que recoge el certificado","El testamento que se usa es posterior al último que figura en el certificado de últimas voluntades: el certificado está incompleto o se pidió antes de tiempo. Pide uno nuevo.","art. 739 CC · Anexo II Reglamento Notarial",RV_V,{campo:"rv-x-testamentoCopiaFecha"},
+(c)=>{const u=rvFecha(c.td.fecha),k=rvFecha(c.x.testamentoCopiaFecha);return u&&k&&k>u?{d:`Copia del ${rvFC(k)}; el certificado recoge uno del ${rvFC(u)}.`}:false;});
+rg("DOC-12","documental","bloquea","Testamento con fecha posterior al fallecimiento","La fecha del testamento es posterior a la del fallecimiento.","art. 739 CC",RV_V,{campo:"rv-x-testamentoDatos.fecha"},
+(c)=>c.f&&[c.td.fecha,c.x.testamentoCopiaFecha].some((f)=>rvFecha(f)&&f>c.f));
+rg("DOC-13","documental","bloquea","Sin testamento y sin declaración de herederos","Sin testamento, el título de la sucesión es el acta notarial de declaración de herederos.","art. 14 Ley Hipotecaria · arts. 55-56 Ley del Notariado",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.intestada&&!c.doc("declaracion"));
+rg("DOC-14","documental","bloquea","Falta la copia autorizada del testamento","Con testamento, la copia autorizada es el título de la sucesión para la escritura y el Registro.","art. 14 Ley Hipotecaria · art. 76 RH",RV_P,{sec:"despacho",sub:"docs"},
+(c)=>c.testado&&!c.doc("testamento"));
+rg("DOC-15","documental","revisar","Nota simple de más de tres meses","La nota simple solo informa del Registro a su fecha: puede haber cargas o asientos nuevos. Pide una actualizada antes de firmar.","art. 222 Ley Hipotecaria · art. 332 RH",RV_P,null,
+(c)=>c.inm.filter((b)=>rvFecha(b.notaSimpleFecha)&&rvDias(b.notaSimpleFecha,c.h)>90).map((b)=>B_(b,{d:`Nota simple del ${rvFC(b.notaSimpleFecha)}.`,ir:CAMPO(`rv-b-${b.id}-notaSimpleFecha`)})));
+rg("DOC-16","documental","revisar","Inmueble sin nota simple","La nota simple dice quién es el titular registral y qué cargas tiene el inmueble.","art. 222 Ley Hipotecaria",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.inm.filter((b)=>!c.doc("esc_"+b.id)&&!rvFecha(b.notaSimpleFecha)).map((b)=>B_(b,{ir:{sec:"despacho",sub:"docs"}})));
+rg("DOC-17","documental","bloquea","Cuenta sin certificado de saldo","La escritura y el impuesto recogen el saldo a la fecha del fallecimiento según certificado de la entidad.","art. 24 Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.B.filter((b)=>b.tipo==="cuenta"&&!c.doc("cert_"+b.id)&&!rvFecha(b.saldoFecha)).map((b)=>B_(b,{ir:{sec:"despacho",sub:"docs"}})));
+rg("DOC-18","documental","bloquea","Saldo certificado a otra fecha","El certificado de saldo no es a la fecha del fallecimiento, que es cuando se devenga el impuesto.","art. 24 Ley 29/1987",RV_V,null,
+(c)=>c.f?c.B.filter((b)=>(b.tipo==="cuenta"||b.tipo==="valores")&&rvFecha(b.saldoFecha)&&b.saldoFecha!==c.f).map((b)=>B_(b,{d:`Certificado a ${rvFC(b.saldoFecha)}; fallecimiento el ${rvFC(c.f)}.`,ir:CAMPO(`rv-b-${b.id}-saldoFecha`)})):false);
+rg("DOC-19","documental","revisar","Valores sin certificado de posición","Para valorar acciones y fondos a la fecha del fallecimiento hace falta el certificado de la entidad o gestora.","art. 24 Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.B.filter((b)=>b.tipo==="valores"&&!c.doc("cert_"+b.id)&&!rvFecha(b.saldoFecha)).map((b)=>B_(b,{ir:{sec:"despacho",sub:"docs"}})));
+rg("DOC-20","documental","revisar","Seguro de vida sin certificado de la aseguradora","El importe que se declara debe salir del certificado de la entidad.","art. 3.1.c Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.P.some((p)=>rvNum(p.seguro)>0)&&!c.doc("polizas"));
+rg("DOC-21","documental","revisar","Discapacidad sin certificado","La reducción por discapacidad exige el certificado oficial del grado.","art. 20.2.a Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.P.some((p)=>rvNum(p.discapacidad)>0)&&!c.doc("discap"));
+rg("DOC-22","documental","revisar","Pareja inscrita sin certificado del registro","La equiparación fiscal con el cónyuge se acredita con el certificado del registro de parejas.","art. 20.2.a Ley 29/1987 · normativa autonómica",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.V.some((p)=>p.relacion==="pareja_hecho"&&p.inscrita)&&!c.doc("pareja"));
+rg("DOC-23","documental","revisar","Falta el certificado de matrimonio","Acredita el matrimonio y, con las capitulaciones si las hay, el régimen económico.","Ley 20/2011 del Registro Civil · art. 1327 CC",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.casado&&!c.doc("matrimonio"));
+rg("DOC-24","documental","revisar","Convivencia sin padrón histórico","La convivencia de los dos últimos años (vivienda habitual y plusvalía) se acredita con el empadronamiento histórico.","art. 20.2.c Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.P.some((p)=>p.convivio2anios)&&!c.doc("padron"));
+rg("DOC-25","documental","bloquea","Renuncia sin escritura","La renuncia a la herencia solo vale en escritura pública ante notario (o escrito ante el juzgado).","art. 1008 CC",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.P.some((p)=>p.renuncia)&&!c.doc("renuncia"));
+rg("DOC-26","documental","revisar","Donaciones previas sin escrituras","Para acumular las donaciones de los cuatro años anteriores hacen falta sus escrituras y autoliquidaciones.","art. 30 Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>c.P.some((p)=>rvNum(p.donaciones)>0)&&!c.doc("donac"));
+rg("DOC-27","documental","revisar","Deudas sin certificado","Las deudas solo se deducen si se acreditan con documento fehaciente a la fecha del fallecimiento.","art. 13 Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>rvArr(c.x.deudas).some((d)=>rvNum(d.importe)>0)&&!c.doc("deudas"));
+rg("DOC-28","documental","consejo","Gastos sin facturas","Los gastos de funeral y de última enfermedad se deducen si se justifican.","art. 14 Ley 29/1987",RV_V,{sec:"despacho",sub:"docs"},
+(c)=>rvArr(c.x.gastos).some((g)=>rvNum(g.importe)>0)&&!c.doc("facturas"));
+rg("DOC-29","documental","bloquea","NIF del causante ausente o incorrecto","La escritura y los modelos identifican al causante por su NIF.","art. 156 Reglamento Notarial",RV_V,{sec:"firma"},
+(c)=>rvVacio(c.x.nifCausante)?{d:"No consta."}:!rvNifOk(c.x.nifCausante)?{d:"La letra de control no corresponde al número."}:false);
+rg("DOC-30","documental","bloquea","Heredero sin NIF o con NIF incorrecto","Cada heredero firma y autoliquida con su NIF (o NIE si es extranjero).","art. 156 Reglamento Notarial",RV_V,null,
+(c)=>c.V.filter((p)=>rvVacio(p.nif)||!rvNifOk(p.nif)).map((p)=>P_(p,{d:rvVacio(p.nif)?"No consta.":"La letra de control no corresponde al número."})));
+rg("DOC-31","documental","bloquea","Inmueble sin referencia catastral válida","La referencia catastral (20 caracteres) debe constar en la escritura y en los modelos.","art. 38 RDLeg 1/2004 (Catastro)",RV_V,null,
+(c)=>c.inm.filter((b)=>!/^[0-9A-Z]{20}$/.test(String(b.refCatastral||"").toUpperCase().replace(/[\s\-.]/g,""))).map((b)=>B_(b,{d:rvVacio(b.refCatastral)?"No consta.":"Formato incorrecto."})));
+rg("DOC-32","documental","revisar","Pólizas en el certificado sin beneficiario","El certificado de seguros recoge contratos, pero nadie figura cobrando un seguro de vida.","art. 3.1.c Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>rvArr(c.x.aseguradoras).length>0||(Array.isArray(c.x.aseguradoras)&&c.x.aseguradoras.some((a)=>typeof a==="string"&&a.trim()))?!c.P.some((p)=>rvNum(p.seguro)>0):false);
+rg("DOC-33","documental","revisar","Seguro cobrado sin contratos en el certificado","El certificado de seguros dice que no hay contratos y hay una persona con un seguro de vida anotado.","Ley 20/2005",RV_V,{sec:"herencia"},
+(c)=>Array.isArray(c.x.aseguradoras)&&c.x.aseguradoras.length===0&&c.P.some((p)=>rvNum(p.seguro)>0));
+rg("DOC-34","documental","revisar","Inmueble no inscrito a nombre del causante","Para inscribir la herencia, el causante debe figurar como titular en el Registro (tracto sucesivo). Puede hacer falta reanudar el tracto o inmatricular.","art. 20 Ley Hipotecaria",RV_V,{sec:"tramites"},
+(c)=>!!c.situ.sinInscribir);
+rg("DOC-35","documental","revisar","Obras sin declarar","Las obras o ampliaciones sin declarar se formalizan con escritura de obra nueva y certificado técnico antes o con la herencia.","art. 28 RDLeg 7/2015 · art. 202 Ley Hipotecaria",RV_V,{sec:"tramites"},
+(c)=>!!c.situ.obraSinDeclarar);
+rg("DOC-36","documental","revisar","IBAN incorrecto","El dígito de control del IBAN no cuadra: la carta al banco y el certificado de saldos saldrían con un número erróneo.","ISO 13616",RV_V,null,
+(c)=>c.B.filter((b)=>!rvVacio(b.iban)&&!rvIbanOk(b.iban)).map((b)=>B_(b)));
+rg("DOC-37","documental","revisar","Falta el domicilio del causante","La escritura y el modelo 650 recogen el último domicilio del causante.","art. 156 Reglamento Notarial",RV_V,{sec:"firma"},
+(c)=>rvVacio(c.x.domicilioCausante));
+rg("DOC-38","documental","consejo","Certificado de últimas voluntades sin fecha de expedición","Anota la fecha de expedición para comprobar que se pidió pasados quince días hábiles.","Anexo II Reglamento Notarial",RV_P,{campo:"rv-x-ultimasExpedido"},
+(c)=>c.doc("ultimas")&&!rvFecha(c.x.ultimasExpedido));
+rg("DOC-39","documental","consejo","Testamento sin fecha de la copia","Anota la fecha del testamento que se usa para cotejarla con el certificado de últimas voluntades.","art. 739 CC",RV_V,{campo:"rv-x-testamentoCopiaFecha"},
+(c)=>c.testado&&!rvFecha(c.x.testamentoCopiaFecha));
+rg("ARI-01","aritmetica","bloquea","Los porcentajes del testamento no suman 100 %","Lo que el testamento no reparte se rige por la sucesión sin testamento; si sobra, alguna cuota está mal.","arts. 912.2.º y 981-986 CC",RV_V,{sec:"herencia"},
+(c)=>{if(!c.porc||!c.V.length)return false;const s=c.V.reduce((a,p)=>a+rvNum(p.pct),0);return Math.abs(s-100)>0.01?{d:`Suman el ${Math.round(s*100)/100} % entre quienes aceptan.`}:false;});
+rg("ARI-02","aritmetica","bloquea","Porcentaje fuera de rango","Un porcentaje del testamento es negativo, mayor que 100 o no se entiende.","art. 763 CC",RV_V,null,
+(c)=>c.porc?c.P.filter((p)=>rvIlegible(p.pct)||rvNum(p.pct)<0||rvNum(p.pct)>100).map((p)=>P_(p,{d:`Anotado: «${String(p.pct)}».`})):false);
+rg("ARI-03","aritmetica","revisar","Cuota del testamento a quien renuncia","Quien renuncia tiene una cuota: decide a dónde va (sustituto, acrecer o herederos sin testamento).","arts. 774 y 981-986 CC",RV_V,null,
+(c)=>c.porc?c.P.filter((p)=>p.renuncia&&rvNum(p.pct)>0).map((p)=>P_(p)):false);
+rg("ARI-04","aritmetica","bloquea","La partición no cuadra con el haber de los herederos","Lo adjudicado no coincide con lo que corresponde a los herederos: algún bien queda fuera o está adjudicado a quien no hereda.","arts. 1061-1062 CC",RV_V,{sec:"particion"},
+(c)=>{if(!c.C||!rvArr(c.C.H).length)return false;const a=c.C.H.reduce((s,h)=>s+rvNum(h.adjudicado),0),hb=c.C.H.reduce((s,h)=>s+rvNum(h.haber),0);return Math.abs(a-hb)>1?{d:`Adjudicado ${rvEur(a)}; haber ${rvEur(hb)}.`}:false;});
+rg("ARI-05","aritmetica","bloquea","Bien adjudicado a quien no hereda","Un bien está adjudicado entero a una persona que no tiene cuota en la herencia: su valor no entra en el reparto.","arts. 1061 y 1068 CC",RV_V,null,
+(c)=>c.R?c.B.filter((b)=>b.adjudicadoA&&!b.legatarioId&&c.P.some((p)=>p.id===b.adjudicadoA&&!p.renuncia&&!(c.derechos[p.id]||[]).length)).map((b)=>B_(b)):false);
+rg("ARI-06","aritmetica","revisar","Exceso de adjudicación sin compensación declarada","Un heredero recibe más de lo que le corresponde. Sin compensación en dinero, el exceso sería una donación.","art. 1062 CC · art. 7.2.B RDLeg 1/1993",RV_V,{sec:"firma"},
+(c)=>c.C&&rvArr(c.C.excesos).length&&!(c.x.firma&&c.x.firma.dec&&c.x.firma.dec.compensacion)?c.C.excesos.map((e)=>({s:e.nombre,d:`Exceso de ${rvEur(e.exceso)}.`,ir:{sec:"particion"}})):false);
+rg("ARI-07","aritmetica","bloquea","Valor que no se entiende","El importe escrito no se entiende y cuenta como 0: la masa y el impuesto salen mal.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.B.filter((b)=>["valor","valorReferencia","valorCatastralTotal","valorCatastralSuelo","valorAdq"].some((k)=>rvIlegible(b[k]))).map((b)=>B_(b)));
+rg("ARI-08","aritmetica","revisar","Bien sin valor","Un bien sin valor no computa en la masa ni en el impuesto.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.B.filter((b)=>!rvNum(b.valor)&&!rvNum(b.valorReferencia)&&!rvIlegible(b.valor)).map((b)=>B_(b)));
+rg("ARI-09","aritmetica","bloquea","Proindiviso sin porcentaje válido","En un bien del que el causante tenía solo una parte, el porcentaje tiene que estar entre 0 y 100.","arts. 392-393 CC",RV_V,null,
+(c)=>c.B.filter((b)=>b.titularidad==="proindiviso"&&(rvVacio(b.porcentaje)||rvIlegible(b.porcentaje)||rvNum(b.porcentaje)<=0||rvNum(b.porcentaje)>100)).map((b)=>B_(b,{d:rvVacio(b.porcentaje)?"Sin porcentaje: se calcula como si fuera el 100 %.":`Anotado: «${String(b.porcentaje)}».`})));
+rg("ARI-10","aritmetica","bloquea","Valor catastral del suelo mayor que el total","El valor del suelo es una parte del valor catastral total: no puede ser mayor.","art. 107.2.a TRLRHL",RV_V,null,
+(c)=>c.inm.filter((b)=>rvNum(b.valorCatastralSuelo)>rvNum(b.valorCatastralTotal)&&rvNum(b.valorCatastralTotal)>0).map((b)=>B_(b)));
+rg("ARI-11","aritmetica","revisar","Valor catastral mayor que el declarado","El valor catastral total supera el valor de mercado declarado: es raro y suele ser un error al teclear.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.inm.filter((b)=>rvNum(b.valor)>0&&rvNum(b.valorCatastralTotal)>rvNum(b.valor)).map((b)=>B_(b)));
+rg("ARI-12","aritmetica","revisar","Valor de referencia desproporcionado","El valor de referencia es más del doble o menos de la mitad del valor declarado: comprueba que no falta o sobra un cero.","art. 9 Ley 29/1987",RV_V,null,
+(c)=>c.inm.filter((b)=>{const v=rvNum(b.valor),r=rvNum(b.valorReferencia);return v>0&&r>0&&(r>v*2||r<v/2);}).map((b)=>B_(b,{d:`Declarado ${rvEur(rvNum(b.valor))}; referencia ${rvEur(rvNum(b.valorReferencia))}.`})));
+rg("ARI-13","aritmetica","bloquea","Los legados superan la herencia","El valor de lo legado supera el caudal neto: primero se paga a los acreedores y los legados se reducen.","arts. 887-891 y 1027 CC",RV_V,{sec:"herencia"},
+(c)=>{if(!c.R)return false;const s=c.B.filter((b)=>b.legatarioId&&c.P.some((p)=>p.id===b.legatarioId&&!p.renuncia)).reduce((a,b)=>a+rvValorB(b),0),n=rvNum(c.R.isd.masa.neto);return s>0&&s>n+1?{d:`Legados ${rvEur(s)}; caudal neto ${rvEur(n)}.`}:false;});
+rg("ARI-14","aritmetica","revisar","Más deudas que bienes","El pasivo supera al activo. Antes de aceptar, valora la aceptación a beneficio de inventario o la renuncia.","arts. 1003, 1010-1034 CC",RV_V,{tramite:"inventario_plazo"},
+(c)=>c.R&&rvNum(c.R.isd.masa.pasivoExcede)>0?{d:`Exceso de pasivo: ${rvEur(c.R.isd.masa.pasivoExcede)}.`}:false);
+rg("ARI-15","aritmetica","bloquea","Edad que no se entiende","La edad escrita no se entiende: se trata como desconocida y cambia el grupo y el valor del usufructo.","art. 20.2.a Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>(!rvVacio(p.edad)&&rvEdad(p)==null)||(rvVacio(p.edad)&&!rvVacio(p.edadTexto))).map((p)=>P_(p)));
+rg("ARI-16","aritmetica","revisar","Edad poco verosímil","La edad supera los 110 años: comprueba el dato.","art. 26 Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>rvEdad(p)!=null&&rvEdad(p)>110).map((p)=>P_(p)));
+rg("ARI-17","aritmetica","bloquea","Fecha del fallecimiento futura","La fecha del fallecimiento es posterior a hoy.","art. 657 CC",RV_V,{act:"editar"},
+(c)=>!!(c.f&&c.f>c.h));
+rg("ARI-18","aritmetica","bloquea","Fecha del fallecimiento que no se entiende","La fecha escrita no es una fecha válida: no hay plazos ni cálculo hasta corregirla.","art. 657 CC",RV_V,{act:"editar"},
+(c)=>!rvVacio(c.x.fecha)&&!c.f);
+rg("ARI-19","aritmetica","bloquea","Adquisición posterior al fallecimiento","El inmueble consta adquirido después de la muerte del causante: es imposible.","art. 104 TRLRHL",RV_V,null,
+(c)=>c.f?c.inm.filter((b)=>rvFecha(b.fechaAdq)&&b.fechaAdq>c.f).map((b)=>B_(b,{d:`Adquirido el ${rvFC(b.fechaAdq)}.`})):false);
+rg("ARI-20","aritmetica","revisar","Fecha de adquisición muy antigua","La fecha de adquisición es anterior a 1900: comprueba el dato.","art. 107.4 TRLRHL",RV_V,null,
+(c)=>c.inm.filter((b)=>rvFecha(b.fechaAdq)&&b.fechaAdq<"1900-01-01").map((b)=>B_(b)));
+rg("ARI-21","aritmetica","bloquea","Importe del seguro que no se entiende","El importe del seguro de vida no se entiende o es negativo.","art. 3.1.c Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>rvIlegible(p.seguro)||rvNum(p.seguro)<0).map((p)=>P_(p)));
+rg("ARI-22","aritmetica","revisar","Edades incoherentes entre padres e hijos del causante","Un hijo del causante tiene casi la misma edad o más que un ascendiente del causante.","art. 26 Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>{const a=c.P.filter((p)=>rvLinea(p)==="asc"&&rvEdad(p)!=null),h=c.P.filter((p)=>p.relacion==="hijo"&&rvEdad(p)!=null);return a.length&&h.length&&Math.max(...h.map(rvEdad))>Math.min(...a.map(rvEdad))-24?{d:`Hijo de ${Math.max(...h.map(rvEdad))} años; ascendiente de ${Math.min(...a.map(rvEdad))}.`}:false;});
+rg("ARI-23","aritmetica","revisar","Nieto de edad incoherente con su progenitor","El nieto tiene casi la misma edad o más que el hijo del que desciende.","art. 26 Ley 29/1987",RV_V,null,
+(c)=>c.P.filter((p)=>p.relacion==="nieto"&&rvEdad(p)!=null).filter((p)=>{const g=c.porNombre(p.estirpe);return g&&rvEdad(g)!=null&&rvEdad(p)>rvEdad(g)-12;}).map((p)=>P_(p)));
+rg("ARI-24","aritmetica","bloquea","Persona duplicada","Hay dos personas con el mismo NIF o el mismo nombre: heredarían dos veces.","art. 156 Reglamento Notarial",RV_V,{sec:"herencia"},
+(c)=>{const vis=new Map(),out=[];for(const p of c.P)for(const k of[rvVacio(p.nif)?"":"n:"+String(p.nif).toUpperCase().replace(/[\s.\-]/g,""),rvNorm(p.nombre)?"m:"+rvNorm(p.nombre):""].filter(Boolean)){if(vis.has(k)&&vis.get(k)!==p){out.push(P_(p));break;}vis.set(k,p);}return out;});
+rg("ARI-25","aritmetica","bloquea","Bien duplicado","Dos bienes tienen la misma referencia catastral o el mismo IBAN: el inventario lo cuenta dos veces.","art. 1061 CC",RV_V,null,
+(c)=>{const vis=new Set(),out=[];for(const b of c.B){const k=[b.refCatastral&&"r:"+String(b.refCatastral).toUpperCase().replace(/[\s\-.]/g,""),b.iban&&"i:"+String(b.iban).toUpperCase().replace(/[^A-Z0-9]/g,"")].filter(Boolean);if(k.some((q)=>vis.has(q)))out.push(B_(b));k.forEach((q)=>vis.add(q));}return out;});
+rg("ARI-26","aritmetica","consejo","Porcentaje en un bien privativo","El bien es privativo y tiene un porcentaje anotado que no se usa. Si el causante tenía solo una parte, márcalo como «una parte».","arts. 392-393 CC",RV_V,null,
+(c)=>c.B.filter((b)=>(b.titularidad||"privativo")==="privativo"&&!rvVacio(b.porcentaje)&&rvNum(b.porcentaje)!==100).map((b)=>B_(b)));
+rg("ARI-27","aritmetica","bloquea","Deuda o gasto que no se entiende","Un importe de deudas o gastos no se entiende o es negativo y cuenta como 0.","arts. 13-14 Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>[...rvArr(c.x.deudas),...rvArr(c.x.gastos)].some((d)=>rvIlegible(d.importe)||rvNum(d.importe)<0));
+rg("ARI-28","aritmetica","revisar","Deudas mayores que el valor de los inmuebles","La hipoteca y demás deudas superan el valor de todos los inmuebles: comprueba el importe pendiente a la fecha del fallecimiento.","art. 13 Ley 29/1987",RV_V,{sec:"herencia"},
+(c)=>{const d=rvArr(c.x.deudas).reduce((s,q)=>s+rvNum(q.importe),0),v=c.inm.reduce((s,b)=>s+Math.max(rvNum(b.valor),rvNum(b.valorReferencia)),0);return c.inm.length&&d>v&&d>0?{d:`Deudas ${rvEur(d)}; inmuebles ${rvEur(v)}.`}:false;});
+rg("ARI-29","aritmetica","revisar","Saldo certificado distinto del declarado","El saldo del certificado no coincide con el valor anotado del bien.","art. 24 Ley 29/1987",RV_V,null,
+(c)=>c.B.filter((b)=>!rvVacio(b.saldoCert)&&Math.abs(rvNum(b.saldoCert)-rvNum(b.valor))>1).map((b)=>B_(b,{d:`Certificado ${rvEur(rvNum(b.saldoCert))}; anotado ${rvEur(rvNum(b.valor))}.`,ir:CAMPO(`rv-b-${b.id}-saldoCert`)})));
+rg("ARI-30","aritmetica","revisar","Mejora en una sucesión con porcentajes que no la recogen","Hay una mejora anotada y el porcentaje del descendiente no llega a su parte de legítima más la mejora.","arts. 808 y 823 CC",RV_V,null,
+(c)=>{if(!c.porc||!c.comun)return false;const n=c.desc.length||1;return c.desc.filter((p)=>rvNum(p.mejoraPct)>0&&rvNum(p.pct)+0.01<rvNum(p.mejoraPct)+100/3/n).map((p)=>P_(p));});
+function rvEvaluar(x,o={}){
+if(!x||typeof x!=="object")return{hallazgos:[],cuenta:{bloquea:0,revisar:0,consejo:0},reglas:RV_REGLAS.length,errores:[],hoy:""};
+const c=rvCtx(x,o),out=[],errores=[];
+for(const r of RV_REGLAS){
+let v;try{v=r.f(c);}catch(e){errores.push(r.id+": "+((e&&e.message)||e));continue;}
+if(!v)continue;
+for(const q of Array.isArray(v)?v:[v===true?{}:v]){
+if(!q)continue;
+out.push({id:r.id,fam:r.fam,g:q.g||r.g,titulo:r.t,sujeto:q.s||"",explicacion:r.e,detalle:q.d||"",norma:q.n||r.n,estado:q.est||r.est,ir:q.ir||r.ir||null});
+}
+}
+out.sort((a,b)=>RV_GN[a.g].o-RV_GN[b.g].o||RV_FAM.findIndex((f)=>f[0]===a.fam)-RV_FAM.findIndex((f)=>f[0]===b.fam)||a.id.localeCompare(b.id));
+const cuenta={bloquea:0,revisar:0,consejo:0};for(const h of out)cuenta[h.g]++;
+return{hallazgos:out,cuenta,reglas:RV_REGLAS.length,errores,hoy:c.h};
+}
+function rvRevisar(x,o={}){
+const f=()=>{
+let R=null,L=null,C=null;
+try{R=typeof calcular==="function"?calcular(x):null;}catch(e){R=null;}
+if(R){try{L=typeof lgCalcular==="function"?lgCalcular(x,R):null;}catch(e){L=null;}try{C=typeof cuadroParticion==="function"?cuadroParticion(x,R):null;}catch(e){C=null;}}
+return rvEvaluar(x,{R,L,C,hoy:o.hoy});
+};
+return!o.hoy&&typeof calcMemo==="function"?calcMemo("rv",x,f):f();
+}
+const RV_IRTXT={sec:{particion:"Partición",herencia:"Herederos y bienes",impuestos:"Impuestos",estrategia:"Estrategia fiscal",tramites:"Trámites",despacho:"Documentos recibidos",firma:"Listo para firmar",normativa:"Normativa",revision:"Completar dato"}};
+function rvBtn(en){
+if(!en)return"";
+const a=en.campo?`data-rvfoco="${esc(en.campo)}"`:en.sec?(en.sec==="revision"?`data-rvfoco="rv-datos"`:`data-sec="${esc(en.sec)}"${en.sub?` data-sub="${esc(en.sub)}"`:""}`):en.tramite?`data-topen="${esc(en.tramite)}"`:en.bien?`data-editb="${esc(en.bien)}"`:en.persona?`data-editp="${esc(en.persona)}"`:en.act?`data-act="${esc(en.act)}"`:en.doc?`data-doc="${esc(en.doc)}"`:"";
+const t=en.campo?"Completar dato":en.sec?RV_IRTXT.sec[en.sec]||"Abrir":en.tramite?"Ver trámite":en.bien?"Abrir bien":en.persona?"Abrir ficha":en.act==="editar"?"Completar datos":"Abrir";
+return a?`<button class="btn sm gray rv-go" ${a}>${esc(t)}</button>`:"";
+}
+const rvTag=(e)=>(e===RV_P?'<span class="tag P">En verificación</span>':e===RV_V?'<span class="tag V">Verificado</span>':"");
+function rvFila(h,terr){
+const norma=h.norma?(typeof linkNorma==="function"?h.norma.split(" · ").map((n)=>linkNorma(n,terr)).join(" · "):esc(h.norma)):"";
+return`<div class="dg-row rv-row" data-rv="${esc(h.id)}"><i class="dg-dot ${RV_GN[h.g].c}" aria-hidden="true"></i><div class="dg-t"><b>${esc(h.titulo)}${h.sujeto?`<span class="rv-suj"> · ${esc(h.sujeto)}</span>`:""}</b><small>${esc(h.explicacion)}</small>${h.detalle?`<div class="dg-acc"><span class="dg-arrow" aria-hidden="true">→</span>${esc(h.detalle)}</div>`:""}<div class="dg-meta"><span>${esc(RV_FN[h.fam])}</span>${norma?`<span class="dg-norma">${norma}</span>`:""}${rvTag(h.estado)}<span class="mono rv-id">${esc(h.id)}</span></div></div><div class="dg-go-w">${rvBtn(h.ir)}</div></div>`;
+}
+const RV_KCLS={bloquea:"bad",revisar:"warn",consejo:"info"};
+const RV_KSUB={bloquea:"impiden presentar o firmar",revisar:"pueden costar dinero o un recurso",consejo:"ahorros y trámites que conviene valorar"};
+function rvContador(k,n,on){
+return`<button class="rd-kpi ${n?RV_KCLS[k]:"zero"}" data-rvg="${k}" aria-pressed="${on}"><span class="rd-kl">${esc(RV_GN[k].t)}</span><b class="num">${n}</b><small>${RV_KSUB[k]}</small></button>`;
+}
+function tRevision(x,R){
+const A=rvRevisar(x),terr=typeof terrISD==="function"?terrISD(x):x.ccaa;
+const g=ui.rvg||"",fam=ui.rvf||"";
+const L=A.hallazgos.filter((h)=>(!g||h.g===g)&&(!fam||h.fam===fam));
+const k=A.cuenta,tot=k.bloquea+k.revisar+k.consejo;
+const lede=!tot?"Ninguna regla encuentra incoherencias con los datos actuales.":k.bloquea?`${rvPl(k.bloquea,"punto impide","puntos impiden")} presentar o firmar tal como está. Empieza por «${A.hallazgos[0].titulo}».`:k.revisar?`Nada impide presentar, pero hay ${rvPl(k.revisar,"punto","puntos")} que conviene revisar antes.`:"Nada impide presentar. Quedan consejos que pueden ahorrar dinero o trámites.";
+const fams=RV_FAM.map(([f,t])=>{const n=A.hallazgos.filter((h)=>h.fam===f&&(!g||h.g===g)).length;return`<button class="chip-r" data-rvfam="${f}" aria-pressed="${fam===f}">${esc(t)} <span class="num">${n}</span></button>`;}).join("");
+const grupos=RV_GRAV.filter(([q])=>!g||q===g).map(([q,t])=>{const G=L.filter((h)=>h.g===q);return G.length?`<div class="sectitle flex"><b>${esc(t)}</b><span>${G.length}</span></div><div class="group dg-list">${G.map((h)=>rvFila(h,terr)).join("")}</div>`:"";}).join("");
+return`<div class="rv">
+    <div class="card rv-hero ${k.bloquea?"bad":tot?"warn":"ok"}"><div class="k">Revisión del expediente</div><h2>${k.bloquea?"No está listo para presentar":tot?"Listo, con puntos a revisar":"Coherente"}</h2><p>${esc(lede)}</p><p class="caption">${A.reglas} reglas comprobadas el ${esc(rvFC(A.hoy))} en cuatro familias: civil, fiscal, documental y aritmética. Cada una cita su norma.</p></div>
+    <div class="rd-kpis rv-kpis" role="group" aria-label="Filtrar por gravedad">${RV_GRAV.map(([q])=>rvContador(q,k[q],g===q)).join("")}</div>
+    <div class="rv-fams" role="group" aria-label="Filtrar por familia"><button class="chip-r" data-rvfam="" aria-pressed="${!fam}">Todas <span class="num">${A.hallazgos.filter((h)=>!g||h.g===g).length}</span></button>${fams}</div>
+    ${L.length?grupos:`<div class="card empty dg-empty"><b>${tot?"Nada con este filtro":"Nada que corregir"}</b>${tot?"Quita el filtro para ver el resto.":"Las reglas de coherencia no encuentran nada con los datos actuales."}</div>`}
+    ${rvDatosHTML(x,R)}
+    <p class="foot-note">La revisión aplica reglas escritas sobre los datos del expediente y el cálculo del motor, sin inteligencia artificial. Señala lo que no cuadra y cita la norma; la decisión es del abogado.</p></div>`;
+}
+function rvFranja(x){
+let A;try{A=rvRevisar(x);}catch(e){return"";}
+const k=A.cuenta,seg=(q,n,s1,p)=>`<button class="rd-sg ${n?RV_KCLS[q]:""}" data-rvir="${q}"><b class="num">${n}</b> ${n===1?s1:p}</button>`;
+return`<div class="rd-strip rv-strip" role="group" aria-label="Revisión del expediente"><button class="rd-sh" data-rvir=""><span class="rd-si">${I.tick}</span><b>Revisión</b></button>${seg("bloquea",k.bloquea,"bloquea presentar","bloquean presentar")}<i aria-hidden="true"></i>${seg("revisar",k.revisar,"a revisar","a revisar")}<i aria-hidden="true"></i>${seg("consejo",k.consejo,"consejo","consejos")}<button class="rd-sgo" data-rvir="">${A.reglas} reglas ${I.chev}</button></div>`;
+}
+function rvAviso(x,que="este escrito"){
+let A;try{A=rvRevisar(x);}catch(e){return"";}
+const k=A.cuenta,B=A.hallazgos.filter((h)=>h.g==="bloquea");
+if(!k.bloquea&&!k.revisar)return`<div class="infobar rv-aviso ok" role="status"><span class="ico green">${I.tick}</span><span><b>Revisión del expediente sin bloqueos.</b> ${k.consejo?rvPl(k.consejo,"consejo")+" pendiente"+(k.consejo===1?"":"s")+".":""}</span></div>`;
+return`<div class="infobar rv-aviso ${k.bloquea?"bad":"warn"}" role="${k.bloquea?"alert":"status"}"><span class="ico ${k.bloquea?"red":"orange"}">${I.info}</span><span><b>Antes de usar ${esc(que)}:</b> ${k.bloquea?`${rvPl(k.bloquea,"punto impide","puntos impiden")} presentar o firmar`:"nada impide presentar"}${k.revisar?`${k.bloquea?" y hay":", pero hay"} ${rvPl(k.revisar,"punto","puntos")} a revisar`:""}.${B.length?` ${esc(B.slice(0,3).map((h)=>h.titulo+(h.sujeto?" ("+h.sujeto+")":"")).join("; "))}${B.length>3?"…":"."}`:""} <button class="link" data-rvir="${k.bloquea?"bloquea":"revisar"}">Ver la revisión ›</button></span></div>`;
+}
+const rvGet=(o,k)=>k.split(".").reduce((a,q)=>(a&&typeof a==="object"?a[q]:undefined),o);
+function rvSet(o,k,v){const p=k.split(".");let a=o;for(const q of p.slice(0,-1)){if(!a[q]||typeof a[q]!=="object")a[q]={};a=a[q];}if(v===""||v===false||v==null)delete a[p[p.length-1]];else a[p[p.length-1]]=v;}
+function rvCampo(id,label,attrs,v,tipo="text",hint="",opts=null){
+if(tipo==="check")return`<div class="row toggle"><span class="t"><b>${esc(label)}</b>${hint?`<small>${esc(hint)}</small>`:""}</span><label class="switch"><input type="checkbox" id="${id}" ${attrs} ${v?"checked":""} aria-label="${esc(label)}"><span></span></label></div>`;
+const ctl=opts?`<select id="${id}" ${attrs}>${opts.map(([k,t])=>`<option value="${esc(k)}" ${String(v??"")===k?"selected":""}>${esc(t)}</option>`).join("")}</select>`:`<input id="${id}" ${attrs} ${tipo==="date"?'type="date"':tipo==="num"?'inputmode="decimal"':""} value="${esc(tipo==="num"&&typeof numStr==="function"?numStr(v):v??"")}">`;
+return`<div class="field"><label for="${id}">${esc(label)}</label>${ctl}${hint?`<span class="hint">${esc(hint)}</span>`:""}</div>`;
+}
+function rvDatosHTML(x,R){
+const P=rvArr(x.personas),B=rvArr(x.bienes),testado=x.testamento==="porcentajes"||x.testamento==="usufructo";
+const fx=(k,label,tipo,hint,opts)=>rvCampo("rv-x-"+k,label,`data-rvx="${k}"`,rvGet(x,k),tipo,hint,opts);
+const cony=P.find((p)=>p.relacion==="conyuge"&&!p.renuncia&&!p.separado);
+const usuV=!!cony&&(x.testamento==="usufructo"||x.testamento==="no");
+const tes=`${fsecH("Testamento y certificados","Fechas para cotejar el testamento con el certificado de últimas voluntades.")}<div class="group">
+    ${fx("testamentoDatos.tipo","Tipo de testamento","sel","",[["","Sin indicar"],["abierto","Abierto notarial"],["cerrado","Cerrado"],["ológrafo","Ológrafo (escrito a mano)"],["mancomunado","Mancomunado"]])}
+    ${fx("testamentoDatos.fecha","Fecha del último testamento según el certificado","date","La que figura en el certificado de últimas voluntades.")}
+    ${fx("testamentoCopiaFecha","Fecha del testamento cuya copia se usa","date")}
+    ${fx("ultimasExpedido","Fecha de expedición del certificado de últimas voluntades","date")}
+    ${x.testamento==="usufructo"?fx("cautelaSocini","¿El testamento incluye cautela socini?","sel","",[["","Sin indicar"],["si","Sí"],["no","No"]]):""}
+    ${/ol[oó]grafo/i.test(String(rvGet(x,"testamentoDatos.tipo")||""))||x.situ?.olografo?fx("olografoProtocolizado","Ológrafo adverado y protocolizado","check"):""}
+    ${/cerrado/i.test(String(rvGet(x,"testamentoDatos.tipo")||""))||x.situ?.testamentoCerrado?fx("cerradoAbierto","Testamento cerrado abierto ante notario","check"):""}</div>`;
+const pz=`${fsecH("Plazos y matrimonio","")}<div class="group">
+    ${fx("prorrogaFecha","Fecha en que se pidió la prórroga de Sucesiones","date")}
+    ${fx("prorrogaPlusvalia","Prórroga pedida también en la plusvalía","check","La de Sucesiones no la alcanza (art. 110.2.b TRLRHL).")}
+    ${x.fecha&&String(x.fecha).slice(5)<"07-01"?fx("irpfAnteriorPresentada","Renta del año anterior ya presentada","check"):""}
+    ${x.civil==="gananciales"||x.civil==="separacion"||x.civil==="viudo"?fx("matrimonioFecha","Fecha del matrimonio","date")+fx("capitulacionesFecha","Fecha de las capitulaciones","date","Déjala vacía si no hay."):""}
+    ${usuV?fx("conmutacion.modo","Conmutación del usufructo del viudo","sel","",[["","No se conmuta"],["capital","Por un capital en dinero"],["renta","Por una renta vitalicia"],["bienes","Por bienes concretos"]])+(rvGet(x,"conmutacion.modo")?fx("conmutacion.valor","Valor de la conmutación (€)","num")+fx("conmutacion.acuerdo","Hay acuerdo con el viudo","check")+fx("conmutacion.fecha","Fecha de la conmutación","date"):""):""}</div>`;
+const fp=(p,k,label,tipo,hint,opts)=>rvCampo(`rv-p-${p.id}-${k}`,label,`data-rvp="${esc(p.id)}" data-rvk="${k}"`,p[k],tipo,hint,opts);
+const pers=P.map((p)=>{
+const lin=rvLinea(p),legit=["desc","asc","conyuge"].includes(lin);
+const f=[testado&&legit?fp(p,"desheredado","Desheredado en el testamento","check"):"",p.desheredado?fp(p,"causaDesheredacion","Causa de la desheredación","sel","",[["","Sin indicar"],...RV_CAUSAS.map(([k,t])=>[k,t])]):"",testado&&lin==="desc"?fp(p,"mejoraPct","Mejora (% de la herencia)","num"):"",testado?fp(p,"sustituto","Sustituto si no hereda","sel","",[["","Ninguno"],...P.filter((q)=>q.id!==p.id).map((q)=>[q.id,rvNom(q)])]):"",p.renuncia?fp(p,"renunciaAFavor","Renuncia en favor de otra persona","check"):"",p.renuncia&&rvEdad(p)!=null&&rvEdad(p)<18?fp(p,"autorizacionJudicial","Con autorización judicial","check"):"",fp(p,"noResidente","Reside fuera de España","check"),p.fiduciario?fp(p,"fideicomisario","Fideicomisario","text"):""].filter(Boolean).join("");
+return f?`<div class="rv-sub">${esc(rvNom(p))}</div><div class="group">${f}</div>`:"";
+}).join("");
+const fb=(b,k,label,tipo,hint,opts)=>rvCampo(`rv-b-${b.id}-${k}`,label,`data-rvb="${esc(b.id)}" data-rvk="${k}"`,b[k],tipo,hint,opts);
+const bien=B.map((b)=>{
+const f=rvInm(b)?fb(b,"notaSimpleFecha","Fecha de la nota simple","date")+fb(b,"adqTitulo","Cómo lo adquirió el causante","sel","",[["","Sin indicar"],["compra","Compra"],["herencia","Herencia"],["donacion","Donación"],["otro","Otro"]]):b.tipo==="cuenta"||b.tipo==="valores"?fb(b,"saldoFecha","Fecha del certificado de saldo o posición","date")+fb(b,"saldoCert","Importe certificado (€)","num"):"";
+return f?`<div class="rv-sub">${esc(rvNomB(b))}</div><div class="group">${f}</div>`:"";
+}).join("");
+const abierto=(ui.fopt&&ui.fopt["rv-datos"])??false;
+return`<details class="fopt rv-datos" id="rv-datos" data-fopt="rv-datos" ${abierto?"open":""}><summary><span><b>Datos que usa la revisión</b><br>Fechas de certificados, desheredaciones, mejoras, sustitutos y otros datos que no se piden en las fichas.</span></summary>${tes}${pz}${pers?fsecH("Personas","")+pers:""}${bien?fsecH("Bienes","")+bien:""}</details>`;
+}
+function rvIr(g){ui.rvg=g||null;ui.rvf=null;if(typeof go==="function"&&ui.vista==="exp"){ui.sec="revision";ui.sheet=null;render();window.scrollTo(0,0);}}
+function rvFoco(id){
+ui.fopt=ui.fopt||{};ui.fopt["rv-datos"]=true;ui.sec="revision";ui.sheet=null;ui.rvg=null;ui.rvf=null;render();
+setTimeout(()=>{const n=document.getElementById(id)||document.getElementById("rv-datos");if(!n)return;n.scrollIntoView({behavior:"smooth",block:"center"});try{n.focus({preventScroll:true});}catch(e){n.focus();}},200);
+}
+if(typeof document!=="undefined"){
+document.addEventListener("click",(e)=>{
+const t=e.target&&e.target.closest?e.target.closest("[data-rvg],[data-rvfam],[data-rvir],[data-rvfoco]"):null;if(!t)return;
+const app=document.getElementById("app");if(app&&!app.contains(t))return;
+e.preventDefault();e.stopPropagation();const d=t.dataset;
+if(d.rvfoco!=null)return rvFoco(d.rvfoco);
+if(d.rvir!=null)return rvIr(d.rvir);
+if(d.rvg!=null){ui.rvg=ui.rvg===d.rvg?null:d.rvg;render();return;}
+if(d.rvfam!=null){ui.rvf=d.rvfam&&ui.rvf!==d.rvfam?d.rvfam:null;render();return;}
+},true);
+document.addEventListener("change",(e)=>{
+const t=e.target;if(!t||!t.dataset||!(t.dataset.rvx||t.dataset.rvp||t.dataset.rvb))return;
+e.stopPropagation();
+const x=typeof exp==="function"?exp():null;if(!x)return;
+const v=t.type==="checkbox"?t.checked:String(t.value||"").trim();
+if(t.dataset.rvx)rvSet(x,t.dataset.rvx,v);
+else{const L=t.dataset.rvp?x.personas:x.bienes,o=rvArr(L).find((q)=>q.id===(t.dataset.rvp||t.dataset.rvb));if(!o)return;rvSet(o,t.dataset.rvk,v);}
+if(typeof guardar==="function")guardar();
+setTimeout(()=>{const a=document.activeElement,id=a&&a.id&&a!==document.body?a.id:t.id;render();const n=document.getElementById(id);if(n){try{n.focus({preventScroll:true});}catch(er){n.focus();}}},0);
+},true);
+}
 const TM_CATS=[["reunion","Reuniones y llamadas"],["documentacion","Documentación e inventario"],["tramites","Trámites"],["particion","Partición"],["impuestos","Impuestos y estrategia"],["escritos","Escritos e informes"],["otro","Otras tareas"]];
 const TM_PRESETS=[["Reunión con la familia","reunion"],["Llamada con el cliente","reunion"],["Revisión de documentación","documentacion"],["Inventario y valoración de bienes","documentacion"],["Partición","particion"],["Liquidación del Impuesto sobre Sucesiones","impuestos"],["Plusvalía municipal","impuestos"],["Estrategia fiscal","impuestos"],["Preparación de la escritura","escritos"],["Escritos e informes","escritos"],["Firma en notaría","tramites"],["Inscripción en el Registro","tramites"],["Desplazamiento","otro"]];
 const TM_SEC={resumen:["Revisión del expediente","otro"],tramites:["Trámites","tramites"],herencia:["Herederos y bienes","documentacion"],particion:["Partición","particion"],impuestos:["Impuestos","impuestos"],estrategia:["Estrategia fiscal","impuestos"],segunda:["Dos herencias","impuestos"],diagnostico:["Revisión del expediente","otro"],normativa:["Estudio de normativa","otro"],documentos:["Documentos y escritos","escritos"]};
@@ -9596,10 +10622,11 @@ for(let i=1;i<=paginas;i++){
 if(paginas>6)lecProgreso(`${LEC.estado?.base||"Leyendo"} · página ${i} de ${paginas}`);
 const pg=await doc.getPage(i);const tc=await pg.getTextContent();
 const F=await lecCamposFormulario(pg);campos+=F.length;
-const its=tc.items.filter((it)=>it.str&&it.str.trim()).map((it)=>({x:it.transform[4],y:it.transform[5],h:Math.abs(it.transform[3])||it.height||10,s:it.str})).concat(F).sort((a,b)=>b.y-a.y||a.x-b.x);
+const its=tc.items.filter((it)=>it.str&&it.str.trim()).map((it)=>({x:it.transform[4],y:it.transform[5],h:Math.abs(it.transform[3])||it.height||10,w:it.width,s:it.str})).concat(F).sort((a,b)=>b.y-a.y||a.x-b.x);
 const filas=[];for(const it of its){const f=filas[filas.length-1];if(f&&Math.abs(f.y-it.y)<=Math.max(2,Math.min(f.h,it.h)*0.35))f.items.push(it);else filas.push({y:it.y,h:it.h,items:[it]});}
 const lineas=filas.map((f)=>f.items.sort((a,b)=>a.x-b.x).map((q)=>q.s).join(" ").replace(/\s{2,}/g," ").trim());
 const t=lineas.join("\n");textos.push(t);
+if(typeof orgGeoPdf==="function")orgGeoPdf(i,pg,filas,t);
 const largo=t.replace(/\s/g,"").length>60,mal=largo&&lecTextoIlegible(t);
 if(!largo||mal){sinTexto.push(i);if(mal)ilegibles++;}
 }
@@ -9616,7 +10643,7 @@ ocr++;lecProgreso(`${LEC.estado?.base||"Leyendo"} · reconociendo la página ${i
 const vp=pg.getViewport({scale:Math.min(4,Math.max(2,1800/vp1.width))});
 const c=document.createElement("canvas");c.width=vp.width;c.height=vp.height;
 await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
-const r=await lecOcrFoto(c);
+LEC.geoPag=i;const r=await lecOcrFoto(c);LEC.geoPag=0;
 textos[i-1]=r.texto;for(const a of r.avisos)if(!avisos.includes(a))avisos.push(a);
 }
 if(ilegibles)avisos.push(`El texto de ${ilegibles===1?"una página":ilegibles+" páginas"} del PDF no se podía interpretar (fuentes sin mapa de caracteres o capa de texto defectuosa): se ${ilegibles===1?"ha":"han"} leído por imagen.`);
@@ -9625,7 +10652,7 @@ if(doc.numPages>paginas)avisos.push(`Documento de ${doc.numPages} páginas: se h
 let adjuntos=[];
 try{const A=await doc.getAttachments();if(A)adjuntos=Object.values(A).filter((a)=>a&&a.content&&a.content.length).map((a)=>new File([a.content],a.filename||"adjunto",{type:lecMime(a.filename)}));}catch(e){}
 if(adjuntos.length)avisos.push(`El PDF lleva ${adjuntos.length===1?"un archivo adjunto, que también se lee":adjuntos.length+" archivos adjuntos, que también se leen"}.`);
-return{texto:textos.join("\n\f\n"),escaneado:ocr>0&&ocr>=(paginas-blancas)/2,paginas:doc.numPages,avisos,adjuntos};
+return{texto:textos.join("\n\f\n"),escaneado:ocr>0&&ocr>=(paginas-blancas)/2,paginas:doc.numPages,avisos,adjuntos,clave};
 }
 function lecEnBlanco(c){const d=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<d.length;i+=4)if(d[i]*0.3+d[i+1]*0.59+d[i+2]*0.11<150)n++;return n<(d.length/4)*0.002;}
 const LEC_OCR_LETRA={0:"DOQ",1:"TIL",2:"Z",4:"A",5:"S",6:"G",7:"T",8:"B",O:"QD",Q:"O",D:"O",I:"TL",L:"T",T:"IL",Z:"",B:"",S:"",G:"",U:"V",V:"Y",Y:"V",H:"N",N:"H",M:"N",P:"R",R:"P",C:"G",K:"X",X:"K",J:"",F:"P",W:""};
@@ -9648,7 +10675,7 @@ function lecCompletarNif(t){
 const nifs=[];const s=String(t||"").replace(/((?:N\.?\s?I\.?\s?F|D\.?\s?N\.?\s?I|N\.?\s?I\.?\s?E)\.?\s*[:：]?\s*)(\d{8})(?=\s*[,;.)]|\s+(?:y|e|casad|vecin|mayor|titular|soltero|viud)\b|\s*$)/gim,(m,a,n)=>{const v=n+"TRWAGMYFPDXBNJZSQVHLCKE"[Number(n)%23];nifs.push(v);return a+v;});
 return{t:s,n:nifs.length,nifs};
 }
-async function lecOcrCanvas(c){const w=await lecOcr();const r=await w.recognize(c);return{texto:r.data.text||"",conf:Number(r.data.confidence)||0};}
+async function lecOcrCanvas(c){const w=await lecOcr();const r=await w.recognize(c);return{texto:r.data.text||"",conf:Number(r.data.confidence)||0,w:c.width,h:c.height,palabras:(r.data.words||[]).map((q)=>[q.text,q.bbox.x0,q.bbox.y0,q.bbox.x1,q.bbox.y1])};}
 function lecEstirar(g,loMax=255){
 const h=new Uint32Array(256);for(let i=0;i<g.length;i++)h[g[i]]++;
 const n=g.length;let lo=0,hi=255,a=0;
@@ -9748,6 +10775,7 @@ if(Math.abs(L.angulo)>=0.3)avisos.push(`La imagen estaba torcida (${String(Math.
 if(r.conf&&r.conf<55)avisos.push("La imagen se lee con dificultad (poca nitidez o contraste): revisa con especial cuidado lo propuesto o sube una foto mejor, de frente y con buena luz.");
 let texto=r.texto;
 if(!LEC.basico){const c=lecCompletarNif(lecLimpiarOcr(texto));texto=c.t;if(c.n)avisos.push(`No se leía la letra de ${c.n===1?"un NIF":c.n+" NIF"} (${c.nifs.join(", ")}): se ha calculado con su número. Compruébal${c.n===1?"o":"os"} en el documento.`);}
+if(typeof orgGeoOcr==="function")orgGeoOcr(L.gris,r,texto,LEC.geoPag||0);
 return{texto,conf:r.conf,aviso:avisos.join(" ")};
 }
 async function lecOcrFoto(src,plano){
@@ -10793,14 +11821,14 @@ const out=[];out.adjuntos=[];
 for(let i=0;i<files.length;i++){
 const f=files[i];LEC.estado={base:prof?`Leyendo el adjunto ${f.name}`:`Leyendo ${i+1} de ${files.length}: ${f.name}`};lecProgreso(LEC.estado.base);
 try{
-const r=await lecTexto(f);
+LEC.geo=[];let r,geo;try{r=await lecTexto(f);}finally{geo=LEC.geo;LEC.geo=null;}
 if(!r){out.push({nombre:f.name,tipo:"desconocido",titulo:"Formato no legible",texto:"",datos:{campos:[],personas:[],bienes:[],deudas:[],gastos:[],avisos:[lecNoLegible(f.name)]},escaneado:false});continue;}
 let datos;
 if(r.correo&&r.adjuntos&&r.adjuntos.length&&r.correo.cuerpo.replace(/\s+/g," ").length<400)datos={tipo:"desconocido",titulo:"Correo electrónico",campos:[],personas:[],bienes:[],deudas:[],gastos:[],avisos:[]};
 else datos=lecAnalizar(r.texto,f.name);
 if(r.correo&&datos.tipo==="desconocido"){datos.titulo="Correo electrónico";datos.avisos=datos.avisos.filter((a)=>!/^No se reconoce el tipo|^Parece una carta/.test(a));}
 if(r.avisos&&r.avisos.length)datos.avisos.unshift(...r.avisos);
-out.push({nombre:f.name,tipo:datos.tipo,titulo:datos.titulo,texto:r.texto,datos,escaneado:r.escaneado,paginas:r.paginas,formato:r.formato||""});
+out.push({nombre:f.name,tipo:datos.tipo,titulo:datos.titulo,texto:r.texto,datos,escaneado:r.escaneado,paginas:r.paginas,formato:r.formato||"",geo,archivo:f,...(r.clave?{clave:r.clave}:{})});
 if(r.adjuntos&&r.adjuntos.length&&prof<3){
 const sub=await lecLeerArchivos(r.adjuntos.filter((a)=>lecLegible(a)||/\.(eml|docx?|xlsx?|msg)$/i.test(a.name)),prof+1);
 for(const q of sub)q.nombre=`${f.name} › ${q.nombre}`;
@@ -10858,6 +11886,7 @@ const A=pal(a),B=pal(b);return[...A].some((w)=>B.has(w));
 function lecPropuestas(x,R){
 const P=[];let id=0;const nuevas=[];
 const addP=(p)=>{p.id="lp"+(++id);p.on=p.conf>=1;P.push(p);return p;};let add=addP;
+const src=(p,doc,it,tipo)=>{if(p&&it)(p.src=p.src||[]).push({doc,it,tipo});return p;};
 const vistos=new Map();
 const nomsCausante=[x.nombre,...R.flatMap((r)=>r.datos.campos.filter((c)=>c.k==="nombre").map((c)=>c.valor))].filter(Boolean);
 const esCausante=(n)=>nomsCausante.some((q)=>lecMismoNombre(q,n));
@@ -10869,7 +11898,7 @@ const etiqP=(p)=>p.legatario?"Legatario":p.relacion==="conyuge"?"Cónyuge":p.rel
 for(const r of R){
 const doc=r.nombre;
 for(const c of r.datos.campos){
-const add=(p)=>{p.k=c.k;p.valor=c.valor;const clave=JSON.stringify([c.k,c.valor]);const ya=vistos.get(clave);if(ya){ya.doc+=" + "+doc;ya.conf=Math.max(ya.conf,p.conf);ya.on=ya.on||p.on;if(p.confOrig!=null)ya.confOrig=Math.max(ya.confOrig||0,p.confOrig);if(p.manda)ya.manda=true;return ya;}const otro=[...vistos.values()].find((q)=>q.k===c.k&&q.k!=="testamentoDatos"&&q.k!=="aseguradoras");if(otro&&c.k!=="testamento"){p.conf=0;p.etiqueta+=" (otro valor en "+doc+")";}const q=addP(p);vistos.set(clave,q);return q;};
+const add=(p)=>{p.k=c.k;p.valor=c.valor;const clave=JSON.stringify([c.k,c.valor]);const ya=vistos.get(clave);if(ya){ya.doc+=" + "+doc;ya.conf=Math.max(ya.conf,p.conf);ya.on=ya.on||p.on;if(p.confOrig!=null)ya.confOrig=Math.max(ya.confOrig||0,p.confOrig);if(p.manda)ya.manda=true;return src(ya,doc,c,"campo");}const otro=[...vistos.values()].find((q)=>q.k===c.k&&q.k!=="testamentoDatos"&&q.k!=="aseguradoras");if(otro&&c.k!=="testamento"){p.conf=0;p.etiqueta+=" (otro valor en "+doc+")";}const q=addP(p);vistos.set(clave,q);return src(q,doc,c,"campo");};
 if(c.k==="nombre"){if(x.nombre&&lecMismoNombre(x.nombre,c.valor))continue;add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.mostrar||c.valor,conf:x.nombre?0:c.conf,aplicar:(x)=>{x.nombre=c.valor;}});}
 else if(c.k==="fecha"){if(x.fecha===c.valor)continue;add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.mostrar||c.valor,conf:x.fecha&&x.fecha!==c.valor?0:c.conf,aplicar:(x)=>{x.fecha=c.valor;}});}
 else if(c.k==="civil"){if(x.civil===c.valor)continue;add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.mostrar,conf:x.civil?0:c.conf,confOrig:c.conf,manda:!!c.manda,aplicar:(x)=>{x.civil=c.valor;}});}
@@ -10901,20 +11930,20 @@ if(p.pareja){const otro=r.datos.personas.find((q)=>q.pareja&&q!==p);if(!(otro&&e
 if(p.inscrito){const padres=r.datos.personas.filter((q)=>q.progenitor);if(padres.some((q)=>esCausante(q.nombre)))p={...p,relacion:"hijo",conf:2};}
 if(p.progenitor){const ins=r.datos.personas.find((q)=>q.inscrito);const padres=r.datos.personas.filter((q)=>q.progenitor);if(ins&&esCausante(ins.nombre))p={...p,relacion:"padre",conf:0,nota:"progenitor del causante: solo hereda si vive y no hay descendientes"};else if(padres.some((q)=>esCausante(q.nombre)))p=viudo?{...p,relacion:"conyuge",conf:0,nota:"otro progenitor del inscrito; el causante consta viudo/a, así que habrá fallecido antes"}:{...p,relacion:"conyuge",conf:1,nota:"otro progenitor del inscrito: cónyuge del causante si siguen casados"};else p={...p,relacion:"",conf:0};}
 if(p.pareja&&p.conf>0&&viudo)p={...p,conf:0,nota:"el causante consta viudo/a: este cónyuge habrá fallecido antes (no hay viudo con derechos)"};
-if(esCausante(p.nombre)){if(p.nif&&!x.nifCausante&&!P.some((q)=>q.grupo==="Causante"&&q.etiqueta==="DNI del causante"))add({doc,grupo:"Causante",etiqueta:"DNI del causante",mostrar:p.nif,conf:1,aplicar:(x)=>{x.nifCausante=p.nif;}});continue;}
+if(esCausante(p.nombre)){if(p.nif&&!x.nifCausante&&!P.some((q)=>q.grupo==="Causante"&&q.etiqueta==="DNI del causante"))src(add({doc,grupo:"Causante",etiqueta:"DNI del causante",mostrar:p.nif,conf:1,aplicar:(x)=>{x.nifCausante=p.nif;}}),doc,p,"persona");continue;}
 const ex=(x.personas||[]).find((q)=>lecMismoNombre(q.nombre,p.nombre));
 if(ex){
 const cambios={};if(p.nif&&!ex.nif)cambios.nif=p.nif;if(p.edad&&!ex.edad)cambios.edad=p.edad;if(p.relacion&&(!ex.relacion||ex.relacion==="extrano")&&p.relacion!=="extrano")cambios.relacion=p.relacion;if(p.estirpe&&!ex.estirpe)cambios.estirpe=p.estirpe;
-if(Object.keys(cambios).length)add({doc,grupo:"Personas",etiqueta:`Completar a ${ex.nombre}`,mostrar:Object.entries(cambios).map(([k,v])=>`${({nif:"NIF",edad:"edad",relacion:"parentesco",estirpe:"desciende de"})[k]}: ${k==="relacion"?RELACIONES[v]?.label||v:v}`).join(" · "),conf:p.conf,aplicar:(x)=>{const q=x.personas.find((z)=>z.id===ex.id);if(q)Object.assign(q,cambios);}});
+if(Object.keys(cambios).length)src(add({doc,grupo:"Personas",etiqueta:`Completar a ${ex.nombre}`,mostrar:Object.entries(cambios).map(([k,v])=>`${({nif:"NIF",edad:"edad",relacion:"parentesco",estirpe:"desciende de"})[k]}: ${k==="relacion"?RELACIONES[v]?.label||v:v}`).join(" · "),conf:p.conf,aplicar:(x)=>{const q=x.personas.find((z)=>z.id===ex.id);if(q)Object.assign(q,cambios);}}),doc,p,"persona");
 continue;
 }
 const ya=nuevas.find((q)=>lecMismoNombre(q.np.nombre,p.nombre));
-if(ya){const np=ya.np;if(p.nif&&!np.nif)np.nif=p.nif;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;if(p.pct&&!np.pct)np.pct=p.pct;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;continue;}
-if(p.rol==="titular registral"){if(x.nombre&&lecMismoNombre(x.nombre,p.nombre))continue;add({doc,grupo:"Personas",etiqueta:"Titular registral que no está en el expediente",mostrar:`${p.nombre}${p.nif?" · "+p.nif:""}: ¿cotitular, cónyuge o el propio causante con otro nombre?`,conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:p.nombre,nif:p.nif||"",relacion:"extrano",edad:"",origen:"documento"});}});continue;}
+if(ya){const np=ya.np;if(p.nif&&!np.nif)np.nif=p.nif;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;if(p.pct&&!np.pct)np.pct=p.pct;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;src(ya.prop,doc,p,"persona");continue;}
+if(p.rol==="titular registral"){if(x.nombre&&lecMismoNombre(x.nombre,p.nombre))continue;src(add({doc,grupo:"Personas",etiqueta:"Titular registral que no está en el expediente",mostrar:`${p.nombre}${p.nif?" · "+p.nif:""}: ¿cotitular, cónyuge o el propio causante con otro nombre?`,conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:p.nombre,nif:p.nif||"",relacion:"extrano",edad:"",origen:"documento"});}}),doc,p,"persona");continue;}
 const rel=p.relacion||"";
 const np={nombre:p.nombre,relacion:rel,edad:p.edad||"",nif:p.nif||"",...(p.legadoDesc?{notaLegado:p.legadoDesc}:{}),...(p.estirpe?{estirpe:p.estirpe}:{}),...(p.pct?{pct:p.pct}:{}),...(p.nota?{nota:p.nota}:{})};
 const prop=add({doc,grupo:"Personas",etiqueta:etiqP(p),mostrar:descP(np),conf:rel?p.conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:np.nombre,relacion:np.relacion||"extrano",edad:np.edad||"",nif:np.nif||"",origen:"documento",...(np.notaLegado?{notaLegado:np.notaLegado}:{}),...(np.estirpe?{estirpe:np.estirpe}:{}),...(np.pct&&x.testamento==="porcentajes"?{pct:np.pct}:{})});}});
-nuevas.push({np,prop});
+src(prop,doc,p,"persona");nuevas.push({np,prop});
 }
 for(let b of r.datos.bienes){
 if(b.tituloHerencia&&b.adjudicatario){if(nomsCausante.length&&!esCausante(b.adjudicatario))b={...b,conf:0,nota:`adjudicado a ${b.adjudicatario}, que no es el causante`};else if(!nomsCausante.length)b={...b,conf:Math.min(b.conf,1),nota:`adjudicado a ${b.adjudicatario}`};}
@@ -10938,18 +11967,18 @@ const mat=(v)=>lecN(v||"").replace(/[\s-]/g,"");
 const fin4=(q)=>(q.iban?String(q.iban).slice(-4):q.ibanFin||""),ent1=(q)=>lecN(q.entidad||"").split(/\s+/)[0];
 const mismaCuenta=(a,c)=>a.tipo==="cuenta"&&c.tipo==="cuenta"&&fin4(a)&&fin4(a)===fin4(c)&&ent1(a)&&ent1(a)===ent1(c)&&(!a.iban||!c.iban||a.iban===c.iban);
 const yaB=nuevosB.find((q)=>(b.refCatastral&&q.nb.refCatastral===b.refCatastral)||(b.iban&&q.nb.iban===b.iban)||mismaCuenta(q.nb,b)||(b.matricula&&q.nb.matricula&&mat(q.nb.matricula)===mat(b.matricula))||(b.isin&&q.nb.isin===b.isin)||lecMismoProducto(q.nb,b));
-if(!ex&&yaB){const nb=yaB.nb;for(const[k,v]of Object.entries(campos))if(nb[k]==null||nb[k]===""||nb[k]===0)nb[k]=v;let cambiaValor=false;if(b.valor&&(!nb.valor||(b.prioValor||2)>(nb._prio||2))){nb.valor=b.valor;nb._prio=b.prioValor||2;nb.valorFuente=b.valorFuente||"";cambiaValor=true;}if(b.rustico){nb.rustico=true;nb.tipo="inmueble";nb.usoResidencial=false;if(nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}}if(nb.rustico&&nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}if(b.muniNombre&&!nb.muniNombre&&!nb.muniIne){nb._muni=[b.muniNombre,b.muniProv];}if(b.tipo==="vivienda"&&nb.tipo==="inmueble")nb.tipo="vivienda";if(/^(Finca registral|Inmueble)/.test(nb.descripcion||"")&&b.descripcion&&!/^(Finca registral|Inmueble)/.test(b.descripcion))nb.descripcion=b.descripcion;let m0=yaB.prop.mostrar;if(cambiaValor&&yaB.prop._valTxt)m0=m0.replace(" · "+yaB.prop._valTxt,"");const vistosF=new Set();yaB.prop.mostrar=(m0+" · "+resumen+(cambiaValor&&valTxt?" · "+valTxt:"")).split(" · ").filter((f)=>{const k=lecN(f).trim();if(!k||vistosF.has(k))return false;vistosF.add(k);return true;}).join(" · ");if(cambiaValor)yaB.prop._valTxt=valTxt;yaB.prop.doc+=" + "+doc;yaB.prop.conf=Math.max(yaB.prop.conf,b.conf);yaB.prop.on=yaB.prop.conf>=1;continue;}
-if(ex){const nuevos=Object.fromEntries(Object.entries(campos).filter(([k,v])=>ex[k]==null||ex[k]===""||ex[k]===0));if(b.valor&&!(Number(ex.valor)>0))nuevos.valor=b.valor;if(!Object.keys(nuevos).length)continue;add({doc,grupo:"Inmuebles",etiqueta:`Completar «${ex.descripcion||"inmueble"}»`,mostrar:[resumen,nuevos.valor?valTxt:""].filter(Boolean).join(" · "),conf:b.conf,aplicar:(x)=>{const q=x.bienes.find((z)=>z.id===ex.id);if(q){Object.assign(q,nuevos);if(b.muniNombre&&!q.muniIne)lecMunicipio(q,b.muniNombre,b.muniProv);}}});continue;}
+if(!ex&&yaB){const nb=yaB.nb;for(const[k,v]of Object.entries(campos))if(nb[k]==null||nb[k]===""||nb[k]===0)nb[k]=v;let cambiaValor=false;if(b.valor&&(!nb.valor||(b.prioValor||2)>(nb._prio||2))){nb.valor=b.valor;nb._prio=b.prioValor||2;nb.valorFuente=b.valorFuente||"";cambiaValor=true;}if(b.rustico){nb.rustico=true;nb.tipo="inmueble";nb.usoResidencial=false;if(nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}}if(nb.rustico&&nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}if(b.muniNombre&&!nb.muniNombre&&!nb.muniIne){nb._muni=[b.muniNombre,b.muniProv];}if(b.tipo==="vivienda"&&nb.tipo==="inmueble")nb.tipo="vivienda";if(/^(Finca registral|Inmueble)/.test(nb.descripcion||"")&&b.descripcion&&!/^(Finca registral|Inmueble)/.test(b.descripcion))nb.descripcion=b.descripcion;let m0=yaB.prop.mostrar;if(cambiaValor&&yaB.prop._valTxt)m0=m0.replace(" · "+yaB.prop._valTxt,"");const vistosF=new Set();yaB.prop.mostrar=(m0+" · "+resumen+(cambiaValor&&valTxt?" · "+valTxt:"")).split(" · ").filter((f)=>{const k=lecN(f).trim();if(!k||vistosF.has(k))return false;vistosF.add(k);return true;}).join(" · ");if(cambiaValor)yaB.prop._valTxt=valTxt;yaB.prop.doc+=" + "+doc;src(yaB.prop,doc,b,"bien");yaB.prop.conf=Math.max(yaB.prop.conf,b.conf);yaB.prop.on=yaB.prop.conf>=1;continue;}
+if(ex){const nuevos=Object.fromEntries(Object.entries(campos).filter(([k,v])=>ex[k]==null||ex[k]===""||ex[k]===0));if(b.valor&&!(Number(ex.valor)>0))nuevos.valor=b.valor;if(!Object.keys(nuevos).length)continue;src(add({doc,grupo:"Inmuebles",etiqueta:`Completar «${ex.descripcion||"inmueble"}»`,mostrar:[resumen,nuevos.valor?valTxt:""].filter(Boolean).join(" · "),conf:b.conf,aplicar:(x)=>{const q=x.bienes.find((z)=>z.id===ex.id);if(q){Object.assign(q,nuevos);if(b.muniNombre&&!q.muniIne)lecMunicipio(q,b.muniNombre,b.muniProv);}}}),doc,b,"bien");continue;}
 const esInm=b.tipo==="vivienda"||b.tipo==="inmueble";
 const nb={tipo:b.tipo,descripcion:b.descripcion,valor:b.valor||"",titularidad:b.titularidad||"",...campos,_muni:b.muniNombre?[b.muniNombre,b.muniProv]:null,_prio:b.prioValor||2,_desc:b.descripcion,_doc:doc};
 const grupoB=esInm?"Inmuebles":b.tipo==="vehiculo"?"Vehículos":b.tipo==="cuenta"||b.tipo==="valores"?"Cuentas y valores":b.tipo==="empresa"?"Empresas y participaciones":"Otros bienes";
 const etiqB=esInm?(b.rustico?"Finca rústica":b.tipo==="vivienda"?"Vivienda":"Inmueble"):b.tipo==="valores"?(/plan de pensiones/i.test(b.descripcion)?"Plan de pensiones":"Fondos o valores"):b.tipo==="vehiculo"?"Vehículo":b.tipo==="cuenta"?"Cuenta":b.tipo==="empresa"?"Participaciones sociales":"Bien";
 const prop=add({doc,grupo:grupoB,etiqueta:etiqB,mostrar:`${b.descripcion}${resumen?" · "+resumen:""}${valTxt?" · "+valTxt:""}`,conf:b.conf,aplicar:(x)=>{const{_muni,_prio,_desc,_doc,...resto}=nb;const fin={id:uid(),...resto,titularidad:resto.titularidad||(x.civil==="gananciales"?"ganancial":b.porcentaje&&b.porcentaje<100?"proindiviso":"privativo"),origen:"documento"};if(fin.titularidad!=="proindiviso")delete fin.porcentaje;if(_muni)lecMunicipio(fin,_muni[0],_muni[1]);x.bienes.push(fin);lecDocsBien(x,fin,prop.doc.split(" + ").map((n)=>(R.find((r)=>r.nombre===n)||{}).tipo));}});
-prop._valTxt=valTxt;if(b.ibanFin&&!nb.iban)nb.ibanFin=b.ibanFin;
+src(prop,doc,b,"bien");prop._valTxt=valTxt;if(b.ibanFin&&!nb.iban)nb.ibanFin=b.ibanFin;
 nuevosB.push({nb,prop});
 }
-for(const g of r.datos.gastos||[])add({doc,grupo:"Gastos",etiqueta:g.etiqueta||"Gasto deducible",k:"gasto",mostrar:`${g.concepto}${g.importe?" · "+eur0(g.importe):" (importe por confirmar)"}${g.nota?". "+g.nota:""}`,conf:g.conf==null?1:g.conf,aplicar:(x)=>{x.gastos=x.gastos||[];x.gastos.push({concepto:g.concepto,importe:g.importe||"",origen:"documento"});}});
-for(const d of r.datos.deudas)add({doc,grupo:"Deudas",etiqueta:d.fuente==="banco"?(d.hipoteca?"Préstamo hipotecario (saldo del banco)":"Préstamo"):"Deuda",k:"deuda",deuda:d,mostrar:`${d.concepto}${d.importe?" · "+eur0(d.importe):" (importe por confirmar)"}${d.ganancial?" · deuda ganancial (la herencia responde de la mitad)":""}${d.nota?". "+d.nota:""}`,conf:d.conf,aplicar:(x)=>{x.deudas=x.deudas||[];x.deudas.push({concepto:d.concepto,importe:d.importe||"",...(d.ganancial?{ganancial:true}:{}),origen:"documento"});}});
+for(const g of r.datos.gastos||[])src(add({doc,grupo:"Gastos",etiqueta:g.etiqueta||"Gasto deducible",k:"gasto",mostrar:`${g.concepto}${g.importe?" · "+eur0(g.importe):" (importe por confirmar)"}${g.nota?". "+g.nota:""}`,conf:g.conf==null?1:g.conf,aplicar:(x)=>{x.gastos=x.gastos||[];x.gastos.push({concepto:g.concepto,importe:g.importe||"",origen:"documento"});}}),doc,g,"gasto");
+for(const d of r.datos.deudas)src(add({doc,grupo:"Deudas",etiqueta:d.fuente==="banco"?(d.hipoteca?"Préstamo hipotecario (saldo del banco)":"Préstamo"):"Deuda",k:"deuda",deuda:d,mostrar:`${d.concepto}${d.importe?" · "+eur0(d.importe):" (importe por confirmar)"}${d.ganancial?" · deuda ganancial (la herencia responde de la mitad)":""}${d.nota?". "+d.nota:""}`,conf:d.conf,aplicar:(x)=>{x.deudas=x.deudas||[];x.deudas.push({concepto:d.concepto,importe:d.importe||"",...(d.ganancial?{ganancial:true}:{}),origen:"documento"});}}),doc,d,"deuda");
 }
 if(!x.ccaa&&typeof muniDesdeTexto==="function"&&typeof MUNI_ES==="object"){
 const res=P.find((p)=>p.k==="residencia");const lug=P.find((p)=>p.k==="lugarFallecimiento");const inm=R.flatMap((r)=>r.datos.bienes).find((b)=>b.muniNombre);
@@ -10967,7 +11996,7 @@ if(v.arrendatario&&esCausante(v.arrendatario)){addP({doc,grupo:"Inmuebles",etiqu
 const q=nuevosB.find((q)=>(q.nb.tipo==="vivienda"||q.nb.tipo==="inmueble")&&igualInm(v,q.nb));const e=!q&&(x.bienes||[]).find((b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&igualInm(v,b));
 if(q){q.nb.arrendadoOCedido=true;if(q.nb.tipo==="vivienda"){q.nb.tipo="inmueble";q.nb.usoResidencial=true;q.prop.etiqueta="Inmueble (arrendado)";}q.prop.mostrar+=" · arrendado";q.prop.doc+=" + "+doc;}
 const dest=q?q.nb.descripcion:e?e.descripcion:"";
-addP({doc,grupo:"Inmuebles",etiqueta:"Contrato de arrendamiento",k:"arrendamiento",mostrar:`${c.mostrar}${dest?" · inmueble: "+dest.slice(0,70):" · no se ha podido asociar a ningún inmueble del expediente: márcalo como arrendado en su ficha"}`,conf:q||e?c.conf:0,aplicar:(x)=>{const b=(x.bienes||[]).find((b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&igualInm(v,b));if(!b)return;b.arrendadoOCedido=true;if(b.tipo==="vivienda"){b.tipo="inmueble";b.usoResidencial=true;}b.arrendamiento={arrendatario:v.arrendatario||"",renta:v.renta||"",fianza:v.fianza||"",fecha:v.fecha||""};}});
+src(addP({doc,grupo:"Inmuebles",etiqueta:"Contrato de arrendamiento",k:"arrendamiento",mostrar:`${c.mostrar}${dest?" · inmueble: "+dest.slice(0,70):" · no se ha podido asociar a ningún inmueble del expediente: márcalo como arrendado en su ficha"}`,conf:q||e?c.conf:0,aplicar:(x)=>{const b=(x.bienes||[]).find((b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&igualInm(v,b));if(!b)return;b.arrendadoOCedido=true;if(b.tipo==="vivienda"){b.tipo="inmueble";b.usoResidencial=true;}b.arrendamiento={arrendatario:v.arrendatario||"",renta:v.renta||"",fianza:v.fianza||"",fecha:v.fecha||""};}}),doc,c,"campo");
 }
 {
 const viv=nuevosB.filter((q)=>q.nb.tipo==="vivienda");const yaHay=(x.bienes||[]).some((b)=>b.tipo==="vivienda");
@@ -10998,7 +12027,9 @@ if(tst.length>1&&tst.some((p)=>p.valor!=="nose"))for(const p of tst.filter((q)=>
 const yaCony=(x.personas||[]).find((p)=>p.relacion==="conyuge"&&!p.separado);
 const conys=nuevas.filter((q)=>q.np.relacion==="conyuge"&&P.includes(q.prop)).sort((a,b)=>b.prop.conf-a.prop.conf);
 conys.forEach((q,i)=>{if(!yaCony&&i===0)return;q.prop.conf=0;q.prop.on=false;q.prop.etiqueta+=yaCony?` (el expediente ya tiene cónyuge: ${yaCony.nombre||"sin nombre"}; un expediente solo admite uno)`:` (otro documento propone a ${conys[0].np.nombre} como cónyuge; un expediente solo admite uno)`;});
-return{docs:R,propuestas:P};
+const res={docs:R,propuestas:P};
+if(typeof orgEnriquecer==="function"){try{orgEnriquecer(res,x);}catch(e){console.error(e);}}
+return res;
 }
 function lecCausantes(R,x){
 const G=[];
@@ -11059,7 +12090,7 @@ if(typeof toast==="function")toast(`${plural(fuera.length,"documento quitado","d
 render();return;
 }
 if(accion==="separar"){
-const P=lecPropuestas(x,idxPrin.map((i)=>docs[i])).propuestas;const nuevos=[];
+const r0=lecPropuestas(x,idxPrin.map((i)=>docs[i])),P=r0.propuestas;const nuevos=[];
 for(const[k,g]of C.grupos.entries()){
 if(k===pi)continue;
 const y=lecExpVacio();DB.expedientes.unshift(y);
@@ -11070,7 +12101,7 @@ for(const q of lecPropuestas(y,mios).propuestas){q.id="s"+k+q.id;q.exp=y.id;P.pu
 nuevos.push({id:y.id,ref:y.despacho.ref,nombre:g.nombre});
 }
 anotar(x,`Documentos de ${plural(nuevos.length,"otra herencia","otras herencias")} separados en ${nuevos.map((n)=>n.ref).join(", ")}`,"doc");guardar();
-LEC.resultado={docs,propuestas:P,separados:nuevos,principal:C.grupos[pi].nombre};
+LEC.resultado={docs,propuestas:P,separados:nuevos,principal:C.grupos[pi].nombre,cruces:r0.cruces};
 render();return;
 }
 }
@@ -11104,6 +12135,7 @@ const orden=[...R.propuestas.filter((p)=>p.grupo==="Causante"),...R.propuestas.f
 for(const s of R.separados||[]){
 const y=DB.expedientes.find((q)=>q.id===s.id);if(!y)continue;let m=0;
 for(const p of orden)if(p.exp===s.id&&ids.includes(p.id)){try{p.aplicar(y);m++;}catch(e){console.error(e);}}
+if(m&&typeof orgGuardarOrigen==="function")orgGuardarOrigen(y,orden.filter((p)=>p.exp===s.id&&ids.includes(p.id)));
 const dd=R.docs.filter((d)=>R.propuestas.some((p)=>p.exp===s.id&&p.doc.split(" + ").includes(d.nombre)));
 if(m){y.docsLeidos=(y.docsLeidos||[]).concat(dd.map((d)=>({nombre:d.nombre,tipo:d.tipo,fecha:hoy()})));anotar(y,`${plural(m,"dato cargado","datos cargados")} desde documentos separados de ${x.despacho?.ref||nombreExp(x)}. Marcados «leído de documento» para revisar.`,"doc");}
 n+=m;
@@ -11112,6 +12144,7 @@ const sep=new Set((R.separados||[]).map((s)=>s.id));
 const docsX=sep.size?R.docs.filter((d)=>!R.propuestas.some((p)=>sep.has(p.exp)&&p.doc.split(" + ").includes(d.nombre))):R.docs;
 let nx=0;
 for(const p of orden)if(!sep.has(p.exp)&&ids.includes(p.id)){try{p.aplicar(x);n++;nx++;}catch(e){console.error(e);}}
+if(nx&&typeof orgGuardarOrigen==="function")orgGuardarOrigen(x,orden.filter((p)=>!sep.has(p.exp)&&ids.includes(p.id)));
 for(const p of orden)if(!sep.has(p.exp)&&ids.includes(p.id)&&p.repartir){try{p.repartir(x);}catch(e){console.error(e);}}
 if(nx){
 const T=new Set(docsX.map((d)=>d.tipo));const M={defuncion:"defuncion",ultimas:"ultimas",seguros:"seguros",herederos:"declaracion",padron:"padron_causante",familia:"libro",matrimonio:"matrimonio",factura:"facturas",prestamo:"deudas"};
@@ -11128,12 +12161,14 @@ const C=R.causantes&&!R.causantes.resuelto?R.causantes:null;
 if(C)return sheetHTML("Documentos de herencias distintas",lecMezclaHTML(R,C,x),"Cerrar","lec-sheet");
 const grupos=[...new Set(P.map((p)=>p.grupo))];
 const docs=`<div class="lec-docs">${R.docs.map((d)=>`<div class="lec-doc"><span class="lec-doc-t"><b>${esc(d.titulo)}</b><small>${esc(d.nombre)}${d.escaneado?" · escaneo":d.formato?" · "+esc(d.formato):d.texto?" · PDF con texto":""}${d.paginas>1?" · "+plural(d.paginas,"página"):""}</small></span></div>`).join("")}</div>${(()=>{const A=R.docs.flatMap((d)=>d.datos.avisos.map((a)=>[d.titulo,a]));return A.length?`<ul class="lec-avisos">${A.map(([t,a])=>`<li><b>${esc(t)}:</b> ${esc(a)}</li>`).join("")}</ul>`:"";})()}`;
-const fila=(p)=>`<label class="row lec-row ${p.conf===0?"lec-duda":""}"><input type="checkbox" data-lecsel="${p.id}" ${p.on?"checked":""}><span class="t"><b>${esc(p.etiqueta)}</b><small>${esc(p.mostrar)}</small><small class="lec-src">${esc(p.doc)}${p.conf===0?" · dudoso o ya hay un valor en el expediente: revísalo":""}</small></span></label>`;
-const listaDe=(Q)=>[...new Set(Q.map((p)=>p.grupo))].map((g)=>`<div class="sectitle">${esc(g)}</div><div class="group lec-grupo">${Q.filter((p)=>p.grupo===g).map(fila).join("")}</div>`).join("");
+const org=typeof orgFilaHTML==="function";
+const fila=(p)=>`<label class="row lec-row ${p.conf===0?"lec-duda":""}${org&&p.confianza?" org-n-"+p.confianza:""}"><input type="checkbox" data-lecsel="${p.id}" ${p.on?"checked":""}><span class="t"><b>${esc(p.etiqueta)}</b><small>${esc(p.mostrar)}</small><small class="lec-src">${esc(p.doc)}${p.conf===0?" · dudoso o ya hay un valor en el expediente: revísalo":""}</small>${org?orgFilaHTML(p):""}</span></label>`;
+const listaDe=(Q)=>{const B=org?orgBajas(Q):[];const Q2=Q.filter((p)=>!B.includes(p));return(B.length?`<div class="sectitle org-primero">Revisar primero · ${plural(B.length,"dato","datos")} con confianza baja</div><div class="group lec-grupo">${B.map(fila).join("")}</div>`:"")+[...new Set(Q2.map((p)=>p.grupo))].map((g)=>`<div class="sectitle">${esc(g)}</div><div class="group lec-grupo">${Q2.filter((p)=>p.grupo===g).map(fila).join("")}</div>`).join("");};
 const S=R.separados||[];
 const lista=S.length?[`<h3 class="lec-dest">En este expediente${R.principal?` · herencia de ${esc(R.principal)}`:""}</h3>${listaDe(P.filter((p)=>!p.exp))||`<p class="caption">Sin datos nuevos.</p>`}`,...S.map((s)=>`<h3 class="lec-dest">En el expediente nuevo ${esc(s.ref)}${s.nombre?` · herencia de ${esc(s.nombre)}`:""}</h3>${listaDe(P.filter((p)=>p.exp===s.id))||`<p class="caption">Sin datos nuevos.</p>`}`)].join(""):listaDe(P);
 void grupos;
 const body=`${S.length?`<div class="lec-sep" role="status"><b>Separados en ${plural(S.length+1,"expediente")}.</b> Los documentos de ${S.map((s)=>esc(s.nombre||"otro causante")).join(" y ")} ya están archivados en ${S.map((s)=>esc(s.ref)).join(", ")}. Revisa abajo los datos de cada uno: al cargarlos, cada dato va a su expediente.</div>`:""}<p class="caption" style="margin:0 0 12px">Lo que se ha leído en ${plural(R.docs.length,"documento")}. Marca lo que quieras cargar en ${S.length?"cada expediente":`el expediente${x?` de ${esc(nombreExp(x))}`:""}`}; todo queda señalado como «leído de documento» para que lo revises. Nada se inventa: lo que no se reconoce, se deja vacío.</p>
+    ${typeof orgCrucesHTML==="function"?orgCrucesHTML(R):""}
     ${docs}
     ${P.length?lista:`<div class="card empty" style="margin-top:12px"><b>Sin datos nuevos</b>Los documentos se han archivado, pero no se ha reconocido nada que no estuviera ya en el expediente.</div>`}
     ${P.length?`<div class="lec-acts"><button class="btn block" data-act="lecAplicar">Cargar lo marcado en el expediente</button><button class="btn block gray" data-act="cerrarSheet">Solo archivar los documentos</button></div>`:""}`;
@@ -11178,7 +12213,7 @@ const filas=[x.nifCausante?["NIF del causante",x.nifCausante]:null,x.lugarFallec
 ...PP.map((q)=>["Plan de pensiones (no es herencia)",[q.plan||"",q.entidad?"en "+q.entidad:"",q.importe?eur0(q.importe):"",q.beneficiarios?"beneficiarios: "+String(q.beneficiarios).slice(0,60):""].filter(Boolean).join(" · ")]),
 ...AR.map((b)=>["Arrendado: "+String(b.descripcion||"inmueble").slice(0,40),[b.arrendamiento.arrendatario||"",b.arrendamiento.renta?eur0(b.arrendamiento.renta)+" al mes":"",b.arrendamiento.fecha?"desde "+fechaCorta(b.arrendamiento.fecha):""].filter(Boolean).join(" · ")])].filter(Boolean);
 const tipos=D.map((d)=>LEC_TIPOS[d.tipo]||d.tipo).filter((v,i,a)=>a.indexOf(v)===i);
-return`<div class="card lec-res" style="margin-top:14px">${cardH("Leído de los documentos",D.length?`${plural(D.length,"documento leído","documentos leídos")}`:"Datos del causante",`<button class="link" data-sec="documentos">Documentos ›</button>`)}${tipos.length?`<p class="caption lec-res-tipos" style="margin:0 0 10px">${esc(tipos.join(" · "))}</p>`:""}${filas.length?`<div class="kv">${filas.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div>`:""}<p class="caption" style="margin:10px 0 0">Las personas y bienes cargados desde documentos llevan la marca «leído de documento» hasta que los revises.</p></div>`;
+return`<div class="card lec-res" style="margin-top:14px">${cardH("Leído de los documentos",D.length?`${plural(D.length,"documento leído","documentos leídos")}`:"Datos del causante",`<button class="link" data-sec="documentos">Documentos ›</button>`)}${tipos.length?`<p class="caption lec-res-tipos" style="margin:0 0 10px">${esc(tipos.join(" · "))}</p>`:""}${filas.length?`<div class="kv">${filas.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div>`:""}${typeof orgResumenHTML==="function"?orgResumenHTML(x):""}<p class="caption" style="margin:10px 0 0">Las personas y bienes cargados desde documentos llevan la marca «leído de documento» hasta que los revises.</p></div>`;
 }
 function lecFranjaHTML(x){
 if(!["encargo","documentacion",undefined,""].includes(x.fase))return"";
@@ -12110,6 +13145,556 @@ const x=typeof ui!=="undefined"&&ui.vista==="exp"&&typeof exp==="function"?exp()
 if(!x&&typeof licPuedeCrear==="function"&&!licPuedeCrear()){toast(licMotivoBloqueo());return;}
 scnAbrir({expId:x?x.id:"",tramiteId:b.dataset.scnAbrir||""});
 },true);
+const ORG={norm:new Map(),visor:null,volver:null};
+function orgNifLetra(v){
+const s=String(v||"").toUpperCase().replace(/[\s.\-]/g,"");
+const m=/^(\d{8})[A-Z]$/.exec(s),e=/^([XYZ])(\d{7})[A-Z]$/.exec(s);
+if(!m&&!e)return"";
+const n=m?Number(m[1]):Number({X:"0",Y:"1",Z:"2"}[e[1]]+e[2]);
+return"TRWAGMYFPDXBNJZSQVHLCKE"[n%23];
+}
+function orgCccOk(ccc){
+const s=String(ccc||"").replace(/\s/g,"");if(!/^\d{20}$/.test(s))return false;
+const P=[1,2,4,8,5,10,9,7,3,6];
+const dc=(x)=>{let t=0;for(let i=0;i<10;i++)t+=P[i]*Number(x[i]);const r=11-(t%11);return r===11?0:r===10?1:r;};
+return`${dc("00"+s.slice(0,8))}${dc(s.slice(10))}`===s.slice(8,10);
+}
+function orgIbanOk(v){
+const s=String(v||"").toUpperCase().replace(/[\s\-]/g,"");
+if(!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s))return{ok:false,motivo:"no tiene la forma de un IBAN"};
+if(s.startsWith("ES")&&s.length!==24)return{ok:false,motivo:"un IBAN español tiene 24 caracteres"};
+const r=(s.slice(4)+s.slice(0,4)).replace(/[A-Z]/g,(c)=>String(c.charCodeAt(0)-55));let m=0;for(const ch of r)m=(m*10+Number(ch))%97;
+if(m!==1)return{ok:false,motivo:"los dígitos de control del IBAN no cuadran (módulo 97)"};
+if(s.startsWith("ES")&&!orgCccOk(s.slice(4)))return{ok:false,motivo:"los dígitos de control de la cuenta (posiciones 13 y 14) no cuadran"};
+return{ok:true,motivo:""};
+}
+const orgRcOk=(r)=>typeof lecRefCatOk==="function"&&lecRefCatOk(String(r||"").toUpperCase().replace(/\s/g,""));
+function orgNorm(t){
+t=String(t||"");const c=ORG.norm.get(t);if(c)return c;
+let s="";const map=[];
+for(let i=0;i<t.length;i++){const n=t[i].normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase();for(let k=0;k<n.length;k++){s+=n[k];map.push(i);}}
+map.push(t.length);const r={s,map};if(ORG.norm.size>400)ORG.norm.clear();ORG.norm.set(t,r);return r;
+}
+const ORG_ESC=(s)=>String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+const ORG_VACIAS=new Set(["DE","DEL","LA","LAS","LOS","EL","Y","E","EN","A","AL","CON","POR","O"]);
+const orgToks=(v,max=10)=>lecN(v).replace(/…/g," ").split(/[^A-Z0-9Ñ]+/).filter((w)=>w.length>=2&&!ORG_VACIAS.has(w)).slice(0,max);
+function orgBuscarFecha(t,v){
+const out=[];const add=(ini,fin,f)=>{if(f===v)out.push({ini,fin,exacto:true});};
+for(const m of t.matchAll(/(?<!\d)(\d{1,2})\s?[\/.\-]\s?(\d{1,2})\s?[\/.\-]\s?(\d{4})(?!\d)/g))add(m.index,m.index+m[0].length,lecIso(m[1],m[2],m[3]));
+for(const m of t.matchAll(/(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/g))add(m.index,m.index+m[0].length,lecIso(m[3],m[2],m[1]));
+for(const m of t.matchAll(/(?<![\d\/.\-])(\d{2})[ \t]{1,3}(\d{2})[ \t]{1,3}(\d{4})(?!\d)/g))add(m.index,m.index+m[0].length,lecIso(m[1],m[2],m[3]));
+const re=new RegExp(`(?<![A-Za-zÁÉÍÓÚÜÑáéíóúüñ])(\\d{1,2}|[a-záéíóúü]+(?: y [a-záéíóúü]+)?)\\s+de\\s+(${LEC_MESES.join("|")})\\s+de(?:l)?\\s+(\\d{4}|[a-záéíóúü]+(?:\\s+[a-záéíóúü]+){0,4})`,"gi");
+for(const m of t.matchAll(re)){
+const d=/^\d+$/.test(m[1])?Number(m[1]):lecPalabrasNumero(m[1]);if(!d)continue;
+const i3=m.index+m[0].length-m[3].length;let y=null,fin=m.index+m[0].length;
+if(/^\d+$/.test(m[3]))y=Number(m[3]);else{const W=m[3].split(/\s+/);for(let k=W.length;k>=1&&y==null;k--){const q=lecPalabrasNumero(W.slice(0,k).join(" "));if(q&&q>=1900){y=q;fin=i3+m[3].indexOf(W[k-1],W.slice(0,k-1).join(" ").length)+W[k-1].length;}}}
+if(y)add(m.index,fin,lecIso(d,LEC_MESES.indexOf(lecN(m[2]).toLowerCase())+1,y));
+}
+return out;
+}
+function orgBuscarImporte(t,v){
+const n=Math.round(Number(v)*100)/100;if(!(n>0))return[];
+const ent=Math.trunc(n),dec=Math.round((n-ent)*100),dd=String(dec).padStart(2,"0");
+const miles=String(ent).replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const F=[`${miles},${dd}`,`${ent},${dd}`,`${miles.replace(/\./g," ")},${dd}`];
+if(!dec){F.push(`${miles},0`);if(ent>=1000)F.push(miles);}
+const out=[];
+const re=new RegExp(`(?<![\\d.,])(?:${[...new Set(F)].map(ORG_ESC).join("|")})(?![\\d]|[.,]\\d)`,"g");
+for(const m of t.matchAll(re))out.push({ini:m.index,fin:m.index+m[0].length,exacto:true});
+if(!dec)for(const m of t.matchAll(new RegExp(`(?<![\\d.,])${ent}(?=\\s*(?:€|euros?\\b|EUR\\b))`,"gi")))out.push({ini:m.index,fin:m.index+m[0].length,exacto:true});
+return out;
+}
+function orgBuscarCodigo(t,v,sep,tolerante){
+const C=[...String(v||"").toUpperCase().replace(/[\s.\-]/g,"")];if(C.length<4)return[];
+const mk=(cls)=>new RegExp(`(?<![A-Za-z0-9])${C.map(cls).join(sep)}(?![A-Za-z0-9])`,"gi");
+let out=[...t.matchAll(mk(ORG_ESC))].map((m)=>({ini:m.index,fin:m.index+m[0].length,exacto:true}));
+if(!out.length&&tolerante&&typeof LEC_PARECIDOS==="object")out=[...t.matchAll(mk((c)=>`[${ORG_ESC(c)}${ORG_ESC((LEC_PARECIDOS[c]||"").replace(/[^A-Z0-9]/g,""))}]`))].map((m)=>({ini:m.index,fin:m.index+m[0].length,exacto:false,corregido:t.slice(m.index,m.index+m[0].length).replace(/\s+/g," ")}));
+return out;
+}
+function orgBuscarPartido(t,v){
+const C=String(v||"").toUpperCase().replace(/\s/g,"");const out=[];
+for(let k=C.length-4;k>=8;k-=4){
+const a=C.slice(0,k),b=C.slice(k);
+for(const m of t.matchAll(new RegExp(`(?<![A-Z0-9])${[...a].map(ORG_ESC).join("\\s?")}(?![0-9])`,"g"))){
+const nl=t.indexOf("\n",m.index+m[0].length);if(nl<0||nl-m.index>160)continue;
+const q=new RegExp(`^[^\\n\\d]{0,40}?(${[...b].map(ORG_ESC).join("\\s?")})(?![0-9])`).exec(t.slice(nl+1,nl+120));
+if(q){const i2=nl+1+q.index+q[0].length-q[1].length;out.push({ini:m.index,fin:m.index+m[0].length,exacto:true,partes:[[m.index,m.index+m[0].length],[i2,i2+q[1].length]]});}
+}
+if(out.length)return out;
+}
+return out;
+}
+function orgBuscarTexto(t,v,min=1){
+const toks=orgToks(v);if(!toks.length)return[];
+const N=orgNorm(t),S=N.s,out=[];
+const pos=(a,b)=>({ini:N.map[a],fin:N.map[Math.max(a,b-1)]+1});
+const re=new RegExp(`(?<![A-Z0-9Ñ])${toks.map(ORG_ESC).join("[^A-Z0-9Ñ]+(?:(?:DE|DEL|LA|LAS|LOS|Y|E)[^A-Z0-9Ñ]+)*")}(?![A-Z0-9Ñ])`,"g");
+for(const m of S.matchAll(re))out.push({...pos(m.index,m.index+m[0].length),exacto:true});
+if(out.length||toks.length<2)return out;
+const occ=toks.map((w)=>[...S.matchAll(new RegExp(`(?<![A-Z0-9Ñ])${ORG_ESC(w)}(?![A-Z0-9Ñ])`,"g"))].map((m)=>[m.index,m.index+w.length]));
+const raro=occ.reduce((b,o,i)=>(o.length&&(b<0||o.length<occ[b].length)?i:b),-1);if(raro<0)return[];
+let mejor=null;
+for(const[a0]of occ[raro]){
+let a=a0,b=a0+toks[raro].length,n=0;
+occ.forEach((o,i)=>{let best=null;for(const[x,y]of o)if(Math.abs(x-a0)<=160&&(!best||Math.abs(x-a0)<Math.abs(best[0]-a0)))best=[x,y];if(best){n++;a=Math.min(a,best[0]);b=Math.max(b,best[1]);}else void i;});
+if(n/toks.length>=min&&(!mejor||n>mejor.n||(n===mejor.n&&b-a<mejor.b-mejor.a)))mejor={a,b,n};
+}
+return mejor?[{...pos(mejor.a,mejor.b),exacto:false,parcial:mejor.n<toks.length}]:[];
+}
+function orgHallar(t,a){
+t=String(t||"");if(!t||a.v==null||a.v==="")return null;
+let H=[];
+if(a.tipo==="fecha")H=orgBuscarFecha(t,a.v);
+else if(a.tipo==="importe")H=orgBuscarImporte(t,a.v);
+else if(a.tipo==="nif")H=orgBuscarCodigo(t,a.v,"[\\s.\\-]?",false);
+else if(a.tipo==="iban"){H=orgBuscarCodigo(t,a.v,"\\s*",false);if(!H.length)H=orgBuscarPartido(t,a.v);}
+else if(a.tipo==="rc")H=orgBuscarCodigo(t,a.v,"\\s?",true);
+else if(a.tipo==="codigo")H=orgBuscarCodigo(t,a.v,"[\\s\\-]?",false);
+else if(a.tipo==="entero")H=[...t.matchAll(new RegExp(`(?<![\\d.,])${ORG_ESC(a.v)}(?![\\d]|[.,]\\d)`,"g"))].map((m)=>({ini:m.index,fin:m.index+m[0].length,exacto:true}));
+else if(a.tipo==="clave")H=[...t.matchAll(new RegExp(a.re.source,"gi"))].map((m)=>({ini:m.index,fin:m.index+m[0].length,exacto:true,deducido:!!a.deducido}));
+else H=orgBuscarTexto(t,a.v,a.min||(a.tipo==="nombre"?1:0.7));
+if(!H.length)return null;
+if(a.ctx&&H.length>1){const k=H.find((h)=>a.ctx.test(t.slice(Math.max(0,h.ini-90),h.ini)));if(k)return k;}
+return H[0];
+}
+const ORG_CLAVES={
+civil:{gananciales:[/gananciales/,false],separacion:[/separaci[óo]n\s+de\s+bienes/,false],participacion:[/participaci[óo]n/,false],viudo:[/viud[oa]/,false],soltero:[/solter[oa]/,false],divorciado:[/divorciad[oa]|separad[oa]/,false]},
+testamento:{usufructo:[/usufructo\s+universal|usufructo\s+(?:vitalicio\s+)?de\s+(?:toda\s+)?(?:su|la)\s+herencia/,false],porcentajes:[/(?:por|a|en)\s+partes\s+iguales|instituy[eo]n?[^.;]{0,40}herederos?/,false],no:[/no\s+consta|no\s+figura|sin\s+inscripci[óo]n/,false],nose:[/testamento\s+(?:abierto|cerrado|ol[óo]grafo|mancomunado)|consta\s+como\s+otorgante/,false]},
+};
+function orgAtomosCampo(c){
+const v=c.valor,A=[];
+const txt=(etq,val,tipo="texto",extra={})=>{if(val!=null&&val!==""&&typeof val!=="boolean"&&!(tipo==="importe"&&!(Number(val)>0)))A.push({etq,v:val,tipo,...extra});};
+switch(c.k){
+case"nombre":txt(c.etiqueta||"Nombre",v,"nombre");break;
+case"testamentoNotario":txt("Notario",v,"nombre");break;
+case"fecha":case"testamentoFecha":case"matrimonioFecha":txt(c.etiqueta||"Fecha",v,"fecha");break;
+case"nifCausante":txt("DNI del causante",v,"nif");break;
+case"lugarFallecimiento":txt("Lugar del fallecimiento",v);break;
+case"residencia":txt("Municipio de residencia",String(v).replace(/\s*\(.*$/,""));break;
+case"domicilio":txt("Domicilio",v,"texto",{min:0.6});break;
+case"civil":{const q=ORG_CLAVES.civil[v];if(q)A.push({etq:"Estado civil",v:c.mostrar||v,tipo:"clave",re:q[0]});if(v==="gananciales")A.push({etq:"Estado civil",v:"casado",tipo:"clave",re:/casad[oa]/,deducido:true,alt:true});break;}
+case"testamento":{const q=ORG_CLAVES.testamento[v];if(q)A.push({etq:c.etiqueta||"Testamento",v:c.mostrar||v,tipo:"clave",re:q[0]});break;}
+case"testamentoDatos":case"actaHerederos":if(v&&typeof v==="object"){txt("Fecha",v.fecha,"fecha");txt("Notario",v.notario,"nombre");txt("Protocolo",v.protocolo,"entero",{sec:true});}break;
+case"aseguradoras":for(const e of Array.isArray(v)?v:[])txt("Aseguradora",typeof e==="string"?e:e&&e.entidad,"texto",{min:0.6});break;
+case"poliza":if(v){txt("Aseguradora",v.entidad,"texto",{min:0.5,sec:true});txt("Póliza",v.poliza,"codigo");txt("Capital",v.capital,"importe");}break;
+case"cargas":if(v==="libre")A.push({etq:"Cargas",v:c.mostrar||"libre de cargas",tipo:"clave",re:/libre\s+de\s+cargas|no\s+hay\s+cargas|sin\s+cargas|no\s+constan?\s+cargas|cargas\s*[:：]?\s*ninguna/});break;
+case"datosFiscales":if(v&&v.ejercicio)A.push({etq:"Ejercicio",v:String(v.ejercicio),tipo:"clave",re:new RegExp(`(?:ejercicio|renta)\\s+${v.ejercicio}`)});break;
+case"planPensiones":if(v){txt("Plan",v.plan,"texto",{min:0.6,sec:true});txt("Derechos consolidados",v.importe,"importe");}break;
+case"isdPresentado":if(v){txt("Base imponible",v.base,"importe");txt("Cuota",v.cuota,"importe");}break;
+case"arrendamiento":if(v){txt("Arrendatario",v.arrendatario,"nombre");txt("Renta",v.renta,"importe");txt("Fecha",v.fecha,"fecha",{sec:true});}break;
+default:
+if(typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v))txt(c.etiqueta||"Fecha",v,"fecha");
+else if(typeof v==="number"&&v>31)txt(c.etiqueta||"Importe",v,"importe");
+else if(typeof v==="string"&&v.length>=3&&v.length<=90&&!/^[a-z_]+$/.test(v))txt(c.etiqueta||"Dato",v,"texto",{min:0.6});
+else if(v&&typeof v==="object"&&!Array.isArray(v))for(const[k,q]of Object.entries(v)){if(typeof q==="number"&&q>31)txt(k,q,"importe",{sec:true});else if(typeof q==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(q))txt(k,q,"fecha",{sec:true});}
+}
+return A;
+}
+function orgAtomosPersona(p){const A=[{etq:"Nombre",v:p.nombre,tipo:"nombre"}];if(p.nif)A.push({etq:"NIF",v:p.nif,tipo:"nif"});return A;}
+function orgAtomosBien(b){
+const A=[];const add=(etq,v,tipo,extra={})=>{if(v!=null&&v!==""&&v!==0)A.push({etq,v,tipo,...extra});};
+add("Referencia catastral",b.refCatastral,"rc");add("IBAN",b.iban,"iban");add("Matrícula",b.matricula,"codigo");add("ISIN",b.isin,"codigo");
+const derivado=/%|calculad|deprec|tablas|precio medio/i.test(String(b.valorFuente||""));
+add(b.tipo==="cuenta"?"Saldo":b.valorReferencia&&b.valor===b.valorReferencia?"Valor de referencia":"Valor",b.valor,"importe",{ctx:b.valorReferencia&&b.valor===b.valorReferencia?/referencia/i:/saldo|valor|valoraci|total|importe/i,derivado});
+if(b.valorReferencia&&b.valorReferencia!==b.valor)add("Valor de referencia",b.valorReferencia,"importe",{ctx:/referencia/i});
+add("Valor catastral",b.valorCatastralTotal,"importe",{ctx:/valor\s+catastral(?!\s+(?:suelo|construcci))|catastral\s*\(/i});
+add("Valor catastral del suelo",b.valorCatastralSuelo||b.valorCatastralSueloRustico,"importe",{ctx:/suelo/i});
+add("Valor de adquisición",b.valorAdq,"importe",{sec:true});add("Fecha de adquisición",b.fechaAdq,"fecha",{sec:true});
+if(!b.refCatastral&&!b.iban&&!b.isin&&!b.matricula)add("Descripción",String(b.descripcion||"").replace(/\s+en\s+[A-ZÁÉÍÓÚÑ][^ ]*$/,"").replace(/^(?:Cuenta|Fondo o valores|Depósito a plazo|Plan de pensiones|Acciones|Renta fija)\s+/,""),"texto",{min:0.6,sec:true});
+return A;
+}
+const orgAtomosDeuda=(d)=>(d.importe?[{etq:"Importe",v:d.importe,tipo:"importe",ctx:/pendiente|saldo|deudor|capital|importe|total/i}]:[]);
+function orgAtomos(it,tipo){
+if(tipo==="campo")return orgAtomosCampo(it);
+if(tipo==="persona")return orgAtomosPersona(it);
+if(tipo==="bien")return orgAtomosBien(it);
+if(tipo==="deuda"||tipo==="gasto")return orgAtomosDeuda(it);
+return[];
+}
+function orgSegmentos(d){
+if(d._seg&&d._seg.t===d.texto)return d._seg.L;
+const T=String(d.texto||""),L=[];let o=0;
+for(const s of T.split("\n\f\n")){L.push({o,t:s});o+=s.length+3;}
+const geo=Array.isArray(d.geo)?d.geo:[],usados=new Set();
+L.forEach((s,i)=>{const k=geo.findIndex((g,j)=>!usados.has(j)&&g.texto===s.t);if(k>=0){usados.add(k);s.rec=geo[k];}s.pag=s.rec&&s.rec.pag?s.rec.pag:i+1;});
+d._seg={t:d.texto,L};return L;
+}
+function orgFragmento(t,ini,fin){
+let a=t.lastIndexOf("\n",ini-1)+1,b=t.indexOf("\n",fin);if(b<0)b=t.length;
+if(ini-a>90)a=t.lastIndexOf(" ",ini-70)+1||ini-70;if(b-fin>90){const q=t.indexOf(" ",fin+70);b=q>0?q:fin+70;}
+if(fin-ini<30&&b-a<50){const a2=t.lastIndexOf("\n",a-2)+1;if(a-a2<90)a=a2;}
+const lim=(s)=>s.replace(/\s+/g," ");
+return{antes:(a>0&&t[a-1]!=="\n"?"…":"")+lim(t.slice(a,ini)),dato:lim(t.slice(ini,fin)),despues:lim(t.slice(fin,b))+(b<t.length&&t[b]!=="\n"?"…":"")};
+}
+function orgCajasPdf(rec,ini,fin){
+const R=[];
+for(const L of rec.lineas||[]){
+const a=Math.max(ini,L.o)-L.o,b=Math.min(fin,L.o+L.n)-L.o;if(b<=a)continue;
+let x0=1,x1=0,y0=1,y1=0;
+for(const it of L.items){if(it.b<=a||it.a>=b)continue;const w=(it.x1-it.x0)/Math.max(1,it.b-it.a);x0=Math.min(x0,it.x0+w*Math.max(0,a-it.a));x1=Math.max(x1,it.x0+w*(Math.min(b,it.b)-it.a));y0=Math.min(y0,it.y0);y1=Math.max(y1,it.y1);}
+if(x1>x0)R.push({x0,y0,x1,y1});
+}
+return R;
+}
+const orgAlnum=(s)=>lecN(s).replace(/[^A-Z0-9Ñ]/g,"");
+function orgDist(a,b){const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let p=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}return p[n];}
+function orgCajasOcr(rec,seg,ini,fin){
+const P=rec.palabras||[];const T=orgAlnum(seg.slice(ini,fin));if(!T||!P.length)return[];
+const rel=ini/Math.max(1,seg.length);let mejor=null;
+for(let i=0;i<P.length;i++){
+if(!P[i][0]||T[0]!==P[i][0][0]&&orgDist(P[i][0].slice(0,2),T.slice(0,2))>1)continue;
+let S="",j=i;while(j<P.length&&S.length<T.length)S+=P[j++][0];
+const d=Math.min(orgDist(S,T),orgDist(S.slice(0,T.length),T));const sc=1-d/T.length;
+if(sc>=0.7&&(!mejor||sc>mejor.sc+1e-9||(Math.abs(sc-mejor.sc)<1e-9&&Math.abs(i/P.length-rel)<Math.abs(mejor.i/P.length-rel))))mejor={i,j,sc};
+}
+if(!mejor)return[];
+const R=[];
+for(let k=mejor.i;k<mejor.j;k++){const[,x0,y0,x1,y1]=P[k];const L=R.find((r)=>Math.min(r.y1,y1)-Math.max(r.y0,y0)>(y1-y0)*0.4);if(L){L.x0=Math.min(L.x0,x0);L.x1=Math.max(L.x1,x1);L.y0=Math.min(L.y0,y0);L.y1=Math.max(L.y1,y1);}else R.push({x0,y0,x1,y1});}
+return R;
+}
+function orgOrigen(d,a){
+if(!d||!d.texto)return null;
+const h=orgHallar(d.texto,a);if(!h)return null;
+const L=orgSegmentos(d);const s=L.filter((q)=>q.o<=h.ini).pop()||L[0];
+const li=h.ini-s.o,lf=Math.min(h.fin-s.o,s.t.length);
+const rec=s.rec;let cajas=null,ocr=null;
+const tramos=h.partes?h.partes.map(([a,b])=>[a-s.o,Math.min(b-s.o,s.t.length)]):[[li,lf]];
+if(rec&&rec.lineas)cajas=tramos.flatMap(([a,b])=>orgCajasPdf(rec,a,b));
+else if(rec&&rec.palabras){cajas=tramos.flatMap(([a,b])=>orgCajasOcr(rec,s.t,a,b));ocr=rec.conf;}
+if(d.escaneado&&ocr==null&&!(rec&&rec.lineas))ocr=rec&&rec.conf!=null?rec.conf:-1;
+const pags=L.length>1?L.length:d.paginas||1;
+return{doc:d.nombre,etq:a.etq,v:orgMostrar(a),tipo:a.tipo,pag:s.pag,paginas:Math.max(pags,s.pag),seg:L.indexOf(s),ini:li,fin:lf,frag:h.partes?{...orgFragmento(s.t,li,lf),dato:tramos.map(([a,b])=>s.t.slice(a,b)).join(" … "),despues:orgFragmento(s.t,tramos[1][0],tramos[1][1]).despues}:orgFragmento(s.t,li,lf),partido:!!h.partes,exacto:h.exacto,corregido:h.corregido||"",deducido:!!(h.deducido||a.deducido),parcial:!!h.parcial,cajas:cajas&&cajas.length?cajas:null,ocr,fuente:rec?(rec.img?"imagen":"pdf"):"texto"};
+}
+function orgMostrar(a){
+if(a.tipo==="fecha"&&/^\d{4}-\d{2}-\d{2}$/.test(a.v))return a.v.split("-").reverse().join("/");
+if(a.tipo==="importe")return(typeof eur0==="function"?eur0(a.v):String(a.v)).replace(/ €$/,"")+(Math.round(a.v*100)%100?","+String(Math.round(a.v*100)%100).padStart(2,"0"):"")+" €";
+return String(a.v);
+}
+const ORG_NIVEL=["","baja","media","alta"];
+function orgConfianza(p,docs){
+const mot=[],neg=[];let n=3;const baja=(m)=>{n=1;neg.push(m);},media=(m)=>{n=Math.min(n,2);neg.push(m);};
+const O=p.origen||[],A=p.atomos||[];
+if(p.conf===0){const m=/\(([^)]{6,})\)\s*$/.exec(p.etiqueta||"");baja(m?"Dudoso: "+m[1]:/ya\s+(?:hay|tiene)/.test(p.etiqueta||"")?"El expediente ya tiene otro valor":"El lector lo deja sin marcar: revísalo");}
+for(const a of A){
+if(a.tipo==="nif"){const l=orgNifLetra(a.v);if(l&&String(a.v).toUpperCase().slice(-1)===l)mot.push("Letra del NIF correcta");else baja(`La letra del NIF ${a.v} no corresponde a su número${l?" (sería "+l+")":""}`);}
+if(a.tipo==="iban"){const r=orgIbanOk(a.v);if(r.ok)mot.push("IBAN válido (módulo 97 y control de la cuenta)");else baja(`IBAN ${a.v}: ${r.motivo}`);}
+if(a.tipo==="rc"){if(orgRcOk(a.v))mot.push("Referencia catastral con sus caracteres de control correctos");else baja(`La referencia catastral ${a.v} no cuadra con sus caracteres de control`);}
+}
+const prim=A.filter((a)=>!a.sec&&!a.alt);
+if(A.length){
+const loc=prim.filter((a)=>O.some((o)=>o.atomo===a.i));
+const docsLoc=new Set(O.filter((o)=>!A[o.atomo]||!A[o.atomo].sec).map((o)=>o.doc));
+if(!loc.length&&prim.length){if(prim.every((a)=>a.derivado))media("Valor calculado por el lector, no escrito así en el documento");else baja("No se ha encontrado escrito en el documento: compruébalo");}
+else if(loc.length<prim.length){const f=prim.filter((a)=>!loc.includes(a));if(f.every((a)=>a.derivado))media(`${f.map((a)=>a.etq.toLowerCase()).join(", ")}: valor calculado, no literal`);else media(`${loc.length} de ${prim.length} datos localizados en el documento (falta ${f.map((a)=>a.etq.toLowerCase()).join(", ")})`);}
+const exactos=O.filter((o)=>o.exacto&&!o.deducido&&(!A[o.atomo]||!A[o.atomo].sec));
+if(loc.length&&!exactos.length){if(O.some((o)=>o.deducido))media(`Deducido: el documento dice «${(O.find((o)=>o.deducido).frag.dato||"").slice(0,40)}»`);else if(O.some((o)=>o.corregido))media(`Corregido con los caracteres de control: el documento dice «${O.find((o)=>o.corregido).corregido}»`);else media("Localizado de forma aproximada: el texto no coincide letra a letra");}
+else if(O.some((o)=>o.corregido)&&!exactos.some((o)=>o.tipo==="rc"))media(`Corregido con los caracteres de control: el documento dice «${O.find((o)=>o.corregido).corregido}»`);
+const texto=exactos.filter((o)=>o.ocr==null),img=O.filter((o)=>o.ocr!=null);
+if(loc.length&&!texto.length&&img.length){
+const q=Math.max(...img.map((o)=>o.ocr));const dl=new Set(img.map((o)=>o.doc)).size;
+if(q>=0&&q<60)baja(`Leído por imagen con calidad baja (${Math.round(q)} %)`);
+else if(dl<2)media(q>=0?`Leído por imagen (calidad ${Math.round(q)} %), sin otro documento que lo confirme`:"Leído por imagen, sin otro documento que lo confirme");
+else mot.push(`Leído por imagen en ${dl} documentos que coinciden`);
+}
+if(docsLoc.size>=2)mot.unshift(`Coincide en ${docsLoc.size} documentos`);
+else if(exactos.length)mot.unshift("Escrito así en el documento");
+}else if(!p.src){if(p.conf===0){n=1;neg.length=0;neg.push("Aviso del lector para revisar: no es un dato escrito en un documento");}else media("Deducido de otros datos: no es un dato escrito en un documento");}
+const sinEsp=(m)=>m.replace(/\s+/g,"").slice(0,30);
+for(const c of p.cruces||[])if(!neg.some((m)=>sinEsp(m)===sinEsp(c)))baja(c);
+if(p.conf===1&&n===3&&!(A.length&&O.length))n=2;
+return{nivel:ORG_NIVEL[n],motivos:[...new Set(n<3?[...neg,...mot]:[...mot,...neg])]};
+}
+function orgNivelFuentes(p){
+for(const s of p.src||[]){
+const A=orgAtomos(s.it,s.tipo).filter((a)=>!a.sec&&!a.alt);let n=3;
+for(const a of A){
+const at=(p.atomos||[]).find((q)=>q.tipo===a.tipo&&(typeof a.v==="number"?Math.round(q.v*100)===Math.round(a.v*100):lecN(String(q.v))===lecN(String(a.v))));if(!at)continue;
+const O=(p.origen||[]).filter((o)=>o.atomo===at.i);const mio=O.find((o)=>o.doc===s.doc);
+if(!mio){n=Math.min(n,a.derivado?2:1);continue;}
+const conf=new Set(O.map((o)=>o.doc)).size>=2||O.some((o)=>o.exacto&&!o.deducido&&o.ocr==null);
+if(!conf||!mio.exacto)n=Math.min(n,2);
+if((a.tipo==="nif"&&orgNifLetra(a.v)!==String(a.v).toUpperCase().slice(-1))||(a.tipo==="iban"&&!orgIbanOk(a.v).ok)||(a.tipo==="rc"&&!orgRcOk(a.v)))n=1;
+}
+if(p.confianza==="baja"&&(p.cruces||[]).length)n=1;
+s.nivel=ORG_NIVEL[n];
+}
+}
+function orgEnriquecer(res,x){
+if(!res||!Array.isArray(res.propuestas))return res;
+ORG.norm.clear();
+const R=res.docs||[],porNombre=new Map(R.map((d)=>[d.nombre,d]));
+for(const p of res.propuestas){
+p.atomos=[];p.origen=[];p.cruces=[];
+const vistos=new Map();
+for(const s of p.src||[]){
+const d=porNombre.get(s.doc);
+for(const a of orgAtomos(s.it,s.tipo)){
+const clave=a.tipo+"|"+(typeof a.v==="number"?Math.round(a.v*100):lecN(String(a.v)))+"|"+(a.alt?1:0);
+let i=vistos.get(clave);if(i==null){i=p.atomos.length;vistos.set(clave,i);p.atomos.push({...a,i});}
+if(p.origen.some((o)=>o.atomo===i&&o.doc===s.doc))continue;
+const o=orgOrigen(d,a);if(o)p.origen.push({...o,atomo:i});
+}
+}
+const alt=p.atomos.filter((a)=>a.alt);
+for(const a of alt){const prin=p.atomos.find((q)=>!q.alt&&q.etq===a.etq);if(prin&&p.origen.some((o)=>o.atomo===prin.i))p.origen=p.origen.filter((o)=>o.atomo!==a.i);else if(prin){for(const o of p.origen)if(o.atomo===a.i)o.atomo=prin.i;}}
+p.atomos=p.atomos.filter((a)=>!a.alt);
+}
+res.cruces=orgCruces(R,res.propuestas,x);
+for(const p of res.propuestas){const c=orgConfianza(p,R);p.confianza=c.nivel;p.motivos=c.motivos;orgNivelFuentes(p);}
+return res;
+}
+function orgMismaPersona(a,b){const A=orgToks(a),B=orgToks(b);if(Math.min(A.length,B.length)<3)return A.slice().sort().join(" ")===B.slice().sort().join(" ");return lecMismoNombre(a,b);}
+function orgCruces(R,P,x){
+const C=[],ok={};const sumar=(k,n=1)=>{ok[k]=(ok[k]||0)+n;};
+const ref=(d,a)=>(d?orgOrigen(d,a):null);
+const afecta=(fn,motivo)=>{const ids=[];for(const p of P)if(fn(p)){p.cruces.push(motivo);ids.push(p.id);}return ids;};
+const campos=(k)=>R.flatMap((d)=>(d.datos.campos||[]).filter((c)=>c.k===k&&c.valor).map((c)=>({d,c})));
+const fc=(f)=>(typeof fechaCorta==="function"?fechaCorta(f):f.split("-").reverse().join("/"));
+const T=(d)=>String(d.texto||"");
+const noms=campos("nombre"),nifs=campos("nifCausante");
+const base=noms.find((q)=>q.d.tipo==="defuncion")||noms[0];
+if(base)for(const q of noms){
+if(q===base)continue;
+if(lecMismoNombre(base.c.valor,q.c.valor)){if(q.d!==base.d)sumar("causante");continue;}
+const m=`El causante no coincide: «${base.c.valor}» en ${base.d.nombre} y «${q.c.valor}» en ${q.d.nombre}`;
+C.push({nivel:"error",titulo:"Causante distinto",texto:`${m}. Comprueba que los documentos son de la misma herencia.`,refs:[ref(base.d,{etq:"Causante",v:base.c.valor,tipo:"nombre"}),ref(q.d,{etq:"Causante",v:q.c.valor,tipo:"nombre"})],props:afecta((p)=>p.k==="nombre",m)});
+}
+const nb=nifs.find((q)=>q.d.tipo==="defuncion")||nifs[0];
+if(nb)for(const q of nifs){if(q===nb)continue;if(q.c.valor===nb.c.valor){sumar("causante");continue;}const m=`DNI del causante distinto: ${nb.c.valor} en ${nb.d.nombre} y ${q.c.valor} en ${q.d.nombre}`;C.push({nivel:"error",titulo:"DNI del causante distinto",texto:m+".",refs:[ref(nb.d,{etq:"DNI",v:nb.c.valor,tipo:"nif"}),ref(q.d,{etq:"DNI",v:q.c.valor,tipo:"nif"})],props:afecta((p)=>p.k==="nifCausante",m)});}
+const fechas=campos("fecha").filter((q)=>q.c.conf>0);
+const fb=fechas.find((q)=>q.d.tipo==="defuncion")||fechas[0];
+const fMuerte=fb?fb.c.valor:x&&x.fecha;
+if(fb)for(const q of fechas){
+if(q===fb)continue;if(q.c.valor===fb.c.valor){if(q.d!==fb.d)sumar("fecha");continue;}
+const m=`Fecha del fallecimiento distinta: ${fc(fb.c.valor)} en ${fb.d.nombre} y ${fc(q.c.valor)} en ${q.d.nombre}`;
+C.push({nivel:"error",titulo:"Fecha del fallecimiento distinta",texto:`${m}. Manda el certificado de defunción; pide que se corrija el otro documento si es suyo el error.`,refs:[ref(fb.d,{etq:"Fecha del fallecimiento",v:fb.c.valor,tipo:"fecha"}),ref(q.d,{etq:"Fecha del fallecimiento",v:q.c.valor,tipo:"fecha"})],props:afecta((p)=>p.k==="fecha",m)});
+}
+const ult=R.filter((d)=>d.tipo==="ultimas");
+const tests=R.filter((d)=>d.tipo==="testamento").map((d)=>({d,f:((d.datos.campos||[]).find((c)=>c.k==="testamentoFecha")||{}).valor})).filter((q)=>q.f);
+for(const u of ult){
+const F=[];const Tu=T(u);
+for(const m of Tu.matchAll(/fecha\s*(?:del?\s*)?(?:acto|otorgamiento|testamento)\s*[:：]?\s*/gi)){const z=Tu.slice(m.index+m[0].length,m.index+m[0].length+60);const q=lecFechas(z);if(q.length&&q[0].i<6)F.push(q[0].f);}
+const tdat=((u.datos.campos||[]).find((c)=>c.k==="testamentoDatos")||{}).valor;if(tdat&&tdat.fecha)F.push(tdat.fecha);
+if(!F.length)continue;
+const ultimo=F.sort().pop();
+const vistas=new Set();
+for(const t of tests){
+if(t.f===ultimo){sumar("testamento");continue;}
+if(vistas.has(t.f)){const c0=C.find((c)=>c.tf===t.f&&c.titulo==="Testamento que no es el último");if(c0){c0.props.push(...afecta((p)=>p.grupo==="Testamento"&&(p.src||[]).some((s)=>s.doc===t.d.nombre),c0.motivo));c0.texto=c0.texto.replace(/\.$/,"")+` (también la copia ${t.d.nombre}).`;}continue;}
+vistas.add(t.f);
+const m=t.f<ultimo?`El testamento leído (${fc(t.f)}) no es el último: el Registro de Últimas Voluntades certifica otro de ${fc(ultimo)}`:`El testamento leído (${fc(t.f)}) no figura en el certificado de últimas voluntades, cuyo último acto es de ${fc(ultimo)}`;
+C.push({nivel:"error",titulo:"Testamento que no es el último",tf:t.f,motivo:m,texto:`${m}. El último otorgado es, en principio, el vigente: pide copia autorizada de ese a la notaría.`,refs:[ref(u,{etq:"Último acto de última voluntad",v:ultimo,tipo:"fecha"}),ref(t.d,{etq:"Fecha del testamento",v:t.f,tipo:"fecha"})],props:afecta((p)=>p.grupo==="Testamento"&&(p.src||[]).some((s)=>s.doc===t.d.nombre),m)});
+}
+}
+if(fMuerte)for(const t of tests)if(t.f>fMuerte){const m=`El testamento (${fc(t.f)}) es posterior al fallecimiento (${fc(fMuerte)}): una de las dos fechas está mal leída`;C.push({nivel:"error",titulo:"Fechas imposibles",texto:m+".",refs:[ref(t.d,{etq:"Fecha del testamento",v:t.f,tipo:"fecha"}),fb?ref(fb.d,{etq:"Fecha del fallecimiento",v:fMuerte,tipo:"fecha"}):null],props:afecta((p)=>p.k==="testamentoFecha",m)});}
+for(const d of R){
+const Td=T(d);const vistos=new Set();
+for(const m of Td.matchAll(/(?<![A-Za-z0-9])(\d{8}|[XYZ]\d{7})\s?-?\s?([A-Z])(?![A-Za-z0-9])/g)){
+const v=m[1]+m[2];if(vistos.has(v))continue;vistos.add(v);
+const l=orgNifLetra(v);if(!l)continue;
+if(l===m[2]){sumar("nif");continue;}
+const antes=Td.slice(Math.max(0,m.index-60),m.index);if(!/N\.?\s?I\.?\s?[FE]|D\.?\s?N\.?\s?I|DOCUMENTO|IDENTIDAD|NIF|DNI|NIE|TITULAR/i.test(antes)&&!(d.datos.personas||[]).length)continue;
+C.push({nivel:"error",titulo:"NIF con la letra equivocada",texto:`${d.nombre} trae el NIF ${v}, pero con ese número la letra es ${l}. El lector no lo ha usado: comprueba el número en el documento original o en el DNI.`,refs:[ref(d,{etq:"NIF",v,tipo:"nif"})],props:[]});
+}
+}
+const pers=R.flatMap((d)=>(d.datos.personas||[]).filter((p)=>p.nif&&p.nombre).map((p)=>({d,p})));
+const dobles=new Set();
+for(let i=0;i<pers.length;i++)for(let j=i+1;j<pers.length;j++){
+const a=pers[i],b=pers[j];if(a.p.nif===b.p.nif||!orgMismaPersona(a.p.nombre,b.p.nombre))continue;
+const k=[a.p.nif,b.p.nif].sort().join();if(dobles.has(k))continue;dobles.add(k);
+const m=`${a.p.nombre}: NIF ${a.p.nif} en ${a.d.nombre} y ${b.p.nif} en ${b.d.nombre}`;
+C.push({nivel:"error",titulo:"Una persona con dos NIF",texto:m+". Uno de los dos está mal escrito o mal leído.",refs:[ref(a.d,{etq:"NIF",v:a.p.nif,tipo:"nif"}),ref(b.d,{etq:"NIF",v:b.p.nif,tipo:"nif"})],props:afecta((p)=>p.grupo==="Personas"&&(p.src||[]).some((s)=>s.tipo==="persona"&&lecMismoNombre(s.it.nombre,a.p.nombre)),m)});
+}
+for(const d of R){
+const vistos=new Set();
+for(const m of T(d).matchAll(/(?<![A-Z0-9])(\d{7}[A-Z]{2}\d{4}[A-Z]\d{4}[A-Z]{2}|\d{5}[A-Z]\d{8}\d{4}[A-Z]{2})(?![A-Z0-9])/g)){
+const v=m[1];if(vistos.has(v))continue;vistos.add(v);
+if(orgRcOk(v)){sumar("rc");continue;}
+const corr=(d.datos.bienes||[]).find((b)=>b.refCatastral&&b.refCatastral!==v&&orgDist(b.refCatastral,v)<=2&&orgRcOk(b.refCatastral));
+C.push({nivel:corr?"aviso":"error",titulo:corr?"Referencia catastral corregida":"Referencia catastral que no cuadra",texto:corr?`${d.nombre} dice ${v}, que no cuadra con sus caracteres de control; el lector propone ${corr.refCatastral}, la única corrección que cuadra. Confírmalo en la Sede del Catastro.`:`${d.nombre} trae la referencia catastral ${v}, que no cuadra con sus caracteres de control: está mal escrita o mal leída. Compruébala en la Sede del Catastro antes de usarla.`,refs:[ref(d,{etq:"Referencia catastral",v,tipo:"rc"})],props:corr?[]:afecta((p)=>(p.atomos||[]).some((a)=>a.tipo==="rc"&&a.v===v),`La referencia catastral ${v} no cuadra con sus caracteres de control`)});
+}
+}
+for(const d of R){
+const vistos=new Set();
+for(const m of T(d).matchAll(/(?<![A-Z0-9])ES\d{2}(?:\s*\d{4}){5}(?!\d)/g)){
+const v=m[0].replace(/\s/g,"");if(vistos.has(v))continue;vistos.add(v);
+const r=orgIbanOk(v);if(r.ok){sumar("iban");continue;}
+const mo=`IBAN ${v.replace(/(.{4})/g,"$1 ").trim()}: ${r.motivo}`;
+C.push({nivel:"error",titulo:"IBAN que no cuadra",texto:`${d.nombre}: ${mo}. Está mal escrito o mal leído; compruébalo con el banco.`,refs:[ref(d,{etq:"IBAN",v,tipo:"iban"})],props:afecta((p)=>(p.atomos||[]).some((a)=>a.tipo==="iban"&&a.v===v),mo)});
+}
+}
+for(const d of R.filter((q)=>/^(bancario|valores)$/.test(q.tipo))){
+const Td=T(d);
+for(const b of(d.datos.bienes||[]).filter((q)=>q.tipo==="valores"&&q.valor)){
+const h=orgHallar(Td,{tipo:"importe",v:b.valor});if(!h)continue;
+let a0=Td.lastIndexOf("\n",Td.lastIndexOf("\n",h.ini-1)-1)+1;a0=Math.max(a0,h.ini-260);
+for(const q of(d.datos.bienes||[]).concat(d.datos.deudas||[])){const v2=q.valor||q.importe;if(q===b||!v2)continue;const h2=orgHallar(Td.slice(a0,h.ini),{tipo:"importe",v:v2});if(h2)a0+=h2.fin;}
+const z=Td.slice(a0,h.ini);const N=[...z.matchAll(/(?<![\d.,])(\d{1,3}(?:\.\d{3})*,(\d{2,6})|\d+,(\d{2,6}))(?![\d])/g)].map((m)=>({v:lecNum(m[1]),dec:(m[2]||m[3]||"").length,i:m.index,s:m[1]}));
+const U=N.filter((q)=>q.dec>=3||/particip|t[íi]tulos|acciones/i.test(z.slice(q.i+q.s.length,q.i+q.s.length+20)));
+if(!U.length)continue;
+const tol=Math.max(1,b.valor*0.005);let cuadra=null,prueba=null;
+for(const u of U){const tras=N.filter((q)=>q.i>u.i);for(const nv of tras){const pr=u.v*nv.v;if(Math.abs(pr-b.valor)<=tol)cuadra=[u,nv];else if(!prueba&&(tras.length===1||/liquidativo|precio|cotizaci/i.test(z.slice(Math.max(0,nv.i-40),nv.i))))prueba=[u,nv,pr];}}
+if(cuadra){sumar("fondos");continue;}
+if(prueba){const[u,nv,pr]=prueba;const m=`${b.descripcion}: ${u.s} participaciones × ${nv.s} € de valor liquidativo = ${orgMostrar({tipo:"importe",v:Math.round(pr*100)/100})}, pero el certificado dice ${orgMostrar({tipo:"importe",v:b.valor})}`;C.push({nivel:"error",titulo:"La valoración del fondo no cuadra",texto:m+". Pide al banco que lo confirme.",refs:[ref(d,{etq:"Valoración",v:b.valor,tipo:"importe"})],props:afecta((p)=>(p.src||[]).some((s)=>s.it===b),m)});}
+}
+const tot=/\b(?:total(?:\s+(?:posiciones|saldos?|patrimonio|activo))?|saldo\s+total)\b[^\n\d]{0,40}?(?<![\d.,])(\d{1,3}(?:\.\d{3})*,\d{2})/i.exec(Td);
+if(tot){
+const vt=lecNum(tot[1]);const B=(d.datos.bienes||[]).filter((q)=>q.valor>0);
+const s1=B.reduce((s,q)=>s+q.valor,0),s2=B.filter((q)=>!/pensiones/i.test(q.descripcion||"")).reduce((s,q)=>s+q.valor,0);
+if(B.length>1&&[s1,s2].some((s)=>Math.abs(s-vt)<0.6))sumar("totales");
+else if(B.length>1){const m=`${d.nombre}: el total que declara el certificado (${tot[1]} €) no es la suma de las posiciones leídas (${orgMostrar({tipo:"importe",v:Math.round(s1*100)/100})})`;C.push({nivel:"aviso",titulo:"Total del certificado distinto de la suma",texto:m+". Puede faltar una posición por leer o sobrar alguna: revisa el certificado.",refs:[ref(d,{etq:"Total",v:vt,tipo:"importe"})],props:[]});}
+}
+let fs=d.datos.extra&&d.datos.extra.fechaSaldo;
+if(!fs)for(const m of Td.matchAll(/\b(?:a\s+(?:la\s+)?fecha|al\s+d[ií]a|saldos?\s+a|posiciones\s+a)\b/gi)){const z=Td.slice(m.index+m[0].length,m.index+m[0].length+40);const F=lecFechas(z);if(F.length&&F[0].i<=30&&!/emisi|expedici/i.test(z.slice(0,F[0].i))){fs=F[0].f;if(fs===fMuerte)break;}}
+if(fs&&fMuerte){if(fs===fMuerte)sumar("saldos");else{const m=`${d.nombre} da los saldos a ${fc(fs)} y el fallecimiento es de ${fc(fMuerte)}`;C.push({nivel:"aviso",titulo:"Saldos a otra fecha",texto:`${m}. En Sucesiones cuenta el saldo a la fecha del fallecimiento: pide el certificado a esa fecha.`,refs:[ref(d,{etq:"Fecha de los saldos",v:fs,tipo:"fecha"}),fb?ref(fb.d,{etq:"Fecha del fallecimiento",v:fMuerte,tipo:"fecha"}):null],props:afecta((p)=>(p.src||[]).some((s)=>s.doc===d.nombre&&s.tipo==="bien"),m)});}}
+}
+const hijosDe=(d)=>(d.datos.personas||[]).filter((p)=>p.relacion==="hijo"&&!p.legatario&&p.nombre);
+const arbol=R.filter((d)=>/^(familia|nacimiento|herederos)$/.test(d.tipo)).flatMap((d)=>hijosDe(d).map((p)=>({d,p})));
+const enExp=((x&&x.personas)||[]).filter((p)=>p.relacion==="hijo"&&p.nombre).map((p)=>({d:null,p}));
+for(const t of R.filter((d)=>d.tipo==="testamento")){
+const H=hijosDe(t);if(!H.length)continue;
+const ancla=H[0];
+for(const q of arbol.concat(enExp)){
+if(H.some((h)=>lecMismoNombre(h.nombre,q.p.nombre))){sumar("herederos");continue;}
+const m=`${q.p.nombre} figura como hijo/a ${q.d?"en "+q.d.nombre:"en el expediente"} y el testamento (${t.nombre}) no lo nombra`;
+if(C.some((c)=>c.titulo==="Hijo que el testamento no nombra"&&c.texto.startsWith(q.p.nombre+" figura")))continue;
+C.push({nivel:"error",titulo:"Hijo que el testamento no nombra",texto:`${m}. Comprueba si nació o fue reconocido después del testamento o si hay preterición (arts. 814 y 815 del Código Civil).`,refs:[q.d?ref(q.d,{etq:"Hijo/a",v:q.p.nombre,tipo:"nombre"}):null,ref(t,{etq:"Hijos que nombra el testamento",v:ancla.nombre,tipo:"nombre"})],props:afecta((p)=>p.grupo==="Personas"&&(p.src||[]).some((s)=>s.tipo==="persona"&&lecMismoNombre(s.it.nombre,q.p.nombre)),m)});
+}
+if(arbol.length)for(const h of H)if(!arbol.some((q)=>lecMismoNombre(q.p.nombre,h.nombre))){const q0=arbol[0];const m=`El testamento nombra como hijo/a a ${h.nombre}, que no aparece en ${q0.d.nombre}`;if(C.some((c)=>c.texto.startsWith(m)))continue;C.push({nivel:"aviso",titulo:"Hijo del testamento que no está en el libro de familia",texto:`${m}. Puede ser un hijo de otra relación, adoptado o un error de lectura del nombre.`,refs:[ref(t,{etq:"Hijo/a",v:h.nombre,tipo:"nombre"}),ref(q0.d,{etq:"Hijos del libro de familia",v:q0.p.nombre,tipo:"nombre"})],props:afecta((p)=>p.grupo==="Personas"&&(p.src||[]).some((s)=>s.tipo==="persona"&&lecMismoNombre(s.it.nombre,h.nombre)),m)});}
+const ct=(t.datos.personas||[]).find((p)=>p.relacion==="conyuge");
+if(ct)for(const d of R.filter((q)=>/^(familia|matrimonio|defuncion)$/.test(q.tipo))){
+const c2=(d.datos.personas||[]).find((p)=>(p.relacion==="conyuge"||p.pareja)&&!(base&&lecMismoNombre(p.nombre,base.c.valor)));
+if(!c2)continue;if(lecMismoNombre(c2.nombre,ct.nombre)){sumar("herederos");continue;}
+const m=`El testamento nombra cónyuge a ${ct.nombre} y ${d.nombre} a ${c2.nombre}`;if(C.some((c)=>c.texto.startsWith(m)))continue;
+C.push({nivel:"error",titulo:"Cónyuge distinto",texto:`${m}. Puede haber un matrimonio posterior al testamento o un divorcio: el cónyuge con derechos es el del momento del fallecimiento.`,refs:[ref(t,{etq:"Cónyuge",v:ct.nombre,tipo:"nombre"}),ref(d,{etq:"Cónyuge",v:c2.nombre,tipo:"nombre"})],props:afecta((p)=>p.grupo==="Personas"&&/Cónyuge/.test(p.etiqueta||""),m)});
+}
+}
+C.forEach((c,i)=>{c.i=i;c.refs=c.refs.filter(Boolean);});
+C.ok=ok;
+return C;
+}
+const ORG_ETQ={alta:"Confianza alta",media:"Confianza media",baja:"Confianza baja"};
+const orgAntes=(s,n)=>(s.length<=n?s:"…"+s.slice(-n).replace(/^\S*\s+/,""));
+const orgDespues=(s,n)=>(s.length<=n?s:s.slice(0,n).replace(/\s+\S*$/,"")+"…");
+const orgQ=(f,a=34,d=30,n=90)=>`<q>${esc(orgAntes(f.antes,a))}<mark>${esc(f.dato.length>n?f.dato.slice(0,n)+"…":f.dato)}</mark>${esc(orgDespues(f.despues,d))}</q>`;
+const orgBajas=(P)=>(P||[]).filter((p)=>p.confianza==="baja");
+function orgFilaHTML(p){
+if(!p.confianza)return"";
+const cls=p.confianza==="alta"?"ok":p.confianza==="media"?"warn":"bad";
+const O=p.origen||[];const o=O.find((q)=>q.cajas)||O[0];
+const mot=(p.motivos||[]).slice(0,2).join(" · ");
+const pag=(q)=>(q.paginas>1?`pág. ${q.pag} de ${q.paginas}`:"pág. 1");
+const otros=new Set(O.map((q)=>q.doc)).size-1;
+return`<span class="org-fila"><span class="chip ${cls} org-chip"><i></i>${ORG_ETQ[p.confianza]}</span>${mot?`<span class="org-mot">${esc(mot)}</span>`:""}</span>${o?`<button type="button" class="org-src" data-org-ver="p:${esc(p.id)}:${O.indexOf(o)}" title="Ver ${esc(o.etq.toLowerCase())} en la página del documento">${I.doc}<span class="org-src-t"><span class="org-src-d">${esc(o.doc)} · ${pag(o)}${otros>0?` · y ${plural(otros,"documento más","documentos más")}`:""}</span>${orgQ(o.frag)}</span></button>`:p.atomos&&p.atomos.length?`<span class="org-src org-src-no">Sin fragmento localizado en el documento</span>`:""}`;
+}
+function orgCrucesHTML(R){
+const C=(R&&R.cruces)||[];const ok=(C&&C.ok)||{};
+const okTxt=[ok.causante&&`mismo causante en ${plural(ok.causante+1,"documento")}`,ok.fecha&&`fecha del fallecimiento igual en ${plural(ok.fecha+1,"documento")}`,ok.testamento&&"el testamento leído es el último que consta",ok.nif&&plural(ok.nif,"NIF con su letra correcta","NIF con su letra correcta"),ok.rc&&plural(ok.rc,"referencia catastral con control correcto","referencias catastrales con control correcto"),ok.iban&&plural(ok.iban,"IBAN válido","IBAN válidos"),ok.fondos&&plural(ok.fondos,"fondo: participaciones × valor liquidativo cuadra","fondos: participaciones × valor liquidativo cuadran"),ok.totales&&plural(ok.totales,"total bancario que cuadra","totales bancarios que cuadran"),ok.saldos&&"saldos a la fecha del fallecimiento",ok.herederos&&"herederos del testamento en el árbol"].filter(Boolean);
+if(!C.length&&!okTxt.length)return"";
+const P=(R.propuestas||[]);const n={alta:0,media:0,baja:0};for(const p of P)if(p.confianza)n[p.confianza]++;
+const ref=(c,j)=>{const o=c.refs[j];return`<button type="button" class="org-src" data-org-ver="c:${c.i}:${j}" title="Ver en la página del documento">${I.doc}<span class="org-src-t"><span class="org-src-d">${esc(o.doc)} · pág. ${o.pag}</span>${orgQ(o.frag,30,30,80)}</span></button>`;};
+return`<section class="org-cruces" aria-labelledby="org-cr-t"><div class="org-cr-cab"><h3 id="org-cr-t">Comprobaciones entre documentos</h3><span class="org-cr-n">${n.baja?`<span class="chip bad"><i></i>${n.baja} baja</span>`:""}${n.media?`<span class="chip warn"><i></i>${n.media} media</span>`:""}${n.alta?`<span class="chip ok"><i></i>${n.alta} alta</span>`:""}</span></div>
+    ${C.length?`<ul class="org-cr-l">${C.map((c)=>`<li class="org-cr ${c.nivel==="error"?"org-cr-e":"org-cr-a"}"><p><b>${esc(c.titulo)}.</b> ${esc(c.texto)}</p>${c.refs.length?`<div class="org-cr-refs">${c.refs.map((_,j)=>ref(c,j)).join("")}</div>`:""}</li>`).join("")}</ul>`:`<p class="org-cr-bien">Ninguna discrepancia entre los documentos.</p>`}
+    ${okTxt.length?`<p class="org-cr-ok"><span class="org-tick" aria-hidden="true">${I.tick}</span><span>Comprobado: ${esc(okTxt.join(" · "))}.</span></p>`:""}
+    <p class="caption org-cr-nota">La confianza de cada dato se calcula por reglas: si está escrito así en el documento, cuántos documentos lo dicen, si se ha leído por imagen y con qué calidad, y si los dígitos de control cuadran. Pulsa un documento para ver el dato resaltado en su página.</p></section>`;
+}
+function orgGuardarOrigen(x,P){
+const f=typeof hoy==="function"?hoy():"";
+const L=P.map((p)=>({f,etq:p.etiqueta,v:String(p.mostrar||"").slice(0,140),c:p.confianza||"",o:(p.origen||[]).filter((o,i,A)=>A.findIndex((q)=>q.doc===o.doc)===i).slice(0,3).map((o)=>({d:o.doc,p:o.pag,t:String(o.frag.dato||"").slice(0,90)}))}));
+x.origenLectura=(x.origenLectura||[]).concat(L).slice(-500);
+}
+function orgResumenHTML(x){
+const L=x.origenLectura||[];if(!L.length)return"";
+const n={alta:0,media:0,baja:0};for(const q of L)if(n[q.c]!=null)n[q.c]++;
+return`<details class="org-res"><summary>Origen de ${plural(L.length,"dato cargado","datos cargados")}: documento, página y texto${n.baja?` · ${n.baja} de confianza baja`:""}</summary><ul>${L.map((q)=>`<li><b>${esc(q.etq)}</b>${q.c?` <span class="chip ${q.c==="alta"?"ok":q.c==="media"?"warn":"bad"} org-chip"><i></i>${ORG_ETQ[q.c]||q.c}</span>`:""}<span>${esc(q.v)}</span>${q.o.map((o)=>`<small>${esc(o.d)} · pág. ${o.p} · «${esc(o.t)}»</small>`).join("")}</li>`).join("")}</ul></details>`;
+}
+function orgRef(ref){
+const R=typeof LEC==="object"&&LEC.resultado;if(!R)return null;
+const[t,a,b]=String(ref).split(":");const j=Number(b);
+if(t==="p"){const p=R.propuestas.find((q)=>q.id===a);return p&&p.origen&&p.origen[j]?{o:p.origen[j],p,lista:p.origen,k:j,tipo:"p",id:a}:null;}
+if(t==="c"){const c=(R.cruces||[])[Number(a)];return c&&c.refs[j]?{o:c.refs[j],c,lista:c.refs,k:j,tipo:"c",id:a}:null;}
+return null;
+}
+function orgCerrar(){
+const v=document.querySelector(".org-visor");if(v)v.remove();
+document.removeEventListener("keydown",orgTecla,true);
+if(ORG.volver&&document.contains(ORG.volver)){try{ORG.volver.focus();}catch(e){}}
+ORG.volver=null;
+}
+function orgTecla(e){
+const v=document.querySelector(".org-visor");if(!v)return;
+if(e.key==="Escape"){e.preventDefault();e.stopPropagation();orgCerrar();return;}
+if(e.key==="Tab"){const F=[...v.querySelectorAll("button, [href], [tabindex]:not([tabindex='-1'])")].filter((n)=>!n.disabled&&n.offsetParent!==null);if(!F.length)return;const i=F.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();F[F.length-1].focus();}else if(!e.shiftKey&&i===F.length-1){e.preventDefault();F[0].focus();}}
+}
+async function orgVer(ref,desde){
+const r=orgRef(ref);if(!r)return;
+const{o}=r;const R=LEC.resultado;const d=R.docs.find((q)=>q.nombre===o.doc);if(!d)return;
+if(!document.querySelector(".org-visor"))ORG.volver=desde||document.activeElement;
+const v0=document.querySelector(".org-visor");if(v0)v0.remove();
+const seg=orgSegmentos(d)[o.seg]||{};const rec=seg.rec;
+const motivos=r.p?r.p.motivos||[]:[];
+const fuentes=r.lista.map((q,j)=>`<button type="button" class="org-v-f${j===r.k?" on":""}" data-org-ver="${r.tipo}:${r.id}:${j}"${j===r.k?' aria-current="true"':""}><b>${esc(q.etq)}</b><span>${esc(q.doc)} · pág. ${q.pag}</span></button>`).join("");
+const el=document.createElement("div");el.className="org-visor";
+el.innerHTML=`<div class="org-v-scrim" data-org-cerrar="1"></div><section class="org-v-panel" role="dialog" aria-modal="true" aria-labelledby="org-v-t" aria-describedby="org-v-d">
+    <header class="org-v-cab"><div class="org-v-tit"><h2 id="org-v-t">${esc(o.etq)}: ${esc(String(o.v).length>70?String(o.v).slice(0,70).replace(/\s+\S*$/,"")+"…":o.v)}</h2><p id="org-v-d">${esc(o.doc)} · página ${o.pag}${o.paginas>1?` de ${o.paginas}`:""}${o.ocr!=null?` · leído por imagen${o.ocr>=0?` (calidad ${Math.round(o.ocr)} %)`:""}`:""}</p></div><button type="button" class="btn sm gray" data-org-cerrar="1">Cerrar</button></header>
+    <div class="org-v-cuerpo"><div class="org-v-hoja" tabindex="0" role="region" aria-label="Página ${o.pag} de ${esc(o.doc)} con el dato resaltado"><p class="org-v-carga">Abriendo la página…</p></div>
+    <aside class="org-v-lado"><h3>Texto leído en el documento</h3><blockquote class="org-v-frag">${esc(o.frag.antes)}<mark>${esc(o.frag.dato)}</mark>${esc(o.frag.despues)}</blockquote>
+    ${o.corregido?`<p class="org-v-nota">El documento dice «${esc(o.corregido)}»: el lector lo ha corregido con los caracteres de control.</p>`:o.deducido?`<p class="org-v-nota">Dato deducido de este texto, no escrito tal cual.</p>`:!o.exacto?`<p class="org-v-nota">Localizado de forma aproximada: el texto no coincide letra a letra.</p>`:""}
+    ${r.p?`<h3>Confianza ${esc(r.p.confianza||"")}</h3>${motivos.length?`<ul class="org-v-mot">${motivos.map((m)=>`<li>${esc(m)}</li>`).join("")}</ul>`:""}`:r.c?`<h3>${esc(r.c.titulo)}</h3><p class="org-v-nota">${esc(r.c.texto)}</p>`:""}
+    ${r.lista.length>1?`<h3>${r.tipo==="c"?"Los dos documentos":"Dónde aparece"}</h3><div class="org-v-fs">${fuentes}</div>`:""}</aside></div></section>`;
+document.body.appendChild(el);
+document.addEventListener("keydown",orgTecla,true);
+el.querySelector("[data-org-cerrar].btn").focus();
+const hoja=el.querySelector(".org-v-hoja");
+const cajas=(o.cajas||[]).map((c)=>`<span class="org-caja" style="left:${(c.x0*100).toFixed(2)}%;top:${(c.y0*100).toFixed(2)}%;width:${((c.x1-c.x0)*100).toFixed(2)}%;height:${((c.y1-c.y0)*100).toFixed(2)}%"></span>`).join("");
+const centrar=()=>{const c=hoja.querySelector(".org-caja");if(c)hoja.scrollTop=Math.max(0,c.offsetTop-hoja.clientHeight/3);};
+const texto=()=>{const t=seg.t||"";hoja.innerHTML=`<pre class="org-v-texto">${esc(t.slice(Math.max(0,o.ini-1200),o.ini))}<mark>${esc(t.slice(o.ini,o.fin))}</mark>${esc(t.slice(o.fin,o.fin+1600))}</pre>`;const m=hoja.querySelector("mark");if(m)hoja.scrollTop=Math.max(0,m.offsetTop-hoja.clientHeight/3);};
+try{
+if(rec&&rec.img){hoja.innerHTML=`<div class="org-v-pag"><img src="${rec.img}" alt="">${cajas}</div>`;const im=hoja.querySelector("img");if(!im.complete)await new Promise((res)=>{im.onload=im.onerror=res;});centrar();}
+else if(rec&&rec.lineas&&d.archivo&&typeof lecPdfLib==="function"){
+const pdf=await lecPdfLib();const datos=new Uint8Array(await d.archivo.arrayBuffer());
+const doc=await pdf.getDocument({data:datos,password:d.clave||"",isEvalSupported:false}).promise;const pg=await doc.getPage(rec.pag);
+const vp1=pg.getViewport({scale:1});const ancho=Math.max(320,hoja.clientWidth-2);const k=Math.min(3,(ancho*(window.devicePixelRatio||1))/vp1.width);
+const vp=pg.getViewport({scale:k});const cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+if(!document.contains(hoja))return;
+hoja.innerHTML=`<div class="org-v-pag">${cajas}</div>`;hoja.firstChild.prepend(cv);centrar();
+}else texto();
+}catch(e){console.error(e);texto();}
+}
+if(typeof document!=="undefined"&&document.addEventListener)document.addEventListener("click",(e)=>{
+const t=e.target&&e.target.closest?e.target:null;if(!t)return;
+const v=t.closest("[data-org-ver]");if(v){e.preventDefault();e.stopPropagation();orgVer(v.dataset.orgVer,document.querySelector(".org-visor")?ORG.volver:v);return;}
+if(t.closest("[data-org-cerrar]")){e.preventDefault();e.stopPropagation();orgCerrar();}
+},true);
+function orgGeoPdf(pag,pg,filas,texto){
+try{
+if(!Array.isArray(LEC.geo))return;
+const vp=pg.getViewport({scale:1});const W=vp.width,H=vp.height;
+const rect=(it)=>{const w=it.w>0?it.w:it.s.length*it.h*0.5;const a=vp.convertToViewportPoint(it.x,it.y+it.h*0.92),b=vp.convertToViewportPoint(it.x+w,it.y-it.h*0.24);return{x0:Math.min(a[0],b[0])/W,x1:Math.max(a[0],b[0])/W,y0:Math.min(a[1],b[1])/H,y1:Math.max(a[1],b[1])/H};};
+const lineas=[];let o=0;const piezas=[];
+for(const f of filas){
+const C=[];f.items.slice().sort((a,b)=>a.x-b.x).forEach((it,k)=>{if(k)C.push({c:" ",it:null});for(let j=0;j<it.s.length;j++)C.push({c:it.s[j],it,j});});
+const D=[];for(let i=0;i<C.length;){if(/\s/.test(C[i].c)){let j=i;while(j<C.length&&/\s/.test(C[j].c))j++;if(j-i>=2)D.push({c:" ",it:null});else D.push(C[i]);i=j;}else D.push(C[i++]);}
+let a=0,b=D.length;while(a<b&&/\s/.test(D[a].c))a++;while(b>a&&/\s/.test(D[b-1].c))b--;
+const E=D.slice(a,b);const items=[];
+E.forEach((q,col)=>{if(!q.it)return;let g=items[items.length-1];if(!g||g.it!==q.it){g={it:q.it,a:col,b:col+1,j0:q.j,j1:q.j+1};items.push(g);}else{g.b=col+1;g.j1=q.j+1;}});
+const L={o,n:E.length,items:items.map((g)=>{const r=rect(g.it);const w=(r.x1-r.x0)/Math.max(1,g.it.s.length);return{a:g.a,b:g.b,x0:r.x0+w*g.j0,x1:r.x0+w*g.j1,y0:r.y0,y1:r.y1};})};
+lineas.push(L);piezas.push(E.map((q)=>q.c).join(""));o+=E.length+1;
+}
+const t=piezas.join("\n");if(t!==texto)return;
+LEC.geo.push({pag,texto,lineas});
+}catch(e){console.error(e);}
+}
+function orgGeoOcr(lienzo,r,texto,pag){
+try{
+if(!Array.isArray(LEC.geo)||!r||!Array.isArray(r.palabras))return;
+const W=r.w||lienzo.width,H=r.h||lienzo.height;if(!W||!H)return;
+let img="";
+if(lienzo&&typeof document!=="undefined"){const k=Math.min(1,1300/lienzo.width);const c=document.createElement("canvas");c.width=Math.round(lienzo.width*k);c.height=Math.round(lienzo.height*k);c.getContext("2d").drawImage(lienzo,0,0,c.width,c.height);img=c.toDataURL("image/jpeg",0.72);}
+LEC.geo.push({pag:pag||0,texto,conf:r.conf,img,palabras:r.palabras.map(([t,x0,y0,x1,y1])=>[orgAlnum(t),x0/W,y0/H,x1/W,y1/H])});
+}catch(e){console.error(e);}
+}
 const TK_VENTANA=7;
 const tkLista=(x)=>(Array.isArray(x&&x.tareasDespacho)?x.tareasDespacho:[]);
 const tkPendientes=(x)=>tkLista(x).filter((t)=>!t.hecha);
@@ -14312,7 +15897,7 @@ return`<aside class="side" aria-label="Expedientes">
       <div class="sgrp">Trabajo</div>
       ${rdSideItem()}
       <button class="sitem" data-act="home" aria-current="${ui.vista==="inicio"}"><span class="ic">${I.folder}</span><span class="t"><b>Expedientes</b></span><span class="cnt">${DB.expedientes.length||""}</span></button>
-      <button class="sitem" data-act="agenda" aria-current="${ui.vista==="agenda"}"><span class="ic">${I.cal}</span><span class="t"><b>Agenda</b></span></button>
+      <button class="sitem" data-act="agenda" aria-current="${ui.vista==="agenda"}"><span class="ic">${I.cal}</span><span class="t"><b>Agenda</b></span></button>${typeof plSideItem==="function"?plSideItem():""}
       <div class="sect">En curso</div>
       ${L.length?L.map((e)=>`<button class="sitem" data-open="${e.x.id}" aria-current="${ui.vista==="exp"&&ui.id===e.x.id}"><span class="ic">${e.nivel==="bad"||e.nivel==="warn"?`<i class="dot ${e.nivel}"></i>`:`<i class="dot"></i>`}</span><span class="t"><b>${esc(nombreExp(e.x))}</b><small>${esc(e.x.despacho?.ref||"")}${e.x.despacho?.ref?" · ":""}${esc(faseN(e.x.fase))}</small></span></button>`).join(""):`<p class="caption" style="padding:4px 10px">${ui.q?"Sin resultados.":"Sin expedientes."}</p>`}
     </div>
@@ -14372,7 +15957,7 @@ return`<div class="topbar"><button class="tbtn back-m" data-act="home">${I.back}
   ${body}<p class="foot-note">El archivo .ics funciona con Calendario de Apple, Google Calendar y Outlook, con aviso una semana antes de cada plazo.</p></div>`;
 }
 const SECCIONES=()=>[["resumen","Resumen",I.home2],["herencia","Herederos y bienes",I.tree],["impuestos","Impuestos",I.tax],["particion","Partición",I.chart],["tramites","Trámites",I.list],["documentos","Documentos",I.folder],
-["diagnostico","Diagnóstico",I.info,"Qué falta y qué conviene revisar"],["estrategia","Estrategia fiscal",I.scale,"Cómo pagar menos, con su riesgo"],["segunda","Dos herencias",I.people,"Qué pasará al fallecer el viudo"],["terceros","Bancos y notaría",I.ext,"Solicitudes y respuestas de terceros"],["firma","Listo para firmar",I.tick,"Comprobación antes de la notaría"],["normativa","Normativa",I.law,"Las normas aplicadas a este caso"],["despacho","Encargo y honorarios",I.brief,"Cliente, equipo, fondos y bitácora"]];
+["diagnostico","Diagnóstico",I.info,"Qué falta y qué conviene revisar"],["revision","Revisión del expediente",I.tick,"Reglas de coherencia antes de presentar"],["estrategia","Estrategia fiscal",I.scale,"Cómo pagar menos, con su riesgo"],["segunda","Dos herencias",I.people,"Qué pasará al fallecer el viudo"],["terceros","Bancos y notaría",I.ext,"Solicitudes y respuestas de terceros"],["firma","Listo para firmar",I.tick,"Comprobación antes de la notaría"],["normativa","Normativa",I.law,"Las normas aplicadas a este caso"],["despacho","Encargo y honorarios",I.brief,"Cliente, equipo, fondos y bitácora"]];
 const SEC_PRINCIPALES=["resumen","herencia","impuestos","particion","tramites","documentos"];
 const TABS_M=["resumen","tramites","particion","impuestos"];
 function expEstadoHTML(x,T){
@@ -14395,8 +15980,8 @@ docTramReconciliar(x);
 const R=calcular(x);const T=tramitesExp(x,R);snapAct(x,R);
 const secs=SECCIONES();
 let body;
-if(!R&&!["despacho","documentos","normativa","diagnostico","firma","terceros"].includes(ui.sec))body=`${franjaFamilia(x)}<div class="card empty" style="margin-top:14px"><b>Faltan datos para calcular</b>${x.familia?"Los datos de la familia ya están cargados. Revísalos y completa la fecha, la comunidad, los herederos y los bienes que falten.":"Revisa la fecha, la comunidad, los herederos y los bienes, o pide los datos a la familia."}<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" data-act="editar">Completar datos</button></div></div>`;
-else body=({resumen:tResumen,tramites:tTramites,herencia:tHerencia,particion:tParticion,impuestos:tImpuestos,estrategia:tEstrategia,segunda:tSegunda,diagnostico:tDiagnostico,terceros:tTerceros,firma:tFirma,normativa:tNormativa,documentos:tDocumentos,despacho:tDespacho})[ui.sec](x,R,T);
+if(!R&&!["despacho","documentos","normativa","diagnostico","revision","firma","terceros"].includes(ui.sec))body=`${franjaFamilia(x)}<div class="card empty" style="margin-top:14px"><b>Faltan datos para calcular</b>${x.familia?"Los datos de la familia ya están cargados. Revísalos y completa la fecha, la comunidad, los herederos y los bienes que falten.":"Revisa la fecha, la comunidad, los herederos y los bienes, o pide los datos a la familia."}<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" data-act="editar">Completar datos</button></div></div>`;
+else body=({resumen:tResumen,tramites:tTramites,herencia:tHerencia,particion:tParticion,impuestos:tImpuestos,estrategia:tEstrategia,segunda:tSegunda,diagnostico:tDiagnostico,revision:tRevision,terceros:tTerceros,firma:tFirma,normativa:tNormativa,documentos:tDocumentos,despacho:tDespacho})[ui.sec](x,R,T);
 const sec=secs.find((s)=>s[0]===ui.sec)||secs[0];
 const titulo=ui.sec==="resumen"?nombreExp(x):sec[1];
 const pend=T.filter((t)=>!cerrado(t)).length;
@@ -14431,7 +16016,7 @@ const esencial=`${avisoExp(x)}${typeof bloqueoRepartoHTML==="function"?bloqueoRe
       ${kpi("Deudas y gastos",fmtK((R.isd.masa.deudas||0)+(R.isd.masa.gastos||0)),(R.isd.masa.deudas||R.isd.masa.gastos)?`deudas ${fmtK(R.isd.masa.deudas||0)} · gastos ${fmtK(R.isd.masa.gastos||0)}`:"sin pasivos declarados","",'data-sec="herencia"')}
       ${kpi("Trámites",`${hechos} de ${T.length}`,`resueltos · ${Math.round(hechos/(T.length||1)*100)} %`,"",'data-sec="tramites"')}
     </div>
-    ${franjaFamilia(x)}${typeof rdAccionesHTML==="function"&&x.fase!=="cerrado"?`<div style="margin-top:14px">${rdAccionesHTML(x)}</div>`:""}${typeof lecResumenHTML==="function"?lecResumenHTML(x):""}
+    ${franjaFamilia(x)}${typeof rdAccionesHTML==="function"&&x.fase!=="cerrado"?`<div style="margin-top:14px">${rdAccionesHTML(x)}</div>`:""}${typeof rvFranja==="function"?rvFranja(x):""}${typeof lecResumenHTML==="function"?lecResumenHTML(x):""}
     <div class="grid g2" style="margin-top:14px">
       <div class="card next">${p?`<div><div class="k"><i class="dot ${v.cls==="bad"?"bad":v.cls==="warn"?"warn":""}"></i>Siguiente paso</div><div class="title">${esc(p.titulo)}</div><div class="sub">${esc(p.organismo||p.quien||"")}</div><p class="caption" style="margin:12px 0 0;line-height:1.55;max-width:52ch">${esc(p.que.split(". ")[0].replace(/\.$/,""))}.</p></div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">${v.q!=null?`<div class="when"><span class="days num ${v.cls}">${Math.abs(v.q)}</span><span class="caption">${v.q<0?"días de retraso":v.q===1?"día":"días"}${p.limite?"<br>"+fechaCorta(p.limite):""}</span></div>`:`<div class="caption">${esc(v.txt)}</div>`}<button class="btn sm" data-topen="${p.id}">Abrir</button></div>`:`<div><div class="k"><i class="dot ok"></i>Todo al día</div><div class="title">No quedan trámites pendientes.</div></div>`}</div>
@@ -14883,7 +16468,7 @@ if(s.tipo==="situ")return sheetHTML("Ajustar al caso",`<p class="lead">Marca lo 
 if(s.tipo==="deudas")return sheetHTML("Deudas y gastos",formDeudas(x),"Hecho");
 if(s.tipo==="doc"){
 const R=calcular(x);const t=docTexto(x,R,s.id);
-return sheetHTML(DOC_TIT[s.id],`<div style="display:flex;gap:10px;margin:4px 0 18px;justify-content:center;flex-wrap:wrap"><button class="btn sm" data-pdfdoc="${s.id}">${I.dl}Descargar en PDF</button><button class="btn sm gray" data-dl="${s.id}">Descargar en Word</button><button class="btn sm gray" data-copy="${s.id}">Copiar texto</button></div><div class="paperview">${esrVista(t)}</div><p class="foot-note" style="text-align:center">Borrador. Lo marcado en amarillo lo completa o revisa el abogado antes de firmarlo o presentarlo.</p>`,"Cerrar","wide");
+return sheetHTML(DOC_TIT[s.id],`${typeof rvAviso==="function"?rvAviso(x,"este escrito"):""}<div style="display:flex;gap:10px;margin:4px 0 18px;justify-content:center;flex-wrap:wrap"><button class="btn sm" data-pdfdoc="${s.id}">${I.dl}Descargar en PDF</button><button class="btn sm gray" data-dl="${s.id}">Descargar en Word</button><button class="btn sm gray" data-copy="${s.id}">Copiar texto</button></div><div class="paperview">${esrVista(t)}</div><p class="foot-note" style="text-align:center">Borrador. Lo marcado en amarillo lo completa o revisa el abogado antes de firmarlo o presentarlo.</p>`,"Cerrar","wide");
 }
 if(s.tipo==="ia"){
 const c=CHATS[x.id]||{turns:[]};
@@ -15016,7 +16601,7 @@ let hoja=ui.sheet?vSheet():"";
 if(ui.sheet&&!hoja)ui.sheet=null;
 if(ui.vista==="asist")$app.innerHTML=vAsistente()+hoja;
 else{
-const main=ui.vista==="exp"?vExp():ui.vista==="radar"?vRadar():ui.vista==="socio"&&typeof vSocio==="function"?vSocio():ui.vista==="rent"?vRentabilidad():ui.vista==="agenda"?vAgenda():ui.vista==="biblio"?vBiblio():vHome();
+const main=ui.vista==="exp"?vExp():ui.vista==="radar"?vRadar():ui.vista==="socio"&&typeof vSocio==="function"?vSocio():ui.vista==="plan"&&typeof vPlan==="function"?vPlan():ui.vista==="rent"?vRentabilidad():ui.vista==="agenda"?vAgenda():ui.vista==="biblio"?vBiblio():vHome();
 $app.innerHTML=`<button type="button" class="mo-salto" data-mo-salto>Ir al contenido</button><div class="shell">${vSide()}<main class="main">${dmBanner()}${typeof dtBanner==="function"?dtBanner():""}${sgBanner()}${typeof redBanner==="function"?redBanner():""}${licBannerHTML()}${main}</main></div>`+hoja;
 }
 if(ui.sheet){for(const n of $app.children)if(!n.matches(".sheet,.scrim"))n.setAttribute("inert","");}
@@ -15405,7 +16990,7 @@ const v=ui.vista;
 return{v,id:v==="exp"?ui.id:null,sec:v==="exp"?ui.sec:null,paso:v==="asist"?ui.paso:null,as:v==="asist"?ui.borrador?.id||null:null,ed:v==="asist"&&!!ui.editando,sh:ui.sheet?{tipo:ui.sheet.tipo,id:ui.sheet.id??null}:null};
 }
 const navClave=(s)=>[s.v,s.id||"",s.sec||"",s.paso??"",s.as||"",s.sh?s.sh.tipo+":"+(s.sh.id??""):""].join("|");
-const NAV_RUTA={inicio:"expedientes",exp:"expediente",asist:"asistente",agenda:"agenda",biblio:"normativa",rent:"rentabilidad",radar:"mi-dia",socio:"despacho"};
+const NAV_RUTA={inicio:"expedientes",exp:"expediente",asist:"asistente",agenda:"agenda",biblio:"normativa",rent:"rentabilidad",radar:"mi-dia",socio:"despacho",plan:"planificacion"};
 function navRuta(s){
 const x=s.v==="exp"?DB.expedientes.find((q)=>q.id===s.id):null;
 const partes=[NAV_RUTA[s.v]||s.v,x?(x.despacho?.ref||x.id):"",s.v==="exp"&&s.sec&&s.sec!=="resumen"?s.sec:"",s.v==="asist"?"paso-"+(s.paso||0):""].filter(Boolean);
