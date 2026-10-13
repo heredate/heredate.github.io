@@ -1326,8 +1326,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:20,nombre:"Versión 2.0",fecha:"2026-10-13"};
+const VERSION_APP={n:21,nombre:"Versión 2.1",fecha:"2026-10-13"};
 const NOVEDADES=[
+["Gastos de notaría y registro","En cada expediente, los honorarios del notario por la escritura de aceptación y adjudicación y los del Registro de la Propiedad, con los aranceles del BOE (RD 1426/1989 y 1427/1989 y sus reformas). Salen de los datos del expediente: herederos, bienes, fincas y adjudicaciones, con usufructo y nuda propiedad, cuotas desiguales, nietos y renuncias. Desglose por concepto y por finca, reparto por heredero, folios y copias editables, descuento opcional, IVA aparte, PDF y comparación con la factura real. Avisa si hay heredero único o si no hace falta Registro."],
 ["De dónde sale cada dato","Cada dato leído de un documento lleva su origen: documento, página y la frase exacta, y al pulsarlo se abre la página con el dato resaltado. Confianza alta, media o baja con su motivo; lo dudoso sale primero. Comprobaciones entre documentos: mismo causante y DNI, fecha del fallecimiento, testamento que no es el último, letra del NIF, control de la referencia catastral y del IBAN, saldos e hijos que el testamento no nombra."],
 ["Revisión del expediente","184 comprobaciones civiles, fiscales, documentales y aritméticas: legítimas, preterición, gananciales sin liquidar, plazos, valor de referencia, seguros, reducciones sin requisitos, certificados que faltan o caducan y repartos que no suman. Cada una con su artículo y un clic que lleva al dato. Aviso antes de los escritos y los modelos."],
 ["Hoja de casillas","Junto a Modelos oficiales: cada casilla del modelo con su cifra por heredero, lista para copiar en el programa de la Administración, y el inventario en el orden del modelo. Cuadra sola con el cálculo. Numeración oficial donde está publicada (AEAT y Galicia) y nombre del concepto en el resto. En PDF, Word y CSV."],
@@ -4159,7 +4160,7 @@ if(typeof ayAbrir==="function")add("Centro de ayuda","ayuda manual soporte guia 
 if(typeof guLista==="function")for(const g of guLista())add("Guía: "+g.t,"guia tutorial aprender recorrido paso a paso "+g.t.toLowerCase(),AY_IC.q,"Empezar",()=>guAbrir(g.id),g.d);
 return A;
 }
-const PK_SEC_KW={impuestos:"sucesiones plusvalia isd 650",herencia:"herederos bienes personas arbol",particion:"reparto adjudicacion cuaderno lotes",estrategia:"ahorro fiscal palancas",documentos:"escritos archivo adjuntos",despacho:"encargo fondos honorarios cliente bitacora",tramites:"plazos gestiones",resumen:"inicio portada",diagnostico:"revision riesgos faltan datos",terceros:"bancos notaria registro reclamacion",segunda:"dos herencias segunda conyuge viudo",firma:"notaria paquete listo para firmar escritura nif catastro",normativa:"leyes del caso"};
+const PK_SEC_KW={impuestos:"sucesiones plusvalia isd 650",herencia:"herederos bienes personas arbol",particion:"reparto adjudicacion cuaderno lotes",estrategia:"ahorro fiscal palancas",documentos:"escritos archivo adjuntos",despacho:"encargo fondos honorarios cliente bitacora",tramites:"plazos gestiones",resumen:"inicio portada",diagnostico:"revision riesgos faltan datos",terceros:"bancos notaria registro reclamacion",segunda:"dos herencias segunda conyuge viudo",firma:"notaria paquete listo para firmar escritura nif catastro",normativa:"leyes del caso",gastos:"aranceles notario registrador minuta factura honorarios escritura inscripcion folios copias"};
 function pkGrupos(q){
 const qn=pkNorm(q),x=ui.vista==="exp"?exp():null,R=x?calcular(x):null;
 const G=[];
@@ -7466,6 +7467,11 @@ rg("ARI-29","aritmetica","revisar","Saldo certificado distinto del declarado","E
 (c)=>c.B.filter((b)=>!rvVacio(b.saldoCert)&&Math.abs(rvNum(b.saldoCert)-rvNum(b.valor))>1).map((b)=>B_(b,{d:`Certificado ${rvEur(rvNum(b.saldoCert))}; anotado ${rvEur(rvNum(b.valor))}.`,ir:CAMPO(`rv-b-${b.id}-saldoCert`)})));
 rg("ARI-30","aritmetica","revisar","Mejora en una sucesión con porcentajes que no la recogen","Hay una mejora anotada y el porcentaje del descendiente no llega a su parte de legítima más la mejora.","arts. 808 y 823 CC",RV_V,null,
 (c)=>{if(!c.porc||!c.comun)return false;const n=c.desc.length||1;return c.desc.filter((p)=>rvNum(p.mejoraPct)>0&&rvNum(p.pct)+0.01<rvNum(p.mejoraPct)+100/3/n).map((p)=>P_(p));});
+const rvAranceles=(c)=>{if(typeof arancelesCalcular!=="function"||!c.R||!c.C||!c.C.PT)return null;const o=arOpciones(c.x.aranceles);return arancelesCalcular([arEntrada(c.x,c.R,c.C.PT)],o);};
+rg("ARI-31","aritmetica","revisar","Minuta del notario o del registrador distinta del cálculo","La factura anotada en «Gastos de notaría y registro» difiere en más de 10 € y del 10 % del cálculo con el arancel. Revisa bases, folios, copias y suplidos; la minuta se puede impugnar en 15 días hábiles.","RD 1426/1989, anexo II, norma 10.ª · RD 1427/1989, anexo II, norma 6.ª",RV_V,{sec:"gastos"},
+(c)=>{const F=c.x.aranceles&&c.x.aranceles.factura;if(!F||typeof arComparar!=="function")return false;const A=rvAranceles(c);const K=A?arComparar(A,F):null;const L=K?K.lineas.filter((l)=>l.k==="total"&&l.grande):[];return L.map((l)=>({s:l.grupo==="notaria"?"Notaría":"Registro",d:`Factura ${rvEur(l.real)}; cálculo ${rvEur(l.calculado)}.`}));});
+rg("DOC-40","documental","consejo","Heredero único: los inmuebles pueden inscribirse sin escritura de adjudicación","Con un solo heredero, sin otros legitimarios ni persona autorizada para adjudicar, basta el título sucesorio con una instancia para inscribir (art. 14.3 LH). Se ahorra la escritura; el Registro cobra igual.","art. 14.3 LH · arts. 79 y 80.1.b RH",RV_V,{sec:"gastos"},
+(c)=>{const A=rvAranceles(c);const u=A?A.avisos.find((a)=>a.id==="heredero-unico"&&a.ahorro>0):null;return u?{s:u.titulo.replace(/^Heredero único: /,""),d:`Ahorro aproximado: ${rvEur(u.ahorro)} con IVA.`,est:u.pendiente?RV_P:RV_V}:false;});
 function rvEvaluar(x,o={}){
 if(!x||typeof x!=="object")return{hallazgos:[],cuenta:{bloquea:0,revisar:0,consejo:0},reglas:RV_REGLAS.length,errores:[],hoy:""};
 const c=rvCtx(x,o),out=[],errores=[];
@@ -7490,7 +7496,7 @@ return rvEvaluar(x,{R,L,C,hoy:o.hoy});
 };
 return!o.hoy&&typeof calcMemo==="function"?calcMemo("rv",x,f):f();
 }
-const RV_IRTXT={sec:{particion:"Partición",herencia:"Herederos y bienes",impuestos:"Impuestos",estrategia:"Estrategia fiscal",tramites:"Trámites",despacho:"Documentos recibidos",firma:"Listo para firmar",normativa:"Normativa",revision:"Completar dato"}};
+const RV_IRTXT={sec:{particion:"Partición",herencia:"Herederos y bienes",impuestos:"Impuestos",estrategia:"Estrategia fiscal",tramites:"Trámites",despacho:"Documentos recibidos",firma:"Listo para firmar",normativa:"Normativa",revision:"Completar dato",gastos:"Gastos de notaría"}};
 function rvBtn(en){
 if(!en)return"";
 const a=en.campo?`data-rvfoco="${esc(en.campo)}"`:en.sec?(en.sec==="revision"?`data-rvfoco="rv-datos"`:`data-sec="${esc(en.sec)}"${en.sub?` data-sub="${esc(en.sub)}"`:""}`):en.tramite?`data-topen="${esc(en.tramite)}"`:en.bien?`data-editb="${esc(en.bien)}"`:en.persona?`data-editp="${esc(en.persona)}"`:en.act?`data-act="${esc(en.act)}"`:en.doc?`data-doc="${esc(en.doc)}"`:"";
@@ -7598,6 +7604,188 @@ if(t.dataset.rvx)rvSet(x,t.dataset.rvx,v);
 else{const L=t.dataset.rvp?x.personas:x.bienes,o=rvArr(L).find((q)=>q.id===(t.dataset.rvp||t.dataset.rvb));if(!o)return;rvSet(o,t.dataset.rvk,v);}
 if(typeof guardar==="function")guardar();
 setTimeout(()=>{const a=document.activeElement,id=a&&a.id&&a!==document.body?a.id:t.id;render();const n=document.getElementById(id);if(n){try{n.focus({preventScroll:true});}catch(er){n.focus();}}},0);
+},true);
+}
+const AR_DER={pleno:"pleno dominio",usufructo:"usufructo",nuda:"nuda propiedad"};
+const arEurV=(n)=>(typeof eur==="function"?eur(n):(Math.round(n*100)/100).toFixed(2)+" €");
+function arTransmision(x,R){
+if(R===undefined)R=calcular(x);
+if(!R||!R.isd||typeof particion!=="function")return null;
+let PT;try{PT=particion(x,R);}catch(e){return null;}
+return arEntrada(x,R,PT);
+}
+function arOtrosExp(x){return(typeof DB==="object"&&Array.isArray(DB.expedientes)?DB.expedientes:[]).filter((e)=>e&&e.id!==x.id&&e.fase!=="cerrado"&&Array.isArray(e.personas));}
+function arCalcularExp(x,R){
+const t=arTransmision(x,R);if(!t)return null;
+const o=arOpciones(x.aranceles),L=[t];
+if(o.conjunta){const y=arOtrosExp(x).find((e)=>e.id===o.conjunta);const t2=y?arTransmision(y):null;if(t2)L.push(t2);}
+return arancelesCalcular(L,o);
+}
+const arTag=(k)=>{const p=AR_PARAM[k];if(!p)return"";return p.estado==="VERIFICADO"?'<span class="tag V">Verificado</span>':'<span class="tag P">En verificación</span>';};
+function arNorma(k){
+const p=AR_PARAM[k];if(!p)return"";
+const abierto=ui.arP===k;
+return`<span class="ga-n">${p.url?`<a class="nlink" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.norma)}</a>`:esc(p.norma)}<button class="ga-st" data-arp="${k}" aria-expanded="${abierto}" title="${esc((p.nota||p.cifra)+(p.estado==="VERIFICADO"?" · Texto leído en el BOE el "+AR_CONSULTA.split("-").reverse().join("-"):""))}">${arTag(k)}</button></span>${abierto?`<span class="ga-nota" role="note"><b>${esc(p.concepto)}:</b> ${esc(p.cifra)}.${p.nota?" "+esc(p.nota):""}${p.estado==="VERIFICADO"?` Texto leído en el BOE el ${AR_CONSULTA.split("-").reverse().join("-")}.`:""}</span>`:""}`;
+}
+const arLin=(t,sub,v,k,cls="")=>`<div class="ga-l ${cls}"><span class="ga-lt">${t}${sub?`<small>${sub}</small>`:""}${k?arNorma(k):""}</span><b class="num">${v}</b></div>`;
+function arAviso(a){
+const cls=a.tipo==="warn"?"warn":"",ico=a.tipo==="warn"?`<span class="ico orange">${I.info}</span>`:a.tipo==="ok"?`<span class="ico green">${I.tick}</span>`:`<span class="ico gold">${I.info}</span>`;
+return`<div class="infobar ga-av ${cls}" data-araviso="${esc(a.id)}">${ico}<span><b>${esc(a.titulo)}.</b> ${esc(a.texto)}${a.param?`<span class="ga-avn">${arNorma(a.param)}</span>`:""}</span></div>`;
+}
+const arCampo=(id,label,attrs,v,hint="",extra="")=>`<div class="field ga-f"><label for="${id}">${esc(label)}</label><input id="${id}" ${attrs} inputmode="decimal" value="${esc(v)}" autocomplete="off">${hint?`<span class="hint">${hint}</span>`:""}${extra}</div>`;
+const arSwitch=(id,label,hint,on,attrs)=>`<div class="row toggle"><span class="t"><b>${esc(label)}</b>${hint?`<small>${hint}</small>`:""}</span><label class="switch"><input type="checkbox" id="${id}" ${attrs} ${on?"checked":""} aria-label="${esc(label)}"><span></span></label></div>`;
+const arSeg=(k,v,L,label)=>`<div class="seg ga-seg" role="group" aria-label="${esc(label)}">${L.map(([q,t])=>`<button data-arx="${k}" data-v="${q}" aria-pressed="${v===q}">${esc(t)}</button>`).join("")}</div>`;
+const arNumTxt=(n)=>(n==null||n===""?"":typeof numStr==="function"?numStr(n):String(n));
+function arVistaNotaria(C){
+const N=C.notaria,varias=C.transmisiones.length>1;
+const filas=N.conceptos.map((c)=>`<tr><th scope="row">${esc(c.nombre)}<small>${c.concepto==="gananciales"?"Liquidación de gananciales":"Herencia"}${varias?" de "+esc(c.causante):""}${c.usufructo?" · usufructo":""}${c.nuda?" · nuda propiedad":""}</small></th><td class="num">${arEurV(c.base)}</td><td class="num ga-opt">${arEurV(c.escala)}</td><td class="num ga-opt">− ${arEurV(c.rebaja)}</td><td class="num"><b>${arEurV(c.derechos)}</b></td></tr>`).join("");
+return`<section class="card ga-sec" aria-labelledby="ga-h-not"><div class="ga-sh"><div><div class="k">Escritura de aceptación y adjudicación</div><h3 id="ga-h-not">Notaría</h3></div><b class="num ga-st-t">${arEurV(N.total)}</b></div>
+    ${N.conceptos.length?`<div class="ga-tw"><table class="ga-t"><caption class="sr-only">Derechos del número 2 por interesado</caption><thead><tr><th scope="col">Interesado y concepto</th><th scope="col" class="num">Base</th><th scope="col" class="num ga-opt">Escala nº 2</th><th scope="col" class="num ga-opt">Rebaja 5 %</th><th scope="col" class="num">Derechos</th></tr></thead><tbody>${filas}</tbody></table></div>
+    <p class="ga-cap">${arNorma("notHerencia")}</p>`:`<p class="caption">No hay adjudicaciones con valor: completa los bienes y el reparto.</p>`}
+    <div class="ga-ls">
+      ${arLin("Documento de cuantía",`${N.conceptos.length} ${N.conceptos.length===1?"concepto":"conceptos"}, escala con la rebaja del 5 %`,arEurV(N.num2),"notEscala")}
+      ${N.descuento?arLin(`Descuento del ${grp(N.descuentoPct,N.descuentoPct%1?1:0)} %`,"sobre los derechos del nº 2","− "+arEurV(N.descuento),"notDescuento"):""}
+      ${arLin("Folios de matriz",`${N.folios} ${N.folios===1?"folio":"folios"}${N.folios===N.foliosEstimados?" (estimado)":""}; se cobran desde el quinto: ${N.foliosCobrados}`,arEurV(N.impFolios),"notFolios")}
+      ${arLin("Copias autorizadas",`${N.copiasAut} de ${N.foliosCopia} folios, ${arEurV(N.precioAut)} cada una`,arEurV(N.impCopiasAut),"notCopiaAut")}
+      ${arLin("Copias simples",`${N.copiasSimples} de ${N.foliosCopia} folios`,arEurV(N.impCopiasSimples),"notCopiaSimple")}
+      ${N.renuncias?arLin("Renuncias en la escritura",`${N.renuncias} × 30,05 €`,arEurV(N.impRenuncias),"notSinCuantia"):""}
+      ${arLin("Honorarios sin IVA","",arEurV(N.base),"","sub")}
+      ${arLin(`IVA ${grp(C.iva,C.iva%1?1:0)} %`,"",arEurV(N.iva),"iva")}
+      ${N.suplidos?arLin("Suplidos: información registral",`${N.notasSimples} ${N.notasSimples===1?"finca":"fincas"}, con su IVA; no llevan IVA del notario`,arEurV(N.suplidos),"notSuplido"):""}
+      ${arLin("Total notaría","",arEurV(N.total),"","tot")}
+    </div></section>`;
+}
+function arVistaRegistro(C){
+const Rg=C.registro;
+if(!Rg.necesario)return`<section class="card ga-sec" aria-labelledby="ga-h-reg"><div class="ga-sh"><div><div class="k">Registro de la Propiedad</div><h3 id="ga-h-reg">Registro</h3></div><b class="num ga-st-t">${arEurV(0)}</b></div><p class="caption">No hay inmuebles: no hace falta inscribir nada en el Registro de la Propiedad.</p></section>`;
+const varias=C.transmisiones.length>1;
+const fincas=Rg.fincas.map((f)=>`<div class="ga-finca"><div class="ga-fh"><span><b>${esc(f.nombre)}</b><small>${f.ref?`Ref. catastral <span class="mono">${esc(f.ref)}</span> · `:""}valor ${arEurV(f.valor)}${f.v!==f.valor?` · del causante ${arEurV(f.v)}`:""}${varias?" · herencia de "+esc(f.causante):""}${f.registro?" · "+esc(f.registro):""}</small></span><b class="num">${arEurV(f.total)}</b></div>
+    <div class="ga-tw"><table class="ga-t"><caption class="sr-only">Inscripciones de ${esc(f.nombre)}</caption><thead><tr><th scope="col">Titular y derecho</th><th scope="col" class="num">Base</th><th scope="col" class="num">Derechos</th></tr></thead><tbody>${f.lineas.map((l)=>`<tr><th scope="row">${esc(l.nombre)}<small>${AR_DER[l.derecho]}${l.concepto==="gananciales"?" · liquidación de gananciales":""}${l.tope?" · con el tope del 1 %":""}</small></th><td class="num">${arEurV(l.base)}</td><td class="num">${arEurV(l.derechos)}</td></tr>`).join("")}${f.afeccion?`<tr><th scope="row">Nota de afección fiscal<small>nº 3.3</small></th><td class="num"></td><td class="num">${arEurV(f.afeccion)}</td></tr>`:""}</tbody></table></div></div>`).join("");
+return`<section class="card ga-sec" aria-labelledby="ga-h-reg"><div class="ga-sh"><div><div class="k">Registro de la Propiedad</div><h3 id="ga-h-reg">Registro</h3></div><b class="num ga-st-t">${arEurV(Rg.total)}</b></div>
+    ${fincas}
+    <p class="ga-cap">${arNorma("regEscala")} ${arNorma("regLimites")} ${arNorma("regDerechos")}</p>
+    <div class="ga-ls">
+      ${arLin("Inscripciones",`${Rg.fincas.length} ${Rg.fincas.length===1?"finca":"fincas"}, con la rebaja del 5 %, el mínimo y el máximo`,arEurV(Rg.derechos),"regRebaja")}
+      ${Rg.afeccion?arLin("Notas de afección fiscal","",arEurV(Rg.afeccion),"regAfeccion"):""}
+      ${arLin("Asiento de presentación",`${Rg.registros} ${Rg.registros===1?"Registro":"Registros"}`,arEurV(Rg.presentacion),"regPresentacion")}
+      ${arLin("Honorarios sin IVA","",arEurV(Rg.base),"","sub")}
+      ${arLin(`IVA ${grp(C.iva,C.iva%1?1:0)} %`,"",arEurV(Rg.iva),"iva")}
+      ${arLin("Total registro","",arEurV(Rg.total),"","tot")}
+    </div></section>`;
+}
+function arVistaReparto(C){
+const o=C.opciones;
+const filas=C.reparto.map((r)=>`<tr><th scope="row">${esc(r.nombre)}<small>${r.base?`adjudicado ${arEurV(r.base)} · ${grp(r.peso*100,1)} %`:""}</small></th><td class="num">${arEurV(r.notaria)}</td><td class="num">${arEurV(r.registro)}</td><td class="num"><b>${arEurV(r.total)}</b></td></tr>`).join("");
+return`<section class="card ga-sec" aria-labelledby="ga-h-rep"><div class="ga-sh"><div><div class="k">Quién paga qué</div><h3 id="ga-h-rep">Reparto por heredero</h3></div></div>
+    <div class="ga-reglas"><div><span class="ga-rl" id="ga-rl-n">Notaría</span>${arSeg("repartoNotaria",o.repartoNotaria,[["proporcional","En proporción"],["iguales","Partes iguales"],["concepto","Cada uno lo suyo"]],"Reparto de la notaría")}</div>
+    <div><span class="ga-rl" id="ga-rl-r">Registro</span>${arSeg("repartoRegistro",o.repartoRegistro,[["finca","Por finca"],["proporcional","En proporción"],["iguales","Partes iguales"]],"Reparto del registro")}</div></div>
+    <p class="caption ga-rex">${o.repartoNotaria==="concepto"?"Notaría: cada heredero paga los derechos de lo que se le adjudica y lo común (folios, copias, suplidos) en proporción.":o.repartoNotaria==="iguales"?"Notaría: a partes iguales entre los interesados.":"Notaría: en proporción al valor adjudicado a cada uno; es lo que resulta de deducir de la herencia los gastos de interés común."} ${o.repartoRegistro==="finca"?"Registro: cada finca la pagan aquellos a cuyo favor se inscribe.":o.repartoRegistro==="iguales"?"Registro: a partes iguales.":"Registro: en proporción al valor adjudicado."} El acuerdo entre los herederos puede ser otro.</p>
+    <p class="ga-cap">${arNorma("reparto")} ${arNorma("regPago")} ${arNorma("notPago")}</p>
+    <div class="ga-tw"><table class="ga-t"><caption class="sr-only">Reparto de los gastos por heredero</caption><thead><tr><th scope="col">Heredero</th><th scope="col" class="num">Notaría</th><th scope="col" class="num">Registro</th><th scope="col" class="num">Total</th></tr></thead><tbody>${filas}</tbody><tfoot><tr><th scope="row">Total</th><td class="num">${arEurV(C.notaria.total)}</td><td class="num">${arEurV(C.registro.total)}</td><td class="num"><b>${arEurV(C.total)}</b></td></tr></tfoot></table></div></section>`;
+}
+function arVistaAjustes(x,C){
+const o=C.opciones,N=C.notaria,est=(v,e)=>(v===""||v==null?"":v);
+const T=arTransmision(x)||{interesados:[]};
+const otros=arOtrosExp(x);
+const pide=T.interesados.map((i)=>`<label class="ga-chk"><input type="checkbox" data-arcp="${esc(i.id)}" ${o.copiaAutPor[i.id]?"checked":""}> ${esc(i.nombre)}</label>`).join("");
+const abierto=(ui.fopt&&ui.fopt["ga-aj"])??true;
+return`<details class="fopt ga-aj" id="ga-aj" data-fopt="ga-aj" ${abierto?"open":""}><summary><span><b>Ajustes de la escritura</b><br>Folios, copias, descuento e impuesto. Lo que dejes vacío se calcula solo.</span></summary>
+    <div class="ga-fs">
+      ${arCampo("ga-folios","Folios de la matriz",'data-arx="folios" data-art="int"',est(o.folios),`Estimado: ${N.foliosEstimados}. Los cuatro primeros no se cobran.`,o.folios!==""?`<button class="link ga-rs" data-ar="folios">Volver al estimado</button>`:"")}
+      ${arCampo("ga-folcop","Folios de cada copia",'data-arx="foliosCopia" data-art="int"',est(o.foliosCopia),`Estimado: ${N.foliosCopiaEstimados} (matriz y documentos unidos).`,o.foliosCopia!==""?`<button class="link ga-rs" data-ar="foliosCopia">Volver al estimado</button>`:"")}
+      ${arCampo("ga-caut","Copias autorizadas",'data-arx="copiasAutorizadas" data-art="int"',est(o.copiasAutorizadas),`Por defecto: una para Hacienda y el Registro y una por cada heredero que la pida (${1+T.interesados.filter((i)=>o.copiaAutPor[i.id]).length}).`,o.copiasAutorizadas!==""?`<button class="link ga-rs" data-ar="copiasAutorizadas">Volver al cálculo</button>`:"")}
+      ${arCampo("ga-csim","Copias simples",'data-arx="copiasSimples" data-art="int"',est(o.copiasSimples),`Por defecto: una por interesado (${T.interesados.length}).`,o.copiasSimples!==""?`<button class="link ga-rs" data-ar="copiasSimples">Volver al cálculo</button>`:"")}
+      ${arCampo("ga-desc","Descuento del notario (%)",'data-arx="descuento" data-art="num"',o.descuento?arNumTxt(o.descuento):"","Opcional, hasta el 10 % (RDL 6/2000, art. 35.1). Se aplica a los derechos del nº 2.")}
+      ${arCampo("ga-iva","Impuesto (%)",'data-arx="iva" data-art="num"',o.iva===""?"":arNumTxt(o.iva),"IVA del 21 % si lo dejas vacío. En Canarias, Ceuta y Melilla indica el IGIC o el IPSI.")}
+      ${C.registro.necesario?arCampo("ga-regs","Registros de la Propiedad distintos",'data-arx="registros" data-art="int"',est(o.registros),`Un asiento de presentación por Registro. Por defecto: ${Math.max(1,C.registro.registrosConocidos)}.`):""}
+    </div>
+    ${pide?`<div class="ga-pide"><span class="ga-rl">Piden copia autorizada propia</span><div class="ga-chks">${pide}</div></div>`:""}
+    <div class="group ga-sw">
+      ${C.registro.necesario?arSwitch("ga-ns","Información registral previa (suplido)","Nota simple de cada finca que pide el notario antes de firmar.",o.notasSimples,'data-arx="notasSimples" data-art="bool"')+arSwitch("ga-af","Notas de afección fiscal","Una por finca tras liquidar Sucesiones.",o.afeccion,'data-arx="afeccion" data-art="bool"'):""}
+      ${T.renuncias&&T.renuncias.length?arSwitch("ga-ren","Renuncias en la misma escritura","Quítalo si se otorgaron aparte.",o.renunciasEnEscritura,'data-arx="renunciasEnEscritura" data-art="bool"'):""}
+    </div>
+    <div class="field ga-f ga-conj"><label for="ga-conj">Escritura conjunta con otra herencia</label><select id="ga-conj" data-arx="conjunta" data-art="str"><option value="">No: solo esta herencia</option>${otros.map((e)=>`<option value="${esc(e.id)}" ${o.conjunta===e.id?"selected":""}>${esc(typeof nombreExp==="function"?nombreExp(e):e.nombre||e.id)}</option>`).join("")}</select><span class="hint">Por ejemplo, la del otro progenitor: cada herencia se minuta aparte y se comparten folios, copias y presentación.</span></div>
+  </details>`;
+}
+function arVistaFactura(x,C){
+const F=(x.aranceles&&x.aranceles.factura)||{};
+const val=(g,k)=>(F[g]&&F[g][k]!=null&&F[g][k]!==""?arNumTxt(F[g][k]):"");
+const campo=(g,k,t)=>arCampo(`ga-fc-${g}-${k}`,t,`data-arf="${g}.${k}"`,val(g,k));
+const K=arComparar(C,F);
+const res=K&&K.lineas.length?`<div class="ga-tw"><table class="ga-t ga-cmp"><caption class="sr-only">Diferencias con la factura</caption><thead><tr><th scope="col">Concepto</th><th scope="col" class="num">Calculado</th><th scope="col" class="num">Factura</th><th scope="col" class="num">Diferencia</th></tr></thead><tbody>${K.lineas.map((l)=>`<tr class="${l.grande?"ga-dif":""}"><th scope="row">${l.grupo==="notaria"?"Notaría":"Registro"} · ${esc(l.t)}${l.grande?`<small>${esc(l.motivo)}</small>`:""}</th><td class="num">${arEurV(l.calculado)}</td><td class="num">${arEurV(l.real)}</td><td class="num"><b>${l.dif>0?"+":l.dif<0?"−":""}${arEurV(Math.abs(l.dif))}</b>${l.calculado?`<small>${l.dif>0?"+":l.dif<0?"−":""}${grp(Math.abs(l.pct)*100,1)} %</small>`:""}</td></tr>`).join("")}</tbody></table></div>
+    ${K.avisos.map((a)=>`<div class="infobar warn ga-av" role="status"><span class="ico orange">${I.info}</span><span>${esc(a)}</span></div>`).join("")}${!K.grande?`<div class="infobar ga-av" role="status"><span class="ico green">${I.tick}</span><span>La factura cuadra con el cálculo: ninguna diferencia pasa de 10 € y del 10 %.</span></div>`:""}`:`<p class="caption">Teclea o pega los importes de la minuta: el total y, si quieres, cada concepto. Los conceptos, sin IVA; los totales, con IVA.</p>`;
+const abierto=(ui.fopt&&ui.fopt["ga-fc"])??!!(K&&K.lineas.length);
+return`<details class="fopt ga-fc" id="ga-fc" data-fopt="ga-fc" ${abierto?"open":""}><summary><span><b>Comparar con la factura</b><br>${K&&K.lineas.length?`Diferencia total ${K.difTotal>0?"+":K.difTotal<0?"−":""}${arEurV(Math.abs(K.difTotal))}${K.grande?": hay conceptos que revisar":""}.`:"Las minutas reales del notario y del registrador, frente al cálculo."}</span></summary>
+    <div class="ga-fcg"><div><div class="ga-rl">Notaría</div><div class="ga-fs">${campo("notaria","total","Total de la minuta (con IVA)")}${AR_FACT_CONCEPTOS.notaria.map(([k,t])=>campo("notaria",k,t)).join("")}</div></div>
+    <div><div class="ga-rl">Registro</div><div class="ga-fs">${campo("registro","total","Total de la minuta (con IVA)")}${AR_FACT_CONCEPTOS.registro.map(([k,t])=>campo("registro",k,t)).join("")}</div></div></div>
+    ${res}${K&&K.lineas.length?`<button class="link ga-rs" data-ar="borrarFactura">Borrar la factura</button>`:""}</details>`;
+}
+function arVistaNormas(C){
+const abierto=(ui.fopt&&ui.fopt["ga-nm"])??false;
+const L=Object.entries(AR_PARAM);
+return`<details class="fopt ga-nm" id="ga-nm" data-fopt="ga-nm" ${abierto?"open":""}><summary><span><b>Normas y cifras aplicadas</b><br>${L.filter(([,p])=>p.estado==="VERIFICADO").length} verificadas en el BOE y ${L.filter(([,p])=>p.estado!=="VERIFICADO").length} en verificación, con su motivo.</span></summary>
+    <div class="ga-tw"><table class="ga-t ga-nt"><caption class="sr-only">Parámetros del cálculo</caption><thead><tr><th scope="col">Concepto</th><th scope="col">Cifra o regla</th><th scope="col">Norma</th><th scope="col">Estado</th></tr></thead><tbody>${L.map(([k,p])=>`<tr><th scope="row">${esc(p.concepto)}${p.nota?`<small>${esc(p.nota)}</small>`:""}</th><td>${esc(p.cifra)}</td><td>${p.url?`<a class="nlink" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.norma)}</a>`:esc(p.norma)}</td><td>${arTag(k)}</td></tr>`).join("")}</tbody></table></div></details>`;
+}
+function tAranceles(x,R){
+if(R===undefined)R=calcular(x);
+const C=R?arCalcularExp(x,R):null;
+if(!C)return`<div class="card empty" style="margin-top:14px"><b>Sin cálculo</b>Completa los herederos y los bienes del expediente para calcular los gastos de notaría y registro.</div>`;
+const N=C.notaria,Rg=C.registro;
+const iv=`IVA ${grp(C.iva,C.iva%1?1:0)} %`;
+const tot=`<div class="ga-tots" role="group" aria-label="Totales">
+    <div class="ga-tot"><div class="k">Notaría</div><b class="num">${arEurV(N.total)}</b><small>${arEurV(N.base)} sin IVA · ${iv} ${arEurV(N.iva)}${N.suplidos?` · suplidos ${arEurV(N.suplidos)}`:""}</small></div>
+    <div class="ga-tot"><div class="k">Registro de la Propiedad</div><b class="num">${Rg.necesario?arEurV(Rg.total):"No hace falta"}</b><small>${Rg.necesario?`${arEurV(Rg.base)} sin IVA · ${iv} ${arEurV(Rg.iva)}`:"No hay inmuebles que inscribir"}</small></div>
+    <div class="ga-tot ga-tt"><div class="k">Total</div><b class="num">${arEurV(C.total)}</b><small>${arEurV(C.totalSinIva)} de honorarios sin IVA</small></div></div>`;
+const pend=C.pendientes.length?`<p class="caption ga-pend"><span class="tag P">En verificación</span> ${C.pendientes.length} ${C.pendientes.length===1?"criterio":"criterios"} sin norma cerrada: se calculan con la lectura que da más coste al cliente y se marcan en cada línea. <button class="link" data-ar="normas">Ver normas</button></p>`:"";
+const acts=`<div class="ga-acts"><button class="btn sm" data-ar="pdf">${I.dl}Exportar a PDF</button><button class="btn sm gray" data-ar="factura">${I.doc}Comparar con la factura</button></div>`;
+return`<div class="ga">
+    <div class="infobar ga-intro"><span class="ico gold">${I.info}</span><span>Honorarios de la escritura de herencia y de la inscripción, con los aranceles vigentes y los datos de este expediente: herederos, bienes, fincas y adjudicaciones. Pulsa cualquier estado para ver su norma.</span></div>
+    ${tot}${acts}${pend}
+    ${C.avisos.map(arAviso).join("")}
+    <div class="ga-cols">${arVistaNotaria(C)}${arVistaRegistro(C)}</div>
+    ${arVistaReparto(C)}
+    ${arVistaAjustes(x,C)}
+    ${arVistaFactura(x,C)}
+    ${arVistaNormas(C)}
+    <p class="foot-note">Cálculo orientativo con los aranceles de los RD 1426/1989 y 1427/1989 y sus reformas, leídos en el BOE el ${AR_CONSULTA.split("-").reverse().join("-")}. La minuta la emiten el notario y el registrador; si no coincide, se puede impugnar en 15 días hábiles. Sin inteligencia artificial: reglas escritas, cada una con su norma.</p></div>`;
+}
+function arPdf(x){
+const C=arCalcularExp(x);if(!C){if(typeof toast==="function")toast("Completa los datos del expediente");return null;}
+const comparacion=arComparar(C,(x.aranceles&&x.aranceles.factura)||{});
+const bytes=pdfDocumento({titulo:"Gastos de notaría y registro",subtitulo:x.nombre?`Herencia de ${x.nombre}`:"",despacho:pdfDespacho(x),ref:(x.despacho&&x.despacho.ref)||"",bloques:arBloques(C,{comparacion})});
+return bytes;
+}
+function arGuardar(x,f){
+x.aranceles=x.aranceles&&typeof x.aranceles==="object"?x.aranceles:{};
+f(x.aranceles);
+if(typeof guardar==="function")guardar();
+}
+function arRender(foco){setTimeout(()=>{const a=document.activeElement,id=foco||(a&&a.id&&a!==document.body?a.id:"");render();const n=id&&document.getElementById(id);if(n){try{n.focus({preventScroll:true});}catch(er){n.focus();}}},0);}
+function arAbrir(id){ui.fopt=ui.fopt||{};ui.fopt[id]=true;render();setTimeout(()=>{const n=document.getElementById(id);if(n){n.scrollIntoView({behavior:"smooth",block:"start"});const f=n.querySelector("input,select,summary");if(f)try{f.focus({preventScroll:true});}catch(e){f.focus();}}},120);}
+if(typeof document!=="undefined"){
+document.addEventListener("click",(e)=>{
+const t=e.target&&e.target.closest?e.target.closest("[data-ar],[data-arp],button[data-arx]"):null;if(!t)return;
+const app=document.getElementById("app");if(app&&!app.contains(t))return;
+const x=typeof exp==="function"?exp():null;if(!x)return;
+e.preventDefault();e.stopPropagation();const d=t.dataset;
+if(d.arp){ui.arP=ui.arP===d.arp?null:d.arp;const id=t.id;arRender();return;}
+if(d.arx){arGuardar(x,(o)=>{o[d.arx]=d.v;});render();return;}
+const a=d.ar;
+if(a==="pdf"){try{const bytes=arPdf(x);if(bytes)pdfDescargar(`Gastos de notaria y registro ${x.nombre||"herencia"}${x.despacho&&x.despacho.ref?" "+x.despacho.ref:""}`,bytes);}catch(er){console.error(er);if(typeof toast==="function")toast("No se ha podido generar el PDF");}return;}
+if(a==="factura")return arAbrir("ga-fc");
+if(a==="normas")return arAbrir("ga-nm");
+if(a==="borrarFactura"){arGuardar(x,(o)=>{delete o.factura;});render();return;}
+if(["folios","foliosCopia","copiasAutorizadas","copiasSimples"].includes(a)){arGuardar(x,(o)=>{delete o[a];});render();return;}
+},true);
+document.addEventListener("change",(e)=>{
+const t=e.target;if(!t||!t.dataset||!(t.dataset.arx||t.dataset.arcp||t.dataset.arf))return;
+const x=typeof exp==="function"?exp():null;if(!x)return;
+e.stopPropagation();const d=t.dataset;
+const leerN=(v)=>{const s=String(v||"").trim();if(!s)return"";const n=typeof numLeer==="function"?numLeer(s):Number(s);return isNaN(n)?"":n;};
+if(d.arx)arGuardar(x,(o)=>{const v=d.art==="bool"?!!t.checked:d.art==="str"?String(t.value||""):leerN(t.value);if(v===""&&d.art!=="str")delete o[d.arx];else o[d.arx]=d.art==="int"?Math.max(0,Math.round(v)):v;});
+else if(d.arcp)arGuardar(x,(o)=>{o.copiaAutPor=o.copiaAutPor&&typeof o.copiaAutPor==="object"?o.copiaAutPor:{};if(t.checked)o.copiaAutPor[d.arcp]=true;else delete o.copiaAutPor[d.arcp];});
+else if(d.arf)arGuardar(x,(o)=>{const[g,k]=d.arf.split(".");o.factura=o.factura&&typeof o.factura==="object"?o.factura:{};o.factura[g]=o.factura[g]||{};const v=leerN(t.value);if(v==="")delete o.factura[g][k];else o.factura[g][k]=Math.round(v*100)/100;});
+arRender(t.id);
 },true);
 }
 const TM_CATS=[["reunion","Reuniones y llamadas"],["documentacion","Documentación e inventario"],["tramites","Trámites"],["particion","Partición"],["impuestos","Impuestos y estrategia"],["escritos","Escritos e informes"],["otro","Otras tareas"]];
@@ -15957,7 +16145,7 @@ return`<div class="topbar"><button class="tbtn back-m" data-act="home">${I.back}
   ${body}<p class="foot-note">El archivo .ics funciona con Calendario de Apple, Google Calendar y Outlook, con aviso una semana antes de cada plazo.</p></div>`;
 }
 const SECCIONES=()=>[["resumen","Resumen",I.home2],["herencia","Herederos y bienes",I.tree],["impuestos","Impuestos",I.tax],["particion","Partición",I.chart],["tramites","Trámites",I.list],["documentos","Documentos",I.folder],
-["diagnostico","Diagnóstico",I.info,"Qué falta y qué conviene revisar"],["revision","Revisión del expediente",I.tick,"Reglas de coherencia antes de presentar"],["estrategia","Estrategia fiscal",I.scale,"Cómo pagar menos, con su riesgo"],["segunda","Dos herencias",I.people,"Qué pasará al fallecer el viudo"],["terceros","Bancos y notaría",I.ext,"Solicitudes y respuestas de terceros"],["firma","Listo para firmar",I.tick,"Comprobación antes de la notaría"],["normativa","Normativa",I.law,"Las normas aplicadas a este caso"],["despacho","Encargo y honorarios",I.brief,"Cliente, equipo, fondos y bitácora"]];
+["diagnostico","Diagnóstico",I.info,"Qué falta y qué conviene revisar"],["revision","Revisión del expediente",I.tick,"Reglas de coherencia antes de presentar"],["estrategia","Estrategia fiscal",I.scale,"Cómo pagar menos, con su riesgo"],["segunda","Dos herencias",I.people,"Qué pasará al fallecer el viudo"],["terceros","Bancos y notaría",I.ext,"Solicitudes y respuestas de terceros"],["gastos","Gastos de notaría y registro",I.bank,"Honorarios del notario y del Registro"],["firma","Listo para firmar",I.tick,"Comprobación antes de la notaría"],["normativa","Normativa",I.law,"Las normas aplicadas a este caso"],["despacho","Encargo y honorarios",I.brief,"Cliente, equipo, fondos y bitácora"]];
 const SEC_PRINCIPALES=["resumen","herencia","impuestos","particion","tramites","documentos"];
 const TABS_M=["resumen","tramites","particion","impuestos"];
 function expEstadoHTML(x,T){
@@ -15981,7 +16169,7 @@ const R=calcular(x);const T=tramitesExp(x,R);snapAct(x,R);
 const secs=SECCIONES();
 let body;
 if(!R&&!["despacho","documentos","normativa","diagnostico","revision","firma","terceros"].includes(ui.sec))body=`${franjaFamilia(x)}<div class="card empty" style="margin-top:14px"><b>Faltan datos para calcular</b>${x.familia?"Los datos de la familia ya están cargados. Revísalos y completa la fecha, la comunidad, los herederos y los bienes que falten.":"Revisa la fecha, la comunidad, los herederos y los bienes, o pide los datos a la familia."}<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" data-act="editar">Completar datos</button></div></div>`;
-else body=({resumen:tResumen,tramites:tTramites,herencia:tHerencia,particion:tParticion,impuestos:tImpuestos,estrategia:tEstrategia,segunda:tSegunda,diagnostico:tDiagnostico,revision:tRevision,terceros:tTerceros,firma:tFirma,normativa:tNormativa,documentos:tDocumentos,despacho:tDespacho})[ui.sec](x,R,T);
+else body=({resumen:tResumen,tramites:tTramites,herencia:tHerencia,particion:tParticion,impuestos:tImpuestos,estrategia:tEstrategia,segunda:tSegunda,diagnostico:tDiagnostico,revision:tRevision,terceros:tTerceros,gastos:tAranceles,firma:tFirma,normativa:tNormativa,documentos:tDocumentos,despacho:tDespacho})[ui.sec](x,R,T);
 const sec=secs.find((s)=>s[0]===ui.sec)||secs[0];
 const titulo=ui.sec==="resumen"?nombreExp(x):sec[1];
 const pend=T.filter((t)=>!cerrado(t)).length;
