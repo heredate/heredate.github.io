@@ -4,10 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610131841">
+<meta name="hereda-version" content="202610151416">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
-     connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs -->
-<meta http-equiv="Content-Security-Policy" content="connect-src 'self' data: blob:; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'">
+     connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
+     r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
+     clave del despacho; lector-ia.js). Ningún otro tercero. -->
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' data: blob: https://api.anthropic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F4F2EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4356,16 +4358,53 @@ html.scn-on,html.scn-on body{overflow:hidden}
 }
 @media print{.ga-acts,.ga-aj,.ga-fc{display:none}}
 
+/* ───── Lectura con IA (lector-ia.js) y consultas con cita literal (consulta.js) · r14 ───── */
+.lia-clave{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.lia-clave input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);font-size:13px}
+.lia-msg{margin:8px 0 0;font-size:13px;color:var(--success)}
+.lia-msg.lia-err{color:var(--danger)}
+.lia-acepta{padding:14px 16px;border-top:.5px solid var(--hair)}
+.lia-acepta p{margin:0 0 8px}
+.lia-acepta ul{margin:0 0 12px;padding-left:18px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.lia-acepta li{margin:0 0 6px}
+.lia-ck{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--ink);margin:0 0 12px;cursor:pointer}
+.lia-ck input{margin-top:2px;flex:none}
+.lia-acts,.csn-acts{display:flex;gap:8px;flex-wrap:wrap}
+.csn-acts{padding:4px 16px 14px}
+.lia-uso .t{gap:4px}
+.lia-barra{display:block;height:6px;border-radius:3px;background:var(--fill);overflow:hidden;margin-top:6px}
+.lia-barra i{display:block;height:100%;background:var(--brand);border-radius:3px}
+.field .lbl{display:block;font-size:var(--fs-label,13px);font-weight:500;color:var(--ink-2)}
+.org-ia{font-size:12px;line-height:1.4;color:var(--ink-2);padding:1px 8px;border-radius:var(--r-pill,999px);background:var(--fill);white-space:nowrap}
+/* Consultar norma */
+.csn-sheet textarea{width:100%;resize:vertical;min-height:76px;font:inherit}
+.csn-ej{margin:4px 0 14px}
+.csn-resp{margin:14px 0 10px;padding:14px 16px;border-radius:var(--r,12px);background:var(--surface);box-shadow:inset 0 0 0 .5px var(--hair)}
+.csn-resp.csn-no b{display:block;margin-bottom:6px}
+.csn-aviso{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.01em;color:var(--ink-3);text-transform:uppercase}
+.csn-texto{margin:0 0 12px;line-height:1.55}
+.csn-citas{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:10px}
+.csn-citas blockquote{margin:0 0 4px;padding:2px 0 2px 12px;border-left:2px solid var(--brand);font-family:var(--serif,inherit);line-height:1.5;color:var(--ink)}
+.csn-ref{font-size:12px;color:var(--ink-3)}
+.csn-ref a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.csn-arts{margin:8px 0 12px}
+.csn-arts summary{cursor:pointer;font-weight:500;padding:6px 0}
+.csn-arts ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}
+.csn-arts p{margin:4px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.csn-err{color:var(--danger);font-size:13px}
+.csn-nota,.csn-fuente{margin:6px 0}
+.csn-ctx{border-top:.5px solid var(--hair)}
+
 </style>
 <div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610131841"], ["app", "nucleo/app.js?v=202610131841"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610151416"], ["app", "nucleo/app.js?v=202610151416"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610131841").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610151416").catch(() => {}));
 </script>
 </body>
 </html>

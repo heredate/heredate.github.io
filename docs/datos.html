@@ -277,14 +277,18 @@ details.faq p{color:var(--ink-2);margin:10px 0 0}
     <li>Genera una hoja en PDF que explica cómo se guardan los datos en su despacho.</li>
   </ul></div>
   <div class="card"><h3>No hace</h3><ul>
-    <li>No envía expedientes, documentos ni cálculos a ningún servidor.</li>
-    <li>No usa inteligencia artificial ni servicios externos.</li>
+    <li>No envía expedientes, documentos ni cálculos a ningún servidor de Hereda+.</li>
+    <li>No usa inteligencia artificial salvo que usted active la lectura con IA (ver abajo); los cálculos nunca la usan.</li>
     <li>No tiene analítica, cookies de seguimiento ni informes de errores.</li>
     <li>No guarda una copia propia: si usted no tiene copia, nadie la tiene.</li>
     <li>No accede a sus equipos para el soporte ni le pide datos reales.</li>
     <li>No puede recuperar una contraseña olvidada.</li>
   </ul></div>
 </div>
+
+<h2 id="d-ia">Lectura con IA (opcional)</h2>
+<p>Viene desactivada. Si la activa en Ajustes con la clave de la API de Anthropic de su despacho, los documentos que el lector de su ordenador no lee con seguridad (fotos difíciles, testamentos, formatos nuevos) y las consultas normativas se envían <b>desde su navegador directamente a Anthropic</b> (Estados Unidos). Hereda+ no los recibe ni conoce la clave, que se guarda solo en ese navegador (cifrada si usa contraseña) y no entra en copias, exportaciones ni en el despacho en red. Cada dato que propone la IA llega con la frase literal del documento y no se carga hasta que usted lo revisa; los cálculos de impuestos, legítimas, reparto, plazos y aranceles siguen siendo reglas, sin IA.</p>
+<p>Según la documentación de la API de Anthropic (consultada el 15-10-2026), lo enviado no se usa para entrenar sin permiso expreso y por defecto no se conserva el contenido de las peticiones (salvo modelos con retención de 30 días, que Hereda+ no usa). No hay región en la Unión Europea: es una transferencia internacional, de la que su despacho es responsable y Anthropic, su proveedor. Puede desactivarla cuando quiera. <span class="ph">[PENDIENTE de revisión jurídica]</span></p>
 
 <h2 id="d4">Cerrar hoy, abrir mañana</h2>
 <p>Hereda+ guarda cada cambio al momento en el navegador; no hay botón de guardar. Al cerrar la ventana o apagar el ordenador, los expedientes se quedan en ese navegador. Mañana, al abrir Hereda+ en el mismo ordenador, con el mismo navegador y desde la misma dirección, aparecen tal como los dejó. Con la copia automática activada, además, ya hay una copia del día en la carpeta del despacho.</p>
