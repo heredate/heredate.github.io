@@ -314,16 +314,14 @@ footer p{margin:0;max-width:42em}
         <video muted playsinline preload="none" width="1920" height="1080" aria-hidden="true" tabindex="-1" data-mp4="video/hereda-demo.mp4" data-webm="video/hereda-demo.webm"></video>
         <button class="vctl" type="button" hidden aria-pressed="false" aria-describedby="demo-desc"></button>
       </div>
-      <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos» y el programa los lee en el ordenador. En la revisión, cada dato muestra el documento del que sale (el DNI de un hijo, leído de la foto de su DNI), lo dudoso llega sin marcar y se desmarca un dato antes de cargarlo. El expediente queda calculado; después se escribe a mano el valor de un inmueble que ningún documento traía, el cálculo se rehace y se vincula el legado de una plaza de garaje. Siguen Sucesiones y plusvalía paso a paso, el cuadro de partición con la vivienda adjudicada a la viuda (exceso, compensaciones y su coste), el árbol familiar con el derecho, lo que recibe y lo que paga cada heredero, Mi día, las cifras del modelo 650 de cada heredero y el informe de cálculo en PDF.</p>
+      <p class="sr-only" id="demo-desc">Vídeo sin sonido. Se arrastran 26 documentos ficticios a «Desde documentos» y el programa los lee en el ordenador. Lo que no está claro se revisa uno a uno: cada duda con la página del documento y el dato resaltado; una se da por buena con Intro y la hipoteca de la nota simple no se carga, porque el saldo lo certifica el banco. El expediente queda calculado; se escribe a mano el valor de un inmueble que ningún documento trae; se ven Sucesiones y plusvalía paso a paso, la partición con la vivienda para la viuda y su coste, el reparto en el árbol familiar, la lista de Mi día y el informe en PDF.</p>
     </div>
-    <button class="btn sec vozbtn" type="button" id="voz-abrir" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.2v9.6L11.6 7z" fill="currentColor"/></svg>Ver la demo con voz · 3:17</button>
-    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre a la partición, el árbol familiar y el informe en PDF, en dos minutos y sin sonido. La demo con voz lo cuenta paso a paso, con subtítulos. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
+    <button class="btn sec vozbtn" type="button" id="voz-abrir" aria-haspopup="dialog"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 2.2v9.6L11.6 7z" fill="currentColor"/></svg>Ver la demo completa · 1:57</button>
+    <p class="cap">Grabado con la aplicación real: 26 documentos de un caso ficticio, del arrastre y la revisión de dudas a la partición, el árbol familiar y el informe en PDF, en dos minutos y sin sonido. <a class="lnk" href="video/hereda-demo.mp4">Descargar el vídeo</a>.</p>
     <dialog class="vozdlg" id="voz-dlg" aria-labelledby="voz-tit">
-      <div class="hd"><h2 id="voz-tit">Hereda+ · demostración con voz</h2><button class="btn sec sm" type="button" id="voz-cerrar">Cerrar</button></div>
-      <video controls playsinline preload="none" width="1920" height="1080" poster="video/hereda-demo-poster-1600.webp" data-src="video/hereda-demo-voz.mp4" aria-describedby="voz-desc">
-        <track kind="captions" srclang="es" label="Español" src="video/hereda-demo-voz.es.vtt" default>
-      </video>
-      <p id="voz-desc">Locución con voz sintética en castellano, música compuesta para el vídeo y subtítulos en español. Despacho y datos ficticios. <a class="lnk" href="video/hereda-demo-voz.es.vtt" download>Subtítulos</a> · <a class="lnk" href="video/hereda-demo-vertical-voz.mp4">Versión vertical</a></p>
+      <div class="hd"><h2 id="voz-tit">Hereda+ · demostración completa</h2><button class="btn sec sm" type="button" id="voz-cerrar">Cerrar</button></div>
+      <video controls playsinline preload="none" width="1920" height="1080" poster="video/hereda-demo-poster-1600.webp" data-src="video/hereda-demo.mp4" aria-describedby="voz-desc"></video>
+      <p id="voz-desc">Sin sonido: cada paso lleva su rótulo. Despacho y datos ficticios. <a class="lnk" href="video/hereda-demo.mp4" download>Descargar el vídeo</a></p>
     </dialog>
   </div>
   <div class="wrap">
@@ -583,7 +581,7 @@ footer p{margin:0;max-width:42em}
 </div></footer>
 
 <script>
-// Demostración con voz: se abre en un diálogo (Esc o «Cerrar» lo cierran y devuelven el foco al botón); el vídeo se descarga al abrirlo.
+// Demostración completa (con controles): se abre en un diálogo (Esc o «Cerrar» lo cierran y devuelven el foco al botón); el vídeo se descarga al abrirlo.
 // Mientras se ve, el vídeo silencioso de la portada se pausa.
 (() => {
   const ab = document.getElementById("voz-abrir"), dlg = document.getElementById("voz-dlg"); if (!ab || !dlg || typeof dlg.showModal !== "function") { if (ab) ab.hidden = true; return; }
@@ -612,7 +610,7 @@ footer p{margin:0;max-width:42em}
   const cargar = () => { if (cargado) return; cargado = true;
     const w = document.createElement("source"); w.src = v.dataset.webm; w.type = "video/webm"; const m = document.createElement("source"); m.src = v.dataset.mp4; m.type = "video/mp4";
     v.append(w, m); v.preload = "auto"; v.load(); };
-  const pinta = () => { const p = v.paused; b.innerHTML = (p ? ICO.play : ICO.pausa) + "<span>" + (p ? (cargado && v.currentTime > INICIO ? "Seguir el vídeo" : "Ver el vídeo · 2:09") : "Pausar el vídeo") + "</span>"; b.setAttribute("aria-pressed", String(!p)); b.classList.toggle("grande", p && !caja.classList.contains("on")); };
+  const pinta = () => { const p = v.paused; b.innerHTML = (p ? ICO.play : ICO.pausa) + "<span>" + (p ? (cargado && v.currentTime > INICIO ? "Seguir el vídeo" : "Ver el vídeo · 1:57") : "Pausar el vídeo") + "</span>"; b.setAttribute("aria-pressed", String(!p)); b.classList.toggle("grande", p && !caja.classList.contains("on")); };
   const reproducir = () => { cargar(); const go = () => { if (v.currentTime < INICIO) { try { v.currentTime = INICIO; } catch (e) {} } v.play().then(() => caja.classList.add("on")).catch(() => {}).finally(pinta); };
     if (v.readyState >= 1) go(); else v.addEventListener("loadedmetadata", go, { once: true }); };
   v.addEventListener("ended", () => { v.currentTime = INICIO; v.play().catch(() => {}); });
