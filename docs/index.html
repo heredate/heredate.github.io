@@ -7,7 +7,7 @@
 <meta name="description" content="Hereda+, software de sucesiones para despachos de abogados: lee los documentos en tu ordenador, rellena el expediente, calcula Sucesiones y plusvalía y te dice qué hacer hoy. Cálculos con reglas; lectura con IA solo si el despacho la activa. Los datos se quedan en el despacho.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#F5F6F8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -19,19 +19,19 @@
 <meta property="og:type" content="website">
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
 <style>
-/* Hereda+ · web de producto. Mismos tokens y misma letra que la app (src/app/shell.html): papel, tinta, azul notarial, Inter y Source Serif 4
+/* Hereda+ · web de producto. Mismos tokens y misma letra que la app (src/app/shell.html), v11 «Estudio»: blanco, grises fríos, azul de acción e Inter
    (autoalojadas en /fonts; build.py pone la precarga y las @font-face en el marcador de fuentes del head). Las pilas del sistema quedan de respaldo. */
 :root{
-  --bg:#F4F2EC; --bg-2:#EBE9E2; --surface:#FFFEFB; --surface-2:#FAF9F5;
-  --border:#E0DCD2; --border-2:#CBC5B8;
-  --ink-1:#121C2A; --ink-2:#434C59; --ink-3:#5C6470;
-  --brand:#0F2B4C; --brand-hover:#0A1F38; --brand-tint:rgba(15,43,76,.07); --on-brand:#FFFFFF;
-  --success:#1F6E6B; --warning:#875A1A; --danger:#9E3B2B; --petrol:#1F6E6B; --petrol-tint:#E5EFEC;
-  --btn:#0F2B4C; --on-btn:#FFFFFF;
+  --bg:#F5F6F8; --bg-2:#EEF0F3; --surface:#FFFFFF; --surface-2:#F9FAFB;
+  --border:#E4E7EC; --border-2:#D0D5DD;
+  --ink-1:#101828; --ink-2:#475467; --ink-3:#5D6679;
+  --brand:#1D4ED8; --brand-hover:#1A43BC; --brand-tint:rgba(29,78,216,.07); --on-brand:#FFFFFF;
+  --success:#067647; --warning:#A84B06; --danger:#B42318; --petrol:#076A63; --petrol-tint:#E6F4F2;
+  --btn:#1D4ED8; --on-btn:#FFFFFF;
   --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
   --sh-frame:0 0 0 1px rgba(18,28,42,.07),0 2px 4px rgba(18,28,42,.04),0 40px 90px -30px rgba(18,28,42,.32);
   --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --font-display:var(--font-sans);
   --ease:cubic-bezier(.32,.72,0,1);
   --max:1180px;
   color-scheme:light;
@@ -403,7 +403,7 @@ footer p{margin:0;max-width:42em}
 
 <section id="cifras" class="alt" aria-labelledby="t-cifras"><div class="wrap">
   <p class="kicker">En cifras</p>
-  <h2 id="t-cifras">Lo que ya hace la versión 2.3.</h2>
+  <h2 id="t-cifras">Lo que ya hace la versión 2.4.</h2>
   <p class="lead">Cifras del propio programa, comprobables en el despacho de demostración. Las pruebas automáticas se ejecutan antes de cada versión: si una falla, la versión no se publica.</p>
   <div class="cifras prueba rv" role="list">
     <div role="listitem"><b class="num">28</b><span>tipos de documento que el programa lee y entiende</span></div>
@@ -578,7 +578,7 @@ footer p{margin:0;max-width:42em}
 </main>
 
 <footer><div class="wrap">
-  <p>© 2026 Hereda+ · Versión 2.3. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
+  <p>© 2026 Hereda+ · Versión 2.4. Los cálculos son estimaciones con la normativa cargada y los revisa el abogado antes de presentar.</p>
   <nav aria-label="Información legal"><a href="/contratar.html">Planes y contratación</a><a href="/condiciones.html">Condiciones</a><a href="/datos.html">Datos y seguridad</a><a href="/privacidad.html">Privacidad</a><a href="/aviso-legal.html">Aviso legal</a></nav>
 </div></footer>
 

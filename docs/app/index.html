@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610152158">
+<meta name="hereda-version" content="202610160814">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
      clave del despacho; lector-ia.js). Ningún otro tercero. -->
 <meta http-equiv="Content-Security-Policy" content="connect-src 'self' data: blob: https://api.anthropic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'">
 <meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
-<meta name="theme-color" content="#F4F2EC">
+<meta name="theme-color" content="#F5F6F8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -32,12 +32,12 @@
    Puntos de corte (no admiten variables en @media): 390 móvil · 760 tableta · 1024 escritorio con barra lateral · 1280 · 1440. */
 :root{
   /* Color semántico · grafito «azul noche»: superficies de azul muy profundo (no gris), tinta fría, azul notarial y petróleo aclarados */
-  --bg:#0F1621; --surface:#151E2A; --surface-2:#1A2431; --sunken:#0B111A; --elevated:#1C2735;
+  --bg:#0E1117; --surface:#151922; --surface-2:#1A1F2A; --sunken:#0A0D12; --elevated:#1D2330;
   --border:rgba(168,190,222,.11); --border-2:rgba(168,190,222,.2); --border-soft:rgba(168,190,222,.065);
   --ink-1:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF; --ink-4:#4C5767; --ink-ph:#727C8B;
-  --brand:#9DBCE6; --brand-hover:#B7CEEE; --brand-tint:rgba(157,188,230,.13); --on-brand:#0B1A2E;
+  --brand:#8EB1FF; --brand-hover:#AAC4FF; --brand-tint:rgba(142,177,255,.13); --on-brand:#0B1530;
   /* En grafito el botón principal es azul notarial pleno con texto blanco (el azul claro queda para enlaces y foco) */
-  --btn:#2C5A92; --btn-hover:#34669F; --on-btn:#FFFFFF;
+  --btn:#2F5BE0; --btn-hover:#3B67EA; --on-btn:#FFFFFF;
   --petrol:#63B8AF; --petrol-hover:#7CC8C0; --petrol-tint:rgba(99,184,175,.13); --on-petrol:#06201E;
   --success:#63B8AF; --warning:#E0AE68; --danger:#EE8E80; --info:#9DBCE6;
   --success-bg:rgba(99,184,175,.13); --warning-bg:rgba(224,174,104,.14); --danger-bg:rgba(238,142,128,.14); --info-bg:rgba(157,188,230,.12);
@@ -68,12 +68,12 @@
   --c1:#9DBCE6; --c2:#63B8AF; --c3:#9AABC4; --c4:#D9A07A; --c5:#A4AEBB; --c6:#CDB27A; --c7:#A9AEDB;
   --paper:#FFFEFB; --paper-ink:#121C2A;
   /* Marca: el monograma «H+» siempre en azul notarial (en grafito, un punto más claro para que no se hunda en el azul noche) */
-  --logo-bg:#1F4573; --logo-ink:#FFFFFF; --logo-acc:#6CC2B8;
+  --logo-bg:#2F5BE0; --logo-ink:#FFFFFF; --logo-acc:#6CC2B8;
   /* Barra lateral: en grafito, el azul noche más profundo; mismo lenguaje que en claro (tinta clara, activo translúcido, filete petróleo) */
-  --side-bg:#0A1019; --side-ink:#E8ECF2; --side-ink-2:#B3BCC9; --side-ink-3:#97A1AF; --side-ink-4:#4C5767;
+  --side-bg:#0A0D12; --side-ink:#E8ECF2; --side-ink-2:#B3BCC9; --side-ink-3:#97A1AF; --side-ink-4:#4C5767;
   --side-line:rgba(168,190,222,.11); --side-hover:rgba(168,190,222,.06); --side-active:rgba(168,190,222,.1); --side-field:rgba(168,190,222,.07);
-  --side-accent:#6CC2B8; --side-focus:#9DBCE6; --side-btn:#2C5A92; --side-on-btn:#FFFFFF; --side-btn-hover:#34669F;
-  --side-logo-bg:#1F4573; --side-logo-ink:#FFFFFF; --side-logo-acc:#6CC2B8;
+  --side-accent:#8EB1FF; --side-focus:#8EB1FF; --side-btn:#2F5BE0; --side-on-btn:#FFFFFF; --side-btn-hover:#3B67EA;
+  --side-logo-bg:#2F5BE0; --side-logo-ink:#FFFFFF; --side-logo-acc:#6CC2B8;
   /* Títulos de página y cifras grandes: en claro, azul notarial; en grafito, la tinta */
   --ink-title:#E8ECF2;
   color-scheme:dark;
@@ -94,33 +94,32 @@
   --t-display:var(--fs-display); --t-h1:var(--fs-h1); --t-h2:var(--fs-h2); --t-h3:var(--fs-h3); --t-body:var(--fs-body); --t-small:var(--fs-small); --t-caption:var(--fs-caption); --t-label:var(--fs-label);
 }
 :root[data-theme="light"]{
-  /* Color semántico · claro «notarial»: papel marfil frío, tinta azul-negra, azul notarial para marca y acción,
-     petróleo como único acento (selección, avance, dato leído de un documento) y estados con significado */
-  --bg:#F4F2EC; --surface:#FFFEFB; --surface-2:#FAF9F5; --sunken:#EBE9E2; --elevated:#FFFEFB;
-  --border:#E0DCD2; --border-2:#CBC5B8; --border-soft:#EAE7DF;
-  --ink-1:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-4:#B1B5BC; --ink-ph:#848A93;
-  --brand:#0F2B4C; --brand-hover:#0A1F38; --brand-tint:rgba(15,43,76,.07); --on-brand:#FFFFFF;
+  /* Color semántico · claro «Estudio» (v11, 16-10-2026): blanco y grises fríos, tinta grafito, un azul de acción intenso
+     y el petróleo como acento del dato leído. Estados con su color propio (verde, ámbar, rojo). */
+  --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#F9FAFB; --sunken:#F0F2F5; --elevated:#FFFFFF;
+  --border:#E4E7EC; --border-2:#D0D5DD; --border-soft:#EDEFF2;
+  --ink-1:#101828; --ink-2:#475467; --ink-3:#5D6679; --ink-4:#C3C8D0; --ink-ph:#8A93A3;
+  --brand:#1D4ED8; --brand-hover:#1A43BC; --brand-tint:rgba(29,78,216,.07); --on-brand:#FFFFFF;
   --btn:var(--brand); --btn-hover:var(--brand-hover); --on-btn:#FFFFFF;
-  --petrol:#1F6E6B; --petrol-hover:#185A57; --petrol-tint:#E5EFEC; --on-petrol:#FFFFFF;
-  --success:#1F6E6B; --warning:#875A1A; --danger:#9E3B2B; --info:#2B4D74;
-  --success-bg:#E5EFEC; --warning-bg:#F5EDDD; --danger-bg:#F6E8E3; --info-bg:#E8ECF1;
-  --hover:rgba(18,28,42,.035); --press:rgba(18,28,42,.06);
-  --scrim:rgba(14,24,38,.34);
-  --shadow-rgb:18,28,42;
-  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.04);
-  --sh-2:0 0 0 1px var(--border),0 8px 24px -8px rgba(18,28,42,.16);
-  --sh-3:0 0 0 1px rgba(18,28,42,.07),0 28px 72px -16px rgba(18,28,42,.28);
-  --c1:#0F2B4C; --c2:#1F6E6B; --c3:#46607F; --c4:#9A5B34; --c5:#5E6773; --c6:#7D6436; --c7:#56587E;
-  --paper:#FFFFFF; --paper-ink:#121C2A;
+  --petrol:#076A63; --petrol-hover:#065A54; --petrol-tint:#E6F4F2; --on-petrol:#FFFFFF;
+  --success:#067647; --warning:#A84B06; --danger:#B42318; --info:#1D4ED8;
+  --success-bg:#E9F7EF; --warning-bg:#FEF4E6; --danger-bg:#FDEEEC; --info-bg:#EEF3FE;
+  --hover:rgba(16,24,40,.035); --press:rgba(16,24,40,.06);
+  --scrim:rgba(16,24,40,.32);
+  --shadow-rgb:16,24,40;
+  --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(16,24,40,.04);
+  --sh-2:0 0 0 1px var(--border),0 10px 28px -10px rgba(16,24,40,.16);
+  --sh-3:0 0 0 1px rgba(16,24,40,.06),0 24px 64px -16px rgba(16,24,40,.24);
+  --c1:#1D4ED8; --c2:#076A63; --c3:#4652C2; --c4:#A84A08; --c5:#667085; --c6:#A16207; --c7:#7A5AF8;
+  --paper:#FFFFFF; --paper-ink:#101828;
   --on-ink:#FFFFFF;
-  --logo-bg:#0F2B4C;
-  /* Barra lateral en azul notarial: la identidad de la marca. Tinta marfil y azul claro (AA sobre el azul y sobre el activo),
-     activo con un velo blanco del 10 % y filete petróleo claro, «Nuevo expediente» en marfil con texto azul, monograma invertido */
-  --side-bg:#0F2B4C; --side-ink:#F4F2EC; --side-ink-2:#C3CEDC; --side-ink-3:#A3B4CA; --side-ink-4:#6F86A6;
-  --side-line:rgba(255,255,255,.12); --side-hover:rgba(255,255,255,.06); --side-active:rgba(255,255,255,.1); --side-field:rgba(255,255,255,.08);
-  --side-accent:#6CC2B8; --side-focus:#9DBCE6; --side-btn:#F4F2EC; --side-on-btn:#0F2B4C; --side-btn-hover:#FFFFFF;
-  --side-logo-bg:#F4F2EC; --side-logo-ink:#0F2B4C; --side-logo-acc:#1F6E6B;
-  --ink-title:#0F2B4C;
+  --logo-bg:#1D4ED8;
+  /* Barra lateral clara: blanca con filete gris, tinta grafito, activo en azul tenue con el texto en azul */
+  --side-bg:#FFFFFF; --side-ink:#101828; --side-ink-2:#344054; --side-ink-3:#5D6679; --side-ink-4:#98A2B3;
+  --side-line:#EAECF0; --side-hover:rgba(16,24,40,.04); --side-active:rgba(29,78,216,.08); --side-field:#F2F4F7;
+  --side-accent:#1D4ED8; --side-focus:#1D4ED8; --side-btn:#1D4ED8; --side-on-btn:#FFFFFF; --side-btn-hover:#1A43BC;
+  --side-logo-bg:#1D4ED8; --side-logo-ink:#FFFFFF; --side-logo-acc:#9FE3D9;
+  --ink-title:#101828;
   --tint-a:10%; --field-a:5%;
   color-scheme:light;
 }
@@ -782,7 +781,7 @@ button.kpi:hover{background:var(--panel-2)}
 .doccard:hover{background:var(--panel-2)}
 .doccard .paper{width:40px;height:52px;border-radius:3px;background:var(--paper);box-shadow:0 1px 3px rgba(var(--shadow-rgb),.22),0 0 0 .5px rgba(var(--shadow-rgb),.1);position:relative;overflow:hidden}
 .doccard .paper i{position:absolute;left:8px;right:8px;height:2px;border-radius:1px;background:#D8DCE2}
-.doccard .paper i:first-child{background:#0F2B4C;right:16px}
+.doccard .paper i:first-child{background:var(--brand);right:16px}
 @media (max-width:639px){.doccard{flex-direction:row;align-items:center;min-height:0;padding:14px 16px}.doccard .paper{width:32px;height:42px}}
 .doccard b{font-weight:600;font-size:15px;letter-spacing:-.01em}
 .doccard small{display:block;color:var(--label-2);font-size:12.5px;margin-top:3px;line-height:1.4}
@@ -3832,6 +3831,65 @@ input[type="checkbox"],input[type="radio"]{accent-color:var(--brand)}
 @media (max-width:520px){.cs-ficha .vf-l{grid-template-columns:50px minmax(0,1fr) auto auto;gap:8px}.cs-ficha .vf-cas{max-width:50px}.cs-ficha .vf-sh{padding-left:58px}.cs-t th:nth-child(2),.cs-t td:nth-child(2){display:none}}
 
 
+/* ══════════════════════════════════════════════════════════════════════════════
+   v11 · «Estudio» (16-10-2026) — software de despacho: blanco, grises fríos, azul de acción, títulos en Inter.
+   La serifa queda para los documentos que se generan (informes, escrituras); la interfaz es toda sans.
+   ══════════════════════════════════════════════════════════════════════════════ */
+/* Barra lateral clara: la barra se redefine con estados en su color de tema claro */
+:root[data-theme="light"] .side,:root[data-theme="light"] .boot-side{
+  --danger:#B42318; --warning:#A84B06; --success:#067647; --info:#1D4ED8; --on-ink:#FFFFFF; --on-accent:#FFFFFF;
+  --danger-bg:#FDEEEC; --warning-bg:#FEF4E6; --success-bg:#E9F7EF; --info-bg:#EEF3FE;
+  color-scheme:light; border-right:1px solid var(--side-line);
+}
+:root[data-theme="light"] .side .sitem[aria-current="true"] b,:root[data-theme="light"] .side .sitem[aria-current="true"] .ic{color:var(--brand)}
+:root[data-theme="light"] .side .sitem[aria-current="true"]::before{display:none}
+:root[data-theme="light"] .side .sitem:not([aria-current="true"]) .ic{color:var(--side-ink-3)}
+:root[data-theme="light"] .side .pk-btn{background:var(--side-field);box-shadow:inset 0 0 0 1px var(--side-line)}
+:root[data-theme="light"] .side .newbtn .btn{box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.side .sgrp,.side .sgrp-t{letter-spacing:.04em}
+/* Títulos: Inter seminegrita, sin filete; la jerarquía la marcan peso y tamaño */
+.ltitle,.detail-h h3,.wiz .q,h2.q{font-family:var(--font-sans);font-weight:650;letter-spacing:-.022em}
+.page > .headrow .ltitle::after,.page > .ltitle::after{display:none}
+/* Barra superior y pestañas de sección: línea fina, activo en azul */
+:root[data-theme="light"] .topbar{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--border)}
+.secnav button[aria-current="page"]{color:var(--brand)}
+.secnav button[aria-current="page"]::after{background:var(--brand)}
+/* Tarjetas y cifras: blanco puro sobre gris, cifras en tinta, etiquetas en gris medio */
+.kpi b,.card .big{color:var(--ink-1)}
+.kpi small,.kpi .lbl{color:var(--ink-3)}
+/* Toda la interfaz en Inter: el alias de títulos pasa a la sans (los documentos generados llevan su propia tipografía) */
+:root{--font-display:var(--font-sans)}
+.bv-h,.ltitle{letter-spacing:-.026em}
+/* Ficha del expediente: cabecera en tarjeta blanca (como la ficha de registro de un CRM) con la ruta de fases debajo */
+.rec-h{background:var(--surface);border-radius:var(--r-sheet);box-shadow:var(--sh-1);padding:18px 22px 16px;margin-top:-6px}
+.rec-h .greet{margin-top:0}
+html:root .page .rec-h .stepper{margin:16px 0 0;gap:4px}
+/* Ruta de fases: segmentos en píldora; hecho en verde tenue, actual en azul pleno */
+html:root .page .rec-h .stepper button{padding:8px 12px;border-radius:var(--r-ctl);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border-soft);align-items:center}
+html:root .page .rec-h .stepper button i{box-shadow:none}
+html:root .page .rec-h .stepper button.done{background:var(--success-bg);color:var(--success);box-shadow:none}
+html:root .page .rec-h .stepper button.done i{background:transparent}
+html:root .page .rec-h .stepper button.on{background:var(--brand);color:var(--on-brand);box-shadow:none}
+html:root .page .rec-h .stepper button.on i{background:rgba(255,255,255,.2);color:var(--on-brand)}
+html:root .page .rec-h .stepper button.on small{color:inherit;opacity:.85}
+html:root .page .rec-h .stepper button.on.venc,html:root .page .rec-h .stepper button.on.bad{background:var(--brand)}
+.rec-h + .sn-wrap .secnav{margin-top:14px}
+@media (max-width:1023px){.rec-h{padding:14px 16px 12px;border-radius:var(--r-panel)}}
+html:root .page .rec-h .stepper button.on.venc span small,html:root .page .rec-h .stepper button.on span small{color:var(--on-brand);opacity:.9}
+html:root .page .rec-h .stepper button.on.venc i{background:var(--surface);color:var(--danger)}
+html:root .page .rec-h .stepper button.on.venc{box-shadow:inset 0 -3px 0 var(--danger)}
+/* Menú «Herramientas»: grupos con título y un icono por herramienta */
+.sn-menu .sn-h:not(:first-child){margin-top:6px;border-top:1px solid var(--border-soft);padding-top:10px}
+.sn-menu [role="menuitem"]{display:flex;gap:10px;align-items:flex-start}
+.sn-menu .sn-ic{width:18px;height:18px;display:grid;place-items:center;color:var(--ink-3);margin-top:1px;flex:none}
+.sn-menu .sn-ic svg{width:16px;height:16px}
+.sn-menu [aria-current="page"] .sn-ic{color:var(--brand)}
+.sn-menu [role="menuitem"]{justify-content:flex-start;text-align:left}
+.sn-menu [role="menuitem"] > span:last-child{flex:1;min-width:0}
+.sn-menu{max-height:calc(100vh - 140px);overflow-y:auto;overscroll-behavior:contain}
+@media (max-width:1023px){.rec-h{margin:8px 0 14px}.rec-h .stepper{margin-top:14px}}
+.rd-person[aria-pressed="true"] .n{background:rgba(0,0,0,.2)}
+
 /* ───────────── Hereda+ · producto: despacho (socio), auditoría, búsqueda, tareas y acciones masivas ─────────────
    Solo piezas nuevas; todo lo demás reutiliza las clases de la app (card, kpi, grid-t, rd-row, st, seg, sectitle…). */
 
@@ -4398,13 +4456,13 @@ html.scn-on,html.scn-on body{overflow:hidden}
 </style>
 <div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
-(function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F4F2EC" : "#0F1621"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
+(function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610152158"], ["app", "nucleo/app.js?v=202610152158"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610160814"], ["app", "nucleo/app.js?v=202610160814"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610152158").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610160814").catch(() => {}));
 </script>
 </body>
 </html>
