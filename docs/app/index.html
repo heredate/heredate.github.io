@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610160814">
+<meta name="hereda-version" content="202610160832">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
@@ -3890,6 +3890,30 @@ html:root .page .rec-h .stepper button.on.venc{box-shadow:inset 0 -3px 0 var(--d
 @media (max-width:1023px){.rec-h{margin:8px 0 14px}.rec-h .stepper{margin-top:14px}}
 .rd-person[aria-pressed="true"] .n{background:rgba(0,0,0,.2)}
 
+/* ── v11.1 · «Sobrio» (16-10-2026): la letra en tinta y gris; el color, solo en puntos, etiquetas, iconos y botones ── */
+/* Plazos y contadores: tinta en seminegrita (el rojo queda solo para lo vencido) */
+html:root .due.warn,html:root .days.warn,html:root .days.num.warn{color:var(--ink-1);font-weight:600}
+html:root .kpi:not(.bad) b,html:root .kpi.warn b,html:root .kpi.ok b,html:root .kpi.gold b{color:var(--ink-1)}
+html:root .rd-days b,html:root .rd-days b.num,html:root .rd-sg b,html:root .rd-sg b.num{color:var(--ink-1)}
+html:root .sr-v,html:root .sr-v.num{color:var(--ink-1)}
+html:root .aplica{color:var(--ink-3)}
+/* Árbol familiar: datos en gris y cifras en tinta */
+html:root svg text.s{fill:var(--ink-3)}
+html:root svg text.s.tax{fill:var(--ink-1);font-weight:600}
+/* Etiquetas de estado: fondo neutro con un punto de color delante */
+html:root .tag.V,html:root .tag.P,html:root .tag.bajo,html:root .tag.medio,html:root .tag.alto,html:root .tag.litigioso,html:root .tag.warn{background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--border);gap:5px}
+html:root .tag.V::before,html:root .tag.P::before,html:root .tag.bajo::before,html:root .tag.medio::before,html:root .tag.alto::before,html:root .tag.litigioso::before,html:root .tag.warn::before{content:"";width:6px;height:6px;border-radius:50%;flex:none;background:var(--success)}
+html:root .tag.P::before,html:root .tag.medio::before,html:root .tag.warn::before{background:var(--warning)}
+html:root .tag.alto::before,html:root .tag.litigioso::before{background:var(--danger)}
+/* Ruta de fases discreta: la actual con filo azul y texto en tinta; las hechas, en gris con su marca verde */
+html:root .page .rec-h .stepper button.on,html:root .page .rec-h .stepper button.on.venc,html:root .page .rec-h .stepper button.on.bad{background:var(--surface);color:var(--ink-1);box-shadow:inset 0 0 0 1.5px var(--brand)}
+html:root .page .rec-h .stepper button.on i{background:var(--brand);color:var(--on-brand)}
+html:root .page .rec-h .stepper button.on span small,html:root .page .rec-h .stepper button.on.venc span small{color:var(--danger);opacity:1}
+html:root .page .rec-h .stepper button.on.venc i{background:var(--brand);color:var(--on-brand)}
+html:root .page .rec-h .stepper button.done{background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--border-soft)}
+html:root .page .rec-h .stepper button.done i{color:var(--success)}
+html:root .tnode .s.tax,html:root .tnode.cau .s.tax{fill:var(--ink-1)}
+
 /* ───────────── Hereda+ · producto: despacho (socio), auditoría, búsqueda, tareas y acciones masivas ─────────────
    Solo piezas nuevas; todo lo demás reutiliza las clases de la app (card, kpi, grid-t, rd-row, st, seg, sectitle…). */
 
@@ -4458,11 +4482,11 @@ html.scn-on,html.scn-on body{overflow:hidden}
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610160814"], ["app", "nucleo/app.js?v=202610160814"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610160832"], ["app", "nucleo/app.js?v=202610160832"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610160814").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610160832").catch(() => {}));
 </script>
 </body>
 </html>
