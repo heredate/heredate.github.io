@@ -11,12 +11,12 @@
 /* Hereda+ · Calculadora de herencias para la web del despacho. Un solo archivo, sin conexiones: el motor de cálculo va dentro. */
 :root{
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --serif:ui-serif,"New York","Iowan Old Style",Georgia,"Times New Roman",serif;
-  --ac:#0F2B4C; --on-ac:#FFFFFF; --ac-ink:var(--ac);
-  --bg:#F4F2EC; --panel:#FFFEFB; --field:#FAF9F5;
-  --ink:#121C2A; --ink-2:#434C59; --ink-3:#5C6470; --ink-4:#B1B5BC;
-  --line:#E0DCD2; --line-2:#EAE7DF;
-  --keep:#1F6E6B; --tax:#875A1A; --warn:#9E3B2B;
+  --serif:var(--font);
+  --ac:#1D4ED8; --on-ac:#FFFFFF; --ac-ink:var(--ac);
+  --bg:#F5F6F8; --panel:#FFFFFF; --field:#F9FAFB;
+  --ink:#101828; --ink-2:#475467; --ink-3:#5D6679; --ink-4:#C3C8D0;
+  --line:#E4E7EC; --line-2:#EDEFF2;
+  --keep:#076A63; --tax:#A84B06; --warn:#B42318;
   --ac-t:color-mix(in srgb,var(--ac) 8%,var(--panel)); --ac-t2:color-mix(in srgb,var(--ac) 22%,var(--panel));
   --keep-t:color-mix(in srgb,var(--keep) 11%,var(--panel)); --tax-t:color-mix(in srgb,var(--tax) 14%,var(--panel)); --warn-t:color-mix(in srgb,var(--warn) 9%,var(--panel));
   --shadow:0 0 0 1px rgba(18,28,42,.05),0 1px 2px rgba(18,28,42,.04),0 8px 22px -12px rgba(18,28,42,.14);
@@ -25,7 +25,7 @@
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --bg:#0F1621; --panel:#151E2A; --field:#121A25;
+    --bg:#0E1117; --panel:#151922; --field:#121A25;
     --ink:#E8ECF2; --ink-2:#B3BCC9; --ink-3:#97A1AF; --ink-4:#4C5767;
     --line:#2A3647; --line-2:#1F2A38;
     --keep:#63B8AF; --tax:#E0AE68; --warn:#EE8E80;
@@ -3439,7 +3439,7 @@ const D = {
   nombre: (P && P.nombre || "").trim(), colegio: (P && P.colegio || "").trim(), localidad: (P && P.localidad || "").trim(),
   tel: (P && P.tel || "").trim(), email: (P && P.email || "").trim() || (GENERICA ? CONTACTO_GENERICO : ""),
   web: (P && P.web || "").trim(), privacidad: (P && P.privacidad || "").trim() || (GENERICA ? "/privacidad.html" : ""),
-  color: /^#[0-9a-f]{6}$/i.test(P && P.color || "") ? P.color : "#0F2B4C",
+  color: /^#[0-9a-f]{6}$/i.test(P && P.color || "") ? P.color : "#1D4ED8",
 };
 const HEREDA_URL = PRESET && typeof PRESET.hereda === "string" && /^https?:\/\//.test(PRESET.hereda) ? PRESET.hereda : GENERICA ? "/" : "";
 const NOMBRE = D.nombre || (GENERICA ? "Hereda+" : "el despacho");
@@ -3452,9 +3452,9 @@ if (EMB) document.documentElement.classList.add("emb");
   const h = D.color.slice(1), r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
   const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  const de = document.documentElement.style; de.setProperty("--ac", D.color); de.setProperty("--on-ac", (1.05) / (L + 0.05) >= 4.5 ? "#FFFFFF" : "#121C2A");
+  const de = document.documentElement.style; de.setProperty("--ac", D.color); de.setProperty("--on-ac", (1.05) / (L + 0.05) >= 4.5 ? "#FFFFFF" : "#101828");
   if ((1.05) / (L + 0.05) < 3) de.setProperty("--ac-ink", "color-mix(in oklab," + D.color + " 45%,black)");
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="${D.color}"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="${INI.length > 2 ? 20 : 25}" font-weight="700" text-anchor="middle" fill="${(1.05) / (L + 0.05) >= 4.5 ? "#fff" : "#121C2A"}">${INI.replace(/[<&>"]/g, "")}</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="${D.color}"/><text x="32" y="41" font-family="Arial,sans-serif" font-size="${INI.length > 2 ? 20 : 25}" font-weight="700" text-anchor="middle" fill="${(1.05) / (L + 0.05) >= 4.5 ? "#fff" : "#101828"}">${INI.replace(/[<&>"]/g, "")}</text></svg>`;
   const f = document.getElementById("fav"); if (f) f.href = "data:image/svg+xml," + encodeURIComponent(svg);
   if (D.nombre) document.title = "Calculadora de herencias · " + D.nombre;
 })();

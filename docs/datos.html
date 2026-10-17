@@ -9,24 +9,24 @@
 <meta name="description" content="Dónde se guardan los expedientes de Hereda+, quién es responsable de ellos y qué hace y qué no hace Hereda+ con los datos. Explicado para el despacho.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#F4F2EC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F1621" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F5F6F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1117" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="/favicon.png">
 <style>
 /* Páginas legales y de contratación · mismos tokens que la portada (src/landing.html) y la app */
-:root{--bg:#F4F2EC;--bg-2:#EBE9E2;--surface:#FFFEFB;--surface-2:#FAF9F5;--border:#E0DCD2;--border-2:#CBC5B8;
-  --ink-1:#121C2A;--ink-2:#434C59;--ink-3:#5C6470;--brand:#0F2B4C;--brand-tint:rgba(15,43,76,.07);--on-brand:#FFFFFF;
-  --success:#1F6E6B;--warning:#875A1A;--warning-bg:#F5EDDD;--danger:#9E3B2B;--btn:#0F2B4C;--on-btn:#FFFFFF;
+:root{--bg:#F5F6F8;--bg-2:#F0F2F5;--surface:#FFFFFF;--surface-2:#F9FAFB;--border:#E4E7EC;--border-2:#D0D5DD;
+  --ink-1:#101828;--ink-2:#475467;--ink-3:#5D6679;--brand:#1D4ED8;--brand-tint:rgba(15,43,76,.07);--on-brand:#FFFFFF;
+  --success:#076A63;--warning:#A84B06;--warning-bg:#FEF4E6;--danger:#B42318;--btn:#1D4ED8;--on-btn:#FFFFFF;
   --sh-1:0 0 0 1px var(--border),0 1px 2px rgba(18,28,42,.035);
   --font-sans:"Hereda Sans","Hereda Sans Fallback",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  --font-display:"Hereda Serif","Hereda Serif Fallback","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --font-display:var(--font-sans);
   --ease:cubic-bezier(.32,.72,0,1);color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
-  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
-  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0F1621;--bg-2:#0B111A;--surface:#151E2A;--surface-2:#1A2431;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
-  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#9DBCE6;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1A2E;
-  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2C5A92;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1117;--bg-2:#0A0D12;--surface:#151922;--surface-2:#1A1F2A;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#8EB1FF;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1530;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2F5BE0;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0E1117;--bg-2:#0A0D12;--surface:#151922;--surface-2:#1A1F2A;--border:rgba(168,190,222,.11);--border-2:rgba(168,190,222,.2);
+  --ink-1:#E8ECF2;--ink-2:#B3BCC9;--ink-3:#97A1AF;--brand:#8EB1FF;--brand-tint:rgba(157,188,230,.13);--on-brand:#0B1530;
+  --success:#63B8AF;--warning:#E0AE68;--warning-bg:rgba(224,174,104,.14);--danger:#EE8E80;--btn:#2F5BE0;--on-btn:#FFFFFF;--sh-1:0 0 0 1px var(--border);color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;background:var(--bg)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
