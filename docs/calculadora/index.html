@@ -2955,8 +2955,8 @@ function calcularPlusvalia({ inmueble, titulares, fecha, caudalTotal }) {
 // la herramienta de consulta no accede a juntadeandalucia.es, comunidad.madrid, gva.es, atc.gencat.cat ni atriga.gal salvo por enlaces que aparezcan
 // en resultados de búsqueda, y los resultados no traen el formulario. Se deja constancia de lo consultado para no repetir la búsqueda.
 const MODELO650_AUT = {
-  AND: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni las instrucciones del 650 de la Agencia Tributaria de Andalucía (se genera en su programa de ayuda)",
-    consultado: ["https://www.juntadeandalucia.es/sites/default/files/2025-07/MT_12.01.16_ISD.pdf (memoria de la estadística del ISD: cita los modelos 650, 651 y 660, sin casillas)"] },
+  AND: { estado: "VERIFICADO", motivo: "numeración leída casilla a casilla en autoliquidaciones del 650 y del 660 generadas por el programa de la Agencia Tributaria de Andalucía y presentadas en octubre de 2026 (copias del despacho piloto); diseño en src/casillas.mjs (CAS_AND650)",
+    consultado: ["https://www.juntadeandalucia.es/sites/default/files/2025-07/MT_12.01.16_ISD.pdf (memoria de la estadística del ISD: cita los modelos 650, 651 y 660, sin casillas)", "autoliquidaciones reales 650 y 660 presentadas en la ATA, octubre de 2026"] },
   MAD: { estado: "NO LOCALIZADO", motivo: "no se ha podido leer el formulario ni el programa de ayuda del 650 de la Comunidad de Madrid", consultado: [] },
   GAL: { estado: "NO LOCALIZADO", motivo: "solo se ha localizado un 650 gallego en PDF con cuantías de reducción anteriores a 2011; no vale para numerar las casillas del formulario actual",
     consultado: ["https://www.conselleriadefacenda.gal/documents/10433/43456/f650.pdf/b20f5497-3c38-4d1f-a2de-eba18a915aad (formulario antiguo: grupo II 15.956,87 €, discapacidad 108.200 €)", "https://conselleriadefacenda.gal/documents/16561/30903650/MK650-instrucciones-gl.pdf/d7c78050-99a3-4f90-a9e0-9dce47e7fef4 (r10, 13-10-2026: instrucciones oficiales del 650 con casillas [20] a [42]; anotadas en src/modelos-datos.json, sin pasar a la hoja hasta cotejarlas con el formulario del programa)"] },
