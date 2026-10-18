@@ -206,6 +206,7 @@ if(r.liquidado.usar){r.totalCalculado=r.total;r.total=total;r.porTitular=T.map((
 const eurL=(v)=>(Number(v)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €",pctL=(f)=>(Math.round(f*10000)/100).toLocaleString("es-ES")+" %";
 function calcularBase(x){
 if(!x.fecha||!x.ccaa||!(x.personas||[]).length||!(x.bienes||[]).length)return null;
+for(const b of x.bienes||[])if(b.muniIne&&typeof ordLeida==="function"&&ordLeida(b.muniIne)&&b.municipio!=="L_"+b.muniIne&&!(typeof ORDENANZAS==="object"&&ORDENANZAS[b.municipio]&&ORDENANZAS[b.municipio].estadoTipo==="VERIFICADO"&&!String(b.municipio).startsWith("D_")))b.municipio="L_"+b.muniIne;
 for(const b of x.bienes||[])if(b._muniPendiente&&typeof lecMunicipio==="function"&&typeof MUNI_ES==="object"&&(MUNI_ES.m||[]).length)lecMunicipio(b,b._muniPendiente[0],b._muniPendiente[1]);
 const isd=calcularISD(casoMotor(x));
 for(const t of legadosSinBien(x))isd.alertas.unshift(t);
@@ -1347,8 +1348,10 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:271,nombre:"Versión 2.7.1",fecha:"2026-10-18"};
+const VERSION_APP={n:272,nombre:"Versión 2.7.2",fecha:"2026-10-18"};
 const NOVEDADES=[
+["Cualquier ordenanza de plusvalía","Sube la ordenanza fiscal del municipio (PDF del boletín o de la web del ayuntamiento) con los documentos: la app lee el tipo de gravamen (también por años de tenencia), los coeficientes propios y la bonificación por herencia con sus requisitos (vivienda habitual, parentesco, convivencia, tramos por valor catastral, plazo, años sin vender), y la aplica en todos los expedientes de ese municipio. Se gestiona en Despacho y ajustes."],
+["La herencia contada en lenguaje llano","En la portada, «Contarlo en lenguaje llano» redacta el caso para el cliente: qué pasó, quién hereda y por qué, qué hay, qué paga cada uno y los plazos. Se copia con un clic."],
 ["Ficha de cada documento","Cada tipo de documento (defunción, acta, testamento, IBI, catastro, cartas de pago, cuaderno, DNI, banco…) lleva declarado qué datos debe aportar y para qué sirve cada uno. Tras leer, se revisa documento a documento: qué se ha sacado, qué falta y a qué parte del expediente va."],
 ["Cómo encaja el caso","La portada del expediente clasifica la herencia (intestada o testada, régimen del matrimonio, quiénes heredan, dónde tributa, bienes), enseña las reglas que aplica y lista lo que falta para cerrar el cuadro, Sucesiones y plusvalía."],
 ["Cotejo con el Ayuntamiento y con el cuaderno","Las cartas de pago de la plusvalía se cotejan heredero a heredero con el cálculo, con la explicación de cada diferencia y la opción de usar lo liquidado. El criterio del ajuar se toma del cuaderno o del 660 presentados (con o sin la parte del viudo) y el cuaderno muestra la base de Sucesiones de cada heredero."],
@@ -1906,8 +1909,8 @@ const nom=E.municipio,bop=E.bop&&E.bop.url?` La ordenanza se publica en el <a hr
 const hac=` Si tiene más de 1.000 habitantes, su tipo está en la <a href="${esc(HACIENDA_IIVTNU_URL)}" target="_blank" rel="noopener">consulta de Hacienda ↗</a> (elige provincia y municipio).`;
 const F=r.foral,foral=E.foral?` Territorio foral: se calcula con la norma foral${F?` de ${esc(F.nombre)}`:""}; sus coeficientes están pendientes de cotejo y la cifra es orientativa.`:"";
 if(E.manual)return`<div class="infobar plus-est"><span class="ico green">${I.tick}</span><span><b>Tipo y bonificación introducidos a mano${nom?` según la ordenanza de ${esc(nom)}`:""}.</b> Coeficientes limitados al máximo legal.${bop} <button class="link" data-editb="${b.id}" data-mm="1">Revisar</button></span></div>`;
-if(E.hacienda)return`<div class="infobar plus-est"><span class="ico green">${I.tick}</span><span><b>Tipo oficial de ${esc(nom||r.municipio)}: ${grp(r.tipo*100,r.tipo*100%1?2:0)} %</b>, el que el Ayuntamiento comunica al Ministerio de Hacienda para 2026. Coeficientes máximos legales y ${E.bonifManual?`bonificación del ${grp(E.bonifManual,E.bonifManual%1?2:0)} % introducida a mano`:"sin bonificación: Hacienda no publica las bonificaciones, así que la cuota real será igual o menor si la ordenanza prevé alguna"}.${bop} <button class="link" data-editb="${b.id}" data-mm="1">${E.bonifManual?"Revisar":"Introducir la bonificación"}</button></span></div>`;
-return`<div class="infobar plus-est"><span class="ico gold">${I.info}</span><span><b>Como máximo ${eur(r.total)}${nom?`; consulta la ordenanza de ${esc(nom)}`:""}.</b> ${F?`Tipo del ${grp(F.tipoMax*100,0)} % (máximo foral), coeficientes máximos forales${F.exencion?", exención legal de las herencias en línea recta y entre cónyuges":""}`:"Tipo del 30 % (máximo legal, art. 108.1 TRLRHL), coeficientes máximos (art. 107.4)"} y ${E.bonifManual?`la bonificación del ${grp(E.bonifManual,E.bonifManual%1?2:0)} % introducida`:"sin bonificación"}: la cuota real será igual o menor.${hac}${bop}${foral} <button class="link" data-editb="${b.id}" data-mm="1">Introducir el tipo y la bonificación</button></span></div>`;
+if(E.hacienda)return`<div class="infobar plus-est"><span class="ico green">${I.tick}</span><span><b>Tipo oficial de ${esc(nom||r.municipio)}: ${grp(r.tipo*100,r.tipo*100%1?2:0)} %</b>, el que el Ayuntamiento comunica al Ministerio de Hacienda para 2026. Coeficientes máximos legales y ${E.bonifManual?`bonificación del ${grp(E.bonifManual,E.bonifManual%1?2:0)} % introducida a mano`:"sin bonificación: Hacienda no publica las bonificaciones, así que la cuota real será igual o menor si la ordenanza prevé alguna"}.${bop} <button class="link" data-editb="${b.id}" data-mm="1">${E.bonifManual?"Revisar":"Introducir la bonificación"}</button> O sube la ordenanza del municipio (PDF) en Documentos: la app la lee y la aplica.</span></div>`;
+return`<div class="infobar plus-est"><span class="ico gold">${I.info}</span><span><b>Como máximo ${eur(r.total)}${nom?`; consulta la ordenanza de ${esc(nom)}`:""}.</b> ${F?`Tipo del ${grp(F.tipoMax*100,0)} % (máximo foral), coeficientes máximos forales${F.exencion?", exención legal de las herencias en línea recta y entre cónyuges":""}`:"Tipo del 30 % (máximo legal, art. 108.1 TRLRHL), coeficientes máximos (art. 107.4)"} y ${E.bonifManual?`la bonificación del ${grp(E.bonifManual,E.bonifManual%1?2:0)} % introducida`:"sin bonificación"}: la cuota real será igual o menor.${hac}${bop}${foral} <button class="link" data-editb="${b.id}" data-mm="1">Introducir el tipo y la bonificación</button> O sube la ordenanza del municipio (PDF) en Documentos: la app la lee y la aplica.</span></div>`;
 }
 function simEstado(x){if(!ui.sim||ui.sim.id!==x.id)ui.sim={id:x.id,ren:{},val:{},plazo:null,noViv:null};return ui.sim;}
 const simActivo=(s)=>Object.keys(s.ren).length||Object.keys(s.val).some((k)=>s.val[k]!==1)||s.plazo!==null||s.noViv!==null;
@@ -2354,6 +2357,30 @@ return`<div class="mest on" id="b-mest"><span class="ico ${manual||H?"green":"go
     <div class="field"><label for="b-bo">Bonificación por herencia a cónyuge, descendientes o ascendientes (%)</label><input id="b-bo" inputmode="decimal" data-bn="bonifManual" value="${numStr(b.bonifManual)}" placeholder="0"><span class="hint">La de la ordenanza para transmisiones por causa de muerte (el art. 108.4 TRLRHL permite hasta el 95 %). Revisa sus requisitos.</span></div>
     ${manual||num(b.bonifManual)?`<button type="button" class="btn sm gray" data-act="muniMaxLegal">${H&&!pre2026?"Volver al tipo de Hacienda sin bonificación":"Volver a la estimación con el máximo legal"}</button>`:""}`;
 }
+function ordRegistrarLeida(d,ineForzado){
+if(!d)return null;
+const ine=ineForzado||d.ine||(typeof muniDesdeTexto==="function"?muniDesdeTexto(d.provincia?`${d.nombre} (${d.provincia})`:d.nombre)||muniDesdeTexto(d.nombre):"");
+if(!ine)return null;
+const m=typeof muniPorIne==="function"?muniPorIne(ine):null,pv=typeof muniProv==="function"?muniProv(ine):null;
+const dd={...d,ine,nombre:(m&&m.n)||d.nombre,ccaa:(pv&&pv.ccaa)||d.ccaa||"",tipo:d.tipo==null?0.30:d.tipo,tipoDesconocido:d.tipo==null||undefined,estado:"P",origen:"lector",leidaEl:typeof hoy==="function"?hoy():new Date().toISOString().slice(0,10)};
+delete dd._bonifTexto;delete dd.provincia;
+DB.ordenanzasLeidas=DB.ordenanzasLeidas||{};DB.ordenanzasLeidas[ine]=dd;
+ordActivarLeida(dd);
+return ine;
+}
+function ordActivarLeida(dd){
+if(typeof ordenanzaDesdeDatos!=="function"||typeof ORDENANZAS!=="object")return;
+const k="L_"+dd.ine;try{ORDENANZAS[k]=ordenanzaDesdeDatos(dd);}catch(e){console.error(e);return;}
+MUNI_INE_KEY[dd.ine]=k;
+}
+function ordQuitarLeida(ine){
+if(!DB.ordenanzasLeidas||!DB.ordenanzasLeidas[ine])return;
+delete DB.ordenanzasLeidas[ine];delete ORDENANZAS["L_"+ine];
+const k=Object.entries(typeof MUNI_CLAVES==="object"?MUNI_CLAVES:{}).find(([,i])=>i===ine);if(k)MUNI_INE_KEY[ine]=k[0];else delete MUNI_INE_KEY[ine];
+for(const x of DB.expedientes||[])for(const b of x.bienes||[])if(b.muniIne===ine)b.municipio=muniOrd(ine)||"OTRO";
+}
+function ordCargarLeidas(){for(const dd of Object.values((DB&&DB.ordenanzasLeidas)||{}))ordActivarLeida(dd);}
+const ordLeida=(ine)=>(DB&&DB.ordenanzasLeidas&&DB.ordenanzasLeidas[ine])||null;
 const PDF_AFM={
 TR:"6y99bcdwdwn5lm509999dwfo6y996y7qdwdwdwdwdwdwdwdwdwdw7q7qfofofoccplk2ijijk2gzfgk2k299atk2gzopk2k2fgk2ijfggzk2k2q8k2k2gz997q99d1dw99ccdwccdwcc99dwdw7q7qdw7qlmdwdwdwdw99at7qdwdwk2dwdwccdc5kdcf16ydw6y99dwccrsdwdw99rsfg99op6ygz6y6y9999cccc9qdwrs99r8at99k26ycck26y99dwdwdwdw5kdw99l47odwfo99l499b4fo8c8c99dwcl6y998c8mdwkukukucck2k2k2k2k2k2opijgzgzgzgz99999999k2k2k2k2k2k2k2fok2k2k2k2k2k2fgdwccccccccccccijcccccccccc7q7q7q7qdwdwdwdwdwdwdwfodwdwdwdwdwdwdwdw",
 TB:"6y99ffdwdwrsn57q9999dwfu6y996y7qdwdwdwdwdwdwdwdwdwdw9999fufufudwpuk2ijk2k2ijgzlmlmatdwlmijq8k2lmgzlmk2fgijk2k2rsk2k2ij997q99g5dw99dwfgccfgcc99dwfg7q99fg7qn5fgdwfgfgccat99fgdwk2dwdwccay64ayeg6ydw6y99dwdwrsdwdw99rsfg99rs6yij6y6y9999dwdw9qdwrs99rsat99k26ycck26y99dwdwdwdw64dw99kr8cdwfu99kr99b4fu8c8c99fgf06y998c96dwkukukudwk2k2k2k2k2k2rsk2ijijijijatatatatk2k2lmlmlmlmlmfulmk2k2k2k2k2gzfgdwdwdwdwdwdwk2cccccccccc7q7q7q7qdwfgdwdwdwdwdwfudwfgfgfgfgdwfgdw",
@@ -9828,7 +9855,7 @@ const licencia=(lc.codigo||lb.codigo||lc.primerUso||lb.primerUso)?Object.assign(
 if(!licencia||!licencia.codigo){if(licencia)delete licencia.codigo;}
 if(modo==="reemplazar"){
 const mantener={};for(const k of["sg","ultimaCopia","bienvenida"])if(DB[k]!==undefined)mantener[k]=DB[k];
-DB=Object.assign({expedientes:[],modo:"profesional",tema:DB.tema||"claro"},c.db||{},{expedientes:c.expedientes,despacho:c.despacho||DB.despacho},mantener);
+DB=Object.assign({expedientes:[],modo:"profesional",tema:DB.tema||"claro"},c.db||{},{expedientes:c.expedientes,despacho:c.despacho||DB.despacho},mantener);if(typeof ordCargarLeidas==="function")try{ordCargarLeidas();}catch(e){}
 anad=c.expedientes.length;
 }else{
 for(const q of c.expedientes){const i=DB.expedientes.findIndex((x)=>x.id===q.id);if(i<0){DB.expedientes.push(q);anad++;}else if(sgFecha(q)>sgFecha(DB.expedientes[i])){DB.expedientes[i]=q;act++;}}
@@ -9929,7 +9956,7 @@ try{txt=await sgIdbLeer();}catch(e){mal="No se puede abrir la base de datos del 
 if(!mal){if(typeof txt!=="string")mal="Faltan los expedientes en la base de datos del navegador (puede que se hayan borrado los datos del sitio).";else{try{o=JSON.parse(txt);}catch(e){mal="El archivo interno de los expedientes no se puede leer.";}}}
 if(!mal)mal=sgValidarDB(o);
 if(mal){SG.crudoIdb=typeof txt==="string"?txt:"";SG.bloqueado=true;SG.pantalla={tipo:"danado",motivo:mal,crudo:SG.crudoIdb};sgPintarPantalla();sgSWIniciar();sgCarpetaRecordar();return;}
-DB=Object.assign({expedientes:[],modo:"profesional",tema:"claro"},o);
+DB=Object.assign({expedientes:[],modo:"profesional",tema:"claro"},o);if(typeof ordCargarLeidas==="function")try{ordCargarLeidas();}catch(e){}
 if(DB.temaV!==2){DB.tema="claro";DB.temaV=2;}
 if(typeof DB_BLOQUEO!=="undefined")DB_BLOQUEO=null;
 SG.lsTam=txt.length;sgSeguir();
@@ -9960,7 +9987,7 @@ try{txt=await sgDescifrarTexto(dek,P.env.d,"hereda+db");o=JSON.parse(txt);}catch
 const mal=o?sgValidarDB(o):"Los datos cifrados están dañados y no se pueden descifrar.";
 SG.clave=dek;SG.sobre=P.env.k;SG.cifrado=true;SG.ocupado=false;SG.intentos=0;
 if(mal){SG.pantalla={tipo:"danado",motivo:mal,crudo:txt||sgCrudo()};sgPintarPantalla();return;}
-DB=Object.assign({expedientes:[],modo:"profesional",tema:"claro"},o);
+DB=Object.assign({expedientes:[],modo:"profesional",tema:"claro"},o);if(typeof ordCargarLeidas==="function")try{ordCargarLeidas();}catch(e){}
 if(typeof DB_BLOQUEO!=="undefined")DB_BLOQUEO=null;
 SG.act=Date.now();sgSeguir();
 }
@@ -13050,6 +13077,7 @@ else if(c.k==="arrendamiento")arrs.push({c,doc});
 else if(c.k==="planPensiones")add({doc,grupo:"Seguros y previsión",etiqueta:c.etiqueta||"Plan de pensiones",mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>{x.planesPensiones=(x.planesPensiones||[]).filter((q)=>JSON.stringify(q)!==JSON.stringify(c.valor)).concat([c.valor]);}});
 else if(c.k==="datosFiscales")add({doc,grupo:"Impuestos",etiqueta:c.etiqueta,mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>{x.datosFiscales={...(x.datosFiscales||{}),...c.valor};}});
 else if(c.k==="nifCausante")add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.valor,conf:c.conf,aplicar:(x)=>{x.nifCausante=c.valor;}});
+else if(c.k==="ordenanza"){const d0=c.valor,ine=typeof muniDesdeTexto==="function"?(muniDesdeTexto(d0.provincia?`${d0.nombre} (${d0.provincia})`:d0.nombre)||muniDesdeTexto(d0.nombre)):"";const ya=ine&&typeof ordLeida==="function"&&ordLeida(ine);add({doc,grupo:"Plusvalía",etiqueta:c.etiqueta,mostrar:`${c.mostrar}${ine?"":" · municipio no identificado: se guarda y se asigna a mano"}${ya?" · sustituye a la leída el "+(ya.leidaEl||""):""}`,conf:ine?c.conf:0,aplicar:(x)=>{if(typeof ordRegistrarLeida!=="function")return;const k=ordRegistrarLeida(d0,ine||undefined);if(k)for(const b of x.bienes||[])if(b.muniIne===k||(!b.muniIne&&b.muniNombre&&lecMismoNombre(b.muniNombre,d0.nombre))){b.muniIne=k;b.municipio="L_"+k;}else if(!k){x.ordenanzasPendientes=[...(x.ordenanzasPendientes||[]),d0];}}});}
 else if(c.k==="ajuar"){if(x.ajuar===c.valor&&(!c.sinDescuento||x.ajuarDescuentoViudo===false))continue;add({doc,grupo:"Impuestos",etiqueta:c.etiqueta,mostrar:c.mostrar+(c.sinDescuento?", sin descontar la parte del viudo":""),conf:c.conf,aplicar:(x)=>{x.ajuar=c.valor;if(c.sinDescuento)x.ajuarDescuentoViudo=false;}});}
 else if(c.k==="generoCausante"){if(x.generoCausante||P.some((q)=>q.k==="generoCausante"))continue;add({doc,grupo:"Causante",etiqueta:"Sexo del causante",mostrar:c.valor==="f"?"mujer":"hombre",conf:c.conf,k:"generoCausante",valor:c.valor,aplicar:(x)=>{if(!x.generoCausante)x.generoCausante=c.valor;}});}
 else if(c.k==="lugarFallecimiento")add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.valor,conf:c.conf,aplicar:(x)=>{x.lugarFallecimiento=c.valor;}});
@@ -14661,6 +14689,61 @@ if(deuda||fila)out.avisos.push(`Plusvalía ya liquidada por el Ayuntamiento${qui
 if(!herencia)out.avisos.push("La liquidación no es por herencia: compruébala.");
 return out;
 }
+const LT_PCT=(s)=>{const m=/(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento|por\s+100)/i.exec(s);return m?Number(m[1].replace(",",".")):null;};
+const LT_ANIOS=(s)=>{const m=/\b(\d{1,2}|un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+a[ñn]os?\b/i.exec(s);if(!m)return null;return/^\d+$/.test(m[1])?Number(m[1]):lecPalabrasNumero(m[1])||(/^una?$/i.test(m[1])?1:null);};
+const LT_EUR=(s)=>{const m=/(\d{1,3}(?:\.\d{3})+|\d{4,7})(?:,\d{1,2})?\s*(?:€|euros)/i.exec(s);return m?lecNum(m[1]):null;};
+function lecOrdenanza(t){
+const out={campos:[],personas:[],bienes:[],avisos:[]};const T=t.replace(/[ \t]+/g," "),T1=T.replace(/\s+/g," ");
+const cita=[];
+const am=/(?:EXCM[OA]\.?\s+|ILTRE\.?\s+|ILUSTR[EÍ]SIMO\s+)?AYUNTAMIENTO\s+DE\s+(?:LA\s+(?:CIUDAD|VILLA)\s+DE\s+)?([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü' -]{2,40}?)(?=\s*[,.;:)(\n]|\s+(?:ORDENANZA|AYUNTAMIENTO|PROVINCIA|CIF|NIF|Plaza|Calle|C\/|Tel)|$)/m.exec(T)||/ORDENANZA\s+FISCAL[^\n]{0,120}?\bDE(?:L\s+MUNICIPIO\s+DE)?\s+([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜa-záéíóúñü' -]{2,40}?)(?=\s*[,.;\n]|$)/m.exec(T);
+const municipio=am?lecTitulo(am[1].trim()):"";
+const prov=/\bPROVINCIA\s+DE\s+([A-ZÁÉÍÓÚÑÜ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' -]{2,30}?)(?=\s*[,.;\n)]|$)/m.exec(T);
+const d={ine:"",nombre:municipio,ccaa:"",tipo:null,tipoPorAnios:null,coeficientes:null,bonif:null,bonifDesconocida:true,fuente:{url:"",titulo:`OF IIVTNU ${municipio||"(municipio sin leer)"} (documento subido)`,fecha:"",leido:true},estado:"P",notas:"",origen:"lector"};
+const bop=/(?:B\.?\s?O\.?\s?P\.?|BOLET[IÍ]N\s+OFICIAL(?:\s+DE\s+LA\s+PROVINCIA)?)[^\n]{0,60}?(\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4})/i.exec(T1)||/(?:entrar[áa]\s+en\s+vigor|en\s+vigor\s+(?:desde|a\s+partir\s+de)|con\s+efectos\s+(?:desde|de))\s+(?:el\s+(?:d[ií]a\s+)?)?(\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}|\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4})/i.exec(T1);
+if(bop){const f=(lecFechas(bop[1])[0]||{}).f;if(f)d.fuente.fecha=f;}
+const tg=/tipo\s+de\s+gravamen[^.]{0,120}?(?:ser[aá]|es|queda\s+fijado|se\s+fija|se\s+establece|del|de|en|:)\s*(?:el\s+|un\s+|en\s+el\s+|en\s+un\s+|del\s+)?(\d{1,2}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento|por\s+100)/i.exec(T1)||/(?:gravamen|tipo\s+impositivo)[^.]{0,60}?(\d{1,2}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento)/i.exec(T1);
+if(tg){const v=Number(tg[1].replace(",","."));if(v>0&&v<=30){d.tipo=v/100;cita.push(`Tipo: «${tg[0].trim().slice(0,120)}»`);}}
+{
+const z=/tipo\s+de\s+gravamen[\s\S]{0,900}/i.exec(T1);const L=[];
+if(z)for(const m of z[0].matchAll(/(?:hasta|inferior(?:es)?\s+a|menos\s+de|de|entre|m[aá]s\s+de|superior(?:es)?\s+a|igual\s+o\s+superior\s+a)\s+(\d{1,2})(?:\s*(?:a|y|hasta)\s*(\d{1,2}))?\s*a[ñn]os[^%\d]{0,40}?(\d{1,2}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento)/gi))L.push([m[2]?Number(m[2]):/m[aá]s\s+de|superior/i.test(m[0])?null:Number(m[1]),Number(m[3].replace(",","."))]);
+if(L.length>=2&&L.every(([,p])=>p>0&&p<=30)){L.sort((a,b)=>(a[0]==null?1:b[0]==null?-1:a[0]-b[0]));d.tipoPorAnios=L.map(([a,p])=>[a,p/100]);d.tipo=Math.max(...L.map(([,p])=>p))/100;cita.push(`Tipos por años: ${L.map(([a,p])=>`${a==null?"más":"hasta "+a}: ${p} %`).join(", ")}`);}
+}
+{
+const z=/coeficiente[s]?[\s\S]{0,2500}/i.exec(T1);const C=[];
+if(z){const seg=z[0];const re=/(?:inferior\s+a\s+(?:1|un)\s+a[ñn]o|(\d{1,2})\s+a[ñn]os?(?:\s+o\s+m[aá]s)?|igual\s+o\s+superior\s+a\s+20\s+a[ñn]os)\s*[:.\-–]?\s*(0[.,]\d{2,3})/gi;let m;while((m=re.exec(seg))){C.push(Number(m[2].replace(",",".")));if(C.length===21)break;}}
+if(C.length===21&&C.every((c)=>c>0&&c<=0.5)){d.coeficientes=C;cita.push("Coeficientes propios: 21 valores leídos");}
+}
+const idxB=T1.search(/bonificaci[oó]n(?:es)?[^.]{0,200}?(?:mortis\s+causa|causa\s+de\s+muerte|por\s+fallecimiento|a\s+t[ií]tulo\s+lucrativo\s+por\s+causa\s+de\s+muerte)|(?:mortis\s+causa|causa\s+de\s+muerte)[^.]{0,200}?bonificaci[oó]n/i);
+if(idxB>=0){
+const ini=Math.max(0,T1.lastIndexOf("Art",idxB)>=idxB-400?T1.lastIndexOf("Art",idxB):idxB-100);
+let fin=T1.slice(idxB+50).search(/\bArt[íi]culo\s+\d+|\bART[IÍ]CULO\s+\d+|\bDISPOSICI[OÓ]N\b/);fin=fin<0?Math.min(T1.length,idxB+3000):idxB+50+fin;
+const Z=T1.slice(ini,fin);const art=/Art[íi]culo\s+(\d+(?:\s*bis)?)/i.exec(Z);
+const B={pct:null,tramos:null,parentesco:"DAC",viviendaHabitual:/vivienda\s+habitual/i.test(Z),pctResto:null,convivencia:false,empadronado:false,mantener:null,rogada:/car[aá]cter\s+rogado|deber[aá]n?\s+(?:ser\s+)?solicit|previa\s+solicitud|a\s+(?:instancia|solicitud)\s+de(?:l)?\s+(?:sujeto|contribuyente|interesado)|se\s+solicit/i.test(Z),plazo:"",articulo:art?"art. "+art[1]:"",limiteValorCatastral:null,condicion:"",viviendaHeredero:/vivienda\s+habitual\s+del\s+(?:adquirente|heredero|sujeto\s+pasivo)/i.test(Z)};
+const par=/descendientes|adoptados|c[oó]nyuge|ascendientes|adoptantes/i.test(Z);const pareja=/pareja[s]?\s+de\s+hecho|uni[oó]n\s+de\s+hecho/i.test(Z),g1=/primer\s+grado|en\s+l[ií]nea\s+recta\s+de\s+primer/i.test(Z),col=/hermanos|colaterales/i.test(Z);
+B.parentesco=col?"todos":par?(pareja?(g1?"DACP1":"DACP"):g1?"DAC1":"DAC"):"todos";
+const TR=[];for(const m of Z.matchAll(/(?:hasta|inferior(?:es)?\s+(?:o\s+igual\s+)?a|no\s+(?:supere|exceda\s+de)|de|entre|superior(?:es)?\s+a|m[aá]s\s+de|igual\s+o\s+superior\s+a)\s+(\d{1,3}(?:\.\d{3})+|\d{4,7})(?:,\d{2})?\s*(?:€|euros)?(?:\s*(?:a|y|hasta)\s*(\d{1,3}(?:\.\d{3})+|\d{4,7})(?:,\d{2})?\s*(?:€|euros)?)?[^%\d]{0,80}?(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento)/gi)){const sup=m[2]?lecNum(m[2]):/superior|m[aá]s\s+de/i.test(m[0])?null:lecNum(m[1]);const p=Number(m[3].replace(",","."));if(p>0&&p<=100)TR.push([sup,p/100]);}
+if(TR.length>=2){TR.sort((a,b)=>(a[0]==null?1:b[0]==null?-1:a[0]-b[0]));B.tramos={base:/valor\s+catastral\s+del\s+suelo/i.test(Z)?"suelo":"total",tramos:TR};B.pct=Math.max(...TR.map((x)=>x[1]));cita.push(`Bonificación por tramos de valor catastral: ${TR.map(([l,p])=>`${l==null?"más":"hasta "+l.toLocaleString("es-ES")}: ${Math.round(p*100)} %`).join(", ")}`);}
+else{const pcts=[...Z.matchAll(/(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:%|por\s+ciento|por\s+100)/gi)].map((m)=>Number(m[1].replace(",","."))).filter((p)=>p>0&&p<=100);if(pcts.length){B.pct=Math.max(...pcts)/100;if(pcts.length>1&&Math.min(...pcts)<Math.max(...pcts)){B.pctResto=Math.min(...pcts)/100;}cita.push(`Bonificación: ${[...new Set(pcts)].join(" % / ")} %`);}}
+const conv=/conviv/i.test(Z);if(conv){B.convivencia=true;const a=LT_ANIOS((/conviv[\s\S]{0,160}/i.exec(Z)||[""])[0]);if(a)B.convivenciaAnios=a;}
+if(/empadronad[oa]s?\s+(?:en\s+el\s+municipio|en\s+(?:la|dicha)\s+vivienda|en\s+el\s+inmueble)/i.test(Z)&&!/causante\s+(?:estuviera|estuviese|est[eé])\s+empadronad/i.test(Z))B.empadronado=/adquirente|heredero|sujeto\s+pasivo|beneficiario/i.test((/empadronad[\s\S]{0,120}/i.exec(Z)||[""])[0])||/empadronad/i.test(Z)&&!B.viviendaHabitual;
+const mt=/(?:no\s+(?:podr[aá]n?\s+)?(?:transmit|enajen|vend)[a-z]*|mantener|conservar|permanecer)[^.]{0,120}?(\d{1,2}|un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+a[ñn]os/i.exec(Z);if(mt)B.mantener=/^\d+$/.test(mt[1])?Number(mt[1]):lecPalabrasNumero(mt[1])||1;
+const pl=/(?:plazo|dentro\s+de\s+los?)[^.]{0,80}?(\d{1,2}|seis|doce|tres|dos|un)\s+(meses|mes|d[ií]as)/i.exec(Z);if(pl){const n=/^\d+$/.test(pl[1])?pl[1]:String(lecPalabrasNumero(pl[1])||(pl[1]==="un"?1:pl[1]));B.plazo=`${n} ${pl[2]}${/prorrog/i.test(Z)?", prorrogable":""}`;}
+if(!B.tramos){const lim=/valor\s+catastral[^.]{0,80}?(?:no\s+(?:supere|exceda)|inferior|igual\s+o\s+inferior|hasta|m[aá]ximo)[^.\d]{0,30}(\d{1,3}(?:\.\d{3})+|\d{4,7})/i.exec(Z);if(lim)B.limiteValorCatastral=lecNum(lim[1]);}
+if(/renta|ingresos|IPREM|patrimonio\s+(?:preexistente|neto)|discapacidad|mayores\s+de\s+\d{2}/i.test(Z))B.condicion=lecFrase((/[^.]*(?:renta|ingresos|IPREM|patrimonio|discapacidad|mayores\s+de\s+\d{2})[^.]*\./i.exec(Z)||[""])[0].trim(),220);
+if(B.pct!=null){d.bonif=B;d.bonifDesconocida=false;}
+cita.push(`Requisitos: ${[B.viviendaHabitual?"vivienda habitual":"",B.convivencia?"convivencia"+(B.convivenciaAnios?" "+B.convivenciaAnios+" años":""):"",B.mantener?"mantener "+B.mantener+" años":"",B.rogada?"rogada":"",B.plazo?"plazo "+B.plazo:"",B.condicion?"condición: "+B.condicion.slice(0,80):""].filter(Boolean).join("; ")||"ninguno leído"}`);
+d._bonifTexto=Z.slice(0,1500);
+}
+if(!municipio)out.avisos.push("No se ha leído el nombre del municipio de la ordenanza: indícalo al aplicarla.");
+if(d.tipo==null)out.avisos.push("No se ha leído el tipo de gravamen: se calcularía con el máximo legal (30 %) hasta que lo indiques.");
+if(d.bonifDesconocida)out.avisos.push("No se ha localizado la bonificación por herencia (mortis causa) en el texto: si la ordenanza la tiene, indícala a mano en la ficha del inmueble.");
+d.notas=`Ordenanza leída del documento subido${municipio?" ("+municipio+")":""}. ${cita.join(". ")}.`;
+const resumen=[d.tipo!=null?`tipo ${(d.tipo*100).toLocaleString("es-ES")} %${d.tipoPorAnios?" (por años)":""}`:"tipo no leído",d.coeficientes?"coeficientes propios":"",d.bonif?`bonificación ${d.bonif.tramos?"por tramos hasta ":""}${Math.round(d.bonif.pct*100)} %${d.bonif.viviendaHabitual?" (vivienda habitual)":""}${d.bonif.convivencia?", con convivencia":""}${d.bonif.mantener?", mantener "+d.bonif.mantener+" años":""}`:"sin bonificación leída"].filter(Boolean).join(" · ");
+out.campos.push({k:"ordenanza",etiqueta:`Ordenanza de plusvalía${municipio?" de "+municipio:""}`,valor:d,mostrar:resumen,conf:d.tipo!=null?2:1,lit:tg?tg[0].trim().slice(0,100):""});
+if(prov)d.provincia=lecTitulo(prov[1].trim());
+return out;
+}
+lecRegistrar({tipo:"ordenanza",titulo:"Ordenanza fiscal de la plusvalía (IIVTNU)",nombreArchivo:/ORDENANZA/,huellas:[[/ORDENANZA\s+FISCAL/,6],[/INCREMENTO\s+DE\s+VALOR\s+DE\s+LOS\s+TERRENOS/,4],[/TIPO\s+DE\s+GRAVAMEN/,3],[/HECHO\s+IMPONIBLE/,3],[/SUJETO\s+PASIVO/,2],[/\bARTICULO\s+\d+/,1],[/BONIFICACION/,1],[/DOCUMENTO\s+DE\s+PAGO|CUOTA\s+INTEGRA\s*:|\bTRANSMITE\s*:/,-8]],extraer:lecOrdenanza});
 const LT_IMP=(s)=>{const m=/\(\s*€?\s*(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?)\s*€?\s*\)/.exec(s)||/(\d{1,3}(?:\.\d{3})+(?:,\d{2})?|\d+,\d{2})\s*€/.exec(s);return m?lecNum(m[1]):null;};
 function lecCuaderno(t){
 const out={campos:[],personas:[],bienes:[],avisos:[]};const T=t.replace(/[ \t]+/g," "),T1=T.replace(/\s+/g," ");
@@ -16483,6 +16566,13 @@ planpensiones:{descripcion:"Plan de pensiones: tributa en el IRPF del beneficiar
 sociedad:{descripcion:"Participaciones sociales: porcentaje del causante y patrimonio neto (reducción de empresa familiar).",campos:[{k:"b.socios",t:"Sociedad y participación",para:[FD_USO.isd],de:(d)=>fdB(d,"descripcion")}]},
 capitulaciones:{descripcion:"Régimen económico pactado (separación de bienes): cambia la mitad del viudo.",campos:[{k:"civil",t:"Régimen",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);}}]},
 parejahecho:{descripcion:"Pareja de hecho inscrita: equiparación al cónyuge en el impuesto según la comunidad.",campos:[{k:"pareja",t:"Pareja e inscripción",para:[FD_USO.isd],de:(d)=>fdP(d)}]},
+ordenanza:{descripcion:"Ordenanza fiscal de la plusvalía del municipio: tipo, coeficientes y bonificación por herencia con sus requisitos. Queda registrada para todos los expedientes.",campos:[
+{k:"municipio",t:"Municipio",para:[FD_USO.plus],de:(d)=>{const o=(d.campos||[]).find((c)=>c.k==="ordenanza");return o&&o.valor&&o.valor.nombre||null;}},
+{k:"tipo",t:"Tipo de gravamen",para:[FD_USO.plus],de:(d)=>{const o=(d.campos||[]).find((c)=>c.k==="ordenanza");const v=o&&o.valor;return v&&v.tipo!=null?`${(v.tipo*100).toLocaleString("es-ES")} %${v.tipoPorAnios?" (por años de tenencia)":""}`:null;}},
+{k:"coef",t:"Coeficientes propios",para:[FD_USO.plus],de:(d)=>{const o=(d.campos||[]).find((c)=>c.k==="ordenanza");return o&&o.valor&&o.valor.coeficientes?"21 valores":null;},opc:true},
+{k:"bonif",t:"Bonificación por herencia y requisitos",para:[FD_USO.bonif],de:(d)=>{const o=(d.campos||[]).find((c)=>c.k==="ordenanza");const B=o&&o.valor&&o.valor.bonif;return B?`${B.tramos?"por tramos, hasta ":""}${Math.round(B.pct*100)} %${B.pctResto!=null?" ("+Math.round(B.pctResto*100)+" % otros inmuebles)":""}${B.viviendaHabitual?" · vivienda habitual":""}${B.convivencia?" · convivencia":""}${B.mantener?" · mantener "+B.mantener+" años":""}${B.rogada?" · rogada":""}${B.plazo?" · plazo "+B.plazo:""}`:null;}},
+{k:"vigencia",t:"Vigencia o publicación",para:[FD_USO.plus],de:(d)=>{const o=(d.campos||[]).find((c)=>c.k==="ordenanza");return o&&o.valor&&o.valor.fuente&&o.valor.fuente.fecha?fdFecha(o.valor.fuente.fecha):null;},opc:true},
+]},
 datosfiscales:{descripcion:"Datos fiscales de Hacienda: cuentas, valores, inmuebles y rentas del causante.",campos:[{k:"datosFiscales",t:"Bienes y rentas",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdC(d,"datosFiscales")||fdB(d,"descripcion")}]},
 };
 function fdFicha(tipo){return LEC_FICHAS[tipo]||null;}
@@ -16573,8 +16663,35 @@ const abierto=ui.csAbierto===x.id;
 return`<section class="card cs-card" aria-labelledby="cs-t"><div class="cs-cab"><div><span class="kick">Cómo encaja este caso</span><h3 id="cs-t">${esc(E.titulo)}</h3><p class="caption">${esc(E.resumen)}</p></div><div class="cs-sem" aria-label="Qué está listo"><span class="${E.listo.cuadro?"ok":""}">Cuadro</span><span class="${E.listo.isd?"ok":""}">Sucesiones</span><span class="${E.listo.plus?"ok":""}">Plusvalía</span></div></div>
     <dl class="cs-ejes">${E.ejes.map((e)=>`<div><dt>${esc(e.t)}</dt><dd>${esc(e.v)}${e.nota?`<small>${esc(e.nota)}</small>`:""}</dd></div>`).join("")}</dl>
     ${falt.length?`<div class="cs-falta"><b>Falta para cerrarlo</b><ul>${falt.map(li).join("")}</ul></div>`:`<p class="cs-ok">No falta ningún dato esencial: revisa el cuadro, los impuestos y los escritos.</p>`}
-    <button type="button" class="link" data-act="csMas">${abierto?"Ocultar las reglas aplicadas":`Ver las reglas aplicadas (${E.reglas.length})${opc.length?" y lo opcional":""}`}</button>
+    <div class="cs-acts"><button type="button" class="link" data-act="csMas">${abierto?"Ocultar las reglas aplicadas":`Ver las reglas aplicadas (${E.reglas.length})${opc.length?" y lo opcional":""}`}</button><button type="button" class="link" data-act="csRelato">${ui.csRelato===x.id?"Ocultar el relato":"Contarlo en lenguaje llano"}</button>${ui.csRelato===x.id?`<button type="button" class="link" data-act="csCopiar">Copiar el relato</button>`:""}</div>
+    ${ui.csRelato===x.id?`<div class="cs-relato">${csRelato(x,R).split("\n\n").map((q)=>`<p>${esc(q)}</p>`).join("")}</div>`:""}
     ${abierto?`<ul class="cs-reglas">${E.reglas.map((r)=>`<li>${esc(r)}</li>`).join("")}${opc.map((f)=>`<li class="cs-opc">Opcional: ${esc(f.t)} (${esc(f.para)}).</li>`).join("")}</ul>`:""}</section>`;
+}
+function csRelato(x,R){
+if(!x)return"";
+const P=(x.personas||[]).filter((p)=>!p.fallecido),vivos=P.filter((p)=>!p.renuncia),ren=P.filter((p)=>p.renuncia);
+const cony=vivos.find((p)=>p.relacion==="conyuge"),hijos=vivos.filter((p)=>["hijo","nieto","bisnieto"].includes(p.relacion)),otros=vivos.filter((p)=>!["conyuge","hijo","nieto","bisnieto"].includes(p.relacion));
+const B=x.bienes||[],inm=B.filter((b)=>b.tipo==="vivienda"||b.tipo==="inmueble"),isd=R&&R.isd,m=isd&&isd.masa,A=x.actaHerederos||{};
+const nom=x.nombre||"el causante",fem=x.generoCausante==="f";
+const gCony=cony?(gnG(cony)||(x.generoCausante==="m"?"f":x.generoCausante==="f"?"m":"")):"";
+const out=[];
+out.push(`${nom} falleció${x.fecha?" el "+fechaLarga(x.fecha):""}${x.lugarFallecimiento?" en "+x.lugarFallecimiento:""}${x.civil==="gananciales"?`, casad${fem?"a":"o"} en gananciales${cony?" con "+cony.nombre:""}`:x.civil==="separacion"?`, casad${fem?"a":"o"} en separación de bienes${cony?" con "+cony.nombre:""}`:x.civil==="viudo"?`, viud${fem?"a":"o"}`:x.civil==="soltero"?`, solter${fem?"a":"o"}`:x.civil==="divorciado"?`, divorciad${fem?"a":"o"}`:""}.${x.domicilioCausante?` Su último domicilio fue ${x.domicilioCausante}.`:""}`);
+if(x.testamento==="no")out.push(`No dejó testamento. ${A.fecha?`Por acta de declaración de herederos de ${fechaLarga(A.fecha)}${A.notario?" ante el notario "+A.notario:""}${A.fechaDeclaracion?" (declaración de notoriedad de "+fechaLarga(A.fechaDeclaracion)+")":""}, s`:"Hace falta un acta notarial de declaración de herederos; con ella, s"}e declaran herederos ${hijos.length?`a sus ${hijos.length===1?"hijo o hija":plural(hijos.length,"hijo")} (${csLista(hijos.map((p)=>p.nombre))}) por partes iguales`:otros.length?`a ${csLista(otros.map((p)=>p.nombre))}`:"a quienes corresponda por ley"}${cony&&hijos.length?`, y ${cony.nombre}, como cónyuge viud${gCony==="f"?"a":"o"}, conserva el usufructo de un tercio de la herencia (el tercio de mejora), que se valora según su edad${num(cony.edad)>0?`: con ${num(cony.edad)} años, el ${Math.min(70,Math.max(10,89-num(cony.edad)))} %`:""}`:cony&&!hijos.length?`, y ${cony.nombre} tiene además los derechos del cónyuge viudo`:""}.`);
+else if(x.testamento==="usufructo")out.push(`Dejó testamento con usufructo universal a favor de${cony?" "+cony.nombre:"l cónyuge"}: ${cony?gCony==="f"?"ella":"él":"el viudo"} puede usar y disfrutar de todos los bienes mientras viva, y ${hijos.length?csLista(hijos.map((p)=>p.nombre))+" reciben":"los hijos reciben"} la nuda propiedad, que se convertirá en plena a su fallecimiento. Los hijos pueden optar por su legítima estricta en pleno dominio (cautela socini).`);
+else if(x.testamento==="porcentajes"||x.testamento==="si")out.push(`Dejó testamento${x.testamentoDatos&&x.testamentoDatos.notario?` ante el notario ${x.testamentoDatos.notario}`:""}${x.testamentoDatos&&x.testamentoDatos.fecha?` (${fechaLarga(x.testamentoDatos.fecha)})`:""}, en el que instituye herederos a ${vivos.length?csLista(vivos.map((p)=>p.nombre+(p.pct?" ("+String(p.pct).replace(".",",")+" %)":""))):"⟦…⟧"}.`);
+else out.push("Aún no consta si dejó testamento: lo dirá el certificado de últimas voluntades.");
+if(ren.length)out.push(`${csLista(ren.map((p)=>p.nombre))} ${ren.length===1?"renuncia":"renuncian"} a la herencia: su parte acrece a los demás.`);
+if(B.length&&m){
+const partes=B.slice(0,6).map((b)=>`${b.descripcion||(typeof TIPO_BIEN==="object"&&TIPO_BIEN[b.tipo]?TIPO_BIEN[b.tipo][0].toLowerCase():b.tipo)}${num(b.valor)||num(b.valorReferencia)?" ("+eur0(Math.max(num(b.valor),num(b.valorReferencia)))+(b.titularidad==="ganancial"?", ganancial":b.titularidad==="proindiviso"&&num(b.porcentaje)?", "+String(b.porcentaje).replace(".",",")+" %":"")+")":" (sin valor todavía)"}`);
+out.push(`La herencia se compone de ${partes.join("; ")}${B.length>6?` y ${plural(B.length-6,"bien","bienes")} más`:""}.${m.gananciales?` De los bienes gananciales, la mitad (${eur0(m.mitadViudo)}) es de${cony?" "+cony.nombre:"l cónyuge"} por la liquidación de la sociedad de gananciales y no se hereda.`:""}${m.deudas||m.gastos?` Se descuentan ${m.deudas?eur0(m.deudas)+" de deudas":""}${m.deudas&&m.gastos?" y ":""}${m.gastos?eur0(m.gastos)+" de gastos de última enfermedad y entierro":""}.`:""} El caudal hereditario neto es de ${eur0(m.netoReparto!=null?m.netoReparto:m.neto)}${m.ajuar?`, al que a efectos del impuesto se suma un ajuar doméstico de ${eur0(m.ajuar)}`:""}.`);
+}else out.push("Todavía no hay bienes en el expediente: sin ellos no hay cuadro ni impuestos.");
+if(isd&&isd.herederos&&isd.herederos.length){
+const L=isd.herederos.map((h)=>`${h.nombre}: recibe ${eur0(h.valorAdquirido)}${h.aIngresar>0?` y paga ${eur(h.aIngresar)} de Sucesiones`:" y no paga Sucesiones"}`);
+out.push(`${L.join(". ")}.${isd.total===0?` La cuota es cero${x.ccaa?" con la normativa de "+((typeof TERRITORIOS==="object"&&(TERRITORIOS.find((t)=>t[0]===x.ccaa)||[])[1])||x.ccaa):""}, pero el impuesto se presenta igualmente: es obligatorio y hace falta para inscribir y para cobrar de los bancos.`:""}`);
+}
+if(R&&(R.plus||[]).length){const pl=R.plus;const L=pl.map(({b,r})=>`${b.descripcion||"el inmueble"}${r.liquidado&&r.liquidado.usar?`: ${eur(r.total)} según lo liquidado por el Ayuntamiento`:`: ${eur(r.total)}${r.porTitular.some((t)=>t.bonificacionPct>0)?" con la bonificación por vivienda habitual":""}`}`);out.push(`La plusvalía municipal se paga al Ayuntamiento por cada inmueble: ${L.join("; ")}${R.plus.some(({r})=>(r.porTitular||[]).some((t)=>t.requisitosPorConfirmar))?". La bonificación está por confirmar: hay que pedirla en plazo, no vender en los años que marque la ordenanza y estar al corriente con el Ayuntamiento":""}.`);}
+if(x.fecha&&R&&R.plazos){const p6=typeof plusMasMeses==="function"?plusMasMeses(x.fecha,6):"";out.push(`Plazos: seis meses desde el fallecimiento para presentar Sucesiones y la plusvalía${p6?` (hasta el ${fechaLarga(p6)})`:""}, prorrogables otros seis si se pide dentro de los cinco primeros meses. Después, la escritura de herencia ante notario y la inscripción en el Registro.`);}
+return out.join("\n\n");
 }
 const CSN_SIS=`Eres un asistente de consulta normativa para abogados que tramitan herencias en España. Recibes una pregunta y unos fragmentos de normas (cada uno con su identificador entre corchetes, como [F1], y la referencia del artículo). Respondes SOLO con lo que dicen esos fragmentos.
 
@@ -19552,6 +19669,7 @@ const tm=DB.tema||"grafito";const D=despachoCfg();
 return sheetHTML("Despacho y ajustes",`<div class="sectitle" style="margin-top:4px">Despacho</div>
       <div class="group"><div class="field"><label for="a-n">Nombre del despacho</label><input id="a-n" data-cfg="nombre" value="${esc(D.nombre)}" placeholder="Ej.: Zambrano Abogados"></div><div class="field"><label for="a-c">Colegio de la Abogacía</label><input id="a-c" data-cfg="colegio" value="${esc(D.colegio)}" placeholder="Ej.: Ilustre Colegio de Abogados de Málaga"></div><div class="field"><label for="a-l">Localidad para los escritos</label><input id="a-l" data-cfg="localidad" value="${esc(D.localidad)}" placeholder="Málaga"></div></div>
       ${dpCamposContactoHTML()}
+      ${(()=>{const O=Object.values(DB.ordenanzasLeidas||{});return`<div class="sectitle">Ordenanzas de plusvalía leídas</div><div class="group" style="--inset:16px">${O.length?O.map((o)=>`<div class="row"><span class="t"><b>${esc(o.nombre)}</b><small>tipo ${o.tipoDesconocido?"no leído":(Number(o.tipo)*100).toLocaleString("es-ES")+" %"}${o.bonif?` · bonificación ${Math.round(o.bonif.pct*100)} %${o.bonif.viviendaHabitual?" (vivienda habitual)":""}`:" · sin bonificación leída"}${o.fuente&&o.fuente.fecha?" · vigente "+fechaCorta(o.fuente.fecha):""} · leída el ${fechaCorta(o.leidaEl||"")}</small></span><button class="btn sm gray" data-ordquitar="${esc(o.ine)}">Quitar</button></div>`).join(""):`<p class="group-foot">Ninguna. Sube la ordenanza fiscal de la plusvalía de un municipio (PDF del boletín o de la web del ayuntamiento) en los documentos de cualquier expediente: la app lee el tipo, los coeficientes y la bonificación por herencia, y la aplica en todos los expedientes de ese municipio.</p>`}</div>`;})()}
       <div class="sectitle">Equipo</div>
       <div class="group" style="--inset:58px">${D.abogados.map((a)=>`<div class="row">${avatar(a.id,true)}<span class="t abo-g"><input class="inl" data-abo="${a.id}" data-k="nombre" value="${esc(a.nombre)}" aria-label="Nombre"><input class="inl" data-abo="${a.id}" data-k="rol" value="${esc(a.rol||"")}" aria-label="Rol" placeholder="Rol"><select class="inl" data-abo="${a.id}" data-k="genero" aria-label="Tratamiento en los escritos" title="Tratamiento en los escritos (abogado o abogada, socio o socia)"><option value="">Neutro</option><option value="f" ${a.genero==="f"?"selected":""}>Femenino</option><option value="m" ${a.genero==="m"?"selected":""}>Masculino</option></select></span>${D.abogados.length>1?(ui.conf==="abo:"+a.id?`<span class="zp-inline"><button class="btn sm gray" data-conf="">Cancelar</button><button class="btn sm danger-solid" data-delabo="${a.id}">Quitar</button></span>`:`<button class="tbtn" data-conf="abo:${a.id}" aria-label="Quitar a ${esc(a.nombre)} del equipo" title="Quitar del equipo">${I.trash}</button>`):""}</div>`).join("")}<button class="row" data-act="addAbo"><span class="ico q">${I.plus}</span><span class="t"><b>Añadir miembro del equipo</b></span></button></div>
       <div class="group" style="margin-top:12px"><div class="field"><label for="a-yo">Quién usa este equipo</label><select id="a-yo" data-cfg="yo">${D.abogados.map((a)=>`<option value="${a.id}" ${D.yo===a.id?"selected":""}>${esc(a.nombre)}</option>`).join("")}</select><span class="hint">Firma las anotaciones de la bitácora.</span></div></div>
@@ -19659,8 +19777,10 @@ try{snFlechas();}catch(e){}
 navProgramar();
 try{asGuardar();}catch(e){}
 }
+let ORD_CARGADAS=false;
 function render0(){
 aplicarTema();
+if(!ORD_CARGADAS&&typeof ordCargarLeidas==="function"){ORD_CARGADAS=true;try{ordCargarLeidas();}catch(e){console.error(e);}}
 const scroll=document.querySelector(".sheet .body")?.scrollTop;
 let hoja=ui.sheet?vSheet():"";
 if(ui.sheet&&!hoja)ui.sheet=null;
@@ -19784,6 +19904,9 @@ if(d.act==="lecSeparar"){lecMezcla("separar");return;}
 if(d.act==="lecQuitar"){lecMezcla("quitar",Number(d.g));return;}
 if(d.act==="lecMisma"){lecMezcla("misma");return;}
 if(d.act==="lecVista"){LEC.vista=d.v;render();return;}
+if(d.ordquitar){ordQuitarLeida(d.ordquitar);guardar();toast("Ordenanza quitada: vuelven los datos incorporados");render();return;}
+if(d.act==="csRelato"){ui.csRelato=ui.csRelato===x.id?null:x.id;render();return;}
+if(d.act==="csCopiar"){const R=calcular(x);const t=csRelato(x,R);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("Relato copiado"),()=>toast("No se pudo copiar"));return;}
 if(d.act==="csMas"){ui.csAbierto=ui.csAbierto===x.id?null:x.id;render();return;}
 if(d.act==="lecAplicar"){const x=DB.expedientes.find((q)=>q.id===LEC.exp)||exp();if(!x)return;const ids=[...document.querySelectorAll("[data-lecsel]:checked")].map((n)=>n.dataset.lecsel);if(!ids.length){toast("No hay nada marcado");return;}const sep=(LEC.resultado&&LEC.resultado.separados)||[];const n=lecAplicar(x,ids);ui.sheet=null;if(typeof pqAbrir==="function")setTimeout(()=>pqAbrir(x),400);if(sep.length)setTimeout(()=>toast(`Datos cargados en ${nombreExp(x)} y en ${sep.map((s)=>s.ref).join(", ")}`),2500);if(ui.vista!=="exp"||ui.id!==x.id)go({vista:"exp",id:x.id,sec:"herencia",sheet:null});else render();toast(`${plural(n,"dato cargado","datos cargados")} en el expediente. Revisa lo marcado «leído de documento».`);return;}
 if(d.act==="famWa"){const x=exp();abrirExterno(familiaWaURL(x));marcarEnviado(x,"enviado por WhatsApp");render();return;}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610181724">
+<meta name="hereda-version" content="202610181833">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
@@ -4369,6 +4369,8 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .cs-falta ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}.cs-falta li{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:13px}.cs-falta li small{color:var(--ink-3)}
 .cs-ok{margin:12px 0 0;font-size:13px;color:var(--green,#1e7a46)}
 .cs-reglas{margin:8px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--ink-2)}.cs-opc{color:var(--ink-3)}
+.cs-acts{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+.cs-relato{margin-top:10px;padding:12px 14px;border-radius:var(--r-ctl,10px);background:var(--canvas-2,#f4f4f6);font-size:14px;line-height:1.6}.cs-relato p{margin:0 0 10px}.cs-relato p:last-child{margin:0}
 
 /* ───────── Planificación sucesoria (ronda 12 · planificacion.js). Solo tokens del sistema: sin colores ni sombras nuevas ───────── */
 .psu-intro{font-size:var(--fs-body);color:var(--ink-2);line-height:1.55;margin:10px 2px 18px;max-width:68ch}
@@ -4586,11 +4588,11 @@ html.scn-on,html.scn-on body{overflow:hidden}
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610181724"], ["app", "nucleo/app.js?v=202610181724"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610181833"], ["app", "nucleo/app.js?v=202610181833"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610181724").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610181833").catch(() => {}));
 </script>
 </body>
 </html>
