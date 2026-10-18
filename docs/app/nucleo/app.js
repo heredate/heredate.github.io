@@ -148,7 +148,7 @@ const viv=(x.bienes||[]).find((b)=>b.tipo==="vivienda");
 const casado=x.civil==="gananciales"||x.civil==="separacion";
 return{
 fechaFallecimiento:x.fecha,ccaa:terrISD(x),noResidente:noResidenteMotor(x),colacionOrdenada:x.colacionOrdenada===true,criterioVivienda:x.criterioVivienda||"DGT",viviendaA:x.viviendaA,noAplicarVivienda:!!x.noAplicarVivienda,ajuar:x.ajuar&&x.ajuar!=="sts"?x.ajuar:undefined,enPlazo:x.enPlazo!==false,conRequerimiento:x.requerimiento===true,aplicarEmpresa:!!x.aplicarEmpresa,reparto,...(derT?{derechos:derT.derechos,notaDerechos:derT.nota}:{}),...(typeof casoMotorJur==="function"?casoMotorJur(x):{}),
-conyugeViviendaCatastral:casado&&viv?num(viv.valorCatastralTotal):0,
+conyugeViviendaCatastral:casado&&viv&&x.ajuarDescuentoViudo!==false?num(viv.valorCatastralTotal):0,conyugeViviendaCatastralNoAplicado:casado&&viv&&x.ajuarDescuentoViudo===false?num(viv.valorCatastralTotal):0,
 bienes:(x.bienes||[]).map((b)=>({id:b.id,tipo:b.tipo==="vivienda"?"inmueble":b.tipo,esViviendaHabitual:b.tipo==="vivienda",valor:num(b.valor),valorReferencia:num(b.valorReferencia),titularidad:b.titularidad||"privativo",porcentaje:pctCausante(b.porcentaje),legatarioId:b.legatarioId||undefined,descripcion:b.descripcion,usoResidencial:b.usoResidencial==null?undefined:!!b.usoResidencial,arrendadoOCedido:!!b.arrendadoOCedido,troncal:!!b.troncal||undefined,lineaTroncal:b.troncal?b.lineaTroncal||undefined:undefined,
 ...(b.tipo==="empresa"?{efTipo:b.efTipo||undefined,efPatrimonial:b.efPatrimonial==="si"?true:b.efPatrimonial==="no"?false:undefined,efPctCausante:b.efPctCausante===""||b.efPctCausante==null?undefined:num(b.efPctCausante),efPctGrupo:b.efPctGrupo===""||b.efPctGrupo==null?undefined:num(b.efPctGrupo),efDireccion:b.efDireccion||undefined,efRemuneracion50:b.efRemuneracion50==="si"?true:b.efRemuneracion50==="no"?false:undefined,efPctAfecto:b.efPctAfecto===""||b.efPctAfecto==null?undefined:num(b.efPctAfecto),efHabitual:b.efHabitual==="si"?true:b.efHabitual==="no"?false:undefined,efPrincipalRenta:b.efPrincipalRenta==="si"?true:b.efPrincipalRenta==="no"?false:undefined,efJubilado:!!b.efJubilado}:{}),
 reservable811:!!b.reservable811||undefined,reservaExtinguida:b.reservaTipo&&b.reservatarioId?{tipo:b.reservaTipo,reservatarios:[b.reservatarioId]}:undefined})),
@@ -187,8 +187,26 @@ const R=calcMemo("c",x,()=>{try{const r=calcularBase(x);CALC.errores.delete(x.id
 if(R&&R.plus&&Array.isArray(x.bienes))for(const q of R.plus){if(q.b&&!x.bienes.includes(q.b)){const nb=x.bienes.find((b)=>b&&b.id===q.b.id);if(nb)q.b=nb;}}
 return R;
 }
+const plusNorm=(s)=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/[^A-Z ]/g," ").split(/\s+/).filter((w)=>w.length>2&&!["DEL","LAS","LOS"].includes(w));
+function plusCotejo(x,b,r){
+const r2c=(v)=>Math.round(v*100)/100,T=r.porTitular||[];
+const per=(l)=>(x.personas||[]).find((p)=>(l.nif&&p.nif===l.nif))||(x.personas||[]).find((p)=>{const a=plusNorm(p.nombre),c=plusNorm(l.nombre);return a.filter((w)=>c.includes(w)).length>=Math.min(2,a.length);});
+const filas=b.liqPlus.map((l)=>{const p=per(l),t=p?T.find((q)=>q.heredero===p.nombre):null;return{...l,persona:p?p.nombre:l.nombre,calc:t?t.aIngresar:null,fraccionCalc:t?t.fraccion:null};});
+const total=r2c(filas.reduce((s,q)=>s+(Number(q.aIngresar)||0),0)),baseT=r2c(filas.reduce((s,q)=>s+(Number(q.base)||0),0));
+const conCuota=T.filter((q)=>q.cuota>0.005&&!q.exento),completo=conCuota.every((q)=>filas.some((f)=>f.persona===q.heredero));
+const exp=[],us=filas.find((f)=>f.derecho==="usufructo"&&f.pctDerecho>0),tu=us&&T.find((q)=>q.heredero===us.persona);
+if(baseT&&Math.abs(baseT-r.base)<=Math.max(1,r.base*0.002))exp.push(`La base total coincide (${eurL(baseT)}): la diferencia está en cómo se reparte entre los herederos.`);
+else if(baseT&&r.base>0&&baseT<r.base){const f=baseT/r.base;const sinL=r2c(r.base-baseT);exp.push(`El Ayuntamiento ha liquidado el ${pctL(f)} de la base (${eurL(baseT)} de ${eurL(r.base)}): faltan ${eurL(sinL)} de base${us?`, que corresponden a la nuda propiedad de la parte usufructuada (${pctL(1-f)})`:""}. Si nadie reclama, la familia paga menos; si el Ayuntamiento lo revisa, puede liquidar la diferencia.`);}
+else if(baseT)exp.push(`Base liquidada por el Ayuntamiento: ${eurL(baseT)}; calculada: ${eurL(r.base)}. Revisa el valor del suelo, la fecha de adquisición y el coeficiente.`);
+if(us&&tu&&baseT){const fA=us.base/baseT,fC=tu.fraccion;if(fA>fC*1.5)exp.push(`El Ayuntamiento valora el usufructo de ${us.persona} (${String(us.pctDerecho).replace(".",",")} %) sobre toda la parte del causante, y la app solo sobre la parte que grava (en la herencia intestada, el tercio de mejora, art. 834 CC): ${pctL(fA)} de la base frente a ${pctL(fC)}. Como esa parte tiene más bonificación, el reparto del Ayuntamiento sale más barato para la familia.`);}
+const dif=r2c(total-r.total);
+r.liquidado={filas,total,baseT,completo,dif,explicacion:exp,usar:!!b.plusUsarLiquidado&&completo};
+if(r.liquidado.usar){r.totalCalculado=r.total;r.total=total;r.porTitular=T.map((q)=>{const f=filas.find((z)=>z.persona===q.heredero);return f?{...q,aIngresarCalc:q.aIngresar,aIngresar:Number(f.aIngresar)||0,liquidado:true}:q;});}
+}
+const eurL=(v)=>(Number(v)||0).toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})+" €",pctL=(f)=>(Math.round(f*10000)/100).toLocaleString("es-ES")+" %";
 function calcularBase(x){
 if(!x.fecha||!x.ccaa||!(x.personas||[]).length||!(x.bienes||[]).length)return null;
+for(const b of x.bienes||[])if(b._muniPendiente&&typeof lecMunicipio==="function"&&typeof MUNI_ES==="object"&&(MUNI_ES.m||[]).length)lecMunicipio(b,b._muniPendiente[0],b._muniPendiente[1]);
 const isd=calcularISD(casoMotor(x));
 for(const t of legadosSinBien(x))isd.alertas.unshift(t);
 const plus=(x.bienes||[]).filter(plusCompleto).map((b)=>{
@@ -211,6 +229,7 @@ r.estadoTipo=manual?"INTRODUCIDO":hac?"VERIFICADO":"ESTIMADO";
 if(!manual&&!bon)r.porTitular=r.porTitular.map((q)=>q.exento?q:({...q,norma:hac?"Sin bonificación: Hacienda no publica las de cada ordenanza (introdúcela en la ficha del bien si la hay)":"Sin bonificación en la estimación: la ordenanza no está incorporada (introduce la suya en la ficha del bien)",estado:"ESTIMADO"}));
 if(foral)r.estadoTipo="PENDIENTE";
 }
+if(Array.isArray(b.liqPlus)&&b.liqPlus.length)plusCotejo(x,b,r);
 return{b,r};
 });
 const plazos=calcularPlazos(x.fecha,{autonomo:!!x.autonomo,hayInmuebles:(x.bienes||[]).some((b)=>b.tipo==="vivienda"||b.tipo==="inmueble"),hayVehiculos:(x.bienes||[]).some((b)=>b.tipo==="vehiculo"),hayConyuge:(x.personas||[]).some((p)=>p.relacion==="conyuge"),ccaa:x.ccaa});
@@ -1328,8 +1347,12 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:27,nombre:"Versión 2.7",fecha:"2026-10-18"};
+const VERSION_APP={n:271,nombre:"Versión 2.7.1",fecha:"2026-10-18"};
 const NOVEDADES=[
+["Ficha de cada documento","Cada tipo de documento (defunción, acta, testamento, IBI, catastro, cartas de pago, cuaderno, DNI, banco…) lleva declarado qué datos debe aportar y para qué sirve cada uno. Tras leer, se revisa documento a documento: qué se ha sacado, qué falta y a qué parte del expediente va."],
+["Cómo encaja el caso","La portada del expediente clasifica la herencia (intestada o testada, régimen del matrimonio, quiénes heredan, dónde tributa, bienes), enseña las reglas que aplica y lista lo que falta para cerrar el cuadro, Sucesiones y plusvalía."],
+["Cotejo con el Ayuntamiento y con el cuaderno","Las cartas de pago de la plusvalía se cotejan heredero a heredero con el cálculo, con la explicación de cada diferencia y la opción de usar lo liquidado. El criterio del ajuar se toma del cuaderno o del 660 presentados (con o sin la parte del viudo) y el cuaderno muestra la base de Sucesiones de cada heredero."],
+["Lector","Acta: fecha de la declaración de notoriedad y domicilio, profesión y estado civil de los herederos. Escritura: plaza de garaje y trastero vendidos con la vivienda. IBI: recibo domiciliado (requisito de la bonificación). DNI: fecha de nacimiento aunque la línea venga con ruido. Actas largas: se leen hasta la declaración final."],
 ["Preguntas al terminar de leer","Después de leer los documentos, la app pregunta solo lo que ninguno trae y cambia el cálculo: el valor de la vivienda, el coche o las cuentas sin papel, el ajuar, la edad del viudo, quién convivía con el causante y si se cumplirán los requisitos de la bonificación de la plusvalía. Una pregunta por pantalla, con «No lo sé» siempre disponible."],
 ["Plusvalía: requisitos de la bonificación","Cada plusvalía muestra la lista de requisitos (vivienda habitual del causante, convivencia de cada heredero, plazo para pedirla, no vender en 2 años, estar al corriente y domiciliar los recibos) con sus fechas límite. Se marca en un clic: se cumplen, alguno no (se calcula sin bonificación) o por confirmar."],
 ["Cuaderno particional","Se lee el cuaderno particional o la instancia al liquidador de la misma herencia: el valor que fijan los herederos para cada bien, el vehículo, el ajuar y el DNI de cada uno. Si es de otra herencia, no se mezcla."],
@@ -1826,10 +1849,23 @@ return`<div class="card fcard"><div class="fc-h"><div><div class="kick">${esc(r.
     <div class="sr-sec">2. Cuota</div>
     <div class="formula">${fx("Base",eur0(r.base),r.metodo==="real"?"método real":"método objetivo")}${op("×")}${fx("Tipo",grp(r.tipo*100,r.tipo*100%1?2:0)+" %",r.fuenteTipo==="manual"?"introducido a mano":r.fuenteTipo==="sinImpuesto"?"el municipio no exige el impuesto":r.fuenteTipo==="hacienda"?"datos de Hacienda 2026":r.estimacion?"máximo legal":"ordenanza municipal")}${op("=")}${fx("Cuota",eur(r.cuota),"","hi plu")}</div>
     <div class="sr-sec">3. Bonificación y pago por heredero</div>
-    <div class="ptit">${r.porTitular.map((q)=>`<div class="pt"><div class="pt-l"><b>${esc(q.heredero)}</b><small>${pctRegla(q.fraccion)} de la cuota · ${eur(q.cuota)}</small>${q.norma?`<small class="nrm">${linkNorma(q.norma,terr)} ${tagE(q.estado)}</small>`:""}</div><div class="pt-b" title="Bonificación ${pctRegla(q.bonificacionPct)}"><span style="width:${Math.max(1,q.cuota/mq*100)}%"><i class="bon" style="width:${q.bonificacionPct*100}%"></i><i class="pay" style="width:${(1-q.bonificacionPct)*100}%"></i></span></div><div class="pt-v num">${eur(q.aIngresar)}<small>${q.bonificacionPct?`bonificación ${pctRegla(q.bonificacionPct)}`:"sin bonificación"}</small></div></div>`).join("")}</div>`}
+    <div class="ptit">${r.porTitular.map((q)=>`<div class="pt"><div class="pt-l"><b>${esc(q.heredero)}</b><small>${pctRegla(q.fraccion)} de la cuota · ${eur(q.cuota)}</small>${q.norma?`<small class="nrm">${linkNorma(q.norma,terr)} ${tagE(q.estado)}</small>`:""}</div><div class="pt-b" title="Bonificación ${pctRegla(q.bonificacionPct)}"><span style="width:${Math.max(1,q.cuota/mq*100)}%"><i class="bon" style="width:${q.bonificacionPct*100}%"></i><i class="pay" style="width:${(1-q.bonificacionPct)*100}%"></i></span></div><div class="pt-v num">${eur(q.aIngresar)}<small>${q.liquidado?"liquidado por el Ayuntamiento":q.bonificacionPct?`bonificación ${pctRegla(q.bonificacionPct)}`:"sin bonificación"}</small></div></div>`).join("")}</div>`}
     ${plusRequisitosHTML(x,b,r)}
+    ${plusLiquidadoHTML(x,b,r)}
     ${(r.estimacion?(r.alertas||[]).slice(1):r.alertas||[]).map((a)=>`<p class="caption" style="margin:10px 0 0">${esc(a)}</p>`).join("")}</div>`;
 }
+function plusLiquidadoHTML(x,b,r){
+const L=r.liquidado;if(!L)return"";
+const fl=L.filas.map((f)=>`<tr><td>${esc(f.persona)}<small style="display:block;color:var(--ink-3)">${esc(f.derecho||"")}${f.pctDerecho!=null&&f.derecho==="usufructo"?" "+grp(f.pctDerecho,2)+" %":""}${f.pctSubdiv!=null?` · ${grp(f.pctSubdiv,3)} % del inmueble`:""}${f.numero?" · liq. "+esc(f.numero):""}</small></td><td class="n">${f.base!=null?eur(f.base):"—"}</td><td class="n">${f.bonifPct?grp(f.bonifPct,1)+" %":"—"}</td><td class="n"><b>${f.aIngresar!=null?eur(f.aIngresar):"—"}</b></td><td class="n">${f.calc!=null?eur(f.calc):"—"}</td></tr>`).join("");
+const lim=[...new Set(L.filas.map((f)=>f.fechaLimite).filter(Boolean))];
+const usar=!!b.plusUsarLiquidado;
+return`<div class="plr plq"><div class="sr-sec">5. Liquidado por el Ayuntamiento</div>
+    <div class="tablewrap"><table class="grid-t"><thead><tr><th>Heredero</th><th class="n">Base</th><th class="n">Bonif.</th><th class="n">Liquidado</th><th class="n">Calculado</th></tr></thead><tbody>${fl}<tr><td><b>Total</b></td><td class="n">${eur(L.baseT)}</td><td></td><td class="n"><b>${eur(L.total)}</b></td><td class="n">${eur(usar&&r.totalCalculado!=null?r.totalCalculado:r.total)}</td></tr></tbody></table></div>
+    ${L.explicacion.map((t)=>`<p class="caption" style="margin:8px 0 0">${esc(t)}</p>`).join("")}
+    ${lim.length?`<p class="caption" style="margin:8px 0 0">Fecha límite de pago: <b>${lim.map(fechaLarga).join(", ")}</b>.</p>`:""}
+    ${L.completo?`<div class="plr-b"><button type="button" class="btn sm ${usar?"":"gray"}" data-plusliq="${b.id}" data-v="1">Usar lo liquidado</button><button type="button" class="btn sm ${usar?"gray":""}" data-plusliq="${b.id}" data-v="0">Usar lo calculado</button></div>`:`<p class="caption" style="margin:8px 0 0">Faltan cartas de pago de algún heredero: súbelas para poder usar lo liquidado.</p>`}</div>`;
+}
+document.addEventListener("click",(e)=>{const t=e.target&&e.target.closest?e.target.closest("[data-plusliq]"):null;if(!t)return;const x=typeof exp==="function"?exp():null;const b=x&&(x.bienes||[]).find((q)=>q.id===t.dataset.plusliq);if(!b)return;e.preventDefault();b.plusUsarLiquidado=t.dataset.v==="1";if(typeof anotar==="function")anotar(x,`Plusvalía: ${b.plusUsarLiquidado?"se usan las liquidaciones del Ayuntamiento":"se usa el cálculo"}`,"edit");if(typeof guardar==="function")guardar();if(typeof render==="function")render();},true);
 const plusMasMeses=(f,m)=>{if(!f)return"";const d=new Date(f+"T12:00:00Z");d.setUTCMonth(d.getUTCMonth()+m);return d.toISOString().slice(0,10);};
 function plusRequisitosHTML(x,b,r){
 const T=r.porTitular||[];if(r.noSujeto||!T.some((q)=>(q.bonificacionPct>0||q.sinRequisitos)&&!q.exento))return"";
@@ -1846,7 +1882,7 @@ const L=[
 :["",`Pedirla por escrito con la autoliquidación${fx(f6)} (6 meses desde el fallecimiento; prorrogable otros 6 si se pide dentro del plazo).`])(plusMasMeses(x.fecha,6),plusMasMeses(x.fecha,12),new Date().toISOString().slice(0,10)),
 ["",`No vender ni donar la vivienda${x.fecha?` hasta el ${fechaLarga(plusMasMeses(x.fecha,24))}`:" en los 2 años siguientes"}; si se hace, hay que pagar la bonificación con intereses.`],
 ["","Estar al corriente de pagos con el Ayuntamiento (sin deudas en periodo ejecutivo)."],
-["","Tener domiciliados los recibos municipales de la vivienda (IBI, basura)."],
+[b.ibiDomiciliado?"ok":"",`Tener domiciliados los recibos municipales de la vivienda (IBI, basura).${b.ibiDomiciliado?" El recibo del IBI leído estaba domiciliado.":""}`],
 ...(malaga?[["","Comunicar al Ayuntamiento en 30 días cualquier cambio que haga perder el derecho (OF nº 5 de Málaga, art. 9)."]]:[]),
 ];
 const ico=(e)=>e==="ok"?`<span class="plr-i ok" aria-label="Cumplido">${I.tick}</span>`:e==="no"?`<span class="plr-i no" aria-label="No se cumple">✕</span>`:e==="?"?`<span class="plr-i q" aria-label="Por confirmar">?</span>`:`<span class="plr-i" aria-hidden="true">·</span>`;
@@ -5946,7 +5982,7 @@ function esrTitulo(x,c,R){
 const A=x.testamento==="no"&&x.actaHerederos?x.actaHerederos:{},F=c.F;
 const quien=A.notario||F.tNotario?`el notario ${A.notario||F.tNotario}`:"el notario ⟦nombre del notario⟧",cuando=A.fecha||F.tFecha?fechaLarga(A.fecha||F.tFecha):"⟦fecha⟧",nro=esrPh(A.protocolo||F.tProtocolo,"número");
 if(esrTest(x))return`Falleció bajo el testamento otorgado ante ${quien}, el ${cuando}, con el número ${nro} de su protocolo, que es el último según el certificado del Registro General de Actos de Última Voluntad. En lo que interesa, dispone: ⟦transcribir las cláusulas de institución de herederos, legados, sustituciones y, en su caso, usufructo⟧.`;
-if(x.testamento==="no")return`Falleció sin haber otorgado testamento, según el certificado del Registro General de Actos de Última Voluntad. Por acta de notoriedad autorizada por ${quien}, el ${cuando}, con el número ${nro} de su protocolo, conforme a los artículos 55 y 56 de la Ley del Notariado (en la redacción de la Ley 15/2015, de 2 de julio, de la Jurisdicción Voluntaria), se declaró herederos abintestato a las personas que se indican en el apartado siguiente.`;
+if(x.testamento==="no")return`Falleció sin haber otorgado testamento, según el certificado del Registro General de Actos de Última Voluntad. Por acta de notoriedad autorizada por ${quien}, el ${cuando}, con el número ${nro} de su protocolo, conforme a los artículos 55 y 56 de la Ley del Notariado (en la redacción de la Ley 15/2015, de 2 de julio, de la Jurisdicción Voluntaria), se declaró herederos abintestato a las personas que se indican en el apartado siguiente${A.fechaDeclaracion?`, con declaración de notoriedad de ${fechaLarga(A.fechaDeclaracion)}`:""}.`;
 return`${esrREV("aún no consta si hay testamento: el título sucesorio (testamento o acta de declaración de herederos, art. 14 de la Ley Hipotecaria) se completa con el certificado de últimas voluntades.")} ⟦título sucesorio⟧.`;
 }
 function esrLlamados(x,R){
@@ -5974,7 +6010,7 @@ const lineas=PT.B.map((q,i)=>{
 const b=q.b,L=[],ent=typeof tcEntidadDe==="function"?tcEntidadDe(b.descripcion):null;
 const cab=`${i+1}. ${esrInm(b)?(b.tipo==="vivienda"?"URBANA (vivienda habitual del causante)":"URBANA"):esrUp(TIPO_BIEN[b.tipo][0])}. ${esrNomB(b)}.`;
 if(esrInm(b)){
-L.push("Descripción: ⟦situación, superficie, linderos y cuota de participación, según el título y la nota simple⟧.");
+L.push("Descripción: ⟦situación, superficie, linderos y cuota de participación, según el título y la nota simple⟧."+(Array.isArray(b.anejos)&&b.anejos.length?` Con ${b.anejos.join(" y ")} como anejos.`:""));
 L.push(`Inscripción: Registro de la Propiedad de ${esrPh(b.registro,"…")}, tomo ⟦…⟧, libro ⟦…⟧, folio ⟦…⟧, finca número ${esrPh(b.fincaRegistral,"…")}${b.cru?` (CRU/IDUFIR ${b.cru})`:""}.`);
 L.push(`Referencia catastral: ${esrPh(b.refCatastral,"referencia catastral")}.`);
 const tit=b.tituloAdq?({compraventa:"compraventa",herencia:"herencia",donacion:"donación",obra:"declaración de obra nueva"}[b.tituloAdq]||b.tituloAdq):"";
@@ -6002,7 +6038,8 @@ if(sinValor.length)lineas.push(esrREV(`${sinValor.length===1?"este bien del expe
 return{PT,lineas,tabla,pasivo,m,bruto:m.bruto,sinValor};
 }
 function esrHaberes(x,R,PT){
-return esrTabla(["Heredero","Parentesco","Derechos","Haber"],PT.H.map((h)=>[h.p.nombre||"—",gnRel(h.p),esrDerechos(R,h.p.id)||(h.legados?"legatario":"—"),eur(h.haber+h.legados)]));
+const aj=R.isd.masa.ajuar>0,bi=(p)=>{const h=R.isd.herederos.find((q)=>q.id===p.id||q.nombre===p.nombre);return h?eur(h.baseImponible):"—";};
+return esrTabla(["Heredero","Parentesco","Derechos","Haber",...(aj?["Base en Sucesiones (con ajuar)"]:[])],PT.H.map((h)=>[h.p.nombre||"—",gnRel(h.p),esrDerechos(R,h.p.id)||(h.legados?"legatario":"—"),eur(h.haber+h.legados),...(aj?[bi(h.p)]:[])]));
 }
 function esrImpuestos(x,R){
 const pp=plusPorHeredero(R),C=cuadroParticion(x,R),exH=(id)=>{const e=C&&C.excesos.find((q)=>q.id===id);return e?e.trib.coste:0;};
@@ -11207,7 +11244,7 @@ if(doc.isPureXfa||/please wait\.{3}|if this message is not eventually replaced/i
 if(campos)avisos.push(`Formulario PDF: se han leído ${campos===1?"1 campo rellenado":campos+" campos rellenados"}.`);
 let ocr=0,blancas=0;const pendientes=[];
 for(const i of sinTexto){
-if(ocr>=LEC_PAG_OCR){pendientes.push(i);continue;}
+if(ocr>=LEC_PAG_OCR){const ya=textos.join("\n");const sigue=ocr<20&&/ACTA\s+DE\s+DECLARACI[ÓO]N\s+DE\s+HEREDEROS|HEREDEROS\s+ABINTESTATO|TESTAMENTO\s+ABIERTO/i.test(ya)&&!/DOY\s+POR\s+CONCLUS|CONCLUS[OA]\s+EL\s+ACTA|INSTITUYE\s+(?:POR\s+)?(?:[ÚU]NIC[OA]S?\s+Y\s+UNIVERSAL|HEREDER)/i.test(ya);if(!sigue){pendientes.push(i);continue;}}
 const pg=await doc.getPage(i);const vp1=pg.getViewport({scale:1});
 const m=document.createElement("canvas");const vpm=pg.getViewport({scale:Math.min(0.5,400/vp1.width)});m.width=vpm.width;m.height=vpm.height;
 await pg.render({canvasContext:m.getContext("2d"),viewport:vpm}).promise;
@@ -12027,7 +12064,7 @@ if(!vTot&&vSuelo&&vCons)vTot=Math.round((vSuelo+vCons)*100)/100;
 const loc=/(?:localizaci[óo]n|situaci[óo]n|direcci[óo]n|domicilio tributario|emplazamiento|objeto tributario|ubicaci[óo]n)\s*(?:del\s+inmueble)?\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇ][^\n]{6,110}?)(?=[ \t]*\n|\s+(?:Clase|Uso|Superficie|Ref\.?|Referencia|Coeficiente|A[ñn]o|Valor|Val\.|V\.C|Base|Titular|Municipio|Ejercicio|Cuota)|\s*$)/i.exec(T);
 const sup=/superficie\s*(?:construida|del inmueble)?\s*[:：]?\s*(\d{1,5}(?:,\d+)?)\s*m/i.exec(T);
 const locIbi=!loc&&esIbi?/\b((?:CL|AV|AVDA|PZ|PZA|PS|CM|CR|UR|URB|RD|TR|GL|PJ)\s+[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' ]{2,60}?\s+N[RºO°]?\s*[:;.]\s*\d+[^\n]{0,40})/.exec(T):null;
-if(esIbi){const ib=/IBAN\s*[:：]?\s*(ES\s?\d{2}(?:[\s]*[\d*]{4}){3,5})/i.exec(T),en=/ENTIDAD\s+FINANCIERA\s*[:：]?\s*(?:\d{4,8}\s+)?([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ.&' ]{2,40}?)(?=\s{2,}|\s+URB\.|\s+OF\.|\s+OFICINA|\n|$)/i.exec(T);if(ib)out.avisos.push(`El recibo se cargaba en una cuenta${en?" de "+(/^(?:[A-Z]\.){2,}[A-Z]?\.?$/.test(en[1].trim())?en[1].trim():lecEmpresaNombre(en[1].trim())):""} (${ib[1].replace(/\s+/g," ").trim()}): si era del causante, pide a esa entidad el certificado de saldos a la fecha del fallecimiento.`);}
+if(esIbi){const ib=/IBAN\s*[:：]?\s*(ES\s?\d{2}(?:[\s]*[\d*]{4}){3,5})/i.exec(T),en=/ENTIDAD\s+FINANCIERA\s*[:：]?\s*(?:\d{4,8}\s+)?([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ.&' ]{2,40}?)(?=\s{2,}|\s+URB\.|\s+OF\.|\s+OFICINA|\n|$)/i.exec(T);if(ib)out._ibiDomiciliado=true;if(ib)out.avisos.push(`El recibo se cargaba en una cuenta${en?" de "+(/^(?:[A-Z]\.){2,}[A-Z]?\.?$/.test(en[1].trim())?en[1].trim():lecEmpresaNombre(en[1].trim())):""} (${ib[1].replace(/\s+/g," ").trim()}): si era del causante, pide a esa entidad el certificado de saldos a la fecha del fallecimiento.`);}
 const uso=/uso\s*(?:principal|local|del\s+inmueble)?\s*[:：]?\s*(residencial|vivienda|almac[ée]n|aparcamiento|garaje|comercial|industrial|oficinas|agrario|suelo sin edif|r[úu]stico)/i.exec(T);
 const anio=/a[ñn]o\s*(?:de\s*)?construcci[óo]n\s*[:：]?\s*(\d{4})/i.exec(T);
 const muni=/\b(\d{5})\s+([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇ][A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç' \-]{2,40}?)\s*[(\[]([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç ]{3,30})[)\]]/.exec(T)||/\bmunicipio\s*[:：]?\s*([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇ][A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç' \-]{2,40}?)(?=\s*(?:[,.;(\n]|\s+(?:Provincia|Prov|Ref|Situaci|Ejercicio|Objeto|Titular|$)))/i.exec(T)||/\b(\d{5})\s+([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇ][A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇ' \-]{2,40}?)(?=\s*(?:\n|$|[,.;]|\s+(?:Ref|Clase|Uso|Titular|Valor|Val\.)))/.exec(T);
@@ -12076,7 +12113,7 @@ const derecho=m[4]?(/usufructo/i.test(m[4])?"usufructo":/nuda/i.test(m[4])?"nuda
 titulares.push({nombre,nif,pct:m[3]?lecNum(m[3]):null,derecho});out.personas.push({nombre,nif,rol:"titular registral",derecho,conf:1});
 }
 if(titulares.length)b.titulares=titulares;
-out.bienes.push({...b,conf:ref||vTotal?2:1});
+out.bienes.push({...b,...(out._ibiDomiciliado?{ibiDomiciliado:true}:{}),conf:ref||vTotal?2:1});delete out._ibiDomiciliado;
 return out;
 }
 const LEC_FINCA_RE=/\bFINCA\s*(?:REGISTRAL\s*)?(?:DE\s+[A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç.\- ]{2,40}?(?:\s+\d{1,2})?\s+(?:SECCI[ÓO]N\s+\d+\S*\s+)?)?(?:N[úÚuU]MERO|N[.º°ºo]{0,2}|NUM\.?)\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bN[.º°ºo]{0,2}\s*(?:DE\s+)?FINCA\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s*[:：]\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s+(\d{1,3}(?:\.\d{3})+|\d{1,7})\s+DE\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü]/gi;
@@ -12319,15 +12356,26 @@ if(tipo==="separado")out.avisos.push(`${n}: cónyuge separado judicialmente (o d
 if(!out.personas.some((p)=>p.relacion==="hijo")){const hj=lecListaHijos(T,"El acta");for(const q of hj.personas)if(q.nombre!==nombre&&!out.personas.some((p)=>p.nombre===q.nombre))out.personas.push(q);if(hj.aviso)out.avisos.push(hj.aviso);}
 if(/premuert|fallecid[oa]\s+con\s+anterioridad|falleci[óo]\s+antes|este\s+[úu]ltimo\s+fallecid/i.test(T))out.avisos.push("Hay un hijo o hermano fallecido antes que el causante: sus descendientes heredan por estirpes; comprueba que lleven anotado de quién descienden y que el premuerto no figure como heredero.");
 if(/cuota\s+(?:legal\s+)?usufructuaria|usufructo\s+(?:legal\s+)?(?:del?\s+)?(?:c[óo]nyuge|viud)/i.test(T))out.avisos.push("El cónyuge viudo conserva su cuota legal usufructuaria (tercio de mejora con hijos, mitad con ascendientes): la app la calcula sola en la sucesión intestada.");
-const F=lecFechas(T.slice(0,600));let fechaActa=F.length?F[0].f:"";
+const idxDecl=T.search(/DECLARACI[ÓO]N\s+DE\s+NOTORIEDAD/i),cab=idxDecl>0?T.slice(0,Math.min(900,idxDecl)):T.slice(0,900);
+const F=lecFechas(cab.slice(0,600));let fechaActa=F.length?F[0].f:"";
 if(!fechaActa){const MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-const m=new RegExp(`\\ba\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)\\s+de\\s+(${MES.join("|")})\\b[\\s\\S]{0,220}?de\\s+dos\\s+mil\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)`,"i").exec(T.slice(0,900));
+const m=new RegExp(`\\ba\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)\\s+de\\s+(${MES.join("|")})\\b[\\s\\S]{0,220}?de\\s+dos\\s+mil\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)`,"i").exec(cab);
 if(m){const d=lecPalabrasNumero(m[1]),y=2000+(lecPalabrasNumero(m[3])||0),mo=MES.indexOf(m[2].toLowerCase())+1;if(d>=1&&d<=31&&y>2000)fechaActa=`${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}}
 const nota=new RegExp(`[Aa]nte\\s+m[íi]\\s*,?\\s*${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}\\s*,?\\s*[Nn]otari[oa]`).exec(T);
 const prot=/N[ÚU]MERO\s*[:：]?\s*[A-ZÁÉÍÓÚÑÜa-záéíóúñü ]{3,60}?\s*\(\s*(\d{1,3}(?:\.\d{3})*|\d{1,6})\s*\)/.exec(T)||/n[úu]mero\s+([A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç ]{3,60}?)\.\s*(?:ACTA|DECLARACI)/i.exec(T)||/protocolo\s*(?:n[úu]mero|n[.º°]?)?\s*[:：]?\s*(\d{1,6})/i.exec(T);
 const protocolo=prot?(/^[\d.]+$/.test(prot[1])?prot[1].replace(/\./g,""):String(lecPalabrasNumero(prot[1])||"")):"";
-out.campos.push({k:"testamento",etiqueta:"Título sucesorio",valor:"no",mostrar:`Sin testamento: declaración de herederos abintestato${fechaActa?" de "+fechaLarga(fechaActa):""}${nota?" ante "+lecNombre(nota[1]):""}${protocolo?", número "+protocolo:""}`,conf:2});
-out.campos.push({k:"actaHerederos",etiqueta:"Acta de declaración de herederos",valor:{notario:nota?lecNombre(nota[1]):"",fecha:fechaActa,protocolo},mostrar:[fechaActa?fechaLarga(fechaActa):"",nota?"ante "+lecNombre(nota[1]):"",protocolo?"número "+protocolo:""].filter(Boolean).join(", ")||"sin datos de notaría",conf:nota||fechaActa?2:0});
+let fechaDecl="";{const MES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const dn=new RegExp(`DECLARACI[ÓO]N\\s+DE\\s+NOTORIEDAD[\\s\\S]{0,40}?a\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)\\s+de\\s+(${MES.join("|")})\\s+de\\s+dos\\s+mil\\s+([a-záéíóú]+(?:\\s+y\\s+[a-záéíóú]+)?)`,"i").exec(T.replace(/\s+/g," "));
+if(dn){const d=lecPalabrasNumero(dn[1]),y=2000+(lecPalabrasNumero(dn[3])||0),mo=MES.indexOf(dn[2].toLowerCase())+1;if(d>=1&&d<=31&&y>2000)fechaDecl=`${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;}
+if(!fechaDecl){const dn2=/DECLARACI[ÓO]N\s+DE\s+NOTORIEDAD[\s\S]{0,60}?(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{4})/i.exec(T);if(dn2)fechaDecl=(lecFechas(dn2[1])[0]||{}).f||"";}}
+if(fechaDecl&&fechaDecl===fechaActa)fechaDecl="";
+{const T1=T.replace(/\s+/g," "),EC="solter[oa]|casad[oa]|viud[oa]|divorciad[oa]|separad[oa]";
+for(const m of T1.matchAll(new RegExp(`${LEC_TRAT}\\s*${LEC_NOMBRE_RE}\\s*,\\s*([a-záéíóúñü ]{3,40}?)\\s*,\\s*mayor\\s+de\\s+edad\\s*,\\s*(${EC})\\s*,\\s*vecin[oa]\\s+de\\s+([^,;]{2,60}?)\\s*,(?:\\s*(?:en\\s+|provincia\\s+de\\s+)?[^,;]{2,40}?\\s*,)?\\s*con\\s+domicilio\\s+en\\s+([^;]{4,140}?)\\s*;`,"g"))){
+const n=lecNombre(m[1]),h=out.personas.find((p)=>lecMismoNombre(p.nombre,n));if(!h)continue;
+const ec=m[3].toLowerCase().replace(/[oa]$/,"o"),vec=m[4].trim(),dom=lecDireccion(m[5].replace(/,?\s*n[úu]mero\s+/i," ").replace(/\s+/g," ").trim());
+h.estadoCivil=ec;h.profesion=m[2].trim();h.domicilio=lecN(dom).includes(lecN(vec))?dom:`${dom}, ${vec}`;}}
+out.campos.push({k:"testamento",etiqueta:"Título sucesorio",valor:"no",mostrar:`Sin testamento: declaración de herederos abintestato${fechaActa?" de "+fechaLarga(fechaActa):""}${fechaDecl?" (declaración de notoriedad de "+fechaLarga(fechaDecl)+")":""}${nota?" ante "+lecNombre(nota[1]):""}${protocolo?", número "+protocolo:""}`,conf:2});
+out.campos.push({k:"actaHerederos",etiqueta:"Acta de declaración de herederos",valor:{notario:nota?lecNombre(nota[1]):"",fecha:fechaActa,protocolo,...(fechaDecl?{fechaDeclaracion:fechaDecl}:{})},mostrar:[fechaActa?fechaLarga(fechaActa):"",fechaDecl?"declaración de notoriedad de "+fechaLarga(fechaDecl):"",nota?"ante "+lecNombre(nota[1]):"",protocolo?"número "+protocolo:""].filter(Boolean).join(", ")||"sin datos de notaría",conf:nota||fechaActa?2:0});
 return out;
 }
 function lecFamilia(t){
@@ -12634,7 +12682,7 @@ out.bienes.push(b);
 }
 }
 const aj=cas(811),deudas=cas(812),gastos=cas(813);
-const crel=cas(810);if(aj&&crel&&Math.abs(aj-0.03*crel)<=1)out.campos.push({k:"ajuar",etiqueta:"Ajuar doméstico",valor:"3pct",mostrar:`3 % de todo el caudal relicto (${eur0(aj)}), como en el modelo 660 presentado`,conf:2,lit:(/(?:^|\s)811 [\d.]+,\d{2}/.exec(L)||/AJUAR DOM[ÉE]STICO/.exec(L)||[""])[0].trim()});
+const crel=cas(810);if(aj&&crel&&Math.abs(aj-0.03*crel)<=1)out.campos.push({k:"ajuar",sinDescuento:true,etiqueta:"Ajuar doméstico",valor:"3pct",mostrar:`3 % de todo el caudal relicto (${eur0(aj)}), como en el modelo 660 presentado`,conf:2,lit:(/(?:^|\s)811 [\d.]+,\d{2}/.exec(L)||/AJUAR DOM[ÉE]STICO/.exec(L)||[""])[0].trim()});
 out.avisos.push(`Modelo 660 ya presentado: caudal relicto ${eur0(cas(810)||0)}${aj?`, ajuar declarado ${eur0(aj)}`:""}${deudas?`, deudas ${eur0(deudas)}`:""}${gastos?`, gastos ${eur0(gastos)}`:""}, caudal neto ${eur0(cas(816)||0)}. La app recalcula todo con estos bienes: compara sus cifras con las presentadas.`);
 out.campos.push({k:"isdPresentado",etiqueta:"Modelo 660 presentado",valor:{modelo:"660",sujeto:"",base:cas(816),baseLiquidable:null,cuota:null,estado:"presentado",fecha:f},mostrar:`caudal neto ${eur0(cas(816)||0)} · ${out.bienes.length} ${out.bienes.length===1?"bien":"bienes"} · ${out.personas.length} herederos`,conf:1});
 }
@@ -12684,7 +12732,8 @@ const out={personas:[],avisos:[]};
 const L=t.split(/\n/).map((s)=>s.replace(/\s/g,"").toUpperCase()).filter((s)=>/^[A-Z0-9<]{28,38}$/.test(s));
 const esNie=/TARJETA DE IDENTIDAD DE EXTRANJERO|PERMISO DE RESIDENCIA|RESIDENCE PERMIT|\bNIE\b|\bTIE\b/i.test(t);
 const l1=L.find((s)=>/^I[DR]/.test(s)),l3=L.find((s)=>/<<\w/.test(s)&&!/^I[DR]/.test(s)&&/^[A-Z<]+$/.test(s));
-const l2=L.find((s)=>/^\d{6}[0-9MF<]/.test(s)||/^\d{7}[MF]\d{7}/.test(s));
+let l2=L.find((s)=>/^\d{6}[0-9MF<]/.test(s)||/^\d{7}[MF]\d{7}/.test(s));
+if(!l2){for(const s of L){const m=/^([A-Z0-9]{6,9})([MF])(\d{7})/.exec(s);if(!m)continue;const dig=m[1].replace(/[OQD]/g,"0").replace(/[IL|]/g,"1").replace(/Z/g,"2").replace(/A/g,"4").replace(/S/g,"5").replace(/G/g,"6").replace(/T/g,"7").replace(/B/g,"8").replace(/[^0-9]/g,"");if(dig.length<7)continue;const f7=dig.slice(-7);if(lecMrzControl(f7.slice(0,6))===Number(f7[6])){l2=f7+m[2]+m[3]+s.slice(m[0].length);break;}}}
 const viejo=!l3&&l1&&/^I[DR][A-Z]{3}[A-Z]+<[A-Z<]+/.test(l1)?l1:null;
 const l2v=viejo?L.find((s)=>s!==l1&&/^[A-Z0-9]{8,9}[0-9<][A-Z]{3}\d{6}/.test(s)):null;
 let nombre="",nif="",nac="",mrzNacOk=false;
@@ -12809,6 +12858,14 @@ const desc=dm?lecFrase(dm[1].replace(/^(?:una?|la|el)\s+/i,""),110):"";
 const tipo=/vivienda|piso|casa|chalet|apartamento|d[úu]plex|[áa]tico|unifamiliar/i.test(desc)&&!/garaje|aparcamiento|local|trastero/i.test(desc)?"vivienda":"inmueble";
 out.bienes.push({tipo,descripcion:desc||"Inmueble de la escritura de compraventa",refCatastral:ref,fincaRegistral:fin?fin[1].replace(/\./g,""):"",registro:reg?lecTitulo(reg[1]):"",fechaAdq:fecha,valorAdq:precio,tituloAdq:"compraventa",...(/r[úu]stic|pol[íi]gono/i.test(desc)?{rustico:true,usoResidencial:false}:{}),...(comp?{comprador:lecNombre(comp[1])}:{}),...(/sociedad\s+conyugal|gananciales/i.test(T)?{titularidad:"ganancial"}:{}),conf:fecha&&precio?2:1});
 if(!precio)out.avisos.push("No se ha leído el precio de la compraventa: búscalo en la escritura (plusvalía por el método real).");
+const anejos=[];{
+for(const m of T.matchAll(/superficie\s+(?:total\s+)?(?:construida|[úu]til)?\s*(?:de|aproximada\s+de)?\s*([a-záéíóú]+(?:\s+y\s+[a-záéíóú]+)?)\s+metros/gi)){
+const z=T.slice(m.index,m.index+380).split(/CUOTA\s+DE\s+PARTICIPACI/i)[0],antes=T.slice(Math.max(0,m.index-260),m.index),m2=lecPalabrasNumero(m[1])||0;
+if(/vivienda|dependencias\s+y\s+servicios|piso\b|casa\b/i.test(antes+z.slice(0,200))&&!/maniobra|aparcamiento|garaje|trastero/i.test(z))continue;
+if(/maniobra|aparcamiento|garaje/i.test(z))anejos.push("plaza de garaje"+(m2?` (${m2} m²)`:""));
+else if(/trastero/i.test(z)||(m2&&m2<=12))anejos.push("trastero"+(m2?` (${m2} m²)`:""));
+}}
+if(anejos.length){out.bienes[0].anejos=anejos;out.avisos.push(`La escritura parece describir también ${anejos.join(" y ")}: comprueba si siguen siendo del causante y, si lo son, añádelos como bienes (con su referencia catastral) o como anejos de la vivienda.`);}
 return out;
 }
 function lecIsinOk(s){if(!/^[A-Z]{2}[0-9A-Z]{9}\d$/.test(s))return false;const d=[...s.slice(0,11)].map((c)=>parseInt(c,36)).join("")+s[11];let t=0;[...d].reverse().forEach((c,i)=>{let n=Number(c);if(i%2){n*=2;if(n>9)n-=9;}t+=n;});return t%10===0;}
@@ -12993,7 +13050,7 @@ else if(c.k==="arrendamiento")arrs.push({c,doc});
 else if(c.k==="planPensiones")add({doc,grupo:"Seguros y previsión",etiqueta:c.etiqueta||"Plan de pensiones",mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>{x.planesPensiones=(x.planesPensiones||[]).filter((q)=>JSON.stringify(q)!==JSON.stringify(c.valor)).concat([c.valor]);}});
 else if(c.k==="datosFiscales")add({doc,grupo:"Impuestos",etiqueta:c.etiqueta,mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>{x.datosFiscales={...(x.datosFiscales||{}),...c.valor};}});
 else if(c.k==="nifCausante")add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.valor,conf:c.conf,aplicar:(x)=>{x.nifCausante=c.valor;}});
-else if(c.k==="ajuar"){if(x.ajuar===c.valor)continue;add({doc,grupo:"Impuestos",etiqueta:c.etiqueta,mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>{x.ajuar=c.valor;}});}
+else if(c.k==="ajuar"){if(x.ajuar===c.valor&&(!c.sinDescuento||x.ajuarDescuentoViudo===false))continue;add({doc,grupo:"Impuestos",etiqueta:c.etiqueta,mostrar:c.mostrar+(c.sinDescuento?", sin descontar la parte del viudo":""),conf:c.conf,aplicar:(x)=>{x.ajuar=c.valor;if(c.sinDescuento)x.ajuarDescuentoViudo=false;}});}
 else if(c.k==="generoCausante"){if(x.generoCausante||P.some((q)=>q.k==="generoCausante"))continue;add({doc,grupo:"Causante",etiqueta:"Sexo del causante",mostrar:c.valor==="f"?"mujer":"hombre",conf:c.conf,k:"generoCausante",valor:c.valor,aplicar:(x)=>{if(!x.generoCausante)x.generoCausante=c.valor;}});}
 else if(c.k==="lugarFallecimiento")add({doc,grupo:"Causante",etiqueta:c.etiqueta,mostrar:c.valor,conf:c.conf,aplicar:(x)=>{x.lugarFallecimiento=c.valor;}});
 else if(c.k==="testamento"&&c.derechos&&c.valor!=="usufructo"&&typeof liaAplicarDerechos==="function")add({doc,grupo:"Testamento",etiqueta:c.etiqueta,mostrar:c.mostrar,conf:c.conf,aplicar:(x)=>liaAplicarDerechos(x,c,false),repartir:(x)=>liaAplicarDerechos(x,c,true)});
@@ -13026,20 +13083,23 @@ if(p.nif&&nifsCausante.has(p.nif))continue;
 if(esCausante(p.nombre)){if(p.nif&&!x.nifCausante&&!P.some((q)=>q.grupo==="Causante"&&q.etiqueta==="DNI del causante"))src(add({doc,grupo:"Causante",etiqueta:"DNI del causante",mostrar:p.nif,conf:1,aplicar:(x)=>{x.nifCausante=p.nif;}}),doc,p,"persona");continue;}
 const ex=(x.personas||[]).find((q)=>lecMismoNombre(q.nombre,p.nombre));
 if(ex){
-const cambios={};if(p.nif&&!ex.nif)cambios.nif=p.nif;if(p.edad&&!ex.edad)cambios.edad=p.edad;if(p.relacion&&(!ex.relacion||ex.relacion==="extrano")&&p.relacion!=="extrano")cambios.relacion=p.relacion;if(p.estirpe&&!ex.estirpe)cambios.estirpe=p.estirpe;
-if(Object.keys(cambios).length)src(add({doc,grupo:"Personas",etiqueta:`Completar a ${ex.nombre}`,mostrar:Object.entries(cambios).map(([k,v])=>`${({nif:"NIF",edad:"edad",relacion:"parentesco",estirpe:"desciende de"})[k]}: ${k==="relacion"?RELACIONES[v]?.label||v:v}`).join(" · "),conf:p.conf,aplicar:(x)=>{const q=x.personas.find((z)=>z.id===ex.id);if(q)Object.assign(q,cambios);}}),doc,p,"persona");
+const cambios={};if(p.nif&&!ex.nif)cambios.nif=p.nif;if(p.edad&&!ex.edad)cambios.edad=p.edad;if(p.relacion&&(!ex.relacion||ex.relacion==="extrano")&&p.relacion!=="extrano")cambios.relacion=p.relacion;if(p.estirpe&&!ex.estirpe)cambios.estirpe=p.estirpe;for(const k of["domicilio","estadoCivil","profesion","padres","nacimiento"])if(p[k]&&!ex[k])cambios[k]=p[k];
+if(Object.keys(cambios).length)src(add({doc,grupo:"Personas",etiqueta:`Completar a ${ex.nombre}`,mostrar:Object.entries(cambios).map(([k,v])=>`${({nif:"NIF",edad:"edad",relacion:"parentesco",estirpe:"desciende de",domicilio:"domicilio",estadoCivil:"estado civil",profesion:"profesión",padres:"hijo de",nacimiento:"nacimiento"})[k]}: ${k==="relacion"?RELACIONES[v]?.label||v:v}`).join(" · "),conf:p.conf,aplicar:(x)=>{const q=x.personas.find((z)=>z.id===ex.id);if(q)Object.assign(q,cambios);}}),doc,p,"persona");
 continue;
 }
 const ya=nuevas.find((q)=>lecMismoNombre(q.np.nombre,p.nombre));
-if(ya){const np=ya.np;if(p.nif&&!np.nif)np.nif=p.nif;if(p.genero&&!np.genero)np.genero=p.genero;if(p.nacimiento&&!np.nacimiento)np.nacimiento=p.nacimiento;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;if(p.pct&&!np.pct)np.pct=p.pct;if(p.legadoDesc&&!np.notaLegado)np.notaLegado=p.legadoDesc;if(p.desheredado)np.desheredado=true;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;src(ya.prop,doc,p,"persona");continue;}
+if(ya){const np=ya.np;if(p.nif&&!np.nif)np.nif=p.nif;if(p.genero&&!np.genero)np.genero=p.genero;if(p.nacimiento&&!np.nacimiento)np.nacimiento=p.nacimiento;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;for(const k of["domicilio","estadoCivil","profesion","padres","nacimiento"])if(p[k]&&!np[k])np[k]=p[k];if(p.pct&&!np.pct)np.pct=p.pct;if(p.legadoDesc&&!np.notaLegado)np.notaLegado=p.legadoDesc;if(p.desheredado)np.desheredado=true;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;src(ya.prop,doc,p,"persona");continue;}
 if(p.rol==="titular registral"){if(x.nombre&&lecMismoNombre(x.nombre,p.nombre))continue;src(add({doc,grupo:"Personas",etiqueta:"Titular registral que no está en el expediente",mostrar:`${p.nombre}${p.nif?" · "+p.nif:""}: ¿cotitular, cónyuge o el propio causante con otro nombre?`,conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:p.nombre,nif:p.nif||"",relacion:"extrano",edad:"",origen:"documento"});}}),doc,p,"persona");continue;}
 const rel=p.relacion||"";
-const np={nombre:p.nombre,relacion:rel,edad:p.edad||"",nif:p.nif||"",...(p.desheredado?{desheredado:true}:{}),...(p.legadoDesc?{notaLegado:p.legadoDesc}:{}),...(p.estirpe?{estirpe:p.estirpe}:{}),...(p.pct?{pct:p.pct}:{}),...(p.nota?{nota:p.nota}:{}),...(p.genero?{genero:p.genero}:{}),...(p.nacimiento?{nacimiento:p.nacimiento}:{})};
-const prop=add({doc,grupo:"Personas",etiqueta:etiqP(p),mostrar:descP(np),conf:rel?p.conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:np.nombre,relacion:np.relacion||"extrano",edad:np.edad||"",nif:np.nif||"",origen:"documento",...(np.genero?{genero:np.genero}:{}),...(np.nacimiento?{nacimiento:np.nacimiento}:{}),...(np.desheredado?{desheredado:true}:{}),...(np.notaLegado?{notaLegado:np.notaLegado}:{}),...(np.estirpe?{estirpe:np.estirpe}:{}),...(np.pct&&x.testamento==="porcentajes"?{pct:np.pct}:{})});}});
+const np={nombre:p.nombre,relacion:rel,edad:p.edad||"",nif:p.nif||"",...(p.desheredado?{desheredado:true}:{}),...(p.legadoDesc?{notaLegado:p.legadoDesc}:{}),...(p.estirpe?{estirpe:p.estirpe}:{}),...(p.pct?{pct:p.pct}:{}),...(p.nota?{nota:p.nota}:{}),...(p.genero?{genero:p.genero}:{}),...(p.nacimiento?{nacimiento:p.nacimiento}:{}),...(p.domicilio?{domicilio:p.domicilio}:{}),...(p.estadoCivil?{estadoCivil:p.estadoCivil}:{}),...(p.profesion?{profesion:p.profesion}:{}),...(p.padres?{padres:p.padres}:{})};
+const prop=add({doc,grupo:"Personas",etiqueta:etiqP(p),mostrar:descP(np),conf:rel?p.conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:np.nombre,relacion:np.relacion||"extrano",edad:np.edad||"",nif:np.nif||"",origen:"documento",...(np.genero?{genero:np.genero}:{}),...(np.nacimiento?{nacimiento:np.nacimiento}:{}),...(np.domicilio?{domicilio:np.domicilio}:{}),...(np.estadoCivil?{estadoCivil:np.estadoCivil}:{}),...(np.profesion?{profesion:np.profesion}:{}),...(np.padres?{padres:np.padres}:{}),...(np.desheredado?{desheredado:true}:{}),...(np.notaLegado?{notaLegado:np.notaLegado}:{}),...(np.estirpe?{estirpe:np.estirpe}:{}),...(np.pct&&x.testamento==="porcentajes"?{pct:np.pct}:{})});}});
 src(prop,doc,p,"persona");nuevas.push({np,prop});
 }
 for(let b of r.datos.bienes){
-if(r.tipo==="compraventa"&&!b.refCatastral&&!b.fincaRegistral&&!b.valorAdq&&/^Inmueble de la escritura/.test(b.descripcion||"")&&R.some((q)=>q!==r&&!q._ajeno&&(q.datos.bienes||[]).some((z)=>(z.tipo==="vivienda"||z.tipo==="inmueble")&&(z.refCatastral||z.fincaRegistral))))continue;
+if(r.tipo==="compraventa"&&!b.refCatastral&&!b.fincaRegistral&&!b.valorAdq&&/^Inmueble de la escritura/.test(b.descripcion||"")&&R.some((q)=>q!==r&&!q._ajeno&&(q.datos.bienes||[]).some((z)=>(z.tipo==="vivienda"||z.tipo==="inmueble")&&(z.refCatastral||z.fincaRegistral)))){
+if(b.anejos&&b.anejos.length)src(addP({doc,grupo:"Inmuebles",etiqueta:"Anejos de la escritura (por confirmar)",mostrar:`La escritura de compra parece incluir ${b.anejos.join(" y ")}. Si siguen siendo del causante, márcalo: se anotan como anejos de la vivienda (para el cuadro y la escritura); si tienen referencia catastral propia, añádelos como bienes.`,conf:0,aplicar:(x)=>{const v=(x.bienes||[]).find((q)=>q.tipo==="vivienda")||(x.bienes||[]).find((q)=>q.tipo==="inmueble");if(v){v.anejos=[...new Set([...(v.anejos||[]),...b.anejos])];}}}),doc,b,"bien");
+continue;
+}
 if(b.tituloHerencia&&b.adjudicatario){if(nomsCausante.length&&!esCausante(b.adjudicatario))b={...b,conf:0,nota:`adjudicado a ${b.adjudicatario}, que no es el causante`};else if(!nomsCausante.length)b={...b,conf:Math.min(b.conf,1),nota:`adjudicado a ${b.adjudicatario}`};}
 if(Array.isArray(b.titulares)&&b.titulares.length){
 const tc=b.titulares.find((q)=>esCausante(q.nombre));
@@ -13052,7 +13112,7 @@ else if(!nomsCausante.length&&b.titulares.some((q)=>q.derecho==="usufructo"))b={
 }
 if(Array.isArray(b.socios)){const tc=b.socios.find((q)=>esCausante(q.nombre));if(tc){const v=b.patrimonioNeto&&tc.pct?Math.round(b.patrimonioNeto*tc.pct)/100:null;b={...b,descripcion:`${tc.titulos?String(tc.titulos).replace(/\B(?=(\d{3})+(?!\d))/g,".")+" ":""}${b.descripcion.charAt(0).toLowerCase()+b.descripcion.slice(1)}${tc.pct!=null?" ("+String(tc.pct).replace(".",",")+" %)":""}`,valor:v,...(v?{valorFuente:`valor teórico: ${String(tc.pct).replace(".",",")} % del patrimonio neto${b.ejercicioPN?" de "+b.ejercicioPN:""}`,prioValor:2}:{}),nota:v?"":"sin valor: pide el último balance aprobado",conf:1};}else b={...b,conf:0,nota:nomsCausante.length?"el causante no figura entre los socios leídos":"no se sabe qué socio es el causante"};}
 const ex=(x.bienes||[]).find((q)=>lecMismoInmueble(q,b)||(b.matricula&&q.matricula&&lecN(q.matricula).replace(/[\s-]/g,"")===lecN(b.matricula).replace(/[\s-]/g,""))||(b.iban&&q.iban&&q.iban===b.iban)||(b.descripcion&&q.descripcion&&lecMismoNombre(q.descripcion,b.descripcion)&&(q.tipo==="vivienda"||q.tipo==="inmueble")));
-const campos={};for(const k of["refCatastral","valorCatastralTotal","valorCatastralSuelo","valorCatastralConstruccion","valorReferencia","fechaAdq","valorAdq","porcentaje","cargas","iban","entidad","matricula","marca","modelo","fechaMatriculacion","fincaRegistral","cru","registro","superficie","rustico","poligono","parcela","valorCatastralSueloRustico","tituloAdq","notarioAdq","isin","participaciones","nifSociedad","valorFuente","arrendadoOCedido"])if(b[k]!=null&&b[k]!=="")campos[k]=b[k];
+const campos={};for(const k of["refCatastral","valorCatastralTotal","valorCatastralSuelo","valorCatastralConstruccion","valorReferencia","fechaAdq","valorAdq","porcentaje","cargas","iban","entidad","matricula","marca","modelo","fechaMatriculacion","fincaRegistral","cru","registro","superficie","rustico","poligono","parcela","valorCatastralSueloRustico","tituloAdq","notarioAdq","isin","participaciones","nifSociedad","valorFuente","arrendadoOCedido","liqPlus","anejos","ibiDomiciliado"])if(b[k]!=null&&b[k]!=="")campos[k]=b[k];
 if(b.titularidad)campos.titularidad=b.titularidad;
 if(b.usoResidencial!=null&&b.tipo!=="cuenta")campos.usoResidencial=b.usoResidencial;
 const resumen=[b.refCatastral?"ref. catastral "+b.refCatastral:"",b.matricula?"matrícula "+b.matricula:"",b.valorCatastralTotal?"valor catastral "+eur0(b.valorCatastralTotal):"",b.valorCatastralSuelo?"suelo "+eur0(b.valorCatastralSuelo):"",b.valorReferencia?"valor de referencia "+eur0(b.valorReferencia)+(b.anioValorReferencia?" ("+b.anioValorReferencia+")":""):"",(b.tipo==="vivienda"||b.tipo==="inmueble")&&!b.valor&&!b.valorReferencia?"SIN VALOR: anótalo":"",b.titularidad?b.titularidad+(b.porcentaje?" "+b.porcentaje+" %":""):b.cotitular?"con cotitular"+(b.porcentaje?" ("+b.porcentaje+" % del causante)":""):"",b.fechaAdq?"adquirido "+fechaCorta(b.fechaAdq):"",b.valorAdq?"por "+eur0(b.valorAdq):"",b.cargas||"",b.muniNombre?b.muniNombre+(b.muniProv?" ("+b.muniProv+")":""):"",b.soloUsufructo?"el causante solo era usufructuario: el usufructo se extingue y no entra en la herencia":"",b.nota||""].filter(Boolean).join(" · ");
@@ -13064,7 +13124,7 @@ const claseC=(q)=>(/dep[óo]sito|plazo/i.test(q._desc||q.descripcion||"")?"d":"c
 const ibanDudoso=(q)=>!q.iban||(typeof orgIbanOk==="function"&&!orgIbanOk(q.iban).ok);
 const mismoSaldo=(a,c)=>a.tipo==="cuenta"&&c.tipo==="cuenta"&&ent1(a)&&ent1(a)===ent1(c)&&a.valor>0&&Math.abs(a.valor-c.valor)<0.005&&claseC(a)===claseC(c)&&(ibanDudoso(a)||ibanDudoso(c)||a.iban===c.iban);
 const yaB=nuevosB.find((q)=>lecMismoInmueble(q.nb,b)||(b.iban&&q.nb.iban===b.iban)||mismaCuenta(q.nb,b)||mismoSaldo(q.nb,b)||(b.matricula&&q.nb.matricula&&mat(q.nb.matricula)===mat(b.matricula))||(b.isin&&q.nb.isin===b.isin)||lecMismoProducto(q.nb,b));
-if(!ex&&yaB){const nb=yaB.nb;for(const[k,v]of Object.entries(campos))if(nb[k]==null||nb[k]===""||nb[k]===0)nb[k]=v;if(!(nb.valorCatastralTotal>0)&&nb.valorCatastralSuelo>0&&nb.valorCatastralConstruccion>0)nb.valorCatastralTotal=Math.round((nb.valorCatastralSuelo+nb.valorCatastralConstruccion)*100)/100;let cambiaValor=false;if(b.valor&&(!nb.valor||(b.prioValor||2)>(nb._prio||2))){nb.valor=b.valor;nb._prio=b.prioValor||2;nb.valorFuente=b.valorFuente||"";cambiaValor=true;}if(b.rustico){nb.rustico=true;nb.tipo="inmueble";nb.usoResidencial=false;if(nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}}if(nb.rustico&&nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}if(b.muniNombre&&!nb.muniNombre&&!nb.muniIne){nb._muni=[b.muniNombre,b.muniProv];}if(b.tipo==="vivienda"&&nb.tipo==="inmueble")nb.tipo="vivienda";if(/^(Finca registral|Inmueble)/.test(nb.descripcion||"")&&b.descripcion&&!/^(Finca registral|Inmueble)/.test(b.descripcion))nb.descripcion=b.descripcion;const sinNom=/^(?:Fondo o valores|Acciones|Renta fija)\s+en\s/;if(nb.tipo==="valores"&&b.descripcion&&sinNom.test(nb.descripcion||"")&&!sinNom.test(b.descripcion)){const viejo=nb.descripcion;nb.descripcion=b.descripcion+(nb.entidad&&!b.descripcion.includes(nb.entidad)?" en "+nb.entidad:"");yaB.prop.mostrar=yaB.prop.mostrar.replace(viejo,nb.descripcion);}let m0=yaB.prop.mostrar;if(cambiaValor&&yaB.prop._valTxt)m0=m0.replace(" · "+yaB.prop._valTxt,"");const vistosF=new Set();yaB.prop.mostrar=(m0+" · "+resumen+(cambiaValor&&valTxt?" · "+valTxt:"")).split(" · ").filter((f)=>{const k=lecN(f).trim();if(!k||vistosF.has(k))return false;vistosF.add(k);return true;}).join(" · ");if(cambiaValor)yaB.prop._valTxt=valTxt;yaB.prop.doc+=" + "+doc;src(yaB.prop,doc,b,"bien");yaB.prop.conf=Math.max(yaB.prop.conf,b.conf);yaB.prop.on=yaB.prop.conf>=1;continue;}
+if(!ex&&yaB){const nb=yaB.nb;for(const[k,v]of Object.entries(campos))if(nb[k]==null||nb[k]===""||nb[k]===0)nb[k]=v;if(b.liqPlus&&nb.liqPlus!==b.liqPlus)nb.liqPlus=[...(nb.liqPlus||[]).filter((q)=>!b.liqPlus.some((z)=>z.numero&&z.numero===q.numero)),...b.liqPlus];if(!(nb.valorCatastralTotal>0)&&nb.valorCatastralSuelo>0&&nb.valorCatastralConstruccion>0)nb.valorCatastralTotal=Math.round((nb.valorCatastralSuelo+nb.valorCatastralConstruccion)*100)/100;let cambiaValor=false;if(b.valor&&(!nb.valor||(b.prioValor||2)>(nb._prio||2))){nb.valor=b.valor;nb._prio=b.prioValor||2;nb.valorFuente=b.valorFuente||"";cambiaValor=true;}if(b.rustico){nb.rustico=true;nb.tipo="inmueble";nb.usoResidencial=false;if(nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}}if(nb.rustico&&nb.valorCatastralSuelo){nb.valorCatastralSueloRustico=nb.valorCatastralSuelo;delete nb.valorCatastralSuelo;}if(b.muniNombre&&!nb.muniNombre&&!nb.muniIne){nb._muni=[b.muniNombre,b.muniProv];}if(b.tipo==="vivienda"&&nb.tipo==="inmueble")nb.tipo="vivienda";if(/^(Finca registral|Inmueble)/.test(nb.descripcion||"")&&b.descripcion&&!/^(Finca registral|Inmueble)/.test(b.descripcion))nb.descripcion=b.descripcion;const sinNom=/^(?:Fondo o valores|Acciones|Renta fija)\s+en\s/;if(nb.tipo==="valores"&&b.descripcion&&sinNom.test(nb.descripcion||"")&&!sinNom.test(b.descripcion)){const viejo=nb.descripcion;nb.descripcion=b.descripcion+(nb.entidad&&!b.descripcion.includes(nb.entidad)?" en "+nb.entidad:"");yaB.prop.mostrar=yaB.prop.mostrar.replace(viejo,nb.descripcion);}let m0=yaB.prop.mostrar;if(cambiaValor&&yaB.prop._valTxt)m0=m0.replace(" · "+yaB.prop._valTxt,"");const vistosF=new Set();yaB.prop.mostrar=(m0+" · "+resumen+(cambiaValor&&valTxt?" · "+valTxt:"")).split(" · ").filter((f)=>{const k=lecN(f).trim();if(!k||vistosF.has(k))return false;vistosF.add(k);return true;}).join(" · ");if(cambiaValor)yaB.prop._valTxt=valTxt;yaB.prop.doc+=" + "+doc;src(yaB.prop,doc,b,"bien");yaB.prop.conf=Math.max(yaB.prop.conf,b.conf);yaB.prop.on=yaB.prop.conf>=1;continue;}
 if(ex){const nuevos=Object.fromEntries(Object.entries(campos).filter(([k,v])=>ex[k]==null||ex[k]===""||ex[k]===0));if(b.valor&&!(Number(ex.valor)>0))nuevos.valor=b.valor;if(!Object.keys(nuevos).length)continue;src(add({doc,grupo:"Inmuebles",etiqueta:`Completar «${ex.descripcion||"inmueble"}»`,mostrar:[resumen,nuevos.valor?valTxt:""].filter(Boolean).join(" · "),conf:b.conf,aplicar:(x)=>{const q=x.bienes.find((z)=>z.id===ex.id);if(q){Object.assign(q,nuevos);if(b.muniNombre&&!q.muniIne)lecMunicipio(q,b.muniNombre,b.muniProv);}}}),doc,b,"bien");continue;}
 const esInm=b.tipo==="vivienda"||b.tipo==="inmueble";
 const nb={tipo:b.tipo,descripcion:b.descripcion,valor:b.valor||"",titularidad:b.titularidad||"",...campos,_muni:b.muniNombre?[b.muniNombre,b.muniProv]:null,_prio:b.prioValor||2,_desc:b.descripcion,_doc:doc};
@@ -13092,7 +13152,7 @@ for(const a of nuevas.slice()){
 if(!a.np.nif||!P.includes(a.prop))continue;
 const b=nuevas.find((q)=>q!==a&&q.np.nif===a.np.nif&&P.includes(q.prop));if(!b)continue;
 const[keep,drop]=(a.np.relacion&&!b.np.relacion)||(!!a.np.relacion===!!b.np.relacion&&a.prop.conf>=b.prop.conf)?[a,b]:[b,a];
-for(const k of["nacimiento","edad","genero"])if(drop.np[k]&&!keep.np[k])keep.np[k]=drop.np[k];
+for(const k of["nacimiento","edad","genero","domicilio","estadoCivil","profesion","padres"])if(drop.np[k]&&!keep.np[k])keep.np[k]=drop.np[k];
 keep.prop.mostrar=descP(keep.np);keep.prop.doc+=" + "+drop.prop.doc;(keep.prop.src=keep.prop.src||[]).push(...(drop.prop.src||[]));
 P.splice(P.indexOf(drop.prop),1);
 }
@@ -13281,8 +13341,10 @@ lecDocsMarcar(x,ids);
 }
 function lecMunicipio(b,nombre,prov){
 if(typeof muniDesdeTexto!=="function")return;
+if(typeof MUNI_ES==="object"&&MUNI_ES&&!(MUNI_ES.m||[]).length){b.muniNombre=b.muniNombre||nombre;b._muniPendiente=[nombre,prov||""];if(typeof muniIdx==="function")muniIdx();return;}
 const ine=muniDesdeTexto(prov?`${nombre} (${prov})`:nombre)||muniDesdeTexto(nombre);
 if(ine&&typeof muniElegir==="function")muniElegir(b,ine);else b.muniNombre=b.muniNombre||nombre;
+delete b._muniPendiente;
 }
 function lecRepartirIguales(x,c){
 if(!x||x.testamento!=="porcentajes"||c.valor!=="porcentajes")return;
@@ -13335,7 +13397,7 @@ void grupos;
 const body=`${S.length?`<div class="lec-sep" role="status"><b>Separados en ${plural(S.length+1,"expediente")}.</b> Los documentos de ${S.map((s)=>esc(s.nombre||"otro causante")).join(" y ")} ya están archivados en ${S.map((s)=>esc(s.ref)).join(", ")}. Revisa abajo los datos de cada uno: al cargarlos, cada dato va a su expediente.</div>`:""}<p class="caption" style="margin:0 0 12px">Lo que se ha leído en ${plural(R.docs.length,"documento")}. Marca lo que quieras cargar en ${S.length?"cada expediente":`el expediente${x?` de ${esc(nombreExp(x))}`:""}`}; todo queda señalado como «leído de documento» para que lo revises. Nada se inventa: lo que no se reconoce, se deja vacío.</p>
     ${typeof rvdBotonHTML==="function"?rvdBotonHTML(R):""}
     ${typeof orgCrucesHTML==="function"?orgCrucesHTML(R):""}
-    ${docs}
+    ${typeof fdDocsHTML==="function"?`<div class="fd-modo"><button type="button" class="btn sm ${LEC.vista!=="datos"?"":"gray"}" data-act="lecVista" data-v="docs">Por documento</button><button type="button" class="btn sm ${LEC.vista==="datos"?"":"gray"}" data-act="lecVista" data-v="datos">Por dato</button></div>${LEC.vista!=="datos"?fdDocsHTML(R):docs}`:docs}
     ${P.length?lista:`<div class="card empty" style="margin-top:12px"><b>Sin datos nuevos</b>Los documentos se han archivado, pero no se ha reconocido nada que no estuviera ya en el expediente.</div>`}
     ${P.length?`<div class="lec-acts"><button class="btn block" data-act="lecAplicar">Cargar lo marcado en el expediente</button><button class="btn block gray" data-act="cerrarSheet">Solo archivar los documentos</button></div>`:""}`;
 return sheetHTML("Datos leídos de los documentos",body,"Cerrar","lec-sheet");
@@ -14582,9 +14644,15 @@ const obj=/OBJETO\s+TRIBUTARIO[^\n]*\n(?:[^\n]*\n)?\s*((?:CL|AV|AVDA|PZ|PZA|PS|C
 const suelo=/VALOR\s+SUELO\s+CATASTRAL(?:\s+EN\s+TRANSMISI[OÓ]N)?\s*:\s*([\d.]+,\d{2})/i.exec(T1);
 const fila=/\b\d{1,3},\d{4}\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,2})\s+(\d,\d{2})\s+([\d.]+,\d{2})/.exec(T1);
 const fAdq=fila?(lecFechas(fila[1])[0]||{}).f:"";
+const nn=(v)=>(v==null?null:lecNum(v));
+const sub=/%\s*SUBDIV\s*:\s*([\d.,]+)/i.exec(T1),filaT=/\b\d{1,3},\d{4}\s+\d{2}\/\d{2}\/\d{4}\s+\d{1,2}\s+\d,\d{2}\s+([\d.]+,\d{2})\s+([\d.]+,\d{2})/.exec(T1);
+const ci=/CUOTA\s+[IÍ]NTEGRA[^\n]*?:\s*([\d.]+,\d{2})(?:\s*BON\s*:\s*([\d,]+)\s*%\s*([\d.]+,\d{2}))?/i.exec(T1);
+const num0=/FECHA\s+L[IÍ]MITE\s+DE\s+PAGO[^\n]*\n\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{4,10})\b/i.exec(T1),fliq=/NAT\.?\s*URBANA\s+(\d{2}\/\d{2}\/\d{4})/i.exec(T1);
+const tipoN=/Tipo\s+Imp\.?\s*%\s*([\d,]+)/i.exec(T1),dl0=/DEUDA\s+TRIBUTARIA[^\n]*\n([^\n]*\d,\d{2}[^\n]*)/i.exec(T1),dv0=dl0?[...dl0[1].matchAll(/(\d{1,3}(?:\.\d{3})*,\d{2})/g)].map((m)=>lecNum(m[1])):[];
+const liq=herencia&&(ci||dv0.length)?{nombre:quien||"",...(nif&&cont&&quien===nomCont?{nif}:{}),derecho,pctDerecho:der?nn(der[2]):null,pctSubdiv:sub?nn(sub[1]):null,base:filaT?nn(filaT[2]):null,tipo:tipoN?nn(tipoN[1]):null,cuotaIntegra:ci?nn(ci[1]):null,bonifPct:ci&&ci[2]?nn(ci[2]):0,bonif:ci&&ci[3]?nn(ci[3]):0,aIngresar:dv0.length?dv0[0]:ci?Math.round((nn(ci[1])-(ci[3]?nn(ci[3]):0))*100)/100:null,fechaLimite:num0?(lecFechas(num0[1])[0]||{}).f||"":"",numero:num0?num0[2]:"",fechaLiq:fliq?(lecFechas(fliq[1])[0]||{}).f||"":""}:null;
 if(rc||obj||suelo){
 const desc=obj?((q)=>q.replace(/\b(DE|DEL|LA|LAS|LOS|EL|Y)\b/g,(w)=>w.toLowerCase()))(lecDireccion(obj[1].replace(/,\s*0*(\d+)/," $1").replace(/\s+(\w)-0?(\d{1,2})-(\w)\s*$/,", bloque $1, $2º $3"))):"Inmueble de la liquidación de plusvalía";
-out.bienes.push({tipo:"inmueble",descripcion:desc,...(rc?{refCatastral:rc}:{}),...(suelo?{valorCatastralSuelo:lecNum(suelo[1])}:{}),...(fAdq?{fechaAdq:fAdq}:{}),conf:1});
+out.bienes.push({tipo:"inmueble",descripcion:desc,...(rc?{refCatastral:rc}:{}),...(suelo?{valorCatastralSuelo:lecNum(suelo[1])}:{}),...(fAdq?{fechaAdq:fAdq}:{}),...(liq?{liqPlus:[liq]}:{}),conf:1});
 }
 const dl=/DEUDA\s+TRIBUTARIA[^\n]*\n([^\n]*\d,\d{2}[^\n]*)/i.exec(T1),dv=dl?[...dl[1].matchAll(/(\d{1,3}(?:\.\d{3})*,\d{2})/g)].map((m)=>m[1]):[];
 const deuda=dv.length>=2?[null,dv[0],dv[dv.length-1]]:null;
@@ -14631,7 +14699,8 @@ const v=LT_IMP(z);if(v)out.bienes.push({tipo:"cuenta",descripcion:lecFrase(z.rep
 }
 }
 const aj=/Ajuar\s+Dom[ée]stico\s*\(?\s*(\d)\s*%\s*\)?\s*([\d.]+,\d{2})?/i.exec(T1);
-if(aj&&aj[1]==="3")out.campos.push({k:"ajuar",etiqueta:"Ajuar doméstico",valor:"3pct",mostrar:`3 % de todo el caudal${aj[2]?" ("+aj[2]+" €)":""}, como en el cuaderno particional`,conf:2,lit:aj[0].trim()});
+const sumaInv=out.bienes.reduce((t,b)=>t+(Number(b.valor)||0)*(b.titularidad==="ganancial"?0.5:b.titularidad==="proindiviso"&&b.porcentaje?b.porcentaje/100:1),0),ajImp=aj&&aj[2]?lecNum(aj[2]):0;
+if(aj&&aj[1]==="3")out.campos.push({k:"ajuar",sinDescuento:!!(ajImp&&sumaInv&&Math.abs(ajImp-0.03*sumaInv)<=1),etiqueta:"Ajuar doméstico",valor:"3pct",mostrar:`3 % de todo el caudal${aj[2]?" ("+aj[2]+" €)":""}, como en el cuaderno particional`,conf:2,lit:aj[0].trim()});
 const sinT=/no\s+otorg[óo]\s+testamento|sin\s+(?:haber\s+)?otorgado\s+testamento|abintestato/i.exec(T1);
 if(sinT)out.campos.push({k:"testamento",etiqueta:"Título sucesorio",valor:"no",mostrar:"Sin testamento (lo dice el cuaderno particional)",conf:1,lit:sinT[0]});
 out.causanteDoc=causante;
@@ -15794,7 +15863,7 @@ const antes=Td.slice(Math.max(0,m.index-60),m.index);if(!/N\.?\s?I\.?\s?[FE]|D\.
 C.push({nivel:"error",titulo:"NIF con la letra equivocada",texto:`${d.nombre} trae el NIF ${v}, pero con ese número la letra es ${l}. El lector no lo ha usado: comprueba el número en el documento original o en el DNI.`,refs:[ref(d,{etq:"NIF",v,tipo:"nif"})],props:[]});
 }
 }
-const pers=R.flatMap((d)=>(d.datos.personas||[]).filter((p)=>p.nif&&p.nombre).map((p)=>({d,p})));
+const pers=R.flatMap((d)=>(d.datos.personas||[]).filter((p)=>p.nif&&p.nombre&&!/^Titular del (?:DNI|NIE)$/.test(p.nombre)).map((p)=>({d,p})));
 const dobles=new Set();
 for(let i=0;i<pers.length;i++)for(let j=i+1;j<pers.length;j++){
 const a=pers[i],b=pers[j];if(a.p.nif===b.p.nif||!orgMismaPersona(a.p.nombre,b.p.nombre))continue;
@@ -16264,6 +16333,249 @@ if(p.tipo==="edad"){const v=Math.round(num(inp.value));if(!(v>0&&v<120)){if(type
 if(p.tipo==="select")return pqResponder(inp.value);
 }
 if(typeof document!=="undefined"){document.addEventListener("click",pqClick,true);document.addEventListener("submit",pqSubmit,true);}
+const FD_USO={isd:"Impuesto de Sucesiones",plus:"plusvalía municipal",escr:"escritura y cuaderno",cuadro:"cuadro de partición",id:"identificación de la herencia",tram:"trámites y plazos",bonif:"bonificación de la plusvalía",reg:"Registro de la Propiedad"};
+const fdC=(d,k)=>{const c=(d.campos||[]).find((q)=>q.k===k);return c?(c.mostrar&&typeof c.mostrar==="string"?c.mostrar:typeof c.valor==="object"?JSON.stringify(c.valor):String(c.valor)):null;};
+const fdP=(d,f,txt)=>{const L=(d.personas||[]).filter(f||(()=>true));return L.length?(txt?txt(L):L.map((p)=>p.nombre).join(", ")):null;};
+const fdB=(d,k,f)=>{const L=(d.bienes||[]).filter((b)=>b[k]!=null&&b[k]!=="");return L.length?L.map((b)=>(f?f(b[k],b):String(b[k]))).join(" · "):null;};
+const fdEur=(v)=>(typeof eur==="function"?eur(Number(v)):String(v));
+const fdFecha=(v)=>(typeof fechaLarga==="function"&&/^\d{4}-\d{2}-\d{2}$/.test(String(v))?fechaLarga(v):String(v));
+const fdTxtCivil={gananciales:"casado (gananciales)",separacion:"casado (separación de bienes)",viudo:"viudo",soltero:"soltero",divorciado:"divorciado"};
+const FD_PERSONA=[
+{k:"p.nombre",t:"Nombre completo",para:[FD_USO.id],de:(d)=>fdP(d)},
+{k:"p.nif",t:"DNI",para:[FD_USO.isd,FD_USO.escr],de:(d)=>fdP(d,(p)=>p.nif,(L)=>L.map((p)=>p.nif).join(", "))},
+];
+const LEC_FICHAS={
+defuncion:{descripcion:"Fija la fecha del devengo de los impuestos y el último domicilio (residencia fiscal y vivienda habitual).",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"fecha",t:"Fecha del fallecimiento",para:[FD_USO.isd,FD_USO.plus,FD_USO.tram],de:(d)=>fdC(d,"fecha")},
+{k:"nifCausante",t:"DNI del causante",para:[FD_USO.isd,FD_USO.escr],de:(d)=>fdC(d,"nifCausante")},
+{k:"civil",t:"Estado civil",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);}},
+{k:"domicilio",t:"Último domicilio",para:[FD_USO.bonif,FD_USO.isd],de:(d)=>fdC(d,"domicilio")},
+{k:"lugarFallecimiento",t:"Lugar del fallecimiento",para:[FD_USO.isd],de:(d)=>fdC(d,"lugarFallecimiento"),opc:true},
+{k:"generoCausante",t:"Sexo",para:[FD_USO.escr],de:(d)=>{const v=fdC(d,"generoCausante");return v?(v==="m"?"hombre":v==="f"?"mujer":v):null;},opc:true},
+{k:"padres",t:"Padres del causante",para:[FD_USO.cuadro],de:(d)=>fdP(d,(p)=>p.progenitor||p.relacion==="padre"),opc:true},
+]},
+ultimas:{descripcion:"Dice si hay testamento (y cuál es el último) o si la herencia es intestada.",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"testamento",t:"¿Hay testamento?",para:[FD_USO.cuadro,FD_USO.escr],de:(d)=>{const v=fdC(d,"testamento");return v?(v==="no"?"No otorgó testamento":v==="si"?"Sí":v):null;}},
+{k:"testamentoNotario",t:"Notario y fecha del último testamento",para:[FD_USO.escr],de:(d)=>[fdC(d,"testamentoNotario"),fdC(d,"testamentoFecha")].filter(Boolean).join(", ")||null,opc:true},
+{k:"fecha",t:"Fecha del fallecimiento",para:[FD_USO.id],de:(d)=>fdC(d,"fecha"),opc:true},
+]},
+seguros:{descripcion:"Seguros de vida o accidentes que pagan a los beneficiarios y tributan en Sucesiones.",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"aseguradoras",t:"Pólizas y entidades",para:[FD_USO.isd,FD_USO.tram],de:(d)=>fdC(d,"aseguradoras")},
+]},
+herederos:{descripcion:"Quiénes heredan sin testamento, el régimen del matrimonio y el título para la escritura.",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"nifCausante",t:"DNI del causante",para:[FD_USO.isd],de:(d)=>fdC(d,"nifCausante"),opc:true},
+{k:"fecha",t:"Fecha del fallecimiento",para:[FD_USO.isd],de:(d)=>fdC(d,"fecha")},
+{k:"civil",t:"Estado civil y régimen",para:[FD_USO.cuadro],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);}},
+{k:"conyuge",t:"Cónyuge viudo",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdP(d,(p)=>p.relacion==="conyuge"),opc:true},
+{k:"hijos",t:"Herederos declarados",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdP(d,(p)=>p.relacion&&p.relacion!=="conyuge")},
+{k:"actaHerederos",t:"Notario, fecha y número del acta",para:[FD_USO.escr,FD_USO.reg],de:(d)=>fdC(d,"actaHerederos")},
+{k:"circ",t:"Circunstancias de los herederos (domicilio, estado civil)",para:[FD_USO.escr],de:(d)=>fdP(d,(p)=>p.domicilio||p.estadoCivil,(L)=>L.map((p)=>`${p.nombre}: ${[p.estadoCivil,p.domicilio].filter(Boolean).join(", ")}`).join(" · ")),opc:true},
+]},
+testamento:{descripcion:"La voluntad del causante: herederos, legados, usufructo, sustituciones y desheredaciones.",campos:[
+{k:"nombre",t:"Testador",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"testamentoDatos",t:"Notario, fecha y protocolo",para:[FD_USO.escr],de:(d)=>fdC(d,"testamentoDatos")||[fdC(d,"testamentoNotario"),fdC(d,"testamentoFecha")].filter(Boolean).join(", ")||null},
+{k:"testamento",t:"Tipo de disposición",para:[FD_USO.cuadro],de:(d)=>fdC(d,"testamento")},
+{k:"herederos",t:"Herederos y legatarios",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdP(d)},
+{k:"civil",t:"Estado civil al otorgar",para:[FD_USO.cuadro],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);},opc:true},
+]},
+familia:{descripcion:"Confirma el matrimonio y los hijos (y si alguno falleció).",campos:[
+{k:"matrimonioFecha",t:"Fecha del matrimonio",para:[FD_USO.cuadro],de:(d)=>fdC(d,"matrimonioFecha"),opc:true},
+{k:"conyuge",t:"Cónyuge",para:[FD_USO.cuadro],de:(d)=>fdP(d,(p)=>p.relacion==="conyuge"),opc:true},
+{k:"hijos",t:"Hijos",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdP(d,(p)=>p.relacion==="hijo")},
+]},
+matrimonio:{descripcion:"Acredita el matrimonio y el régimen económico (gananciales o separación).",campos:[
+{k:"conyuge",t:"Cónyuges",para:[FD_USO.cuadro],de:(d)=>fdP(d)},
+{k:"matrimonioFecha",t:"Fecha",para:[FD_USO.cuadro],de:(d)=>fdC(d,"matrimonioFecha")},
+{k:"civil",t:"Régimen económico",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);},opc:true},
+]},
+nacimiento:{descripcion:"Acredita la filiación (hijo del causante) y la edad.",campos:[
+{k:"inscrito",t:"Inscrito y padres",para:[FD_USO.cuadro],de:(d)=>fdP(d)},
+]},
+padron:{descripcion:"Residencia habitual del causante (comunidad autónoma del impuesto) y convivencia (bonificación de la plusvalía).",campos:[
+{k:"domicilio",t:"Domicilio del padrón",para:[FD_USO.isd,FD_USO.bonif],de:(d)=>fdC(d,"domicilio")},
+{k:"padronAlta",t:"Fecha de alta",para:[FD_USO.bonif],de:(d)=>fdC(d,"padronAlta"),opc:true},
+{k:"convivientes",t:"Personas empadronadas",para:[FD_USO.bonif],de:(d)=>fdP(d),opc:true},
+]},
+dni:{descripcion:"Identifica a cada persona: número, fecha de nacimiento (edad para el usufructo y las reducciones) y domicilio.",campos:[
+...FD_PERSONA,
+{k:"p.nacimiento",t:"Fecha de nacimiento",para:[FD_USO.isd,FD_USO.cuadro],de:(d)=>fdP(d,(p)=>p.nacimiento,(L)=>L.map((p)=>`${p.nombre}: ${fdFecha(p.nacimiento)}`).join(" · "))},
+{k:"p.domicilio",t:"Domicilio",para:[FD_USO.escr],de:(d)=>fdP(d,(p)=>p.domicilio,(L)=>L.map((p)=>p.domicilio).join(" · ")),opc:true},
+]},
+catastro:{descripcion:"Referencia catastral, valores catastrales (suelo para la plusvalía) y valor de referencia (mínimo para Sucesiones).",campos:[
+{k:"b.refCatastral",t:"Referencia catastral",para:[FD_USO.plus,FD_USO.escr],de:(d)=>fdB(d,"refCatastral")},
+{k:"b.descripcion",t:"Dirección",para:[FD_USO.escr],de:(d)=>fdB(d,"descripcion")},
+{k:"b.valorCatastralSuelo",t:"Valor catastral del suelo",para:[FD_USO.plus],de:(d)=>fdB(d,"valorCatastralSuelo",fdEur)},
+{k:"b.valorCatastralTotal",t:"Valor catastral total",para:[FD_USO.isd,FD_USO.bonif],de:(d)=>fdB(d,"valorCatastralTotal",fdEur)},
+{k:"b.valorReferencia",t:"Valor de referencia",para:[FD_USO.isd],de:(d)=>fdB(d,"valorReferencia",fdEur),opc:true},
+{k:"b.superficie",t:"Superficie y uso",para:[FD_USO.escr],de:(d)=>fdB(d,"superficie",(v)=>v+" m²"),opc:true},
+]},
+ibi:{descripcion:"Confirma el inmueble, el titular y el valor catastral; la cuenta de cargo es pista de una cuenta del causante y prueba la domiciliación (requisito de la bonificación).",campos:[
+{k:"b.refCatastral",t:"Referencia catastral",para:[FD_USO.plus],de:(d)=>fdB(d,"refCatastral")},
+{k:"b.descripcion",t:"Dirección del inmueble",para:[FD_USO.escr],de:(d)=>fdB(d,"descripcion")},
+{k:"b.valorCatastralTotal",t:"Valor catastral",para:[FD_USO.isd,FD_USO.bonif],de:(d)=>fdB(d,"valorCatastralTotal",fdEur)||fdB(d,"valorCatastralConstruccion",(v)=>"construcción "+fdEur(v))},
+{k:"b.valorCatastralSuelo",t:"Valor catastral del suelo",para:[FD_USO.plus],de:(d)=>fdB(d,"valorCatastralSuelo",fdEur),opc:true},
+{k:"domiciliacion",t:"Recibo domiciliado",para:[FD_USO.bonif],de:(d)=>{const a=(d.avisos||[]).find((q)=>/se cargaba en una cuenta/.test(q));return a?a.replace(/:.*$/,""):null;},opc:true},
+]},
+notasimple:{descripcion:"Titularidad registral, cargas, finca y datos de inscripción para la escritura.",campos:[
+{k:"b.descripcion",t:"Finca",para:[FD_USO.escr],de:(d)=>fdB(d,"descripcion")},
+{k:"b.fincaRegistral",t:"Finca registral y registro",para:[FD_USO.reg],de:(d)=>fdB(d,"fincaRegistral",(v,b)=>`${v}${b.registro?" · "+b.registro:""}`)},
+{k:"b.titulares",t:"Titulares y derecho",para:[FD_USO.cuadro],de:(d)=>fdB(d,"titulares",(v)=>v.map((q)=>`${q.nombre} ${q.pct!=null?q.pct+" %":""} ${q.derecho||""}`.trim()).join("; "))},
+{k:"b.cargas",t:"Cargas",para:[FD_USO.isd,FD_USO.escr],de:(d)=>fdB(d,"cargas"),opc:true},
+{k:"b.refCatastral",t:"Referencia catastral",para:[FD_USO.plus],de:(d)=>fdB(d,"refCatastral"),opc:true},
+]},
+compraventa:{descripcion:"Título de adquisición: fecha (años de tenencia de la plusvalía), precio (método real) y datos registrales.",campos:[
+{k:"b.fechaAdq",t:"Fecha de la compra",para:[FD_USO.plus],de:(d)=>fdB(d,"fechaAdq",fdFecha)},
+{k:"b.valorAdq",t:"Precio",para:[FD_USO.plus],de:(d)=>fdB(d,"valorAdq",fdEur)},
+{k:"b.notarioAdq",t:"Notario y protocolo",para:[FD_USO.escr],de:(d)=>fdB(d,"notarioAdq"),opc:true},
+{k:"b.fincaRegistral",t:"Finca registral",para:[FD_USO.reg],de:(d)=>fdB(d,"fincaRegistral"),opc:true},
+{k:"b.anejos",t:"Anejos (garaje, trastero)",para:[FD_USO.cuadro],de:(d)=>fdB(d,"anejos",(v)=>(Array.isArray(v)?v.join(", "):String(v))),opc:true},
+]},
+herenciaprevia:{descripcion:"Escritura de herencia anterior: título del causante sobre el bien y fecha de adquisición.",campos:[
+{k:"b.descripcion",t:"Bien adjudicado",para:[FD_USO.escr],de:(d)=>fdB(d,"descripcion")},
+{k:"b.adjudicatario",t:"A quién se adjudicó",para:[FD_USO.cuadro],de:(d)=>fdB(d,"adjudicatario")},
+{k:"b.fechaAdq",t:"Fecha",para:[FD_USO.plus],de:(d)=>fdB(d,"fechaAdq",fdFecha),opc:true},
+]},
+bancario:{descripcion:"Saldos y valores a la fecha del fallecimiento, con su titularidad.",campos:[
+{k:"nombre",t:"Titular",para:[FD_USO.id],de:(d)=>fdC(d,"nombre"),opc:true},
+{k:"b.saldo",t:"Cuentas y saldos",para:[FD_USO.isd,FD_USO.cuadro],de:(d)=>fdB(d,"valor",(v,b)=>`${b.descripcion||b.tipo}: ${fdEur(v)}`)},
+{k:"b.iban",t:"IBAN",para:[FD_USO.escr],de:(d)=>fdB(d,"iban"),opc:true},
+{k:"fecha",t:"Fecha de los saldos",para:[FD_USO.isd],de:(d)=>fdC(d,"fecha"),opc:true},
+]},
+vehiculo:{descripcion:"Matrícula, marca, modelo y fecha de matriculación (valor por tablas de Hacienda).",campos:[
+{k:"b.matricula",t:"Matrícula",para:[FD_USO.escr,FD_USO.tram],de:(d)=>fdB(d,"matricula")},
+{k:"b.marca",t:"Marca y modelo",para:[FD_USO.isd],de:(d)=>fdB(d,"marca",(v,b)=>`${v} ${b.modelo||""}`.trim())},
+{k:"b.fechaMatriculacion",t:"Fecha de matriculación",para:[FD_USO.isd],de:(d)=>fdB(d,"fechaMatriculacion",fdFecha),opc:true},
+]},
+poliza:{descripcion:"Capital asegurado y beneficiarios: tributa en Sucesiones con su propia reducción.",campos:[
+{k:"poliza",t:"Póliza y capital",para:[FD_USO.isd],de:(d)=>fdC(d,"poliza")},
+{k:"beneficiarios",t:"Beneficiarios",para:[FD_USO.isd],de:(d)=>fdP(d),opc:true},
+]},
+modelo650:{descripcion:"Autoliquidación ya presentada: valores declarados, reducciones y cuota.",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"isdPresentado",t:"Lo declarado",para:[FD_USO.isd],de:(d)=>fdC(d,"isdPresentado")},
+{k:"herederos",t:"Herederos con su DNI",para:[FD_USO.isd],de:(d)=>fdP(d),opc:true},
+{k:"bienes",t:"Bienes declarados",para:[FD_USO.cuadro],de:(d)=>fdB(d,"descripcion"),opc:true},
+{k:"ajuar",t:"Ajuar",para:[FD_USO.isd],de:(d)=>fdC(d,"ajuar"),opc:true},
+]},
+cuaderno:{descripcion:"Partición ya hecha o propuesta: valores que fijan los herederos, bienes, ajuar y adjudicaciones; sirve para cotejar.",campos:[
+{k:"nombre",t:"Causante",para:[FD_USO.id],de:(d)=>fdC(d,"nombre")},
+{k:"herederos",t:"Herederos con su DNI",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdP(d)},
+{k:"bienes",t:"Bienes y valor",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdB(d,"descripcion",(v,b)=>`${v}${b.valor?": "+fdEur(b.valor):""}`)},
+{k:"ajuar",t:"Ajuar",para:[FD_USO.isd],de:(d)=>fdC(d,"ajuar"),opc:true},
+{k:"testamento",t:"Título",para:[FD_USO.cuadro],de:(d)=>fdC(d,"testamento"),opc:true},
+]},
+plusvaliaLiq:{descripcion:"Lo que el Ayuntamiento ha liquidado a un heredero: base, tipo, bonificación y plazo; se coteja con el cálculo.",campos:[
+{k:"fecha",t:"Fecha de la transmisión",para:[FD_USO.id],de:(d)=>fdC(d,"fecha")},
+{k:"heredero",t:"Heredero y DNI",para:[FD_USO.plus],de:(d)=>fdP(d,null,(L)=>L.map((p)=>`${p.nombre}${p.nif?" · "+p.nif:""}`).join(", "))},
+{k:"b.refCatastral",t:"Inmueble (referencia)",para:[FD_USO.plus],de:(d)=>fdB(d,"refCatastral")},
+{k:"b.valorCatastralSuelo",t:"Suelo y fecha de adquisición",para:[FD_USO.plus],de:(d)=>fdB(d,"valorCatastralSuelo",(v,b)=>`${fdEur(v)}${b.fechaAdq?" · "+fdFecha(b.fechaAdq):""}`)},
+{k:"b.liqPlus",t:"Liquidación (base, bonificación, a pagar, plazo)",para:[FD_USO.plus,FD_USO.tram],de:(d)=>fdB(d,"liqPlus",(v)=>v.map((q)=>`base ${fdEur(q.base)} · bonif. ${q.bonifPct||0} % · ${q.aIngresar!=null?fdEur(q.aIngresar):"—"}${q.fechaLimite?" · hasta "+fdFecha(q.fechaLimite):""}`).join("; "))},
+]},
+factura:{descripcion:"Gastos deducibles (funeral, última enfermedad).",campos:[{k:"gasto",t:"Importe y concepto",para:[FD_USO.isd],de:(d)=>((d.gastos||[]).length?d.gastos.map((g)=>`${g.descripcion||g.concepto||"gasto"}: ${fdEur(g.importe||g.valor)}`).join(" · "):null)}]},
+prestamo:{descripcion:"Deudas del causante deducibles.",campos:[{k:"deuda",t:"Saldo pendiente",para:[FD_USO.isd,FD_USO.cuadro],de:(d)=>((d.deudas||[]).length?d.deudas.map((g)=>`${g.descripcion||"deuda"}: ${fdEur(g.importe||g.valor)}`).join(" · "):null)}]},
+arrendamiento:{descripcion:"Inmueble arrendado: no es vivienda habitual ni entra en el ajuar; renta para el cuadro.",campos:[{k:"arrendamiento",t:"Inmueble, arrendatario y renta",para:[FD_USO.isd],de:(d)=>fdC(d,"arrendamiento")}]},
+valores:{descripcion:"Acciones y fondos a la fecha del fallecimiento.",campos:[{k:"b.valor",t:"Valores y valoración",para:[FD_USO.isd,FD_USO.cuadro],de:(d)=>fdB(d,"valor",(v,b)=>`${b.descripcion}: ${fdEur(v)}`)}]},
+planpensiones:{descripcion:"Plan de pensiones: tributa en el IRPF del beneficiario, no en Sucesiones (solo informativo).",campos:[{k:"planPensiones",t:"Plan y beneficiarios",para:[FD_USO.tram],de:(d)=>fdC(d,"planPensiones")}]},
+sociedad:{descripcion:"Participaciones sociales: porcentaje del causante y patrimonio neto (reducción de empresa familiar).",campos:[{k:"b.socios",t:"Sociedad y participación",para:[FD_USO.isd],de:(d)=>fdB(d,"descripcion")}]},
+capitulaciones:{descripcion:"Régimen económico pactado (separación de bienes): cambia la mitad del viudo.",campos:[{k:"civil",t:"Régimen",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>{const v=fdC(d,"civil");return v&&(fdTxtCivil[v]||v);}}]},
+parejahecho:{descripcion:"Pareja de hecho inscrita: equiparación al cónyuge en el impuesto según la comunidad.",campos:[{k:"pareja",t:"Pareja e inscripción",para:[FD_USO.isd],de:(d)=>fdP(d)}]},
+datosfiscales:{descripcion:"Datos fiscales de Hacienda: cuentas, valores, inmuebles y rentas del causante.",campos:[{k:"datosFiscales",t:"Bienes y rentas",para:[FD_USO.cuadro,FD_USO.isd],de:(d)=>fdC(d,"datosFiscales")||fdB(d,"descripcion")}]},
+};
+function fdFicha(tipo){return LEC_FICHAS[tipo]||null;}
+function fdEstado(d){
+const F=fdFicha(d.tipo);const datos=d.datos||d;
+if(!F)return{tipo:d.tipo,titulo:d.titulo||d.tipo,descripcion:"",campos:[],leidos:0,esperados:0};
+const campos=F.campos.map((c)=>{let v=null;try{v=c.de(datos);}catch(e){v=null;}return{k:c.k,t:c.t,para:c.para,valor:v,ok:v!=null&&v!=="",opc:!!c.opc};});
+const esp=campos.filter((c)=>!c.opc);return{tipo:d.tipo,titulo:d.titulo||(typeof LEC_TIPOS==="object"&&LEC_TIPOS[d.tipo])||d.tipo,descripcion:F.descripcion,campos,leidos:esp.filter((c)=>c.ok).length,esperados:esp.length};
+}
+function fdResumen(R){return((R&&R.docs)||[]).map((d)=>{const e=fdEstado(d);return{nombre:d.nombre,titulo:e.titulo,leidos:e.leidos,esperados:e.esperados,faltan:e.campos.filter((c)=>!c.ok&&!c.opc).map((c)=>c.t)};});}
+function fdDocsHTML(R){
+const docs=(R&&R.docs)||[];if(!docs.length)return"";
+const card=(d,i)=>{
+const e=fdEstado(d),falt=e.campos.filter((c)=>!c.ok&&!c.opc),tot=e.esperados;
+const chip=!tot?"":falt.length===0?`<span class="fd-chip ok">completo</span>`:`<span class="fd-chip ${e.leidos?"parte":"no"}">${e.leidos} de ${tot}</span>`;
+const filas=e.campos.map((c)=>`<li class="${c.ok?"ok":c.opc?"opc":"falta"}"><span class="fd-i" aria-hidden="true">${c.ok?(typeof I==="object"&&I.tick?I.tick:"✓"):c.opc?"·":"–"}</span><span class="fd-t"><b>${esc(c.t)}</b><small>${c.ok?esc(String(c.valor).slice(0,160)):c.opc?"no consta (no siempre viene)":"no se ha leído: compruébalo en el documento o anótalo a mano"}</small><small class="fd-para">para: ${c.para.map(esc).join(", ")}</small></span></li>`).join("");
+const av=(d.datos&&d.datos.avisos)||[];
+return`<details class="fd-doc" ${falt.length||d.tipo==="desconocido"?"open":""}><summary><span class="fd-h"><b>${esc(e.titulo)}</b><small>${esc(d.nombre)}${d.escaneado?" · escaneo":d.formato?" · "+esc(d.formato):d.texto?" · PDF con texto":""}${d.paginas>1?" · "+plural(d.paginas,"página"):""}</small></span>${chip}</summary>
+      ${e.descripcion?`<p class="fd-desc">${esc(e.descripcion)}</p>`:d.tipo==="desconocido"?`<p class="fd-desc">No se ha reconocido el tipo de documento: queda archivado. Si es un tipo conocido, renómbralo para que lo indique (p. ej. «IBI.pdf») y vuelve a subirlo.</p>`:""}
+      ${e.campos.length?`<ul class="fd-l">${filas}</ul>`:""}
+      ${av.length?`<ul class="fd-av">${av.map((a)=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}
+      </details>`;
+};
+return`<div class="fd-docs">${docs.map(card).join("")}</div><p class="caption" style="margin:-6px 0 12px">Cada ficha dice qué debe aportar ese tipo de documento y para qué se usa. Para corregir un dato, márcalo o desmárcalo en la lista de abajo o pulsa «Revisar uno a uno».</p>`;
+}
+const CS_REL={hijo:"hijos",nieto:"nietos",bisnieto:"bisnietos",padre:"padres",abuelo:"abuelos",hermano:"hermanos",sobrino:"sobrinos",tio:"tíos",primo:"primos",conyuge:"cónyuge",pareja_hecho:"pareja de hecho",extrano:"otras personas"};
+const csN=(L)=>L.length;
+const csLista=(L)=>(L.length<=1?L.join(""):L.slice(0,-1).join(", ")+" y "+L[L.length-1]);
+function csEscenario(x,R){
+if(!x)return null;
+const P=(x.personas||[]).filter((p)=>!p.fallecido),vivos=P.filter((p)=>!p.renuncia),ren=P.filter((p)=>p.renuncia);
+const por=(r)=>vivos.filter((p)=>p.relacion===r),cony=por("conyuge")[0],pareja=por("pareja_hecho")[0];
+const desc=vivos.filter((p)=>["hijo","nieto","bisnieto"].includes(p.relacion)),asc=vivos.filter((p)=>["padre","abuelo"].includes(p.relacion)),col=vivos.filter((p)=>["hermano","sobrino","tio","primo"].includes(p.relacion));
+const menores=vivos.filter((p)=>num(p.edad)>0&&num(p.edad)<18),men21=vivos.filter((p)=>(num(p.edad)>0&&num(p.edad)<21)||(p.nacimiento&&x.fecha&&(new Date(x.fecha)-new Date(p.nacimiento))/31557600000<21));
+const B=x.bienes||[],viv=B.find((b)=>b.tipo==="vivienda"),inm=B.filter((b)=>b.tipo==="vivienda"||b.tipo==="inmueble"),gan=B.filter((b)=>b.titularidad==="ganancial");
+const T=x.testamento,civil=x.civil,terr=typeof terrISD==="function"?terrISD(x):x.ccaa;
+const isd=R&&R.isd,m=isd&&isd.masa;
+const ejes=[],reglas=[],faltan=[];
+const A=x.actaHerederos||{},F=x.firma||{};
+if(T==="no"){ejes.push({t:"Título",v:`Sin testamento (intestada)${A.fecha?`: acta de ${fechaLarga(A.fecha)}${A.notario?" ante "+A.notario:""}${A.protocolo?", nº "+A.protocolo:""}`:""}`,nota:A.fecha?"":"Falta el acta de declaración de herederos (o está pendiente de firmar)."});if(!A.fecha)faltan.push({t:"Acta de declaración de herederos",para:"título para la escritura y el Registro",en:"documentos"});}
+else if(T==="usufructo")ejes.push({t:"Título",v:"Testamento con usufructo universal al cónyuge (cautela socini): los hijos, la nuda propiedad"});
+else if(T==="porcentajes")ejes.push({t:"Título",v:"Testamento con herederos por cuotas"+(F.tNotario?` (ante ${F.tNotario}${F.tFecha?", "+fechaLarga(F.tFecha):""})`:"")});
+else if(T==="si")ejes.push({t:"Título",v:"Testamento (reparto por derechos leídos del propio testamento)"});
+else{ejes.push({t:"Título",v:"Aún no consta si hay testamento",nota:"El certificado de últimas voluntades lo dice; sin él no hay título."});faltan.push({t:"Certificado de últimas voluntades",para:"saber si hay testamento y cuál es el último",en:"documentos"});}
+if(civil==="gananciales"){ejes.push({t:"Matrimonio",v:`Casado en gananciales${cony?" con "+cony.nombre:""}`,nota:gan.length?`${plural(gan.length,"bien ganancial","bienes gananciales")}: la mitad es del viudo por la liquidación de la sociedad, no de la herencia (art. 1404 CC).`:"No hay bienes marcados como gananciales: comprueba la titularidad de cada bien."});reglas.push("Liquidación de gananciales antes de partir: solo la mitad del causante entra en la herencia (arts. 1392 y 1404 CC).");}
+else if(civil==="separacion")ejes.push({t:"Matrimonio",v:`Casado en separación de bienes${cony?" con "+cony.nombre:""}`,nota:"No hay sociedad que liquidar: cada bien es de su titular; los compartidos, por mitad."});
+else if(civil==="viudo")ejes.push({t:"Estado civil",v:"Viudo: no hay cónyuge con derechos",nota:cony?"Hay un cónyuge en el expediente: revísalo.":""});
+else if(civil==="soltero"||civil==="divorciado")ejes.push({t:"Estado civil",v:civil==="soltero"?"Soltero":"Divorciado (el ex cónyuge no hereda)"});
+else{ejes.push({t:"Estado civil",v:"Sin indicar",nota:"Cambia la mitad del viudo y el usufructo: lo acredita el certificado de defunción o el de matrimonio."});faltan.push({t:"Estado civil y régimen económico",para:"mitad de gananciales y usufructo del viudo",en:"causante"});}
+const grupo=desc.length?"desc":asc.length?"asc":cony||pareja?"cony":col.length?"col":"nadie";
+const quien=[cony?"cónyuge viudo":"",pareja?"pareja de hecho":"",...Object.entries(CS_REL).filter(([k])=>!["conyuge","pareja_hecho"].includes(k)).map(([k,t])=>{const n=csN(por(k));return n?`${n} ${n===1?t.replace(/s$/,""):t}`:"";})].filter(Boolean);
+ejes.push({t:"Llamados",v:quien.length?csLista(quien):"Ninguna persona todavía",nota:ren.length?`Renuncian: ${csLista(ren.map((p)=>p.nombre))}.`:""});
+if(T==="no"){
+if(grupo==="desc"){reglas.push(`Heredan los descendientes por partes iguales${por("nieto").length?", los nietos por estirpes":""} (arts. 930-934 CC).`);if(cony)reglas.push("El cónyuge viudo tiene el usufructo del tercio de mejora (art. 834 CC): se valora por su edad (89 menos la edad, mínimo 10 %, máximo 70 %).");}
+else if(grupo==="asc"){reglas.push("Sin descendientes heredan los ascendientes (arts. 935-942 CC).");if(cony)reglas.push("El cónyuge viudo tiene el usufructo de la mitad (art. 837 CC).");}
+else if(grupo==="cony")reglas.push("Sin descendientes ni ascendientes hereda el cónyuge (arts. 943-944 CC).");
+else if(grupo==="col")reglas.push("Heredan los colaterales: hermanos por cabezas y sobrinos por estirpes (arts. 946-955 CC); sin legítima.");
+if(isd&&isd.notasReparto)reglas.push(...isd.notasReparto.filter((n)=>!reglas.includes(n)));
+}else if(T==="usufructo"||T==="porcentajes"||T==="si"){
+if(desc.length)reglas.push("Legítima de los descendientes: dos tercios (legítima estricta y mejora), arts. 806-808 CC; se comprueba que el reparto la respeta.");
+if(cony&&desc.length)reglas.push("Legítima del viudo: usufructo del tercio de mejora (art. 834 CC); con usufructo universal, la cautela socini deja elegir a los hijos.");
+if(isd&&isd.notasReparto)reglas.push(...isd.notasReparto.filter((n)=>!reglas.includes(n)));
+}
+if(menores.length){ejes.push({t:"Menores",v:csLista(menores.map((p)=>p.nombre)),nota:"Intervienen por su representante; si hay conflicto de intereses con el progenitor, defensor judicial (art. 163 CC)."});}
+if(men21.length&&terr)reglas.push(`${plural(men21.length,"heredero menor de 21 años","herederos menores de 21 años")}: reducción mayor en Sucesiones (grupo I).`);
+if(terr){const g2=(isd&&isd.herederos||[]).length;ejes.push({t:"Sucesiones",v:`${typeof TERRITORIOS==="object"?((TERRITORIOS.find((t)=>t[0]===terr)||[])[1]||terr):terr}${isd?` · ${eur(isd.total)} entre ${plural(g2,"heredero")}`:""}`,nota:isd&&isd.total===0&&g2?"Cuota cero: las reducciones y bonificaciones de la comunidad absorben la base. Se presenta igualmente (es requisito para inscribir).":""});}
+else{ejes.push({t:"Sucesiones",v:"Comunidad sin fijar",nota:"La residencia habitual del causante (más días en los cinco últimos años) decide la normativa."});faltan.push({t:"Comunidad autónoma del causante",para:"normativa del Impuesto de Sucesiones",en:"causante"});}
+if(x.noResidente||vivos.some((p)=>p.noResidente))reglas.push("Hay no residentes: tributan ante la Agencia Estatal por obligación real, con la normativa de la comunidad que corresponda (DA 2.ª Ley 29/1987).");
+if(B.length)ejes.push({t:"Bienes",v:`${plural(B.length,"bien","bienes")}: ${csLista([...new Set(B.map((b)=>(typeof TIPO_BIEN==="object"&&TIPO_BIEN[b.tipo]?TIPO_BIEN[b.tipo][0].toLowerCase():b.tipo)))])}${m?` · caudal ${eur(m.bruto)}`:""}`,nota:viv?"":inm.length?"Ningún inmueble marcado como vivienda habitual: sin ella no hay reducción de vivienda ni bonificación de la plusvalía.":""});
+else{ejes.push({t:"Bienes",v:"Ninguno todavía",nota:"Sin bienes no hay cuadro ni impuestos."});faltan.push({t:"Inventario de bienes",para:"cuadro, Sucesiones y plusvalía",en:"herencia"});}
+if(inm.length){const pl=R&&R.plus||[];ejes.push({t:"Plusvalía",v:pl.length?`${plural(pl.length,"inmueble")} · ${eur(R.totalPlus)}${pl.some(({r})=>r.liquidado)?" · cotejada con el Ayuntamiento":""}`:"Inmuebles sin datos de plusvalía",nota:pl.some(({r})=>(r.porTitular||[]).some((t)=>t.requisitosPorConfirmar))?"Bonificación por confirmar: revisa los requisitos en Impuestos.":""});if(viv&&(vivos.some((p)=>["hijo","nieto","padre","conyuge"].includes(p.relacion)&&p.convivio2anios==null)))faltan.push({t:"Convivencia de cada heredero (padrón histórico)",para:"bonificación de la plusvalía",en:"preguntas"});for(const b of inm){if(!num(b.valor)&&!num(b.valorReferencia))faltan.push({t:`Valor de «${b.descripcion||"inmueble"}»`,para:"Sucesiones y cuadro",en:"preguntas"});if(!num(b.valorCatastralSuelo))faltan.push({t:`Valor catastral del suelo de «${b.descripcion||"inmueble"}»`,para:"plusvalía (recibo del IBI o certificación catastral)",en:"documentos"});if(!b.fechaAdq)faltan.push({t:`Fecha de adquisición de «${b.descripcion||"inmueble"}»`,para:"plusvalía (escritura o nota simple)",en:"documentos"});if(!num(b.valorAdq))faltan.push({t:`Precio de adquisición de «${b.descripcion||"inmueble"}»`,para:"plusvalía por el método real (si fue mayor que el valor actual, no se paga)",en:"documentos",opc:true});}}
+for(const b of inm)if(Array.isArray(b.anejos)&&b.anejos.length&&!B.some((q)=>q!==b&&/garaje|trastero|aparcamiento/i.test(q.descripcion||"")))faltan.push({t:`${csLista(b.anejos)} de la escritura de «${b.descripcion||"inmueble"}»`,para:"saber si siguen siendo del causante (si lo son, son bienes de la herencia)",en:"herencia"});
+const sinNif=vivos.filter((p)=>!p.nif),sinEdad=vivos.filter((p)=>p.relacion==="conyuge"&&!(num(p.edad)>0)&&!p.nacimiento);
+if(sinNif.length)faltan.push({t:`DNI de ${csLista(sinNif.map((p)=>p.nombre))}`,para:"modelo 650 y escritura",en:"personas"});
+if(sinEdad.length)faltan.push({t:`Edad de ${csLista(sinEdad.map((p)=>p.nombre))}`,para:"valor del usufructo",en:"preguntas"});
+if(!x.nifCausante)faltan.push({t:"DNI del causante",para:"modelo 650 y escritura",en:"causante"});
+if(vivos.length&&!x.fecha)faltan.push({t:"Fecha del fallecimiento",para:"devengo y plazos",en:"causante"});
+const tit=[T==="no"?"Herencia intestada":T==="usufructo"?"Herencia testada con usufructo universal":T==="porcentajes"||T==="si"?"Herencia testada":"Herencia (título por confirmar)",civil==="gananciales"?"casado en gananciales":civil==="separacion"?"separación de bienes":civil==="viudo"?"viudo":civil||"",grupo==="desc"?(cony?"cónyuge viudo y descendientes":"solo descendientes"):grupo==="asc"?"ascendientes"+(cony?" y cónyuge":""):grupo==="cony"?"solo el cónyuge":grupo==="col"?"colaterales":"sin herederos todavía"].filter(Boolean).join(" · ");
+const listo={cuadro:!!(R&&R.isd&&B.length&&vivos.length&&T&&T!=="nose"),isd:!!(R&&terr),plus:!!(R&&(R.plus||[]).length&&inm.length&&(R.plus||[]).length===inm.length)};
+return{titulo:tit,ejes,reglas,faltan,listo,resumen:`${vivos.length?plural(vivos.length,"heredero"):"sin herederos"} · ${B.length?plural(B.length,"bien","bienes"):"sin bienes"} · ${faltan.filter((f)=>!f.opc).length?plural(faltan.filter((f)=>!f.opc).length,"dato pendiente","datos pendientes"):"nada pendiente"}`};
+}
+function csCardHTML(x,R){
+const E=csEscenario(x,R);if(!E)return"";
+const ir={documentos:"documentos",causante:"resumen",herencia:"herencia",personas:"herencia",preguntas:""};
+const falt=E.faltan.filter((f)=>!f.opc),opc=E.faltan.filter((f)=>f.opc);
+const li=(f)=>`<li><b>${esc(f.t)}</b><small>para ${esc(f.para)}</small>${f.en==="preguntas"?`<button type="button" class="link" data-pq="abrir">Responder</button>`:f.en&&ir[f.en]?`<button type="button" class="link" data-sec="${ir[f.en]}">Ir</button>`:""}</li>`;
+const abierto=ui.csAbierto===x.id;
+return`<section class="card cs-card" aria-labelledby="cs-t"><div class="cs-cab"><div><span class="kick">Cómo encaja este caso</span><h3 id="cs-t">${esc(E.titulo)}</h3><p class="caption">${esc(E.resumen)}</p></div><div class="cs-sem" aria-label="Qué está listo"><span class="${E.listo.cuadro?"ok":""}">Cuadro</span><span class="${E.listo.isd?"ok":""}">Sucesiones</span><span class="${E.listo.plus?"ok":""}">Plusvalía</span></div></div>
+    <dl class="cs-ejes">${E.ejes.map((e)=>`<div><dt>${esc(e.t)}</dt><dd>${esc(e.v)}${e.nota?`<small>${esc(e.nota)}</small>`:""}</dd></div>`).join("")}</dl>
+    ${falt.length?`<div class="cs-falta"><b>Falta para cerrarlo</b><ul>${falt.map(li).join("")}</ul></div>`:`<p class="cs-ok">No falta ningún dato esencial: revisa el cuadro, los impuestos y los escritos.</p>`}
+    <button type="button" class="link" data-act="csMas">${abierto?"Ocultar las reglas aplicadas":`Ver las reglas aplicadas (${E.reglas.length})${opc.length?" y lo opcional":""}`}</button>
+    ${abierto?`<ul class="cs-reglas">${E.reglas.map((r)=>`<li>${esc(r)}</li>`).join("")}${opc.map((f)=>`<li class="cs-opc">Opcional: ${esc(f.t)} (${esc(f.para)}).</li>`).join("")}</ul>`:""}</section>`;
+}
 const CSN_SIS=`Eres un asistente de consulta normativa para abogados que tramitan herencias en España. Recibes una pregunta y unos fragmentos de normas (cada uno con su identificador entre corchetes, como [F1], y la referencia del artículo). Respondes SOLO con lo que dicen esos fragmentos.
 
 Reglas:
@@ -18730,6 +19042,7 @@ let body;
 if(!R&&!["despacho","documentos","normativa","diagnostico","revision","firma","terceros"].includes(ui.sec))body=`${franjaFamilia(x)}<div class="card empty" style="margin-top:14px"><b>Faltan datos para calcular</b>${x.familia?"Los datos de la familia ya están cargados. Revísalos y completa la fecha, la comunidad, los herederos y los bienes que falten.":"Revisa la fecha, la comunidad, los herederos y los bienes, o pide los datos a la familia."}<div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" data-act="editar">Completar datos</button></div></div>`;
 else body=({resumen:tResumen,tramites:tTramites,herencia:tHerencia,particion:tParticion,impuestos:tImpuestos,estrategia:tEstrategia,segunda:tSegunda,diagnostico:tDiagnostico,revision:tRevision,terceros:tTerceros,gastos:tAranceles,firma:tFirma,normativa:tNormativa,documentos:tDocumentos,despacho:tDespacho})[ui.sec](x,R,T);
 if(["resumen","herencia","impuestos"].includes(ui.sec)&&typeof pqBotonHTML==="function")body=pqBotonHTML(x)+body;
+if(ui.sec==="resumen"&&typeof csCardHTML==="function"&&(x.personas||[]).length+(x.bienes||[]).length>0)body=csCardHTML(x,R)+body;
 const sec=secs.find((s)=>s[0]===ui.sec)||secs[0];
 const titulo=ui.sec==="resumen"?nombreExp(x):sec[1];
 const pend=T.filter((t)=>!cerrado(t)).length;
@@ -18865,7 +19178,7 @@ return`${typeof bloqueoRepartoHTML==="function"?bloqueoRepartoHTML(x,R):""}<div 
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn" data-doc="liquidacion">${I.law}Propuesta de liquidación</button><button class="btn gray" data-sec="estrategia">${I.scale}Estrategia fiscal</button></div>
     <div class="sectitle">Opciones del cálculo</div>
     <div class="group">
-      ${(()=>{const terr=terrISD(x),cur=R.isd.masa.modoAjuar;const ops=[["residencial","Solo viviendas"],...(terr==="AND"?[["ata","Criterio ATA"]]:[]),["3pct","3 % de todo"],["cero","Sin ajuar"]];const hint={residencial:"3 % de las viviendas de uso residencial no alquiladas ni cedidas (STS 499/2020; TEAC 30-05-2025).",ata:"Criterio de la Agencia Tributaria de Andalucía: bienes de uso personal. Práctica real pendiente de confirmar.","3pct":"Opción manual: el Supremo excluye dinero, valores e inmuebles no residenciales.",cero:"Se declara o prueba que no hay ajuar."}[cur]||"";return`<div class="field"><label>Ajuar doméstico</label><div class="seg" style="margin-top:6px">${ops.map(([k,t])=>`<button data-ajuar="${k}" aria-pressed="${cur===k}">${t}</button>`).join("")}</div><span class="hint">${hint}</span></div>`;})()}
+      ${(()=>{const terr=terrISD(x),cur=R.isd.masa.modoAjuar;const ops=[["residencial","Solo viviendas"],...(terr==="AND"?[["ata","Criterio ATA"]]:[]),["3pct","3 % de todo"],["cero","Sin ajuar"]];const hint={residencial:"3 % de las viviendas de uso residencial no alquiladas ni cedidas (STS 499/2020; TEAC 30-05-2025).",ata:"Criterio de la Agencia Tributaria de Andalucía: bienes de uso personal. Práctica real pendiente de confirmar.","3pct":"Opción manual: el Supremo excluye dinero, valores e inmuebles no residenciales.",cero:"Se declara o prueba que no hay ajuar."}[cur]||"";return`<div class="field"><label>Ajuar doméstico</label><div class="seg" style="margin-top:6px">${ops.map(([k,t])=>`<button data-ajuar="${k}" aria-pressed="${cur===k}">${t}</button>`).join("")}</div><span class="hint">${hint}</span>${(()=>{const viv=(x.bienes||[]).find((b)=>b.tipo==="vivienda"),cy=(x.personas||[]).some((p)=>p.relacion==="conyuge"&&!p.fallecido&&!p.renuncia);if(!viv||!cy||!num(viv.valorCatastralTotal)||!["residencial","3pct"].includes(cur)||!["gananciales","separacion"].includes(x.civil))return"";const on=x.ajuarDescuentoViudo!==false;return`<label class="chk" style="margin-top:8px;display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-ajdesc="1" ${on?"checked":""}><span>Descontar lo que corresponde al viudo: 3 % del valor catastral de la vivienda, ${eur(0.03*num(viv.valorCatastralTotal))} (art. 1321 CC; art. 34.3 RD 1629/1991).${on?"":" <b>Sin descontar</b>, como en la autoliquidación o el cuaderno presentados."}</span></label>`;})()}</div>`;})()}
       ${terrISD(x)==="AND"?`<div class="field"><label>Reducción por vivienda habitual</label><div class="seg" style="margin-top:6px"><button data-cviv="DGT" aria-pressed="${(x.criterioVivienda||"DGT")!=="TSJA2026"}">Por cuotas (ATA)</button><button data-cviv="TSJA2026" aria-pressed="${x.criterioVivienda==="TSJA2026"}" ${x.viviendaA?"":"disabled"}>Al adjudicatario (TSJA)</button></div>${x.viviendaA?"":`<span class="hint">El criterio del adjudicatario se activa desde Estrategia.</span>`}</div>`:""}
       ${terrISD(x)==="MAD"?`<div class="row toggle"><span class="t"><b>Se ha recibido requerimiento de la Administración</b><small>En Madrid el grupo III pierde la bonificación por lo que se declare después</small></span><label class="switch"><input type="checkbox" data-opt="requerimiento" ${x.requerimiento?"checked":""}><span></span></label></div>`:""}
       <div class="row toggle"><span class="t"><b>Se presentará dentro de plazo</b>${typeof dgPlazoHint==="function"?`<small>${esc(dgPlazoHint(x,R))}</small>`:""}</span><label class="switch"><input type="checkbox" data-opt="enPlazo" ${(typeof enPlazoExp==="function"?enPlazoExp(x):x.enPlazo!==false)?"checked":""}><span></span></label></div>
@@ -19470,6 +19783,8 @@ if(d.act==="lecNuevo"){if(!licPuedeCrear()){toast(licMotivoBloqueo());ui.sheet={
 if(d.act==="lecSeparar"){lecMezcla("separar");return;}
 if(d.act==="lecQuitar"){lecMezcla("quitar",Number(d.g));return;}
 if(d.act==="lecMisma"){lecMezcla("misma");return;}
+if(d.act==="lecVista"){LEC.vista=d.v;render();return;}
+if(d.act==="csMas"){ui.csAbierto=ui.csAbierto===x.id?null:x.id;render();return;}
 if(d.act==="lecAplicar"){const x=DB.expedientes.find((q)=>q.id===LEC.exp)||exp();if(!x)return;const ids=[...document.querySelectorAll("[data-lecsel]:checked")].map((n)=>n.dataset.lecsel);if(!ids.length){toast("No hay nada marcado");return;}const sep=(LEC.resultado&&LEC.resultado.separados)||[];const n=lecAplicar(x,ids);ui.sheet=null;if(typeof pqAbrir==="function")setTimeout(()=>pqAbrir(x),400);if(sep.length)setTimeout(()=>toast(`Datos cargados en ${nombreExp(x)} y en ${sep.map((s)=>s.ref).join(", ")}`),2500);if(ui.vista!=="exp"||ui.id!==x.id)go({vista:"exp",id:x.id,sec:"herencia",sheet:null});else render();toast(`${plural(n,"dato cargado","datos cargados")} en el expediente. Revisa lo marcado «leído de documento».`);return;}
 if(d.act==="famWa"){const x=exp();abrirExterno(familiaWaURL(x));marcarEnviado(x,"enviado por WhatsApp");render();return;}
 if(d.act==="famMail"){const x=exp();abrirExterno(familiaMailURL(x));marcarEnviado(x,"enviado por correo");render();return;}
@@ -19586,6 +19901,7 @@ if(d.deuda==="0"&&prev.ganancial===undefined)x.deudas[0].ganancial=hipotecaGanan
 }
 $app.addEventListener("change",(e)=>{
 const t=e.target;const d=t.dataset;
+if(d.ajdesc){const x=objetivo();if(!x)return;x.ajuarDescuentoViudo=t.checked;anotar(x,`Ajuar: ${t.checked?"se descuenta":"no se descuenta"} la parte del viudo`,"edit");guardar();render();return;}
 if(t.id==="d-cat"){ui.dcat=t.value;render();return;}
 if(t.id==="f-restore"&&t.files&&t.files[0]){sgAbrirArchivo(t.files[0]);t.value="";return;}
 if(d.padj){const x=exp(),b=x.bienes.find((q)=>q.id===d.padj);if(b){if(t.value)b.adjudicadoA=t.value;else delete b.adjudicadoA;anotar(x,`Partición: ${b.descripcion||TIPO_BIEN[b.tipo][0]} ${t.value?"para "+(persona(x,t.value)?.nombre||""):"en proindiviso"}`,"sistema");guardar();render();}return;}

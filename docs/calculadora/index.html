@@ -1587,6 +1587,7 @@ function calcularISD(caso) {
     alertas.push("Ajuar al 3 % de todo el caudal: el Tribunal Supremo (STS 499/2020) excluye dinero, valores e inmuebles no residenciales; el TEAC (30-05-2025) fija la base en las viviendas de uso residencial no arrendadas ni cedidas.");
   } else notaAjuar = "Se declara que no hay ajuar o se prueba su inexistencia.";
   ajuar = r2(Math.max(0, ajuar));
+  if (conyuge && caso.conyugeViviendaCatastralNoAplicado > 0 && (modo === "residencial" || modo === "3pct")) alertas.push(`No se descuenta del ajuar lo que corresponde al cónyuge viudo (3 % del valor catastral de la vivienda habitual, ${r2(0.03 * caso.conyugeViviendaCatastralNoAplicado).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €; art. 1321 CC y art. 34.3 RD 1629/1991), como en la autoliquidación o el cuaderno presentados. Descontarlo bajaría la base de los herederos en esa cantidad.`);
 
   // 3. Reparto de derechos
   let rep;

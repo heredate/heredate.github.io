@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610181555">
+<meta name="hereda-version" content="202610181724">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
@@ -4339,6 +4339,36 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .plr-i.q{background:color-mix(in srgb,var(--warning,#9a6700) 15%,transparent);color:var(--warning,#9a6700)}
 .plr-sn{white-space:nowrap}
 .plr-b{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+/* v2.7.1 · ficha por documento en la hoja de lectura */
+.fd-modo{display:flex;gap:8px;margin:0 0 10px}
+.fd-docs{display:grid;gap:8px;margin-bottom:14px}
+.fd-doc{border:1px solid var(--border);border-radius:var(--r-ctl,10px);background:var(--surface);padding:0}
+.fd-doc summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;cursor:pointer;list-style:none}
+.fd-doc summary::-webkit-details-marker{display:none}
+.fd-h{display:flex;flex-direction:column;gap:2px;min-width:0}.fd-h b{font-size:14px}.fd-h small{color:var(--ink-3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fd-chip{flex:0 0 auto;font:600 11px/1 var(--font-sans);padding:5px 8px;border-radius:999px;background:color-mix(in srgb,var(--warning,#9a6700) 15%,transparent);color:var(--warning,#9a6700)}
+.fd-chip.ok{background:color-mix(in srgb,var(--green,#1e7a46) 15%,transparent);color:var(--green,#1e7a46)}
+.fd-chip.no{background:color-mix(in srgb,var(--red,#b42318) 15%,transparent);color:var(--red,#b42318)}
+.fd-desc{margin:0;padding:0 12px 8px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.fd-l{list-style:none;margin:0;padding:0 12px 10px;display:grid;gap:6px}
+.fd-l li{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.4}
+.fd-i{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink-3)}.fd-i svg{width:12px;height:12px}
+.fd-l li.ok .fd-i{background:color-mix(in srgb,var(--green,#1e7a46) 15%,transparent);color:var(--green,#1e7a46)}
+.fd-l li.falta .fd-i{background:color-mix(in srgb,var(--red,#b42318) 15%,transparent);color:var(--red,#b42318)}
+.fd-t{display:flex;flex-direction:column;gap:1px;min-width:0}.fd-t small{color:var(--ink-3);font-size:12px}.fd-para{font-size:11px!important;color:var(--ink-3)}
+.fd-l li.falta .fd-t small:first-of-type{color:var(--red,#b42318)}
+.fd-av{margin:0;padding:0 12px 10px 30px;font-size:12px;color:var(--ink-2)}
+/* v2.7.1 · cómo encaja el caso (caso.js) */
+.cs-card{margin-top:14px}
+.cs-cab{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.cs-cab h3{margin:2px 0 4px;font-size:17px}
+.cs-sem{display:flex;gap:6px;flex-wrap:wrap}.cs-sem span{font:600 11px/1 var(--font-sans);padding:6px 9px;border-radius:999px;background:var(--canvas-2,#f2f2f5);color:var(--ink-3)}
+.cs-sem span.ok{background:color-mix(in srgb,var(--green,#1e7a46) 15%,transparent);color:var(--green,#1e7a46)}
+.cs-ejes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px 18px;margin:14px 0 0}.cs-ejes div{min-width:0}
+.cs-ejes dt{font:600 11.5px/1.3 var(--font-sans);color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin:0 0 3px}.cs-ejes dd{margin:0;font-size:13.5px;line-height:1.45}.cs-ejes dd small{display:block;color:var(--ink-3);font-size:12px;margin-top:2px}
+.cs-falta{margin-top:14px;padding:10px 12px;border-radius:var(--r-ctl,10px);background:color-mix(in srgb,var(--warning,#9a6700) 9%,transparent)}.cs-falta b{font-size:13px}
+.cs-falta ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}.cs-falta li{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:13px}.cs-falta li small{color:var(--ink-3)}
+.cs-ok{margin:12px 0 0;font-size:13px;color:var(--green,#1e7a46)}
+.cs-reglas{margin:8px 0 0;padding-left:18px;font-size:13px;line-height:1.5;color:var(--ink-2)}.cs-opc{color:var(--ink-3)}
 
 /* ───────── Planificación sucesoria (ronda 12 · planificacion.js). Solo tokens del sistema: sin colores ni sombras nuevas ───────── */
 .psu-intro{font-size:var(--fs-body);color:var(--ink-2);line-height:1.55;margin:10px 2px 18px;max-width:68ch}
@@ -4556,11 +4586,11 @@ html.scn-on,html.scn-on body{overflow:hidden}
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610181555"], ["app", "nucleo/app.js?v=202610181555"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610181724"], ["app", "nucleo/app.js?v=202610181724"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610181555").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610181724").catch(() => {}));
 </script>
 </body>
 </html>
