@@ -2935,16 +2935,22 @@ function calcularPlusvalia({ inmueble, titulares, fecha, caudalTotal }) {
     // Foral: exención legal (Navarra, art. 173.1.b LF 2/1995) antes que cualquier bonificación; sin ordenanza, la bonificación potestativa
     // del territorio se introduce a mano y se limita a su máximo (100 % en Bizkaia y Álava, 95 % en Gipuzkoa).
     const exento = !!(F && F.exencion && F.exencion.aplica(heredero));
-    const b = exento ? { pct: 1, norma: F.exencion.norma, estado: F.exencion.estado }
+    let b = exento ? { pct: 1, norma: F.exencion.norma, estado: F.exencion.estado }
       : F && !conOrd ? ((F.beneficiario || DAC)(heredero) && Number(inmueble.bonifManual) > 0 ? { pct: Number(inmueble.bonifManual) / 100, norma: `Bonificación introducida a mano según la ordenanza municipal (${F.normaBonif})`, estado: "INTRODUCIDO" } : { pct: 0, norma: F.id === "NAV" ? `${F.normaBonif}${linea(heredero) === "pareja" ? ". La exención del art. 173.1.b cita a los cónyuges: la pareja estable no figura en el texto (PENDIENTE de comprobar su equiparación)" : ""}` : `Sin bonificación: la ordenanza no está incorporada (${F.normaBonif})`, estado: P })
       : ord.bonif(cB);
     // Bonificación entre 0 y 100 % (art. 108.4 TRLRHL: hasta el 95 % de la cuota; un porcentaje introducido a mano puede venir fuera de rango).
     // Forales: hasta el máximo de su norma (la exención no es bonificación y no se limita).
     const maxB = F && !exento ? F.bonifMax : 1;
+    // Bonificación rogada: requisitos formales de la ordenanza (pedirla en plazo, no transmitir en el plazo fijado, estar al corriente, domiciliar los
+    // tributos periódicos…). Si el despacho indica que no se cumplen, para el inmueble o para un heredero, no se aplica; si no lo ha confirmado, se
+    // aplica y se marca «por confirmar».
+    const noReq = !exento && Number(b.pct) > 0 && (inmueble.bonifRequisitos === false || heredero.bonifRequisitos === false);
+    if (noReq) b = { ...b, pct: 0, norma: `${b.norma}. NO SE APLICA: se ha indicado que no se cumplen los requisitos de la bonificación` };
+    const porConfirmar = !exento && Number(b.pct) > 0 && inmueble.bonifRequisitos !== true && heredero.bonifRequisitos !== true;
     const pct = clamp(Number(b.pct) || 0, 0, maxB);
     if (pct !== (Number(b.pct) || 0)) alertas.push(`Bonificación de ${heredero.nombre} fuera de rango (${(Math.round((Number(b.pct) || 0) * 10000) / 100).toLocaleString("es-ES")} %): se limita a ${(pct * 100).toLocaleString("es-ES")} %${F && maxB < 1 ? ` (máximo de la ${F.norma.split(",")[0]})` : ""}.`);
     const br = r2(cuota * fraccion), bo = r2(br * pct);
-    return { heredero: heredero.nombre, fraccion, cuota: br, bonificacionPct: pct, bonificacion: bo, aIngresar: r2(br - bo), norma: b.norma, estado: b.estado, ...(exento ? { exento: true } : {}), ...(b.bonifPendiente && br > 0 ? { bonifPendiente: true } : {}) };
+    return { heredero: heredero.nombre, fraccion, cuota: br, bonificacionPct: pct, bonificacion: bo, aIngresar: r2(br - bo), norma: b.norma, estado: b.estado, ...(exento ? { exento: true } : {}), ...(b.bonifPendiente && br > 0 ? { bonifPendiente: true } : {}), ...(porConfirmar && br > 0 ? { requisitosPorConfirmar: true } : {}), ...(noReq ? { sinRequisitos: true } : {}) };
   });
   return { municipio: !conOrd && hac ? hac.nombre : ord.nombre, ...(conOrd && ord.sinImpuesto && tipo === 0 ? { sinImpuesto: true } : {}), regimen: F ? F.id : "comun", foral: F ? { id: F.id, nombre: F.nombre, norma: F.norma, tipoMax: F.tipoMax, normaTipo: F.normaTipo, normaCoef: F.normaCoef, estadoCoef: F.estadoCoef, exencion: F.exencion ? F.exencion.norma : null, normaBonif: F.normaBonif, bonifMax: F.bonifMax, url: F.url } : null, tipo, estadoTipo, fuenteTipo, fuenteCoef, hacienda: hac ? { ine: hac.ine, nombre: hac.nombre, red: hac.red, fuente: HACIENDA_IIVTNU_FUENTE } : null, coeficiente: coef, notaCoef, normaCoef: legal.norma, estadoCoef: legal.estado, baseObjetiva: baseObj, baseReal, metodo, base, cuota, noSujeto, porTitular, alertas, total: r2(porTitular.reduce((s, x) => s + x.aIngresar, 0)) };
 }

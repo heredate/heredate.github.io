@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610171511">
+<meta name="hereda-version" content="202610181555">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
@@ -1018,7 +1018,7 @@ button.card[data-sec="estrategia"] b.num + br + .tag{margin-top:6px}
 .bottombar .inner{max-width:640px;margin:0 auto;padding:0}
 
 /* ───────── Barra de pestañas (móvil) ───────── */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--canvas-2) 80%,transparent);-webkit-backdrop-filter:saturate(170%) blur(22px);backdrop-filter:saturate(170%) blur(22px);border-top:.5px solid var(--hair);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--canvas-2) 92%,transparent);-webkit-backdrop-filter:saturate(170%) blur(22px);backdrop-filter:saturate(170%) blur(22px);border-top:.5px solid var(--hair);padding-bottom:env(safe-area-inset-bottom)}
 .tabbar .inner{display:grid;grid-template-columns:repeat(5,1fr);height:var(--tab);max-width:600px;margin:0 auto}
 .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;font-weight:500;color:var(--label-3)}
 .tabbar button svg{width:23px;height:23px}
@@ -4312,6 +4312,34 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .rvd-ref.on{box-shadow:inset 0 0 0 1.5px var(--brand);background:var(--brand-tint)}
 .rvd-ref:hover:not(.on){background:var(--hover)}
 
+/* Completar el expediente: una pregunta por pantalla (preguntas.js) */
+.pq-panel{width:min(720px,100%);height:auto;max-height:min(760px,100%)}
+.pq-cuerpo{overflow:auto;padding:24px 28px 20px;display:flex;flex-direction:column;gap:14px}
+.pq-texto{margin:0;font-size:14.5px;line-height:1.55;color:var(--ink-2)}
+.pq-form label{display:block;font:600 12.5px/1.3 var(--font-sans);color:var(--ink-3);margin-bottom:6px}
+.pq-fila{display:flex;gap:8px;flex-wrap:wrap}.pq-fila input,.pq-fila select{flex:1 1 180px;min-width:0;height:42px;padding:0 12px;border-radius:var(--r-ctl);border:1px solid var(--border-2);background:var(--surface);font:500 15px/1 var(--font-sans);color:var(--ink-1)}
+.pq-ops{display:grid;gap:8px}
+.pq-op{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:12px 14px;border-radius:var(--r-ctl);border:1px solid var(--border);background:var(--surface);cursor:pointer;font:600 15px/1.35 var(--font-sans);color:var(--ink-1)}
+.pq-op small{font:400 13px/1.45 var(--font-sans);color:var(--ink-3)}.pq-op:hover,.pq-op:focus-visible{border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 14%,transparent)}
+.pq-bienes{display:flex;flex-direction:column;gap:10px;align-items:flex-start}.pq-bienes .pq-form{width:100%}
+.pq-lista{list-style:none;margin:0;padding:0;width:100%;display:grid;gap:6px}.pq-lista li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r-ctl);background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}.pq-lista li span{flex:1}
+.pq-res{display:flex;gap:28px;justify-content:center;margin:4px 0}.pq-res span{display:flex;flex-direction:column;align-items:center}.pq-res small{font-size:12.5px;color:var(--ink-3)}.pq-res b{font:650 20px/1.3 var(--font-sans);color:var(--ink-1)}
+.pq-entrada{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:14px 18px;border-left:3px solid var(--brand)}.pq-entrada p{margin:2px 0 0}
+@media (max-width:860px){.pq-cuerpo{padding:18px 16px}.pq-entrada{flex-direction:column;align-items:stretch}}
+/* v2.7 · requisitos de la bonificación de la plusvalía */
+.plr{margin-top:14px}
+.plr-e{display:block;font-size:13px;margin:4px 0 8px}
+.plr-e.ok{color:var(--green,#1e7a46)}.plr-e.no{color:var(--red,#b42318)}.plr-e.q{color:var(--warning,#9a6700)}
+.plr-l{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px;line-height:1.45}
+.plr-l li{display:flex;gap:8px;align-items:flex-start}
+.plr-i{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--label2,#666)}
+.plr-i svg{width:12px;height:12px}
+.plr-i.ok{background:color-mix(in srgb,var(--green,#1e7a46) 15%,transparent);color:var(--green,#1e7a46)}
+.plr-i.no{background:color-mix(in srgb,var(--red,#b42318) 15%,transparent);color:var(--red,#b42318)}
+.plr-i.q{background:color-mix(in srgb,var(--warning,#9a6700) 15%,transparent);color:var(--warning,#9a6700)}
+.plr-sn{white-space:nowrap}
+.plr-b{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
 /* ───────── Planificación sucesoria (ronda 12 · planificacion.js). Solo tokens del sistema: sin colores ni sombras nuevas ───────── */
 .psu-intro{font-size:var(--fs-body);color:var(--ink-2);line-height:1.55;margin:10px 2px 18px;max-width:68ch}
 .psu-lista .row .t small{color:var(--ink-3)}
@@ -4528,11 +4556,11 @@ html.scn-on,html.scn-on body{overflow:hidden}
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610171511"], ["app", "nucleo/app.js?v=202610171511"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610181555"], ["app", "nucleo/app.js?v=202610181555"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610171511").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610181555").catch(() => {}));
 </script>
 </body>
 </html>
