@@ -2043,14 +2043,16 @@ const ORDENANZAS = {
   } },
   // ── Capitales y grandes municipios andaluces (investigación 28-09-2026) ──
 
-  SEVILLA: { nombre: "Sevilla", tipo: 0.2653, estadoTipo: P, // 26,53 % según 4 fuentes secundarias 2026; texto 2022 decía 26,8 %. Web oficial ilegible.
+  SEVILLA: { nombre: "Sevilla", tipo: 0.2653, estadoTipo: V, // 26,53 %: tipo comunicado al Ministerio de Hacienda (2026) y fuentes de 2026; OF 1.5 IIVTNU
     bonif(c) {
-      const norma = "OF de medidas de solidaridad social (Sevilla), bonificación del IIVTNU por herencia — requisitos pendientes de comprobar en el texto oficial";
-      if (!DAC(c.heredero)) return { pct: 0 };
-      if (c.caudalTotal > 500000) return { pct: 0, norma: norma + " (caudal > 500.000 €)", estado: P };
-      if (c.inmueble.esViviendaHabitual) { const s = c.inmueble.valorCatastralSuelo; return { pct: s <= 10000 ? 0.95 : s <= 20000 ? 0.50 : s <= 50000 ? 0.30 : 0, norma: norma + " (vivienda habitual; mantener 3 años)", estado: P }; }
-      if (c.inmueble.esLocalAfecto) return { pct: 0.40, norma: norma + " (local afecto)", estado: P };
-      return { pct: 0.10, norma: norma + " (otros inmuebles urbanos)", estado: P };
+      // Art. 12.3-12.8 OF 1.5 IIVTNU Sevilla (texto 2024, modificación definitiva 22/12/2023; 2026 sin cambios según fuentes): desde 2024 la bonificación
+      // está en la propia ordenanza del IIVTNU (la ordenanza de medidas de solidaridad social se derogó)
+      const n = "art. 12.3 OF 1.5 IIVTNU Sevilla";
+      if (!DAC(c.heredero)) return { pct: 0, norma: n + ": descendientes, cónyuge y ascendientes", estado: V };
+      if (c.caudalTotal > 500000) return { pct: 0, norma: n + ": solo si el valor total de la herencia no supera 500.000 € (art. 12.4)", estado: V };
+      if (c.inmueble.esViviendaHabitual) { const s = c.inmueble.valorCatastralSuelo; const p = s <= 10000 ? 0.95 : s <= 20000 ? 0.50 : s <= 50000 ? 0.30 : 0.10; return { pct: p, norma: n + `: vivienda habitual del causante (2 años de padrón), ${s > 50000 ? "suelo de más de 50.000 €: 10 % como «otros inmuebles» (letra e; confirmar)" : "95/50/30 % según el valor catastral del suelo (10.000, 20.000 y 50.000 €)"}; mantener 3 años; rogada en el plazo de declaración`, estado: s > 50000 ? P : V }; }
+      if (c.inmueble.esLocalAfecto) return { pct: 0.40, norma: n + ".d: 40 % inmueble afecto a la actividad económica; mantenerlo afecto 3 años; rogada", estado: V };
+      return { pct: 0.10, norma: n + ".e: 10 % otros inmuebles del causante; rogada en el plazo de declaración", estado: V };
     } },
   CORDOBA: { nombre: "Córdoba", tipo: 0.2752, estadoTipo: V,
     coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 8 OF 306 (propios)
@@ -2113,8 +2115,8 @@ const ORDENANZAS = {
   // ── Capitales de provincia y grandes municipios del resto de España (investigación 28-09-2026) ──
   // Galicia, Asturias, Cantabria, País Vasco, Navarra, La Rioja, Castilla y León
   A_CORUNA: { nombre: "A Coruña", ccaa: "Galicia", tipo: 0.25, estadoTipo: P, bonif(c) {
-    const h = c.heredero, n = "art. 7 OF nº 53 A Coruña (texto 2022; tipo del 25 % según prensa 2024)";
-    if (!DAC(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo vivienda habitual del causante", estado: P };
+    const h = c.heredero, n = "art. 7 OF nº 53 A Coruña (texto 2022; tipo del 25 % comunicado al Ministerio de Hacienda para 2026)";
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: n + ": solo vivienda habitual del causante", estado: P };
     if (h.ingresosAnuales == null) return { pct: 0.20, norma: n + ": 95/70/30/20 % según renta de la unidad familiar frente al IPREM; sin ingresos informados se aplica el tramo mínimo", estado: P };
     const k = h.ingresosAnuales / IPREM_ANUAL_14P;
     return { pct: k <= 1 ? 0.95 : k <= 2 ? 0.70 : k <= 3 ? 0.30 : 0.20, norma: n + ": vivienda habitual del causante; 95/70/30/20 % según renta frente al IPREM (1, 2 y 3 veces); rogada", estado: P };
@@ -2209,9 +2211,11 @@ const ORDENANZAS = {
     if (h.ingresosAnuales == null) return { pct: 0, norma: n + ": 90 % con ingresos brutos anuales hasta 21.957,50 € (dato no informado)", estado: P };
     return { pct: h.ingresosAnuales <= 21957.5 ? 0.90 : 0, norma: n + ": 90 % con ingresos brutos anuales hasta 21.957,50 € y vivienda habitual del heredero", estado: P };
   } },
-  LOGRONO: { nombre: "Logroño", ccaa: "La Rioja", tipo: 0.30, estadoTipo: P, bonif(c) {
+  LOGRONO: { nombre: "Logroño", ccaa: "La Rioja", tipo: 0.30, estadoTipo: P,
+    coef: [0.14, 0.14, 0.13, 0.13, 0.15, 0.17, 0.18, 0.19, 0.18, 0.14, 0.11, 0.09, 0.08, 0.08, 0.08, 0.08, 0.09, 0.12, 0.16, 0.21, 0.37], // coeficientes propios 2026 comunicados al Ministerio de Hacienda
+    bonif(c) {
     if (!DAC(c.heredero)) return { pct: 0, norma: "art. 4 bis OF nº 6 Logroño", estado: P };
-    return { pct: escalon(c.inmueble.valorCatastralTotal, [[50000, 0.80], [100000, 0.65], [150000, 0.50], [200000, 0.35], [300000, 0.20]]), norma: "art. 4 bis.1 OF nº 6 Logroño: 80/65/50/35/20 % según valor catastral total. Si el heredero lleva 10 años empadronado en la vivienda y la mantiene 3 más, 95 %: introducirlo a mano. Coeficientes propios de 2026 (máximos −7,5 %) no localizados", estado: P };
+    return { pct: escalon(c.inmueble.valorCatastralTotal, [[50000, 0.80], [100000, 0.65], [150000, 0.50], [200000, 0.35], [300000, 0.20]]), norma: "art. 4 bis.1 OF nº 6 Logroño: 80/65/50/35/20 % según valor catastral total. Si el heredero lleva 10 años empadronado en la vivienda y la mantiene 3 más, 95 %: introducirlo a mano. Coeficientes propios de 2026 (los comunicados a Hacienda)", estado: P };
   } },
   BURGOS: { nombre: "Burgos", ccaa: "Castilla y León", tipo: 0.21, estadoTipo: P, bonif(c) {
     return DAC(c.heredero) ? manual(c, "OF nº 503 Burgos (BOP 08/01/2026, no cotejado): el texto de 2022 daba 60 % entre padres e hijos y 30 % al cónyuge. Porcentaje introducido a mano") : { pct: 0, norma: "OF nº 503 Burgos", estado: P };
@@ -2230,8 +2234,8 @@ const ORDENANZAS = {
     const h = c.heredero, ok = linea(h) === "conyuge" || (linea(h) === "desc" && h.edad != null && h.edad < 18);
     return { pct: ok ? 0.95 : 0, norma: "art. 14 OF 1.5 Zamora: 95 % solo al cónyuge y a descendientes menores de edad. Tipo no localizado: 30 % provisional", estado: P };
   } },
-  VALLADOLID: { nombre: "Valladolid", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: P, bonif(c) {
-    return { pct: DAC(c.heredero) ? 0.95 : 0, norma: "OF IIVTNU Valladolid (BOP 15/12/2025): 95 % a ascendientes, descendientes y cónyuge; demás requisitos y tipo no localizados", estado: P };
+  VALLADOLID: { nombre: "Valladolid", ccaa: "Castilla y León", tipo: 0.2176, estadoTipo: P, bonif(c) { // tipo 21,76 %: el comunicado al Ministerio de Hacienda (2026); texto vigente no leído
+    return { pct: DAC(c.heredero) ? 0.95 : 0, norma: "OF IIVTNU Valladolid: 95 % en todas las transmisiones por causa de muerte a descendientes, ascendientes, adoptados y cónyuge, sin requisito de vivienda ni límite de valor; se pide con la autoliquidación (texto de 2011 y Guía del contribuyente 2026 del Ayuntamiento)", estado: P };
   } },
   SALAMANCA: { nombre: "Salamanca", ccaa: "Castilla y León", tipo: 0.30, estadoTipo: V, bonif(c) {
     const h = c.heredero, n = "art. 6.6 OF nº 3 Salamanca";
@@ -2274,10 +2278,12 @@ const ORDENANZAS = {
     if (!DAC1(c.heredero) || !c.inmueble.esViviendaHabitual) return { pct: 0, norma: "OF IIVTNU Albacete: primer grado o cónyuge; causante empadronado 2 años en la vivienda", estado: P };
     return { pct: 0.95, norma: "OF IIVTNU Albacete: 95 %; mantener 3 años; solicitud en 6 meses (artículo no localizado)", estado: P };
   } },
-  ALCALA_DE_HENARES: { nombre: "Alcalá de Henares", ccaa: "Comunidad de Madrid", tipo: 0.26, estadoTipo: P, bonif(c) {
-    const h = c.heredero, n = "OF nº 7 Alcalá de Henares";
-    if (!DACP(h) || !c.inmueble.esViviendaHabitual || h.convivio2anios !== true || c.inmueble.valorCatastralSuelo > 100000) return { pct: 0, norma: n + ": vivienda habitual, convivencia 2 años y valor catastral del terreno hasta 100.000 € (alcance del límite por confirmar)", estado: P };
-    return { pct: 0.95, norma: n + ": 95 %; mantener 4 años; solicitud en 6 meses", estado: P };
+  ALCALA_DE_HENARES: { nombre: "Alcalá de Henares", ccaa: "Comunidad de Madrid", tipo: 0.24, estadoTipo: P, bonif(c) { // 24 % desde 2025 (BOCM 26/12/2024; tipo comunicado a Hacienda 2026)
+    const h = c.heredero, n = "OF nº 7 Alcalá de Henares", s = Number(c.inmueble.valorCatastralSuelo) || 0;
+    if (!DACP(h) || !c.inmueble.esViviendaHabitual || h.convivio2anios !== true) return { pct: 0, norma: n + ": vivienda habitual del causante con convivencia y empadronamiento conjunto de 2 años", estado: P };
+    // El 95 % alcanza los primeros 100.000 € de valor catastral del terreno; lo que exceda se liquida sin bonificación
+    const p = s > 100000 ? Math.round(0.95 * (100000 / s) * 10000) / 10000 : 0.95;
+    return { pct: p, norma: n + `: 95 %${s > 100000 ? " sobre los primeros 100.000 € de valor catastral del terreno (" + (p * 100).toLocaleString("es-ES", { maximumFractionDigits: 2 }) + " % efectivo)" : ""}; mantener 4 años; rogada en 6 meses prorrogables otros 6`, estado: P };
   } },
   MOSTOLES: { nombre: "Móstoles", ccaa: "Comunidad de Madrid", tipo: 0.25, estadoTipo: V, bonif(c) {
     // Art. 8 (25 %) y art. 10 OF IIVTNU Móstoles (BOCM nº 294 de 11/12/2023, corrección BOCM nº 310 de 30/12/2023); arts. 6 y 10.2 retocados en BOCM 30/12/2024 y 22/12/2025 sin cambiar tipo ni porcentaje
@@ -2294,12 +2300,18 @@ const ORDENANZAS = {
     const l = linea(c.heredero);
     return { pct: (l === "conyuge" || l === "desc") && c.inmueble.esViviendaHabitual ? 0.95 : 0, norma: "OF IIVTNU Badajoz (BOP 01/07/2022): 95 % vivienda habitual a hijos y cónyuge; requisitos no cotejados", estado: P };
   } },
-  ZARAGOZA: { nombre: "Zaragoza", ccaa: "Aragón", tipo: 0.28, estadoTipo: P, bonif(c) {
-    const n = "OF nº 9 Zaragoza (2026)";
-    if (!DACP(c.heredero)) return { pct: 0, norma: n, estado: P };
-    if (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) return { pct: 0.95, norma: n + ": 95 % vivienda habitual sin límite de valor y locales afectos; rogada", estado: P };
-    if (c.inmueble.valorCatastralSuelo > 200000) return { pct: 0, norma: n + ": suelo superior a 200.000 €", estado: P };
-    return { pct: 0.65, norma: n + ": 65 % otros inmuebles con suelo hasta 200.000 €; una segunda vivienda, garaje o trastero llega al 95 % (ajustar a mano)", estado: P };
+  ZARAGOZA: { nombre: "Zaragoza", ccaa: "Aragón", tipo: 0.28, estadoTipo: V, bonif(c) {
+    // OF nº 9 Zaragoza 2026 (BOPZ 06/02/2026): 95 % vivienda habitual sin límite de valor y terrenos afectos a la actividad (mantener 2 años); además,
+    // UN único inmueble distinto (el de más valor) con valor catastral del suelo hasta 200.000 €: 95 % si es vivienda, garaje o trastero, 65 % si es otro
+    const n = "OF nº 9 Zaragoza (BOPZ 06/02/2026)", i = c.inmueble;
+    if (!DACP(c.heredero)) return { pct: 0, norma: n + ": cónyuge o pareja registrada, descendientes y ascendientes", estado: V };
+    if (i.esViviendaHabitual || i.esLocalAfecto) return { pct: 0.95, norma: n + ": 95 % vivienda habitual sin límite de valor o terrenos afectos a la actividad (mantener 2 años); rogada", estado: V };
+    if (i.valorCatastralSuelo > 200000) return { pct: 0, norma: n + ": el inmueble adicional bonificado debe tener un valor catastral del suelo hasta 200.000 €", estado: V };
+    const O = Array.isArray(i.otrosMuni) ? i.otrosMuni.filter((o) => !o.viv && !o.afecto) : null, v = Number(i.valorCatastralTotal) || 0;
+    if (O && O.some((o) => o.vc > v)) return { pct: 0, norma: n + ": solo se bonifica un inmueble además de la vivienda habitual, el de más valor; aquí hay otro de valor mayor", estado: V };
+    if (O && O.some((o) => !o.vc)) return manual(c, n + ": un solo inmueble además de la vivienda habitual (el de más valor), 95 % vivienda, garaje o trastero y 65 % los demás; falta el valor catastral de otro inmueble. Porcentaje introducido a mano");
+    const residencial = i.esAnejo || i.usoResidencial === true || /vivienda|piso|casa|chalet|apartamento|garaje|aparcamiento|trastero/i.test(String(i.descripcion || ""));
+    return { pct: residencial ? 0.95 : 0.65, norma: n + `: inmueble adicional (el de más valor, suelo hasta 200.000 €): ${residencial ? "95 % vivienda, garaje o trastero" : "65 % (no es vivienda, garaje ni trastero)"}; rogada`, estado: V };
   } },
   HUESCA: { nombre: "Huesca", ccaa: "Aragón", tipo: 0, tipoFecha: (f) => (f >= "2026-01-01" ? 0 : 0.30), estadoTipo: V,
     alerta: (f) => (f >= "2026-01-01" ? "Huesca suprimió el impuesto para devengos desde el 1 de enero de 2026: no hay plusvalía que pagar." : "Huesca: fallecimiento anterior a 2026, rige la ordenanza anterior (no cotejada). Tipo provisional del 30 %."),
@@ -2308,8 +2320,11 @@ const ORDENANZAS = {
     coef: [0.14, 0.13, 0.14, 0.14, 0.16, 0.17, 0.16, 0.12, 0.10, 0.15, 0.08, 0.08, 0.08, 0.08, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // art. 7.4 (el de 9 años puede ser errata)
     bonif(c) { return { pct: DACP(c.heredero) ? 0.95 : 0, norma: "art. 5.1 OF nº 6 Teruel: 95 % en cualquier terreno urbano; no exige vivienda habitual", estado: V }; } },
   // Cataluña, Comunitat Valenciana, Región de Murcia, Illes Balears, Canarias, Ceuta y Melilla
-  BARCELONA: { nombre: "Barcelona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P, bonif(c) {
-    const h = c.heredero, ok = DAC(h) || (linea(h) === "pareja" && h.convivio2anios === true);
+  BARCELONA: { nombre: "Barcelona", ccaa: "Cataluña", tipo: 0.30, estadoTipo: P,
+    coef: [0.05, 0.15, 0.14, 0.14, 0.16, 0.18, 0.19, 0.20, 0.19, 0.15, 0.12, 0.10, 0.09, 0.09, 0.09, 0.09, 0.10, 0.13, 0.17, 0.23, 0.40], // coeficientes propios 2026 comunicados al Ministerio de Hacienda (art. 7 OF 1.3, modificado para 2025)
+    bonif(c) {
+    // Art. 9 OF 1.3 (BOPB 17/02/2023; sin cambios para 2026): cónyuge, descendientes y ascendientes, y también quien conviviera con el causante los 2 años anteriores
+    const h = c.heredero, ok = DAC(h) || h.convivio2anios === true;
     if (!ok || !(c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto)) return { pct: 0, norma: "art. 9 OF 1.3 Barcelona", estado: P };
     return { pct: 0.95, norma: `art. 9.${c.inmueble.esViviendaHabitual ? "1 OF 1.3 Barcelona: vivienda habitual del causante; mantener 3 años" : "2 OF 1.3 Barcelona: local afecto; mantener la actividad 5 años"}; rogada, 6+6 meses`, estado: P };
   } },
@@ -2345,8 +2360,9 @@ const ORDENANZAS = {
   ELCHE: { nombre: "Elche", ccaa: "Comunitat Valenciana", tipo: 0.30, estadoTipo: P, bonif(c) {
     return { pct: DAC(c.heredero) && c.inmueble.esViviendaHabitual ? 0.50 : 0, norma: "art. 8.A OF IIVTNU Elche (texto 2020): 50 % en la vivienda habitual del causante (2 años de padrón)", estado: P };
   } },
-  MURCIA: { nombre: "Murcia", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: P, bonif(c) {
-    return { pct: DAC(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) ? 0.95 : 0, norma: "Ordenanza 3.5 Murcia: 95 % vivienda habitual o local del causante con 2 años de padrón (fuente secundaria); tipo por confirmar", estado: P };
+  MURCIA: { nombre: "Murcia", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: V, bonif(c) {
+    // Ordenanza 3.5 (BORM 28/05/2022; la modificación de 2024 solo cambió el art. 4.2)
+    return { pct: DAC(c.heredero) && (c.inmueble.esViviendaHabitual || c.inmueble.esLocalAfecto) ? 0.95 : 0, norma: "Ordenanza 3.5 Murcia: 95 % vivienda habitual del causante (2 años de padrón) o local afecto, a cónyuge, descendientes y ascendientes; sin plazo de mantenimiento; rogada, en el plazo de declaración (6 meses prorrogables a 1 año)", estado: V };
   } },
   CARTAGENA: { nombre: "Cartagena", ccaa: "Región de Murcia", tipo: 0.30, estadoTipo: V, bonif(c) {
     if (!DAC1(c.heredero)) return { pct: 0, norma: "art. 10 OF IIVTNU Cartagena", estado: V };
