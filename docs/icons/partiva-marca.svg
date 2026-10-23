@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Partiva">
+  <title>Partiva</title>
+  <!-- Logo A · Cuotas (13-10-2026): la P formada por las partes del reparto, un fuste y una panza partida en dos cuotas. Azul notarial y agua. -->
+  <rect width="64" height="64" rx="14" fill="#13243F"/>
+  <g transform="translate(14.75 8) scale(0.75)">
+    <rect x="6" y="6" width="12" height="52" rx="2" fill="#FFFFFF"/>
+    <path d="M22 6 A18 18 0 0 1 40 24 L22 24 Z" fill="#8DBBBE"/>
+    <path d="M22 28 L40 28 A18 18 0 0 1 22 46 Z" fill="#FFFFFF"/>
+  </g>
+</svg>

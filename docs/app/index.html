@@ -4,28 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610200546">
+<meta name="hereda-version" content="202610231423">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
      clave del despacho; lector-ia.js). Ningún otro tercero. -->
 <meta http-equiv="Content-Security-Policy" content="connect-src 'self' data: blob: https://api.anthropic.com; img-src 'self' data: blob:; object-src 'none'; base-uri 'self'">
-<meta name="description" content="Hereda+: software de sucesiones para despachos de abogados.">
+<meta name="description" content="Partiva: software de sucesiones para despachos de abogados.">
 <meta name="theme-color" content="#F5F6F8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Hereda+">
+<meta name="apple-mobile-web-app-title" content="Partiva">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" type="image/svg+xml" href="/icons/hereda-marca.svg">
+<link rel="icon" type="image/svg+xml" href="/icons/partiva-marca.svg">
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<title>Hereda+</title>
+<title>Partiva</title>
 </head>
 <body>
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="preload" href="/fonts/source-serif-4-var-latin.woff2" as="font" type="font/woff2" crossorigin><style>@font-face{font-family:"Hereda Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Serif";font-style:normal;font-weight:450 650;font-display:swap;src:url(/fonts/source-serif-4-var-latin.woff2) format("woff2")}@font-face{font-family:"Hereda Sans Fallback";src:local("Arial"),local("Helvetica Neue"),local("Segoe UI");ascent-override:90.2%;descent-override:22.48%;line-gap-override:0%;size-adjust:107.4%}@font-face{font-family:"Hereda Serif Fallback";src:local("Georgia"),local("Times New Roman");ascent-override:96%;descent-override:31%;line-gap-override:0%;size-adjust:99%}</style>
 <style>
-/* ───────── Hereda+ · sistema de diseño v8 «Despacho» ─────────
+/* ───────── Partiva · sistema de diseño v8 «Despacho» ─────────
    Un único juego de tokens. Los nombres semánticos (--bg, --surface, --ink-1, --brand, --success…) son la fuente;
    los nombres históricos (--canvas, --panel, --label, --accent, --gold, --green…) son alias para los módulos.
    Tema grafito en :root; tema claro (el habitual en despacho) en :root[data-theme="light"].
@@ -113,12 +113,12 @@
   --c1:#1D4ED8; --c2:#076A63; --c3:#4652C2; --c4:#A84A08; --c5:#667085; --c6:#A16207; --c7:#7A5AF8;
   --paper:#FFFFFF; --paper-ink:#101828;
   --on-ink:#FFFFFF;
-  --logo-bg:#1D4ED8;
+  --logo-bg:#13243F; --logo-acc:#8DBBBE; /* azul notarial y agua de la marca Partiva (13-10-2026) */
   /* Barra lateral clara: blanca con filete gris, tinta grafito, activo en azul tenue con el texto en azul */
   --side-bg:#FFFFFF; --side-ink:#101828; --side-ink-2:#344054; --side-ink-3:#5D6679; --side-ink-4:#98A2B3;
   --side-line:#EAECF0; --side-hover:rgba(16,24,40,.04); --side-active:rgba(29,78,216,.08); --side-field:#F2F4F7;
   --side-accent:#1D4ED8; --side-focus:#1D4ED8; --side-btn:#1D4ED8; --side-on-btn:#FFFFFF; --side-btn-hover:#1A43BC;
-  --side-logo-bg:#1D4ED8; --side-logo-ink:#FFFFFF; --side-logo-acc:#9FE3D9;
+  --side-logo-bg:#13243F; --side-logo-ink:#FFFFFF; --side-logo-acc:#8DBBBE;
   --ink-title:#101828;
   --tint-a:10%; --field-a:5%;
   color-scheme:light;
@@ -3914,7 +3914,7 @@ html:root .page .rec-h .stepper button.done{background:var(--surface-2);color:va
 html:root .page .rec-h .stepper button.done i{color:var(--success)}
 html:root .tnode .s.tax,html:root .tnode.cau .s.tax{fill:var(--ink-1)}
 
-/* ───────────── Hereda+ · producto: despacho (socio), auditoría, búsqueda, tareas y acciones masivas ─────────────
+/* ───────────── Partiva · producto: despacho (socio), auditoría, búsqueda, tareas y acciones masivas ─────────────
    Solo piezas nuevas; todo lo demás reutiliza las clases de la app (card, kpi, grid-t, rd-row, st, seg, sectitle…). */
 
 /* Selector «Soy» (barra lateral y cabecera del panel) */
@@ -4268,7 +4268,7 @@ html.scn-on,html.scn-on body{overflow:hidden}
 
 /* ── Revisión de dudas, una a una (dudas.js) ── */
 .rvd-entrada{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px;padding:14px 16px;border-radius:var(--r-panel);background:var(--surface);box-shadow:inset 0 0 0 1px var(--border),inset 3px 0 0 var(--warning)}
-.rvd-e-t{display:flex;flex-direction:column;gap:2px;min-width:0}.rvd-e-t b{font-size:14.5px;color:var(--ink-1)}.rvd-e-t span{font-size:13px;color:var(--ink-3)}
+.rvd-entrada-ok{box-shadow:inset 0 0 0 1px var(--border),inset 3px 0 0 var(--success)}.rvd-todos{align-self:flex-start;margin-top:6px;font-size:13px}.rvd-e-t{display:flex;flex-direction:column;gap:2px;min-width:0}.rvd-e-t b{font-size:14.5px;color:var(--ink-1)}.rvd-e-t span{font-size:13px;color:var(--ink-3)}
 .rvd-chip{display:inline-flex;align-items:center;margin-left:8px;padding:1px 7px;border-radius:5px;font:500 11.5px/1.35 var(--font-sans);background:var(--surface-2);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--border);vertical-align:1px}
 .rvd-chip::before{content:"";width:6px;height:6px;border-radius:50%;margin-right:5px;background:var(--success)}.rvd-chip-no::before{background:var(--ink-4)}.rvd-chip-corregido::before{background:var(--brand)}
 .rvd{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px}
@@ -4584,15 +4584,15 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .csn-ctx{border-top:.5px solid var(--hair)}
 
 </style>
-<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><path class="logo-bg" d="M100.00 50.00 L99.92 68.84 L99.69 74.82 L99.31 79.12 L98.77 82.55 L98.07 85.43 L97.20 87.89 L96.17 90.03 L94.94 91.90 L93.53 93.53 L91.90 94.94 L90.03 96.17 L87.89 97.20 L85.43 98.07 L82.55 98.77 L79.12 99.31 L74.82 99.69 L68.84 99.92 L50.00 100.00 L31.16 99.92 L25.18 99.69 L20.88 99.31 L17.45 98.77 L14.57 98.07 L12.11 97.20 L9.97 96.17 L8.10 94.94 L6.47 93.53 L5.06 91.90 L3.83 90.03 L2.80 87.89 L1.93 85.43 L1.23 82.55 L0.69 79.12 L0.31 74.82 L0.08 68.84 L0.00 50.00 L0.08 31.16 L0.31 25.18 L0.69 20.88 L1.23 17.45 L1.93 14.57 L2.80 12.11 L3.83 9.97 L5.06 8.10 L6.47 6.47 L8.10 5.06 L9.97 3.83 L12.11 2.80 L14.57 1.93 L17.45 1.23 L20.88 0.69 L25.18 0.31 L31.16 0.08 L50.00 0.00 L68.84 0.08 L74.82 0.31 L79.12 0.69 L82.55 1.23 L85.43 1.93 L87.89 2.80 L90.03 3.83 L91.90 5.06 L93.53 6.47 L94.94 8.10 L96.17 9.97 L97.20 12.11 L98.07 14.57 L98.77 17.45 L99.31 20.88 L99.69 25.18 L99.92 31.16Z"/><path class="logo-m" d="M17.5 26h11v48h-11ZM44.5 26h11v48h-11ZM28.5 46.5H44.5v7H28.5Z"/><path class="logo-p" d="M55.5 46.5H83.5v7H55.5ZM68.5 38.5h7v23h-7Z"/></svg></span>Hereda+</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
+<div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect class="logo-bg" width="64" height="64" rx="14"/><g transform="translate(14.75 8) scale(0.75)"><rect class="logo-m" x="6" y="6" width="12" height="52" rx="2"/><path class="logo-p" d="M22 6A18 18 0 0 1 40 24H22Z"/><path class="logo-m" d="M22 28H40A18 18 0 0 1 22 46Z"/></g></svg></span>Partiva</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610200546"], ["app", "nucleo/app.js?v=202610200546"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610231423"], ["app", "nucleo/app.js?v=202610231423"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610200546").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610231423").catch(() => {}));
 </script>
 </body>
 </html>

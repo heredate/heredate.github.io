@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#F5F6F8">
-<title>Datos para la herencia · Hereda+</title>
+<title>Datos para la herencia · Partiva</title>
 <link rel="icon" href="/favicon.png">
 <style>
 /* Tipografía de la casa (autoalojada, OFL): Inter para el texto y Source Serif 4 para los títulos. Sin ellas (archivo abierto
@@ -391,7 +391,7 @@ const avP = (q) => (q.nombre || "").trim() ? esc(ini(q.nombre)) : I.person;
 let ultimoPaso = null, deshacer = null, tToast;
 
 function lateral(p) {
-  const firm = `<div class="top"><span class="mono" aria-hidden="true">${esc(H.d ? ini(H.d, true) : "H+")}</span><span class="firm"><b>${esc(H.d || "Hereda+")}</b><small>${H.r ? "Expediente " + esc(H.r) : "Datos para la herencia"}</small></span></div>`;
+  const firm = `<div class="top"><span class="mono" aria-hidden="true">${esc(H.d ? ini(H.d, true) : "H+")}</span><span class="firm"><b>${esc(H.d || "Partiva")}</b><small>${H.r ? "Expediente " + esc(H.r) : "Datos para la herencia"}</small></span></div>`;
   const steps = PASOS.slice(1).map((t, j) => { const i = j + 1, ok = i < p, cur = i === p;
     const inner = `<i aria-hidden="true">${ok ? I.ok : i}</i><span>${t}</span>`;
     return `<li class="${ok ? "ok" : ""}${cur ? " cur" : ""}">${ok && p < 7 ? `<button type="button" class="st" data-go="${i}"><span class="sr">Volver a </span>${inner}</button>` : `<span class="st"${cur ? ' aria-current="step"' : ""}>${inner}</span>`}</li>`; }).join("");
@@ -512,7 +512,7 @@ function vista() {
   document.getElementById("app").innerHTML = `${firm}
     ${p > 0 && p < 7 ? `<div class="prog"><div class="seg" aria-hidden="true">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= p ? "on" : ""}"></i>`).join("")}</div><div class="meta"><span>Paso ${p} de 6</span><span class="saved">${I.ok}Guardado</span></div></div>` : ""}
     <div class="stage${anim ? " enter" : ""}">${h}</div>
-    <p class="foot">Hecho con Hereda+, el programa de herencias de tu despacho.</p>`;
+    <p class="foot">Hecho con Partiva, el programa de herencias de tu despacho.</p>`;
   const bar = document.getElementById("bar"); bar.classList.toggle("one", p === 0);
   const atras = (n, t = "Atrás") => `<button type="button" class="btn sec" data-go="${n}">${I.left}<span>${t}</span></button>`;
   if (p === 0) bar.innerHTML = `<button type="button" class="btn" data-go="1">${S.personas.length || S.bienes.length || c.fecha ? "Continuar" : "Empezar"}${I.right}</button>`;
