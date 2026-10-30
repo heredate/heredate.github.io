@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="hereda-version" content="202610231528">
+<meta name="hereda-version" content="202610301001">
 <!-- r9 · datos.js: la app publicada solo puede conectarse con su propio origen (sin analítica ni envíos a terceros, aunque alguien los añadiera).
      connect-src cubre fetch, XHR, sendBeacon, WebSocket y EventSource; img-src, los píxeles de seguimiento. Prueba: tools/qa/datos.mjs
      r14 · única excepción: la API de Anthropic, para la lectura con IA y las consultas con cita (opcionales, desactivadas por defecto, con la
@@ -4583,16 +4583,87 @@ html.scn-on,html.scn-on body{overflow:hidden}
 .csn-nota,.csn-fuente{margin:6px 0}
 .csn-ctx{border-top:.5px solid var(--hair)}
 
+/* ── Fusión 30-10-2026: estilos de la rama de octubre (G01, G03-G09: datos registrales, inventario, régimen económico, declaración de herederos, presentaciones y notificaciones, defensa tributaria, aplazamiento y festivos) · pro.css ── */
+.vf-f4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 8px}
+/* G05 · declaración de herederos (abintestato.js): misma tarjeta de datos que «Listo para firmar» */
+.ab-card{margin-bottom:18px}
+.ab-card .ab-nota{margin:6px 0 0}
+.ab-card .ab-sep{height:10px}
+.ab-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-top:12px}
+/* G07 · defensa tributaria (defensa.js): actos notificados con sus plazos, simulador de tasación pericial y escritos */
+.df-card{padding:14px 18px}
+.df-proc{padding:4px 0 14px;margin-bottom:12px;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-h{display:flex;align-items:flex-start;gap:12px;justify-content:space-between}
+.df-h .t,.df-pl .t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.df-h .t small,.df-pl .t small{color:var(--label-2);font-size:12.5px}
+.df-pls{margin-top:10px;border-radius:10px;background:var(--fill-2);padding:4px 12px}
+.df-pl{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;box-shadow:inset 0 -.5px 0 var(--hair)}
+.df-pl:last-child{box-shadow:none}
+.df-pl .t b{font-size:14px;font-weight:600}
+.df-pl .chip{flex:none}
+.df-av{margin:8px 0 0}
+.df-sim{margin-top:10px;padding:10px 12px;border-radius:10px;box-shadow:inset 0 0 0 .5px var(--hair)}
+.df-sim .kv{margin:8px 0 6px}
+.df-sim .caption{margin:0}
+.df-docs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+@media (max-width:600px){.df-card{padding:12px 14px}.df-h{flex-direction:column}.df-docs .btn{flex:1 1 auto}}
+.vf-f2 + .vf-fl,.vf-f3 + .vf-fl,.vf-f2 + .vf-f2,.vf-f2 + .vf-f3,.vf-f3 + .vf-f2,.vf-f3 + .vf-f3{margin-top:8px}
+  .vf-f4{grid-template-columns:1fr 1fr}
+}
+
+/* ── Fusión 30-10-2026: estilos de la rama de octubre (G01, G03-G09: datos registrales, inventario, régimen económico, declaración de herederos, presentaciones y notificaciones, defensa tributaria, aplazamiento y festivos) · producto.css ── */
+/* G09 · calendario de festivos contado en cada plazo (hoja del trámite) */
+.meta .cal-aviso{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:var(--label-2);font-weight:400}
+/* G06 · Impuestos › Presentaciones y notificaciones · G08 · Aplazamiento (fiscal.js) */
+.imp-sub{margin:0 0 16px;max-width:100%}
+.imp-sub button{white-space:normal}
+.imp-n{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--fill);color:var(--label);font-size:11.5px;line-height:18px;text-align:center}
+.fs-cal{align-items:flex-start}
+.fs-cal > span:last-child{flex:1;min-width:0}
+.fs-muni{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12.5px;color:var(--label-2)}
+.fs-muni select,.fs-estado,.ap-form select,.fs-form select{max-width:100%;height:34px;border-radius:var(--r-sm);border:0;background:var(--fill-2);box-shadow:inset 0 0 0 .5px var(--hair);padding:0 10px;font-size:14px;color:var(--label)}
+.fs-muni select{width:100%;max-width:420px}
+.fs-grupo + .fs-grupo{margin-top:12px}
+.fs-gt{font-size:12.5px;color:var(--label-2);margin:0 2px 6px}
+.fs-ico{flex:none}
+.fs-ico svg{width:15px;height:15px}
+.fs-edit{padding:12px 16px}
+.fs-edit-h b{display:block;font-weight:600;font-size:15px}
+.fs-edit-h small{display:block;font-size:12.5px;color:var(--label-2);margin:2px 0 10px}
+.fs-form{padding:4px 0 12px;margin-top:12px}
+.fs-edit .fs-form{margin-top:0}
+.fs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0}
+.fs-grid .field{border-bottom:.5px solid var(--hair-2)}
+.fs-form .field input,.ap-form .field input{border-bottom:0}
+.fs-acts{display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px 0}
+.fs-proc{padding:14px 0 12px}
+.fs-proc-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:0 16px 12px;flex-wrap:wrap}
+.fs-proc-h .k{font-size:12px;color:var(--label-2)}
+.fs-proc-h h3{font:600 16px/1.3 var(--text);margin:2px 0 3px}
+.fs-proc-h small{font-size:12.5px;color:var(--label-2)}
+.fs-proc .group{box-shadow:none;border-radius:0;border-top:.5px solid var(--hair-2)}
+.fs-proc .row .t small.fs-nota{color:var(--label-3);white-space:normal;margin-top:3px;line-height:1.45}
+.fs-proc .st-sp{width:22px;flex:none}
+.fs-proc.fs-cerrado{opacity:.72}
+.fs-avisos li{font-size:13px;color:var(--label-2)}
+.fs-t td small{max-width:none;white-space:normal}
+.ap-form{padding:4px 0 12px}
+.ap-reg{padding:10px 16px 0;margin:0;line-height:1.5}
+.ap-reg .tag{margin-right:4px}
+.ap-avisos{margin-top:12px;background:var(--panel);border-radius:var(--r);box-shadow:var(--shadow-sm)}
+.ap-t td.num,.ap-t td.mono{color:var(--label)}
+.ap-t tr.ap-tot td{border-bottom:0;background:var(--panel-2)}
+@media (max-width:640px){.fs-proc-h .fs-estado{width:100%}.imp-sub{display:flex}.imp-sub button{padding:6px 10px}.imp-l{display:none}}
 </style>
 <div id="app"><div class="boot" aria-hidden="true"><div class="boot-side"><div class="boot-marca"><span class="logo"><svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect class="logo-bg" width="64" height="64" rx="14"/><g transform="translate(14.75 8) scale(0.75)"><rect class="logo-m" x="6" y="6" width="12" height="52" rx="2"/><path class="logo-p" d="M22 6A18 18 0 0 1 40 24H22Z"/><path class="logo-m" d="M22 28H40A18 18 0 0 1 22 46Z"/></g></svg></span>Partiva</div><span class="skel" style="height:32px"></span><span class="skel" style="height:32px;margin-bottom:22px"></span><span class="skel" style="width:70%"></span><span class="skel" style="width:55%"></span><span class="skel" style="width:62%"></span></div><div class="boot-main"><p class="boot-msg"><b>Abriendo el despacho…</b>Los expedientes y los documentos se guardan en este equipo y no salen de él.</p><span class="skel" style="width:min(560px,90%)"></span><span class="skel b"></span><span class="skel b" style="height:220px"></span></div></div></div>
 <script>
 (function () { var set = function () { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", document.documentElement.dataset.theme === "light" ? "#F5F6F8" : "#0E1117"); }; try { new MutationObserver(set).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] }); } catch (e) {} document.addEventListener("DOMContentLoaded", set); })();
 </script>
-<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610231528"], ["app", "nucleo/app.js?v=202610231528"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
+<script data-nucleo-cargador>(function () { var hecho = false; function cargar() { if (hecho) return; hecho = true; if (typeof HTML_ORIGINAL !== "undefined") return; [["motor", "nucleo/motor.js?v=202610301001"], ["app", "nucleo/app.js?v=202610301001"]].forEach(function (n) { var s = document.createElement("script"); s.src = n[1]; s.async = false; s.setAttribute("data-nucleo", n[0]); document.body.appendChild(s); }); } if (window.requestAnimationFrame) requestAnimationFrame(function () { setTimeout(cargar, 0); }); setTimeout(cargar, 300); })();</script>
 
 
 <script>
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610231528").catch(() => {}));
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js?v=202610301001").catch(() => {}));
 </script>
 </body>
 </html>
