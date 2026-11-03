@@ -201,7 +201,7 @@ const tipoManualNum=(v)=>(v==null||String(v).trim()===""?undefined:Math.min(30,M
 const ineBien=(b)=>b.muniIne||(b.municipio&&b.municipio!=="OTRO"&&typeof MUNI_CLAVES==="object"?MUNI_CLAVES[b.municipio]||"":"");
 function inmueblesMuniExp(x){return(x.bienes||[]).filter((b)=>b.tipo==="vivienda"||b.tipo==="inmueble").map((b)=>({ine:ineBien(b),nombre:b.muniNombre||(ORDENANZAS[b.municipio]||{}).nombre||""})).filter((b)=>b.ine);}
 function datosPlus(x,b,caudal,isd){const lq=isd&&isd.masa.liquidacion&&isd.masa.liquidacion.porBien[b.id];return{municipio:b.municipio||"OTRO",ine:ineBien(b),tipoManual:tipoManualNum(b.tipoManual),bonifManual:Math.min(100,Math.max(0,num(b.bonifManual))),cuota:lq?lq.cuotaCausante:cuotaCausante({titularidad:b.titularidad,porcentaje:pctCausante(b.porcentaje)}),valorCatastralTotal:num(b.valorCatastralTotal),valorCatastralSuelo:num(b.valorCatastralSuelo),adquisicion:{fecha:b.fechaAdq,valor:num(b.valorAdq)},valorTransmision:Math.max(num(b.valor),num(b.valorReferencia)),esViviendaHabitual:b.tipo==="vivienda",esLocalAfecto:!!b.localAfecto,descripcion:b.descripcion||"",...(b.usoResidencial!=null?{usoResidencial:!!b.usoResidencial}:{}),esAnejo:/garaje|aparcamiento|trastero|parking/i.test(String(b.descripcion||"")),otrosMuni:(x.bienes||[]).filter((o)=>o!==b&&(o.tipo==="vivienda"||o.tipo==="inmueble")&&ineBien(o)&&ineBien(o)===ineBien(b)).map((o)=>({vc:num(o.valorCatastralTotal),anejo:/garaje|aparcamiento|trastero|parking/i.test(String(o.descripcion||"")),viv:o.tipo==="vivienda",afecto:!!o.localAfecto})),causanteEmpadronado:x.causanteEmpadronado===true?true:undefined,...((rq)=>(typeof rq==="boolean"?{bonifRequisitos:rq}:{}))(typeof b.bonifRequisitos==="boolean"?b.bonifRequisitos:x.plusRequisitos)};}
-const plusCompleto=(b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&num(b.valorCatastralTotal)&&num(b.valorCatastralSuelo)&&b.fechaAdq;
+const plusCompleto=(b)=>(b.tipo==="vivienda"||b.tipo==="inmueble")&&!b.rustico&&num(b.valorCatastralTotal)&&num(b.valorCatastralSuelo)&&b.fechaAdq;
 const CALC={memo:new Map(),max:3000,aciertos:0,fallos:0,errores:new Map()};
 function calcHuella(x){
 let s;try{s=JSON.stringify(x);}catch(e){return null;}
@@ -1401,8 +1401,11 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:340,nombre:"Versión 3.4",fecha:"2026-11-03"};
+const VERSION_APP={n:350,nombre:"Versión 3.5",fecha:"2026-11-03"};
 const NOVEDADES=[
+["Fincas rústicas","Notas simples, recibos del IBI rústico, consultas del Catastro y valores de referencia de tierras, olivares o viñas se leen con su polígono y parcela; el legado de «la parcela 23 del polígono 7» se asigna a su finca, y no se pide plusvalía (solo grava suelo urbano)."],
+["Cada certificado, por separado","Dos fotos o escaneos seguidos de bancos distintos ya no se juntan como si fueran un solo documento: cada uno conserva sus cuentas. Solo se unen las hojas de un mismo documento («IMG_1234», «nota simple 1» y «nota simple 2»)."],
+["Más cifras bien leídas","Números de cuenta con una cifra de más, fondos con miles de participaciones, matrículas partidas o con una letra leída como cifra, y DNI de personas nacidas antes de 1930."],
 ["También en gallego","Testamentos y actas de herederos redactados en gallego se leen como los de castellano (herederos, usufructo del viudo, legados de fincas), igual que los documentos en catalán y valenciano."],
 ["Menos preguntas","Quién convivía con el causante en la vivienda se pregunta una sola vez, marcando a cada heredero, en lugar de una pantalla por persona."],
 ["DNI y hojas escaneadas","Hojas con varios DNI fotocopiados, zonas de lectura mecánica con una letra mal leída, matrículas con una cifra de más y hojas escaneadas con poco texto (que antes se tomaban por páginas en blanco)."],
@@ -6044,7 +6047,7 @@ if((R.isd.pendientes||[]).length)add({id:"vf-isd-pend",grupo:"impuestos",sev:"av
 const pzP=vfPlazo(R,"plusvalia");
 for(const b of bienes.filter(vfInm)){
 const n=vfNomB(b),r=(R.plus||[]).find((q)=>q.b.id===b.id);
-if(!plusCompleto(b)){const f=[];if(!num(b.valorCatastralTotal))f.push("valor catastral total");if(!num(b.valorCatastralSuelo))f.push("valor catastral del suelo");if(!b.fechaAdq)f.push("fecha de adquisición");add({id:"vf-pl-"+b.id,grupo:"impuestos",sev:"aviso",titulo:`Plusvalía de ${n}: faltan datos`,detalle:`Falta ${f.join(", ")}. Sin ellos no se puede liquidar ni comprobar el método más favorable.`,norma:"art. 107 TRLRHL",estado:"VERIFICADO",accion:"Abrir bien",enlace:{editb:b.id}});continue;}
+if(!plusCompleto(b)&&!b.rustico){const f=[];if(!num(b.valorCatastralTotal))f.push("valor catastral total");if(!num(b.valorCatastralSuelo))f.push("valor catastral del suelo");if(!b.fechaAdq)f.push("fecha de adquisición");add({id:"vf-pl-"+b.id,grupo:"impuestos",sev:"aviso",titulo:`Plusvalía de ${n}: faltan datos`,detalle:`Falta ${f.join(", ")}. Sin ellos no se puede liquidar ni comprobar el método más favorable.`,norma:"art. 107 TRLRHL",estado:"VERIFICADO",accion:"Abrir bien",enlace:{editb:b.id}});continue;}
 if(!r)continue;
 const est=r.r.estimacion&&!r.r.estimacion.manual&&!(r.r.estimacion.hacienda&&r.r.estimacion.bonifManual),pend=est||r.r.estadoTipo==="PENDIENTE"||(r.r.porTitular||[]).some((t)=>t.estado==="PENDIENTE");
 add({id:"vf-pl-"+b.id,grupo:"impuestos",sev:pend?"aviso":"ok",titulo:`Plusvalía de ${n}: ${r.r.noSujeto?"no sujeta":eur(r.r.total)}`,detalle:`${r.r.municipio}${pzP&&pzP.limite?` · plazo hasta el ${fechaCorta(pzP.limite)}`:""}${est&&r.r.estimacion.hacienda?". Tipo oficial (Hacienda 2026) sin bonificación: comprueba si la ordenanza prevé alguna para herencias e introdúcela en la ficha del bien.":est?". Cálculo máximo con el tipo máximo legal: introduce el tipo y la bonificación de su ordenanza en la ficha del bien.":pend?". La ordenanza está pendiente de cotejo: confirma tipo y bonificación.":"."}`,norma:"art. 110 TRLRHL",estado:"VERIFICADO",accion:pend?"Abrir bien":"",enlace:pend?{editb:b.id}:null});
@@ -6265,7 +6268,7 @@ bl.push({tipo:"tabla",cabecera:["Inmueble","Municipio","Titular","A ingresar"],f
 if(CE&&CE.excesos.length){bl.push({tipo:"tabla",cabecera:["Exceso de adjudicación: quién paga","Exceso","Tributación","Coste"],filas:[...CE.excesos.map((e)=>[e.nombre,vfEurPdf(e.exceso),e.txtCoste,vfEurPdf(e.trib.coste)]),["Total","","",vfEurPdf(CE.coste)]],alinear:["l","r","l","r"]});bl.push({tipo:"p",texto:`${CE.T.ajdNota} (${CE.T.ajdNorma}; art. 1062 CC).`});}
 const tot=R.isd.total+R.totalPlus+(CE?CE.coste:0);
 bl.push({tipo:"fila",etiqueta:`Total previsto: Sucesiones${R.plus.length?" + plusvalía":""}${CE&&CE.coste?" + exceso":""}`,valor:vfEurPdf(tot),negrita:true,separada:true});}
-const sinPlus=bienes.filter((b)=>vfInm(b)&&!plusCompleto(b));
+const sinPlus=bienes.filter((b)=>vfInm(b)&&!plusCompleto(b)&&!b.rustico);
 if(sinPlus.length)bl.push({tipo:"p",texto:`Plusvalía pendiente de datos catastrales: ${sinPlus.map(vfNomB).join(", ")} [valor catastral y fecha de adquisición].`});
 bl.push({tipo:"h",numero:"8.",texto:"Documentos que se aportan"});
 const docs=typeof docsNecesarios==="function"?docsNecesarios(x):[];
@@ -12156,6 +12159,7 @@ import:"importe",imports:"importes",entitat:"entidad",oficina:"oficina",contract
 gener:"enero",febrer:"febrero",març:"marzo",abril:"abril",maig:"mayo",juny:"junio",juliol:"julio",agost:"agosto",setembre:"septiembre",octubre:"octubre",novembre:"noviembre",desembre:"diciembre",dia:"día",data:"fecha",lloc:"lugar",any:"año",
 els:"los",les:"las",dels:"de los",als:"a los",pel:"por el",pels:"por los",amb:"con",sense:"sin",per:"por",fins:"hasta",després:"después",abans:"antes",segons:"según",també:"también",aquest:"este",aquesta:"esta",aquests:"estos",aquestes:"estas",
 seu:"su",seva:"su",seus:"sus",seves:"sus",meu:"mío",tot:"todo",tota:"toda",tots:"todos",totes:"todas",altre:"otro",altra:"otra",altres:"otros",ambdós:"ambos",ambdues:"ambas",mateix:"mismo",mateixa:"misma",és:"es",són:"son",té:"tiene",tenia:"tenía",tenen:"tienen",
+paratge:"paraje","parcel·la":"parcela",parcela:"parcela",polígon:"polígono",terme:"término",rústica:"rústica",secà:"secano",regadiu:"regadío",olivera:"olivo",oliveres:"olivos",vinya:"viña",conreu:"cultivo",
 davant:"ante",vehicle:"vehículo",vehicles:"vehículos",model:"modelo",marca:"marca",quantitat:"cantidad",diners:"dinero",pagarà:"pagará",situat:"situado",situada:"situada",necessària:"necesaria",capacitat:"capacidad",judici:"juicio",efecte:"efecto",
 llegit:"leído",mi:"mí",dono:"doy",hereten:"heredan",hereta:"hereda",exposat:"expuesto",conformitat:"conformidad",articles:"artículos",article:"artículo",següents:"siguientes",següent:"siguiente",codi:"código",catalunya:"Cataluña",conclosa:"concluida",
 haver:"haber",estat:"estado",correspon:"corresponde",corresponen:"corresponden",informació:"información",garantia:"garantía",préstec:"préstamo",préstecs:"préstamos",hipotecari:"hipotecario",deutor:"deudor",pendent:"pendiente",figurava:"figuraba",
@@ -12198,6 +12202,7 @@ const LEC_GL_FRASES=[
 [/\bvinte e (un|unha|dous|dúas|tres|catro|cinco|seis|sete|oito|nove)\b/g,(m,u)=>({un:"veintiuno",unha:"veintiuna",dous:"veintidós",dúas:"veintidós",tres:"veintitrés",catro:"veinticuatro",cinco:"veinticinco",seis:"veintiséis",sete:"veintisiete",oito:"veintiocho",nove:"veintinueve"})[u]],
 [/\b(trinta|corenta|cincuenta|sesenta|setenta|oitenta|noventa) e (un|unha|dous|dúas|tres|catro|cinco|seis|sete|oito|nove)\b/g,(m,d,u)=>`${LEC_GL_NUM[d]} y ${LEC_GL_NUM[u]}`],
 [/(?<![A-Za-zÀ-ÿ])a (finca|vivenda|casa|cantidade|parcela|leira|totalidade|metade|propiedade|nua|plena|terceira|cuarta|súa|herdanza)(?![A-Za-zÀ-ÿ])/g,"la $1"],[/(?<![A-Za-zÀ-ÿ])A (finca|vivenda|casa|cantidade|parcela|leira)(?![A-Za-zÀ-ÿ])/g,"La $1"],
+[/\bno paraxe\b/gi,"en el paraje"],[/\btermo municipal\b/gi,"término municipal"],
 [/rexistro xeral de actos de última vontade/gi,"Registro General de Actos de Última Voluntad"],[/\brexistro civil\b/gi,"Registro Civil"],[/\brexistro da propiedade\b/gi,"Registro de la Propiedad"],[/ilustre colexio/gi,"Ilustre Colegio"],
 [/\b(\d{1,2})(?:º|o)\s?(?=[A-H]\b|esq|dta|dereita|esquerda)/gi,"$1º "],[/\bdereita\b/gi,"derecha"],[/\besquerda\b/gi,"izquierda"],
 ];
@@ -12210,6 +12215,7 @@ descendentes:"descendientes",ascendentes:"ascendientes",lexítima:"legítima",le
 faleceu:"falleció",falecido:"fallecido",falecida:"fallecida",falecemento:"fallecimiento",nacemento:"nacimiento",universais:"universales",únicos:"únicos",sen:"sin",prexuízo:"perjuicio",cota:"cuota",conta:"cuenta",contas:"cuentas",saldo:"saldo",depósito:"depósito",
 representación:"representación",relevación:"relevación",inventario:"inventario",fianza:"fianza",vitalicio:"vitalicio",propiedade:"propiedad",conformidade:"conformidad",artigos:"artículos",seguintes:"siguientes",galicia:"Galicia",dereito:"derecho",civil:"civil",estado:"estado",
 e:"y",ou:"o",co:"con el",coa:"con la",cos:"con los",coas:"con las",polo:"por el",pola:"por la",polos:"por los",polas:"por las",ao:"al",aos:"a los",do:"del",da:"de la",dos:"de los",das:"de las",no:"en el",na:"en la",nos:"en los",nas:"en las",
+paraxe:"paraje",termo:"término",polígono:"polígono",rústica:"rústica",secaño:"secano",regadío:"regadío",oliveira:"olivo",viña:"viña",
 cantidade:"cantidad",vivenda:"vivienda",leira:"finca",metade:"mitad",totalidade:"totalidad",situada:"situada",situado:"situado",
 primeira:"primera",terceira:"tercera",cuarta:"cuarta",quinta:"quinta",colexio:"colegio",xuízo:"juicio",capacidade:"capacidad",ten:"tiene",ter:"haber",meu:"mi",efecto:"efecto",así:"así",lido:"leído",asina:"firma",fe:"fe",vontade:"voluntad",rexistro:"registro",xeral:"general",actos:"actos",
 seu:"su",súa:"su",seus:"sus",súas:"sus",cuxo:"cuyo",cuxa:"cuya",dona:"doña",ano:"año",días:"días",data:"fecha",certificado:"certificado",testamento:"testamento",declaro:"declaro",notario:"notario",número:"número",protocolo:"protocolo",
@@ -13425,7 +13431,7 @@ if(raro)out.avisos.push(`${b.descripcion}: el valor de referencia leído (${eur0
 if(vr>0&&!raro){b.valorReferencia=vr;b.valor=vr;b.valorFuente=`valor de referencia del Catastro${anioVR?" "+anioVR:""}`;b.anioValorReferencia=anioVR?Number(anioVR):null;b.prioValor=3;
 out.avisos.push(`${b.descripcion}: valor de referencia del Catastro ${eur0(vr)}${anioVR?" ("+anioVR+")":""}, propuesto como valor del inmueble. En Sucesiones la base no puede ser inferior a él (art. 9.3 LISD); si el valor de mercado es mayor, súbelo. ${anioVR?`Sirve para fallecimientos de ${anioVR}; si el fallecimiento fue otro año, consulta el de ese año en la sede del Catastro.`:"Comprueba que sea el del año del fallecimiento."}`);}
 }
-if(!b.valorReferencia&&ref)out.avisos.push(`${b.descripcion} (ref. ${ref}): ${vrNo?"el Catastro indica que no tiene valor de referencia":"el documento no trae el valor de referencia"}, así que el valor del inmueble queda VACÍO. Sin él, el inmueble no suma en Sucesiones y la plusvalía no se puede calcular bien. ${vrNo?"Anota el valor de mercado (tasación o precio de inmuebles similares).":"Consúltalo en la sede electrónica del Catastro (servicio «Valor de referencia») y anótalo, o sube ese certificado."}`);
+if(!b.valorReferencia&&ref)out.avisos.push(`${b.descripcion} (ref. ${ref}): ${vrNo?"el Catastro indica que no tiene valor de referencia":"el documento no trae el valor de referencia"}, así que el valor del inmueble queda VACÍO. Sin él, el inmueble no suma en Sucesiones${b.rustico?"":" y la plusvalía no se puede calcular bien"}. ${vrNo?"Anota el valor de mercado (tasación o precio de inmuebles similares).":"Consúltalo en la sede electrónica del Catastro (servicio «Valor de referencia») y anótalo, o sube ese certificado."}`);
 if(vTot&&vSuelo&&vSuelo>vTot)out.avisos.push("El valor del suelo leído supera el total: revisa el documento.");
 if(!vTot&&!vSuelo)out.avisos.push(esIbi?"No se ha leído el valor catastral en el recibo: comprueba que sea el recibo completo del IBI.":b.valorReferencia?"El documento trae el valor de referencia pero no los valores catastrales: para la plusvalía hace falta el del suelo (recibo del IBI o certificación catastral).":"Esta consulta catastral no incluye los valores catastrales (solo los lleva la certificación para el titular o el recibo del IBI).");
 if(!vCons&&vTot&&vSuelo&&vTot>=vSuelo)b.valorCatastralConstruccion=Math.round((vTot-vSuelo)*100)/100;
@@ -13443,7 +13449,7 @@ if(titulares.length)b.titulares=titulares;
 out.bienes.push({...b,...(out._ibiDomiciliado?{ibiDomiciliado:true}:{}),conf:ref||vTotal?2:1});delete out._ibiDomiciliado;
 return out;
 }
-const LEC_FINCA_RE=/\bFINCA\s*(?:REGISTRAL\s*)?(?:DE\s+[A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç.\- ]{2,40}?(?:\s+\d{1,2})?\s+(?:SECCI[ÓO]N\s+\d+\S*\s+)?)?(?:N[úÚuU]MERO|N[úÚuU]M\.?|N[.º°ºo]{0,2})\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bN[.º°ºo]{0,2}\s*(?:DE\s+)?FINCA\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s*[:：]\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s+(?:REGISTRAL\s+)?(\d{1,3}(?:\.\d{3})+|\d{1,7})\s+(?:DE|EN)\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü]|\bFINCA\s+REGISTRAL\s+(\d{1,3}(?:\.\d{3})+|\d{1,7})\b/gi;
+const LEC_FINCA_RE=/\bFINCA\s*(?:REGISTRAL\s*)?(?:DE\s+[A-ZÁÉÍÓÚÑÜÀÈÌÒÙÄËÏÖÇa-záéíóúñüàèìòùäëïöç.\- ]{2,40}?(?:\s+\d{1,2})?\s+(?:SECCI[ÓO]N\s+\d+\S*\s+)?)?(?:N[úÚuU]MERO|N[úÚuU]M\.?|N[.º°ºo*]{0,2})\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bN[.º°ºo]{0,2}\s*(?:DE\s+)?FINCA\s*[:：]?\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s*[:：]\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b|\bFINCA\s+(?:REGISTRAL\s+)?(\d{1,3}(?:\.\d{3})+|\d{1,7})\s+(?:DE|EN)\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü]|\bFINCA\s+REGISTRAL\s+(\d{1,3}(?:\.\d{3})+|\d{1,7})\b/gi;
 function lecNotaSimple(t){
 const T=t.replace(/[ \t]+/g," ");
 const H=[...T.matchAll(LEC_FINCA_RE)].filter((m,i,A)=>!i||m.index-A[i-1].index>200);
@@ -14272,9 +14278,9 @@ const A=lecDniAnversos(t);if(!A.length)return r;
 if(A.length>=2&&A.every((a)=>a.nombre&&a.nac)&&new Set(A.map((a)=>a.nac)).size===A.length){
 const LD={6:"G",8:"B",5:"S",2:"Z",0:"D",1:"L",4:"A",7:"T",3:"B",9:"P"};
 const Ls=String(t).replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Za-z<«]{18,}[ \t]*)$/gm,"$1\n$2").split("\n").map((l)=>l.replace(/\s/g,"").toUpperCase().replace(/(\d{8})([A-Z])\2(?=<)/,"$1$2").replace(/^(IDESP[0-9A-Z]{9}[0-9A-Z<])(\d{8})(\d)(?=<)/,(m,a,n,d)=>(LD[d]&&lecNifOk(n+LD[d])?a+n+LD[d]:m))),M=[];
-Ls.forEach((l,i)=>{const n=/(\d{8}[A-Z]|[XYZ]\d{7}[A-Z])<{2,}/.exec(l);if(!n||!lecNifOk(n[1]))return;for(let j=i+1;j<=Math.min(Ls.length-1,i+3);j++){const f=/^(\d{2})(\d{2})(\d{2})\d[MF<]/.exec(Ls[j]);if(f){const yy=Number(f[1]),y=yy>Number(String(new Date().getFullYear()).slice(2))?1900+yy:2000+yy;const nac=lecIso(f[3],f[2],y);if(nac)M.push({nif:n[1],nac});break;}}});
+Ls.forEach((l,i)=>{const n=/(\d{8}[A-Z]|[XYZ]\d{7}[A-Z])<{2,}/.exec(l);if(!n||!lecNifOk(n[1]))return;for(let j=i+1;j<=Math.min(Ls.length-1,i+3);j++){const f=/^(\d{2})(\d{2})(\d{2})\d[MF<]/.exec(Ls[j]);if(f){const yy=Number(f[1]),y=yy>Number(String(new Date().getFullYear()).slice(2))?1900+yy:2000+yy;const nac=lecIso(f[3],f[2],y);if(nac)M.push({nif:n[1],nac,nac2:lecIso(f[3],f[2],y-100)});break;}}});
 const dif1=(x,y)=>x&&y&&x.length===y.length&&[...x].filter((c,i)=>c!==y[i]).length===1;
-const libreM=(a)=>{const exacta=M.find((q)=>q.nac===a.nac);if(exacta)return exacta;const C=M.filter((q)=>dif1(q.nac,a.nac)&&!A.some((b)=>b!==a&&b.nac===q.nac));return C.length===1?C[0]:null;};
+const libreM=(a)=>{const exacta=M.find((q)=>q.nac===a.nac)||M.find((q)=>q.nac2===a.nac);if(exacta)return exacta;const C=M.filter((q)=>dif1(q.nac,a.nac)&&!A.some((b)=>b!==a&&b.nac===q.nac));return C.length===1?C[0]:null;};
 const P=A.map((a)=>{const m=libreM(a);const nif=a.nif&&lecNifOk(a.nif)?a.nif:m?m.nif:"";const ant=r.personas.find((p)=>nif&&p.nif===nif)||{};return{...ant,nombre:a.nombre,nif,nacimiento:a.nac,...(a.genero?{genero:a.genero}:{}),edad:Math.floor((Date.now()-new Date(a.nac+"T12:00:00"))/31557600000),relacion:"",extranjero:/^[XYZ]/.test(nif),conf:nif&&(!a.nif||!m||m.nif===a.nif)?2:1};});
 for(const p of r.personas)if(p.nif&&!P.some((q)=>q.nif===p.nif)&&!/^Titular del/.test(p.nombre||"")&&!P.some((q)=>lecMismoNombre(q.nombre,p.nombre)))P.push(p);
 return{...r,personas:P,avisos:(r.avisos||[]).filter((x)=>!/documentos de identidad: se ha le/.test(x)).concat(`El archivo trae ${A.length} documentos de identidad: se ha leído cada uno por separado.`)};
@@ -14404,6 +14410,7 @@ const lecCccAIban=(z)=>{for(const m of String(z||"").matchAll(/(?<![\d])(\d{4})[
 const lecIbanOk=(s)=>{const v=String(s||"").replace(/\s/g,"").toUpperCase();if(!/^ES\d{22}$/.test(v))return false;return BigInt(v.slice(4)+"1428"+v.slice(2,4))%97n===1n;};
 function lecIbanOcr(T){
 const C={O:"0",Q:"0",D:"0",I:"1",L:"1","|":"1",S:"5",B:"8",Z:"2",G:"6"};
+T=String(T).replace(/\bES\d{23}\b/g,(m)=>{const ok=new Set();for(let k=4;k<25;k++){const c=m.slice(0,k)+m.slice(k+1);if(lecIbanOk(c)&&(typeof BANCOS_ES!=="object"||BANCOS_ES[c.slice(4,8)]))ok.add(c);}return ok.size===1?[...ok][0]:m;});
 T=String(T).replace(/\bES([0-9OQD]{3})((?:\s?\d{4}){5})\b/g,(m,d3,g)=>{const G=g.replace(/\s/g,"");const ok=[0,1,2].map((k)=>(d3.slice(0,k)+d3.slice(k+1)).replace(/[OQD]/g,"0")).filter((d)=>lecIbanOk("ES"+d+G));return ok.length&&new Set(ok).size===1?"ES"+ok[0]+g:m;});
 return String(T).replace(/\b[E3][S5]\s?[0-9OQDILSBZG|]{2}(?:\s?[0-9OQDILSBZG|]{4}){5}\b/gi,(m)=>{
 const v=m.replace(/\s/g,"").toUpperCase();if(/^ES\d{22}$/.test(v)&&lecIbanOk(v))return m;
@@ -14561,7 +14568,7 @@ if(!(c.v>0))continue;
 const b=out.bienes.find((q)=>Math.abs((Number(q.valor)||0)-c.v)<0.005);if(b){b.valor=null;b.conf=0;b._sinValor=true;out.avisos.push(`El importe ${eur0(c.v)} es el capital pendiente de un préstamo, no el saldo de «${b.descripcion}»: se carga como deuda y el saldo queda por indicar.`);}
 if(!out.deudas.some((d)=>Math.abs((Number(d.importe)||0)-c.v)<0.005)){const z=T.slice(Math.max(0,c.i-260),c.i+120);const hip=/hipotec/i.test(z);out.deudas.push({concepto:`${hip?"Préstamo hipotecario":"Préstamo"} en ${nombreBanco} (capital pendiente a la fecha del fallecimiento)`,importe:c.v,ganancial:false,fuente:"banco",banco:nombreBanco,hipoteca:hip,conf:1});}
 }
-const PV=[...T.matchAll(/(\d{1,3}(?:\.\d{3})*,\d{2,6})(?:(?!\d{1,3}(?:\.\d{3})*,\d{2})[^€\n]|\n(?!\s*\n)){0,80}?\b(?:part(?:icipaciones|ic)?|par|t[íi]tulos|acciones)\b\.?[\s,;:'"»«]*(?:(?:x|×|\*|a|por|de)\s*)?(?:un\s+valor\s+liquidativo\s+de\s+)?(\d{1,5},\d{2,6})\s*(?:€|euros?|EUR)/gi)].map((m)=>({n:lecNum(m[1]),u:lecNum(m[2])})).filter((q)=>q.n>0&&q.u>0);
+const PV=[...T.matchAll(/(?<![\d.,])((?:\d{1,3}(?:\.\d{3})+|\d+),\d{2,6})(?:(?!\d{1,3}(?:\.\d{3})*,\d{2})[^€\n]|\n(?!\s*\n)){0,80}?\b(?:part(?:icipaciones|ic)?|par|t[íi]tulos|acciones)\b\.?[\s,;:'"»«]*(?:(?:x|×|\*|a|por|de)\s*)?(?:un\s+valor\s+liquidativo\s+de\s+)?(\d{1,5},\d{2,6})\s*(?:€|euros?|EUR)/gi)].map((m)=>({n:lecNum(m[1]),u:lecNum(m[2])})).filter((q)=>q.n>0&&q.u>0);
 const F=out.bienes.filter((q)=>q.tipo==="valores"&&!/plan de pensiones/i.test(q.descripcion||""));
 if(PV.length&&PV.length===F.length)F.forEach((b,k)=>{const{n,u}=PV[k];const v=Math.round(n*u*100)/100;const val=Number(b.valor)||0;
 if(!val||Math.abs(val-u)<0.005||b._sinValor){b.valor=v;b.conf=1;delete b._sinValor;if(!b.participaciones)b.participaciones=n;out.avisos.push(`Valor de «${b.descripcion}» calculado con sus participaciones: ${String(n).replace(".",",")} × ${String(u).replace(".",",")} € = ${eur0(v)} (el importe no se leía bien). Compruébalo.`);}});
@@ -14771,6 +14778,8 @@ texto=texto.replace(/(^|[\s—–\-(,])D[*°º]\s*(?=[A-ZÁÉÍÓÚÑ][a-záéí
 texto=texto.replace(/(^|[\s—–\-(,])D(?:[*°º%?”"]{1,3})\s*(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/gm,"$1Dª ");
 texto=texto.replace(/(?<![A-Za-z0-9])([0-9ODQ]{8})\s?-?\s?([A-Z])(?![A-Za-z0-9])/g,(m,n,l)=>{if((n.match(/\d/g)||[]).length<2||/^\d{8}$/.test(n))return m;const k=n.replace(/[ODQ]/g,"0");return lecNifOk(k+l)?k+l:m;});
 texto=texto.replace(/(Matr[íi]cula\s*[:：]?\s*)(\d{4})(\d)([BCDFGHJKLMNPRSTVWXYZ]{3})\b/gi,(m,a,n,d,l)=>({5:"S",8:"B",2:"Z",6:"G",0:"D",1:"L",7:"T"}[d]===l[0].toUpperCase()?a+n+l:m));
+texto=texto.replace(/(Matr[íi]cula\s*[:：]?\s*)(\d{4})\s?([BCDFGHJKLMNPRSTVWXYZ])\s([BCDFGHJKLMNPRSTVWXYZ])\s?([BCDFGHJKLMNPRSTVWXYZ])\b/gi,"$1$2$3$4$5")
+.replace(/(Matr[íi]cula\s*[:：]?\s*)(\d{4})([0125678])([BCDFGHJKLMNPRSTVWXYZ]{2})\b/gi,(m,a,n,d,l)=>a+n+{5:"S",8:"B",2:"Z",6:"G",0:"D",1:"L",7:"T"}[d]+l);
 texto=texto.replace(/(?<![\dA-Za-z(])(\d{8})\s?([\]})|$])(?![\dA-Za-z])/g,(m,n,ch)=>{const L={"]":"J","}":"J",")":"J","|":"L",$:"S"}[ch];return L&&lecNifOk(n+L)?n+L:m;});
 texto=texto.replace(/(^|[\s—–\-(,])D4\s+(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/gm,"$1Dª ").replace(/(\bfalleci[óo]|\ba)\s+0%\s+(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/g,"$1 Dª ");
 texto=texto.replace(/\b(inscripci[óo]n|anotaci[óo]n|planta|piso|nupcias?)\s+(\d{1,2})\s?[%”"]/gi,"$1 $2ª").replace(/(,\s*\d{1,3},\s*)(\d{1,2})\s?%(?=\s+(?:\d|[A-H]\b|izq|dcha|der|cen|pta|puerta))/gi,"$1$2º");
@@ -14832,6 +14841,7 @@ if((d.personas||[]).some((p)=>p.nombre&&(!p.nif||!p.nacimiento)))lecDatosJuntoAN
 for(const rc of new Set((d.bienes||[]).map((b)=>b.refCatastral).filter((r)=>r&&r.length===20&&!lecRefCatOk(r))))avisos.push(`La referencia catastral ${rc} no cuadra con sus caracteres de control: compruébala en el documento (puede estar mal escrita o mal leída).`);
 if(info.empate)avisos.unshift(`El contenido encaja por igual con ${info.empate.map((k)=>"«"+(LEC_TIPOS[k]||k)+"»").join(" y ")}: se ha tratado como «${LEC_TIPOS[tipo]||tipo}»${info.porNombre?" por el nombre del archivo":""}. Si no lo es, revisa lo propuesto y cambia el nombre del archivo para que lo indique.`);
 else if(info.soloNombre&&tipo!=="desconocido")avisos.unshift(`Apenas se ha reconocido texto propio de «${LEC_TIPOS[tipo]||tipo}»: se ha tratado así por el nombre del archivo. Revisa lo propuesto.`);
+if(avisos.some((a)=>/^El testamento deshereda a /.test(a)))for(let i=avisos.length-1;i>=0;i--)if(/^Desheredación de /.test(avisos[i]))avisos.splice(i,1);
 if(idioma)avisos.push(`Documento en ${idioma}: se ha leído con su traducción al castellano. Revisa con el original los nombres y las cifras propuestos.`);
 return{tipo,titulo:LEC_TIPOS[tipo],campos:d.campos||[],personas:d.personas||[],bienes:d.bienes||[],deudas:d.deudas||[],gastos:d.gastos||[],...(d.excluidos&&d.excluidos.length?{excluidos:d.excluidos}:{}),avisos,extra:d};
 }
@@ -14888,7 +14898,7 @@ nuevo=!abierto||(LEC_TITULOS[q.tipo]&&LEC_TITULOS[q.tipo].test(q.cab.slice(0,260
 if(nuevo&&abierto&&cur.tipo==="cuaderno"&&!(q.s>=8&&LEC_TITULOS[q.tipo]&&LEC_TITULOS[q.tipo].test(q.cab.slice(0,90))))nuevo=false;
 if(!nuevo&&q.s>=4&&!I[cur.desde].notarial&&!(abierto&&cur.tipo==="cuaderno")){const H=LEC_HUELLAS[cur.tipo]||[];const sc=H.reduce((a,[re,w])=>a+(re.test(q.T)?w:0),0);if((q.s>=6&&sc<=3&&sc*2<=q.s)||sc===0)nuevo=true;}
 }
-if(cur&&!nuevo&&q.tipo==="bancario"&&cur.tipo==="bancario"&&i>cur.desde){const bk=(z)=>{const m=LEC_BANCOS.exec(lecN(z.slice(0,900)));return m?m[1].split(" ")[0]:"";};const a=bk(pags[cur.desde]),b=bk(pags[i]);if(a&&b&&a!==b)nuevo=true;}
+if(cur&&!nuevo&&q.tipo==="bancario"&&cur.tipo==="bancario"&&i>cur.desde){const bk=(z)=>{const m=LEC_BANCOS.exec(lecN(z.slice(0,900)));return m?m[1].replace(/^(?:BANCO|BANC|CAJA|CAIXA)\s+(?:DE\s+|DEL\s+)?/,"").split(" ")[0]:"";};const a=bk(pags[cur.desde]),b=bk(pags[i]);if(a&&b&&a!==b)nuevo=true;}
 if(cur&&q.tipo&&cur.tipo===q.tipo&&q.tipo!=="dni"&&LEC_TITULOS[q.tipo]&&LEC_TITULOS[q.tipo].test(q.cab)){
 const fin=LEC_FIN_DOC[q.tipo];nuevo=nuevo||!fin||pags.slice(cur.desde,i).some((p)=>fin.test(lecN(p)));
 const claseC=(z)=>{const h=lecN(z).slice(0,700);return/VALOR\s+DE\s+REFERENCIA/.test(h)?"vr":/RECIBO|IMPUESTO\s+SOBRE\s+BIENES|\bIBI\b|SUJETO\s+PASIVO|CONTRIBUYENTE/.test(h)?"ibi":/DESCRIPTIVA|CONSULTA\s+DESCRIPTIVA|CERTIFICACI[OÓ]N\s+CATASTRAL/.test(h)?"cat":"";};
@@ -14918,7 +14928,10 @@ const suelta=(q)=>q&&q.r&&!q.r.correo&&(q.r.paginas||1)===1&&String(q.r.texto||"
 const items=[];
 for(let i=0;i<L.length;){
 if(!suelta(L[i])||prof){items.push(L[i]);i++;continue;}
-let k=i;while(k+1<L.length&&suelta(L[k+1]))k++;
+const raiz=(n)=>String(n||"").toLowerCase().replace(/\.[a-z0-9]{2,5}$/,"").replace(/[\s_\-.()]*(?:p[aá]g(?:ina)?|hoja|p|parte)?[\s_\-.()]*\d{1,3}\)?$/,"").trim();
+const generico=(n)=>/^(?:img|image|imagen|dsc|dscn|scan|escaneo|escaneado|scanned|photo|foto|whatsapp|pxl|cam|captura|screenshot|documento|doc|hoja|pagina|página|\d)/.test(raiz(n))||!raiz(n);
+const juntables=(a,b)=>(generico(a.f&&a.f.name)&&generico(b.f&&b.f.name))||raiz(a.f&&a.f.name)===raiz(b.f&&b.f.name);
+let k=i;while(k+1<L.length&&suelta(L[k+1])&&juntables(L[k],L[k+1]))k++;
 if(k===i){items.push(L[i]);i++;continue;}
 const run=L.slice(i,k+1),texto=run.map((q)=>q.r.texto).join("\n\f\n");const S=lecSegmentar(texto)||[{desde:1,hasta:run.length,tipo:null,texto}];
 for(const z of S){
@@ -15710,6 +15723,10 @@ const fi=/\bFINCA\s+(?:REGISTRAL\s+)?(?:NUMERO\s+|N[O]?\.?\s*)?(\d{3,7})\b/.exec
 const isin=/\b([A-Z]{2}[A-Z0-9]{9}\d)\b/.exec(N);if(isin){const c=uno(B.filter((b)=>b.isin===isin[1]));if(c)return c;}
 const ib=/\bES\d{2}(?:\s?\d{4}){5}\b/.exec(N);if(ib){const k=ib[0].replace(/\s/g,"");const c=uno(B.filter((b)=>b.iban===k));if(c)return c;}
 const inm=B.filter((b)=>b.tipo==="vivienda"||b.tipo==="inmueble");
+{const pp=/PARCELA\s+(\d{1,5})\s+DEL\s+POLIGONO\s+(\d{1,3})|POLIGONO\s+(\d{1,3})\s*,?\s*PARCELA\s+(\d{1,5})/.exec(N);
+if(pp){const par=Number(pp[1]||pp[4]),pol=Number(pp[2]||pp[3]);
+const L=inm.filter((b)=>{const d=lecN(`${b.descripcion||""} ${b.direccion||""} ${b.descripcionRegistral||""}`);const m1=/POLIGONO\s+(\d{1,3})\D{1,20}PARCELA\s+(\d{1,5})|PARCELA\s+(\d{1,5})\s+DEL\s+POLIGONO\s+(\d{1,3})/.exec(d);if(m1&&Number(m1[1]||m1[4])===pol&&Number(m1[2]||m1[3])===par)return true;const rc=String(b.refCatastral||"");return/^\d{5}[A-Z]\d{8}/.test(rc)&&Number(rc.slice(6,9))===pol&&Number(rc.slice(9,14))===par;});
+if(L.length===1)return L[0];}}
 if(/VIVIENDA|PISO|CASA|CHALET|PLAZA DE (?:GARAJE|APARCAMIENTO)|APARCAMIENTO|GARAJE|TRASTERO|LOCAL|FINCA|URBANA|RUSTICA|NAVE|SOLAR/.test(N)){
 const garaje=/PLAZA DE (?:GARAJE|APARCAMIENTO)|APARCAMIENTO|GARAJE/.test(N),trast=/TRASTERO/.test(N);
 const L=inm.filter((b)=>{const d=b.direccion||b.descripcion||"";const esG=/garaje|aparcamiento/i.test(d)||/\bsótano\b|-1º/i.test(d);return lecDirIgual(nota,d)&&(!garaje||esG||/Pl:\s*-|sótano/i.test(d))&&(!trast||/trastero/i.test(d));});
@@ -18918,10 +18935,10 @@ aplicar:(x,v)=>{const q=x.bienes.find((z)=>z.id===b.id);if(!q||!(num(v)>0))retur
 L.push({id,grupo:"Bienes",titulo:`¿Qué valor tiene «${b.descripcion||"el bien"}»?`,texto:b.tipo==="vehiculo"?"El de las tablas de precios medios de venta de Hacienda (por marca, modelo y año de matriculación, con la depreciación por antigüedad) o el de mercado si es mayor.":"Su valor a la fecha del fallecimiento.",tipo:"eur",aplicar:(x,v)=>{const q=x.bienes.find((z)=>z.id===b.id);if(q){q.valor=v;q.valorFuente="indicado al completar el expediente";}}});
 }
 for(const b of(x.bienes||[]).filter(pqInm)){
-if(!(num(b.valorCatastralSuelo)>0)||!(num(b.valorCatastralTotal)>0)){const id="catastral-"+b.id;if(!(ya(id)&&hecho[id]!=="nose"))
+if((!(num(b.valorCatastralSuelo)>0)&&!b.rustico)||!(num(b.valorCatastralTotal)>0)){const id="catastral-"+b.id;if(!(ya(id)&&hecho[id]!=="nose"))
 L.push({id,grupo:"Inmuebles",titulo:`¿Qué valor catastral tiene «${b.descripcion||"el inmueble"}»?`,texto:`Lo dice el último recibo del IBI o la certificación catastral${b.refCatastral?" (referencia "+b.refCatastral+")":""}: el total y el del suelo, que es el que usa la plusvalía municipal.`,tipo:"catastral",
 aplicar:(x,v)=>{const q=x.bienes.find((z)=>z.id===b.id);if(!q||!v)return;if(num(v.total)>0)q.valorCatastralTotal=num(v.total);if(num(v.suelo)>0)q.valorCatastralSuelo=num(v.suelo);if(q.valorCatastralTotal&&q.valorCatastralSuelo)q.valorCatastralConstruccion=Math.round((q.valorCatastralTotal-q.valorCatastralSuelo)*100)/100;}});}
-if(!b.fechaAdq||!(num(b.valorAdq)>0)){const id="adq-"+b.id;if(!(ya(id)&&hecho[id]!=="nose"))
+if(!b.rustico&&(!b.fechaAdq||!(num(b.valorAdq)>0))){const id="adq-"+b.id;if(!(ya(id)&&hecho[id]!=="nose"))
 L.push({id,grupo:"Inmuebles",titulo:`¿Cuándo y por cuánto adquirió el causante «${b.descripcion||"el inmueble"}»?`,texto:"La fecha y el precio de la escritura por la que lo adquirió (o el valor declarado si lo heredó). La plusvalía depende de los años de tenencia y compara con lo que costó.",tipo:"adq",
 aplicar:(x,v)=>{const q=x.bienes.find((z)=>z.id===b.id);if(!q||!v)return;if(v.fecha&&!q.fechaAdq)q.fechaAdq=v.fecha;if(num(v.valor)>0)q.valorAdq=num(v.valor);if(q.titularidadPresunta&&typeof lecRetitular==="function")lecRetitular(x);}});}
 }
