@@ -1401,8 +1401,11 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:330,nombre:"Versión 3.3",fecha:"2026-11-03"};
+const VERSION_APP={n:340,nombre:"Versión 3.4",fecha:"2026-11-03"};
 const NOVEDADES=[
+["También en gallego","Testamentos y actas de herederos redactados en gallego se leen como los de castellano (herederos, usufructo del viudo, legados de fincas), igual que los documentos en catalán y valenciano."],
+["Menos preguntas","Quién convivía con el causante en la vivienda se pregunta una sola vez, marcando a cada heredero, en lugar de una pantalla por persona."],
+["DNI y hojas escaneadas","Hojas con varios DNI fotocopiados, zonas de lectura mecánica con una letra mal leída, matrículas con una cifra de más y hojas escaneadas con poco texto (que antes se tomaban por páginas en blanco)."],
 ["Documentos en catalán","Testamentos, actas de herederos, notas simples y certificados del banco redactados en catalán (o en valenciano) se leen como los de castellano: herederos, usufructo del viudo, fincas, titularidad y saldos. La app avisa de que lo ha leído traduciéndolo, para cotejar nombres y cifras con el original."],
 ["Todo junto en un PDF, en Word o por correo","Si el cliente lo escanea todo en un solo PDF, la app separa cada documento (también dos certificados del Catastro seguidos de la misma finca). Los documentos de Word y los correos del banco o de la aseguradora se leen con sus tablas, columna a columna."],
 ["Menos dudas que resolver a mano","Herederos por partes iguales cuando uno es nieto, nietos reconocidos por el libro de familia o por sus hermanos, el nombre del causante bien escrito aunque una foto lo estropee, el certificado de defunción con el DNI de los demás documentos, referencias catastrales y números de cuenta con una letra por cifra, y fotos de DNI apaisadas."],
@@ -12165,7 +12168,8 @@ const LEC_CA_SEGURAS=new Set(["testament","obert","institueix","llega","comparei
 "fills","filla","germans","néts","usdefruit","llegat","inscripció","superfície","titulars","entitat","import","posicions","posició","productes","producte","contracte","pòlissa","assegurança","assegurances","rebut","impost","immoble","exercici","quota","tipus","valor","construcció",
 "gener","febrer","març","maig","juny","juliol","agost","setembre","novembre","desembre","dels","els","amb","tots","edat","veí","veïna","certifica","fons","valors","participacions","llibreta","finca","tom","llibre","foli","escriptura","compravenda","adquirida","préstec","informació","davant","llegit","codi","catalunya","titularitat","vehicle","certificat"]);
 const lecCaSin=(w)=>w.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/·/g,"");
-const LEC_CA_SIN=new Map(Object.keys(LEC_CA_PAL).filter((k)=>lecCaSin(k)!==k&&LEC_CA_PAL[lecCaSin(k)]==null).map((k)=>[lecCaSin(k),k]));
+const LEC_SIN_NO=new Set(["sol","te","es","net","mes","dona","a","as","e","o","se","si","mi","tu","el"]);
+const LEC_CA_SIN=new Map(Object.keys(LEC_CA_PAL).filter((k)=>lecCaSin(k)!==k&&LEC_CA_PAL[lecCaSin(k)]==null&&!LEC_SIN_NO.has(lecCaSin(k))).map((k)=>[lecCaSin(k),k]));
 function lecDelCatalan(t){
 let s=String(t||"");if(!lecEsCatalan(s))return s;
 s=s.replace(/\bseua\b/g,"seva").replace(/\bseues\b/g,"seves").replace(/\bSEUA\b/g,"SEVA").replace(/\bhuit\b/g,"vuit").replace(/(?<![A-Za-zÀ-ÿ])dèsset\b/g,"disset").replace(/(?<![A-Za-zÀ-ÿ])díhuit\b/g,"divuit").replace(/(?<![A-Za-zÀ-ÿ])dènou\b/g,"dinou").replace(/\bhuit-cents\b/g,"vuit-cents");
@@ -12177,10 +12181,55 @@ if(w===lw)return v;
 if(!LEC_CA_SEGURAS.has(lw))return w;
 return w===w.toUpperCase()?v.toUpperCase():v[0].toUpperCase()+v.slice(1);
 });
-s=s.replace(/\bde el\b/g,"del").replace(/\ba el\b/g,"al").replace(/\bDE EL\b/g,"DEL");
+s=s.replace(/(?<![A-Za-zÀ-ÿ])de el\b/g,"del").replace(/(?<![A-Za-zÀ-ÿ])a el\b/g,"al").replace(/\bDE EL\b/g,"DEL");
 s=s.replace(/(Instituye\s+(?:heredero|heredera|herederos|herederas)\b[^.]*?[\s,])(?=(?:don|doña|DON|DOÑA)\s|(?:sus|su)\s+(?:hij|niet|herman|sobrin|espos|padre|madre|pareja))/g,(m,pre)=>(/\ba\s$/.test(pre)?m:pre+"a "));
 return s;
 }
+const LEC_GL_SEÑAS=/(?<![A-Za-zÀ-ÿ])(?:herdeir[oa]s?|fill[oa]s|irmán|irmáns|sobriñ[oa]s?|cónxuxe|viúv[oa]|veciñ[oa]|idade|rúa|praza|institúe|usufruto|herdanza|bens|dereitos|accións|iguais|substituídos|polos|súa|súas|lexítima|outorga|dispón|revoga|calquera|faleceu|falecid[oa]|nacemento|xaneiro|febreiro|maio|xuño|xullo|setembro|outubro|novembro|decembro|veciñanza|prexuízo|universais|cota|dous|catro|oito|vinte|corenta|oitenta|ante min|cuxo|cuxa|nai|pai)(?![A-Za-zÀ-ÿ])/gi;
+function lecEsGallego(t){
+const s=String(t||"");if(s.length<80)return false;
+return new Set((s.match(LEC_GL_SEÑAS)||[]).map((w)=>w.toLowerCase())).size>=6;
+}
+const LEC_GL_FRASES=[
+[/veciñanza civil galega/gi,"vecindad civil gallega"],[/veciñanza civil común/gi,"vecindad civil común"],[/veciñanza civil/gi,"vecindad civil"],[/ante min\b/gi,"ante mí"],[/maior de idade/gi,"mayor de edad"],
+[/\bpor partes iguais/gi,"por partes iguales"],[/\ben partes iguais/gi,"en partes iguales"],[/\bsen prexuízo/gi,"sin perjuicio"],[/\bcota legal usufrutuaria/gi,"cuota legal usufructuaria"],[/\bnúa propiedade/gi,"nuda propiedad"],[/\bpleno dominio/gi,"pleno dominio"],
+[/\b(?:os seus|as súas)\b/gi,"sus"],[/\b(?:o seu|a súa)\b/gi,"su"],[/(?<![A-Za-zÀ-ÿ])(?:aos seus|ás súas)(?![A-Za-zÀ-ÿ])/gi,"a sus"],[/(?<![A-Za-zÀ-ÿ])(?:ao seu|á súa)(?![A-Za-zÀ-ÿ])/gi,"a su"],[/\b(?:dos seus|das súas)\b/gi,"de sus"],[/\b(?:do seu|da súa)\b/gi,"de su"],
+[/\b(?:polos seus|polas súas)\b/gi,"por sus"],[/\b(?:polo seu|pola súa)\b/gi,"por su"],[/\bfaleceu en\b/gi,"falleció en"],[/\bcon domicilio na\b/gi,"con domicilio en la"],[/\bcon domicilio no\b/gi,"con domicilio en el"],
+[/\bvinte e (un|unha|dous|dúas|tres|catro|cinco|seis|sete|oito|nove)\b/g,(m,u)=>({un:"veintiuno",unha:"veintiuna",dous:"veintidós",dúas:"veintidós",tres:"veintitrés",catro:"veinticuatro",cinco:"veinticinco",seis:"veintiséis",sete:"veintisiete",oito:"veintiocho",nove:"veintinueve"})[u]],
+[/\b(trinta|corenta|cincuenta|sesenta|setenta|oitenta|noventa) e (un|unha|dous|dúas|tres|catro|cinco|seis|sete|oito|nove)\b/g,(m,d,u)=>`${LEC_GL_NUM[d]} y ${LEC_GL_NUM[u]}`],
+[/(?<![A-Za-zÀ-ÿ])a (finca|vivenda|casa|cantidade|parcela|leira|totalidade|metade|propiedade|nua|plena|terceira|cuarta|súa|herdanza)(?![A-Za-zÀ-ÿ])/g,"la $1"],[/(?<![A-Za-zÀ-ÿ])A (finca|vivenda|casa|cantidade|parcela|leira)(?![A-Za-zÀ-ÿ])/g,"La $1"],
+[/rexistro xeral de actos de última vontade/gi,"Registro General de Actos de Última Voluntad"],[/\brexistro civil\b/gi,"Registro Civil"],[/\brexistro da propiedade\b/gi,"Registro de la Propiedad"],[/ilustre colexio/gi,"Ilustre Colegio"],
+[/\b(\d{1,2})(?:º|o)\s?(?=[A-H]\b|esq|dta|dereita|esquerda)/gi,"$1º "],[/\bdereita\b/gi,"derecha"],[/\besquerda\b/gi,"izquierda"],
+];
+const LEC_GL_NUM={un:"uno",unha:"una",dous:"dos",dúas:"dos",tres:"tres",catro:"cuatro",cinco:"cinco",seis:"seis",sete:"siete",oito:"ocho",nove:"nueve",dez:"diez",once:"once",doce:"doce",trece:"trece",catorce:"catorce",quince:"quince",dezaseis:"dieciséis",dezasete:"diecisiete",dezaoito:"dieciocho",dezanove:"diecinueve",vinte:"veinte",trinta:"treinta",corenta:"cuarenta",cincuenta:"cincuenta",sesenta:"sesenta",setenta:"setenta",oitenta:"ochenta",noventa:"noventa",cen:"cien",cento:"ciento",douscentos:"doscientos",trescentos:"trescientos",catrocentos:"cuatrocientos",cincocentos:"quinientos",seiscentos:"seiscientos",setecentos:"setecientos",oitocentos:"ochocientos",novecentos:"novecientos",mil:"mil"};
+const LEC_GL_PAL={
+herdeiro:"heredero",herdeira:"heredera",herdeiros:"herederos",herdeiras:"herederas",fillo:"hijo",filla:"hija",fillos:"hijos",fillas:"hijas",neto:"nieto",neta:"nieta",netos:"nietos",netas:"nietas",irmán:"hermano",irmá:"hermana",irmáns:"hermanos",irmás:"hermanas",
+sobriño:"sobrino",sobriña:"sobrina",sobriños:"sobrinos",sobriñas:"sobrinas",pai:"padre",nai:"madre",pais:"padres",cónxuxe:"cónyuge",viúvo:"viudo",viúva:"viuda",solteiro:"soltero",solteira:"soltera",veciño:"vecino",veciña:"vecina",idade:"edad",maior:"mayor",premorto:"premuerto",premorta:"premuerta",
+rúa:"calle",praza:"plaza",institúe:"instituye",institúen:"instituyen",usufruto:"usufructo",usufrutuario:"usufructuario",usufrutuaria:"usufructuaria",herdanza:"herencia",bens:"bienes",dereitos:"derechos",dereito:"derecho",accións:"acciones",iguais:"iguales",substituídos:"sustituidos",substituído:"sustituido",substitución:"sustitución",
+descendentes:"descendientes",ascendentes:"ascendientes",lexítima:"legítima",lexitimarios:"legitimarios",aberto:"abierto",outorga:"otorga",outorgar:"otorgar",outorgado:"otorgado",dispón:"dispone",revoga:"revoca",calquera:"cualquier",outro:"otro",outra:"otra",outros:"otros",
+faleceu:"falleció",falecido:"fallecido",falecida:"fallecida",falecemento:"fallecimiento",nacemento:"nacimiento",universais:"universales",únicos:"únicos",sen:"sin",prexuízo:"perjuicio",cota:"cuota",conta:"cuenta",contas:"cuentas",saldo:"saldo",depósito:"depósito",
+representación:"representación",relevación:"relevación",inventario:"inventario",fianza:"fianza",vitalicio:"vitalicio",propiedade:"propiedad",conformidade:"conformidad",artigos:"artículos",seguintes:"siguientes",galicia:"Galicia",dereito:"derecho",civil:"civil",estado:"estado",
+e:"y",ou:"o",co:"con el",coa:"con la",cos:"con los",coas:"con las",polo:"por el",pola:"por la",polos:"por los",polas:"por las",ao:"al",aos:"a los",do:"del",da:"de la",dos:"de los",das:"de las",no:"en el",na:"en la",nos:"en los",nas:"en las",
+cantidade:"cantidad",vivenda:"vivienda",leira:"finca",metade:"mitad",totalidade:"totalidad",situada:"situada",situado:"situado",
+primeira:"primera",terceira:"tercera",cuarta:"cuarta",quinta:"quinta",colexio:"colegio",xuízo:"juicio",capacidade:"capacidad",ten:"tiene",ter:"haber",meu:"mi",efecto:"efecto",así:"así",lido:"leído",asina:"firma",fe:"fe",vontade:"voluntad",rexistro:"registro",xeral:"general",actos:"actos",
+seu:"su",súa:"su",seus:"sus",súas:"sus",cuxo:"cuyo",cuxa:"cuya",dona:"doña",ano:"año",días:"días",data:"fecha",certificado:"certificado",testamento:"testamento",declaro:"declaro",notario:"notario",número:"número",protocolo:"protocolo",
+xaneiro:"enero",febreiro:"febrero",marzo:"marzo",maio:"mayo",xuño:"junio",xullo:"julio",setembro:"septiembre",outubro:"octubre",novembro:"noviembre",decembro:"diciembre",
+...LEC_GL_NUM,
+};
+const LEC_GL_SEGURAS=new Set(["primeira","terceira","colexio","rexistro","xeral","institúe","outorga","dispón","revoga","testamento","aberto","herdeiros","herdeiro","herdeira","fillos","dona","rúa","praza","xaneiro","febreiro","maio","xuño","xullo","setembro","outubro","novembro","decembro","cónxuxe","usufruto","herdanza","declaro","veciño","veciña","viúvo","viúva"]);
+const LEC_GL_SIN=new Map(Object.keys(LEC_GL_PAL).filter((k)=>lecCaSin(k)!==k&&LEC_GL_PAL[lecCaSin(k)]==null&&!LEC_SIN_NO.has(lecCaSin(k))).map((k)=>[lecCaSin(k),k]));
+function lecDelGallego(t){
+let s=String(t||"");if(!lecEsGallego(s))return s;
+s=s.replace(/[A-Za-zÀ-ÿ]+/g,(w)=>{const lw=w.toLowerCase();if(LEC_GL_PAL[lw]!=null)return w;const k=LEC_GL_SIN.get(lecCaSin(lw));if(!k||(w!==lw&&!LEC_GL_SEGURAS.has(k)))return w;return w===lw?k:w===w.toUpperCase()?k.toUpperCase():k[0].toUpperCase()+k.slice(1);});
+for(const[re,v]of LEC_GL_FRASES)s=s.replace(re,v);
+s=s.replace(/(?<![A-Za-zÀ-ÿ])o(?=\s+[a-záéíóúñ])/g,"el").replace(/(?<![A-Za-zÀ-ÿ])os(?=\s+[a-záéíóúñ])/g,"los").replace(/(?<![A-Za-zÀ-ÿ])as(?=\s+[a-záéíóúñ])/g,"las");
+s=s.replace(/[A-Za-zÀ-ÿ]+/g,(w)=>{const lw=w.toLowerCase(),v=LEC_GL_PAL[lw];if(v==null)return w;if(w===lw)return v;if(!LEC_GL_SEGURAS.has(lw))return w;return w===w.toUpperCase()?v.toUpperCase():v[0].toUpperCase()+v.slice(1);});
+s=s.replace(/(?<![A-Za-zÀ-ÿ])de el\b/g,"del").replace(/(?<![A-Za-zÀ-ÿ])a el\b/g,"al");
+s=s.replace(/(Instituye\s+(?:heredero|heredera|herederos|herederas)\b[^.]*?[\s,])(?=(?:don|doña|DON|DOÑA)\s|(?:sus|su)\s+(?:hij|niet|herman|sobrin|espos|padre|madre|pareja))/g,(m,pre)=>(/\ba\s$/.test(pre)?m:pre+"a "));
+return s;
+}
+const lecIdiomaDoc=(t)=>(lecEsCatalan(t)?"catalán":lecEsGallego(t)?"gallego":"");
+const lecAlCastellano=(t)=>{const i=lecIdiomaDoc(t);return i==="catalán"?lecDelCatalan(t):i==="gallego"?lecDelGallego(t):t;};
 const LEC={pdf:null,ocr:null,ocrCargando:null,estado:null,resultado:null,exp:null};
 const LEC_TIPOS={defuncion:"Certificado de defunción",ultimas:"Certificado de últimas voluntades",seguros:"Certificado de seguros de fallecimiento",herederos:"Acta de declaración de herederos",familia:"Libro de familia",matrimonio:"Certificado de matrimonio",nacimiento:"Certificado de nacimiento",padron:"Certificado de empadronamiento",poliza:"Póliza de seguro de vida",catastro:"Certificación catastral",ibi:"Recibo del IBI",notasimple:"Nota simple del Registro",testamento:"Testamento",dni:"DNI o NIE",bancario:"Certificado bancario de posiciones",compraventa:"Escritura de compraventa",herenciaprevia:"Escritura de herencia anterior (título)",vehiculo:"Permiso de circulación o ficha técnica",modelo650:"Modelo 650/660 del Impuesto de Sucesiones",desconocido:"Documento sin reconocer"};
 const LEC_EXTRA=[];
@@ -12265,7 +12314,7 @@ let ocr=0,blancas=0;const pendientes=[];
 for(const i of sinTexto){
 if(ocr>=LEC_PAG_OCR){const ya=textos.join("\n");const varios=ocr<80&&new Set(textos.filter(Boolean).map((q)=>lecTipoPagina(q).tipo).filter(Boolean)).size>=2;const sigue=varios||ocr<20&&/ACTA\s+DE\s+DECLARACI[ÓO]N\s+DE\s+HEREDEROS|HEREDEROS\s+ABINTESTATO|TESTAMENTO\s+ABIERTO/i.test(ya)&&!/DOY\s+POR\s+CONCLUS|CONCLUS[OA]\s+EL\s+ACTA|INSTITUYE\s+(?:POR\s+)?(?:[ÚU]NIC[OA]S?\s+Y\s+UNIVERSAL|HEREDER)/i.test(ya);if(!sigue){pendientes.push(i);continue;}}
 const pg=await doc.getPage(i);const vp1=pg.getViewport({scale:1});
-const m=document.createElement("canvas");const vpm=pg.getViewport({scale:Math.min(0.5,400/vp1.width)});m.width=vpm.width;m.height=vpm.height;
+const m=document.createElement("canvas");const vpm=pg.getViewport({scale:Math.min(1,800/vp1.width)});m.width=vpm.width;m.height=vpm.height;
 await pg.render({canvasContext:m.getContext("2d"),viewport:vpm}).promise;
 if(lecEnBlanco(m)){blancas++;continue;}
 ocr++;lecProgreso(`${LEC.estado?.base||"Leyendo"} · reconociendo la página ${i}${sinTexto.length>1?` (${ocr} de ${Math.min(sinTexto.length,LEC_PAG_OCR)})`:""}`);
@@ -12283,7 +12332,7 @@ try{const A=await doc.getAttachments();if(A)adjuntos=Object.values(A).filter((a)
 if(adjuntos.length)avisos.push(`El PDF lleva ${adjuntos.length===1?"un archivo adjunto, que también se lee":adjuntos.length+" archivos adjuntos, que también se leen"}.`);
 return{texto:textos.join("\n\f\n"),escaneado:ocr>0&&ocr>=(paginas-blancas)/2,paginas:doc.numPages,avisos,adjuntos,clave};
 }
-function lecEnBlanco(c){const d=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<d.length;i+=4)if(d[i]*0.3+d[i+1]*0.59+d[i+2]*0.11<150)n++;return n<(d.length/4)*0.002;}
+function lecEnBlanco(c){const d=c.getContext("2d",{willReadFrequently:true}).getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<d.length;i+=4)if(d[i]*0.3+d[i+1]*0.59+d[i+2]*0.11<150)n++;return n<(d.length/4)*0.0008;}
 const LEC_OCR_LETRA={0:"DOQ",1:"TIL",2:"Z",4:"A",5:"S",6:"G",7:"T",8:"B",O:"QD",Q:"O",D:"O",I:"TL",L:"T",T:"IL",Z:"",B:"",S:"",G:"",U:"V",V:"Y",Y:"V",H:"N",N:"H",M:"N",P:"R",R:"P",C:"G",K:"X",X:"K",J:"",F:"P",W:""};
 function lecLimpiarOcr(t){
 let s=String(t||"")
@@ -12531,6 +12580,10 @@ for(const g of[0,270,90]){const pr=g?lecRotar(p,g):(()=>{const q=document.create
 texto+=(texto?"\n\f\n":"")+r.texto;conf+=r.conf/partes.length;if(r.aviso)avisos.push(r.aviso);
 }
 if(alternativa&&conf<80){const r=await lecOcrImagen(src);if(r.conf>conf+2)return{texto:r.texto,conf:r.conf,avisos:r.aviso?[r.aviso]:[],partes:1};}
+else if(partes.length&&partes[0]!==src&&!plano&&!LEC.basico&&lecLetras(texto)<200){
+const r=await lecOcrImagen(src);const nota=(t,c)=>lecLetras(t)*Math.max(0.3,(c||0)/100);
+if(nota(r.texto,r.conf)>nota(texto,conf)*1.3+20)return{texto:r.texto,conf:r.conf,avisos:r.aviso?[r.aviso]:[],partes:1};
+}
 return{texto,conf,avisos:[...new Set(avisos)],partes:partes.length};
 }
 async function lecACanvas(src){const img=src.getContext?src:src instanceof Blob?await lecImagen(src):src;if(img.getContext)return img;const c=document.createElement("canvas");c.width=img.width;c.height=img.height;c.getContext("2d").drawImage(img,0,0);if(img.close)img.close();return c;}
@@ -13815,7 +13868,7 @@ return out;
 }
 function lecFamilia(t){
 t=String(t||"").replace(/ [:\-*+•](?=\s)/g," ·");
-const out={campos:[],personas:[],avisos:[]};const T=t.replace(/[ \t]+/g," ").replace(/(^|\n)\s*(\d{1,2})\s*[.,]\s*(?:[2º°ª9o”"'*%]\s*\??|\?)\s+(?=[A-ZÁÉÍÓÚÑ])/g,"$1$2.º ");
+const out={campos:[],personas:[],avisos:[]};const T=t.replace(/[ \t]+/g," ").replace(/(^|\n)\s*(\d{1,2})\s*[.,]\s*(?:[27º°ª9o”"'*%]\s*\??|\?)\s+(?=[A-ZÁÉÍÓÚÑ]{2,})/g,"$1$2.º ");
 const T1=T.replace(/(^|\n)\s*(\d{1,2})\s*[.,]\s*(?:[2º°ª9o]\s*\??|\?)\s+(?=[A-ZÁÉÍÓÚÑ])/g,"$1$2.º ").replace(/\s+/g," ").replace(/\b(MARIDO|ESPOSO|CONTRAYENTE ?1|C[ÓO]NYUGE ?1)\s+(MUJER|ESPOSA|CONTRAYENTE ?2|C[ÓO]NYUGE ?2)\s+((?:DON|D\.|Don)\s+[^]{10,400}?)\s(?=(?:DOÑA|DONA|Dª|D\.ª|Doña)\s)/,"$1 $3 $2 ");
 const edad=(f)=>(f?Math.max(0,Math.floor((Date.now()-new Date(f+"T12:00:00"))/31557600000)):null);
 const nacCerca=(z)=>lecFechaCerca(z,/nacid[oa]\s+(?:en\s+[^,]{0,60}?\s*,?\s*)?(?:el\s+(?:d[ií]a\s+)?)?|fecha\s+de\s+nacimiento\s*[:：]?|naci[óo]\s+(?:en\s+[^,]{0,60}?\s*,?\s*)?(?:el\s+(?:d[ií]a\s+)?)?/i,90);
@@ -14217,7 +14270,8 @@ function lecDni(t,uno){
 const r=lecDni0(t,uno);if(uno||!r||!Array.isArray(r.personas))return r;
 const A=lecDniAnversos(t);if(!A.length)return r;
 if(A.length>=2&&A.every((a)=>a.nombre&&a.nac)&&new Set(A.map((a)=>a.nac)).size===A.length){
-const Ls=String(t).split("\n").map((l)=>l.replace(/\s/g,"").toUpperCase()),M=[];
+const LD={6:"G",8:"B",5:"S",2:"Z",0:"D",1:"L",4:"A",7:"T",3:"B",9:"P"};
+const Ls=String(t).replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Za-z<«]{18,}[ \t]*)$/gm,"$1\n$2").split("\n").map((l)=>l.replace(/\s/g,"").toUpperCase().replace(/(\d{8})([A-Z])\2(?=<)/,"$1$2").replace(/^(IDESP[0-9A-Z]{9}[0-9A-Z<])(\d{8})(\d)(?=<)/,(m,a,n,d)=>(LD[d]&&lecNifOk(n+LD[d])?a+n+LD[d]:m))),M=[];
 Ls.forEach((l,i)=>{const n=/(\d{8}[A-Z]|[XYZ]\d{7}[A-Z])<{2,}/.exec(l);if(!n||!lecNifOk(n[1]))return;for(let j=i+1;j<=Math.min(Ls.length-1,i+3);j++){const f=/^(\d{2})(\d{2})(\d{2})\d[MF<]/.exec(Ls[j]);if(f){const yy=Number(f[1]),y=yy>Number(String(new Date().getFullYear()).slice(2))?1900+yy:2000+yy;const nac=lecIso(f[3],f[2],y);if(nac)M.push({nif:n[1],nac});break;}}});
 const dif1=(x,y)=>x&&y&&x.length===y.length&&[...x].filter((c,i)=>c!==y[i]).length===1;
 const libreM=(a)=>{const exacta=M.find((q)=>q.nac===a.nac);if(exacta)return exacta;const C=M.filter((q)=>dif1(q.nac,a.nac)&&!A.some((b)=>b!==a&&b.nac===q.nac));return C.length===1?C[0]:null;};
@@ -14237,7 +14291,7 @@ r.personas.push({nombre:a.nombre,nif:a.nif,nacimiento:a.nac||"",edad:a.nac?Math.
 return r;
 }
 function lecDniAnversos(t){
-t=String(t||"").replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Z<]{18,}[ \t]*)$/gm,"$1\n$2");
+t=String(t||"").replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Za-z<«]{18,}[ \t]*)$/gm,"$1\n$2");
 const L=String(t||"").split("\n"),out=[];let ini=[];
 L.forEach((l,i)=>{if(/DOCUMENTO\s+NACIONAL|^\W{0,4}ESPA[ÑN]A\b/i.test(l)&&!(ini.length&&i-ini[ini.length-1]<=2))ini.push(i);});
 ini.forEach((a,k)=>{
@@ -14254,7 +14308,9 @@ return out;
 }
 function lecDni0(t,uno){
 t=String(t||"").replace(/^([^A-Za-z0-9\n]{0,3})[JTL1l|](?=\s?D\s?E\s?S\s?P[A-Z0-9<]{8,})/gm,"$1I");
-t=t.replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Z<]{18,}[ \t]*)$/gm,"$1\n$2");
+t=t.replace(/^([^\n]*?\S)[ \t]{3,}(I\s?[DR]\s?E\s?S\s?P[0-9A-Za-z<«]{18,}[ \t]*)$/gm,"$1\n$2");
+const LETRA_DE={6:"G",8:"B",5:"S",2:"Z",0:"D",1:"L",4:"A",7:"T",3:"B",9:"P"};
+t=t.replace(/^[ \t]*I\s?[DR]\s?E\s?S\s?P[0-9A-Za-z<«]{18,}[ \t]*$/gm,(l)=>l.toUpperCase().replace(/(\d{8})([A-Z])\2(?=<)/,"$1$2").replace(/^(\s*IDESP[0-9A-Z]{9}[0-9A-Z<])(\d{8})(\d)(?=<)/,(m,a,n,d)=>(LETRA_DE[d]&&lecNifOk(n+LETRA_DE[d])?a+n+LETRA_DE[d]:m)));
 t=String(t||"").split(/\n/).map((q)=>{const i=q.search(/I\s?[DR]\s?E\s?S\s?P/);if(i>0&&i<12)return q.slice(i);if(i===0)return q;if(/^[A-Z0-9<]{28,38}$/.test(q.replace(/[^A-Za-z0-9<\s]/g,"<").replace(/\s/g,"").toUpperCase()))return q;if(/<</.test(q)||/\d{7}[MF<]\d{7}/.test(q)){const m=/[A-Za-z0-9<]{10,}/.exec(q);if(m&&m.index>0&&m.index<12&&/<|\d{7}[MF<]/.test(q.slice(m.index)))return q.slice(m.index);}return q;}).join("\n");
 t=String(t||"").split(/\n/).map((q)=>(/^\s*I\s?[DR]\s?E\s?S\s?P|<<<|^[ \t]*[A-Z0-9]{2,}[A-Z0-9<]*<<|^[ \t]*\d{7}[MF<]\d{7}/.test(q)?q.replace(/(\d)\s?['"’`´.,:;]\s?(?=\d)/g,"$1").replace(/[^A-Za-z0-9<\s]/g,"<"):q)).join("\n");
 if(!uno){
@@ -14348,7 +14404,7 @@ const lecCccAIban=(z)=>{for(const m of String(z||"").matchAll(/(?<![\d])(\d{4})[
 const lecIbanOk=(s)=>{const v=String(s||"").replace(/\s/g,"").toUpperCase();if(!/^ES\d{22}$/.test(v))return false;return BigInt(v.slice(4)+"1428"+v.slice(2,4))%97n===1n;};
 function lecIbanOcr(T){
 const C={O:"0",Q:"0",D:"0",I:"1",L:"1","|":"1",S:"5",B:"8",Z:"2",G:"6"};
-T=String(T).replace(/\bES[OQD0](\d{2})((?:\s?\d{4}){5})\b/g,(m,d,g)=>{const c="ES"+d+g.replace(/\s/g,"");return lecIbanOk(c)&&!lecIbanOk(m.replace(/\s/g,"").slice(0,24))?"ES"+d+g:m;});
+T=String(T).replace(/\bES([0-9OQD]{3})((?:\s?\d{4}){5})\b/g,(m,d3,g)=>{const G=g.replace(/\s/g,"");const ok=[0,1,2].map((k)=>(d3.slice(0,k)+d3.slice(k+1)).replace(/[OQD]/g,"0")).filter((d)=>lecIbanOk("ES"+d+G));return ok.length&&new Set(ok).size===1?"ES"+ok[0]+g:m;});
 return String(T).replace(/\b[E3][S5]\s?[0-9OQDILSBZG|]{2}(?:\s?[0-9OQDILSBZG|]{4}){5}\b/gi,(m)=>{
 const v=m.replace(/\s/g,"").toUpperCase();if(/^ES\d{22}$/.test(v)&&lecIbanOk(v))return m;
 const c="ES"+v.slice(2).replace(/[OQDILSBZG|]/g,(ch)=>C[ch]||ch);if(!/^ES\d{22}$/.test(c)||!lecIbanOk(c))return m;
@@ -14709,12 +14765,13 @@ L.splice(i+1,1);break;
 return L.join("\n");
 }
 function lecAnalizar(texto,nombre){
-const catalan=typeof lecEsCatalan==="function"&&lecEsCatalan(texto);if(catalan)texto=lecDelCatalan(texto);
+const idioma=typeof lecIdiomaDoc==="function"?lecIdiomaDoc(texto):"";if(idioma)texto=lecAlCastellano(texto);
 texto=lecUnirCabeceras(lecArreglarOrdinal(lecArreglarIsin(lecQuitarCabeceras(texto))));
 texto=texto.replace(/(^|[\s—–\-(,])D[*°º]\s*(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/gm,"$1Dª ");
 texto=texto.replace(/(^|[\s—–\-(,])D(?:[*°º%?”"]{1,3})\s*(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/gm,"$1Dª ");
 texto=texto.replace(/(?<![A-Za-z0-9])([0-9ODQ]{8})\s?-?\s?([A-Z])(?![A-Za-z0-9])/g,(m,n,l)=>{if((n.match(/\d/g)||[]).length<2||/^\d{8}$/.test(n))return m;const k=n.replace(/[ODQ]/g,"0");return lecNifOk(k+l)?k+l:m;});
-texto=texto.replace(/(?<![\dA-Za-z])(\d{8})\s?([\]}|$])(?![\dA-Za-z])/g,(m,n,ch)=>{const L={"]":"J","}":"J","|":"L",$:"S"}[ch];return L&&lecNifOk(n+L)?n+L:m;});
+texto=texto.replace(/(Matr[íi]cula\s*[:：]?\s*)(\d{4})(\d)([BCDFGHJKLMNPRSTVWXYZ]{3})\b/gi,(m,a,n,d,l)=>({5:"S",8:"B",2:"Z",6:"G",0:"D",1:"L",7:"T"}[d]===l[0].toUpperCase()?a+n+l:m));
+texto=texto.replace(/(?<![\dA-Za-z(])(\d{8})\s?([\]})|$])(?![\dA-Za-z])/g,(m,n,ch)=>{const L={"]":"J","}":"J",")":"J","|":"L",$:"S"}[ch];return L&&lecNifOk(n+L)?n+L:m;});
 texto=texto.replace(/(^|[\s—–\-(,])D4\s+(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/gm,"$1Dª ").replace(/(\bfalleci[óo]|\ba)\s+0%\s+(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/g,"$1 Dª ");
 texto=texto.replace(/\b(inscripci[óo]n|anotaci[óo]n|planta|piso|nupcias?)\s+(\d{1,2})\s?[%”"]/gi,"$1 $2ª").replace(/(,\s*\d{1,3},\s*)(\d{1,2})\s?%(?=\s+(?:\d|[A-H]\b|izq|dcha|der|cen|pta|puerta))/gi,"$1$2º");
 texto=texto.replace(/(?<![\d.,])(\d{1,3}(?:\.\d{3})+)\.(\d{2})(?![\d.,])/g,"$1,$2").replace(/(?<![\d.,])(\d{1,3})\s(\d{3})[.,](\d{2})(?![\d.,])(?=\s*(?:€|EUR|e\b|\s*$))/gm,"$1.$2,$3");
@@ -14766,7 +14823,7 @@ for(const c of(d.campos||[]).filter((c)=>c.k==="nifCausante"&&c.valor)){
 const L=texto.split("\n");const li=L.findIndex((l)=>l.replace(/[\s.\-]/g,"").includes(c.valor));
 const iM=texto.search(/datos\s+de\s+la\s+persona\s+fallecida|datos\s+del\s+(?:fallecido|causante|difunto)|^\s*persona\s+fallecida\s*[:：]?\s*$/im),iN=texto.replace(/[ .\-]/g,(m)=>m).search(new RegExp(c.valor.slice(0,8)+"\\s?-?\\s?"+c.valor.slice(8)));
 const antesDelFallecido=iM>0&&iN>=0&&iN<iM&&!new RegExp(c.valor.slice(0,8)).test(texto.slice(iM));
-if(li>=0&&(antesDelFallecido||/solicit|requir|peticion|interesad|so[lu][a-z]{2,6}nte/i.test(L[li]))&&!/fallecid|causante|difunt/i.test(L[li])){
+if(li>=0&&(antesDelFallecido||/solicit|requir|peticion|interesad|so[lu][a-z]{2,6}nte/i.test(L[li]))&&!/fallecid|causante|difunt|en\s+relaci[óo]n\s+con|relativo\s+a|referente\s+a/i.test(L[li])){
 const i0=texto.search(/(?:persona\s+)?fallecid[oa]|causante|difunt[oa]/i);const otro=i0>=0?lecNifs(texto.slice(i0)).find((n)=>n!==c.valor&&lecNifOk(n)):null;
 if(otro){c.valor=otro;c.mostrar=otro;}else{c.conf=0;c.etiqueta=(c.etiqueta||"DNI del causante")+" (es el del solicitante: compruébalo)";}
 }
@@ -14775,7 +14832,7 @@ if((d.personas||[]).some((p)=>p.nombre&&(!p.nif||!p.nacimiento)))lecDatosJuntoAN
 for(const rc of new Set((d.bienes||[]).map((b)=>b.refCatastral).filter((r)=>r&&r.length===20&&!lecRefCatOk(r))))avisos.push(`La referencia catastral ${rc} no cuadra con sus caracteres de control: compruébala en el documento (puede estar mal escrita o mal leída).`);
 if(info.empate)avisos.unshift(`El contenido encaja por igual con ${info.empate.map((k)=>"«"+(LEC_TIPOS[k]||k)+"»").join(" y ")}: se ha tratado como «${LEC_TIPOS[tipo]||tipo}»${info.porNombre?" por el nombre del archivo":""}. Si no lo es, revisa lo propuesto y cambia el nombre del archivo para que lo indique.`);
 else if(info.soloNombre&&tipo!=="desconocido")avisos.unshift(`Apenas se ha reconocido texto propio de «${LEC_TIPOS[tipo]||tipo}»: se ha tratado así por el nombre del archivo. Revisa lo propuesto.`);
-if(catalan)avisos.push("Documento en catalán: se ha leído con su traducción al castellano. Revisa con el original los nombres y las cifras propuestos.");
+if(idioma)avisos.push(`Documento en ${idioma}: se ha leído con su traducción al castellano. Revisa con el original los nombres y las cifras propuestos.`);
 return{tipo,titulo:LEC_TIPOS[tipo],campos:d.campos||[],personas:d.personas||[],bienes:d.bienes||[],deudas:d.deudas||[],gastos:d.gastos||[],...(d.excluidos&&d.excluidos.length?{excluidos:d.excluidos}:{}),avisos,extra:d};
 }
 const LEC_ERRORES=[
@@ -14804,7 +14861,7 @@ renuncia:/ESCRITURA\s+DE\s+RENUNCIA|RENUNCIA\s+(?:PURA\s+)?(?:A\s+LA\s+|DE\s+)HE
 padron:/PADRON|EMPADRONAMIENTO/,poliza:/POLIZA|SEGURO\s+DE\s+VIDA/,dni:/DOCUMENTO\s+NACIONAL\s+DE\s+IDENTIDAD|IDENTIDAD\s+DE\s+EXTRANJERO|\bI[DR]ESP/,cuaderno:/CUADERNO\s+PARTICIONAL|LIQUIDADOR|INVENTARIO/,plusvaliaLiq:/DOCUMENTO\s+DE\s+PAGO|LIQUIDACION|INCREMENTO\s+DE\s+VALOR/,familia:/(?:CERTIFICA\w*|INSCRIPCION|ACTA|EXTRACTO)\s+(?:LITERAL\s+)?(?:DE\s+)?(?:LA\s+)?(?:INSCRIPCION\s+DE\s+)?(?:MATRIMONIO|NACIMIENTO)|LIBRO\s+DE\s+FAMILIA|REGISTRO\s+DE\s+PAREJAS/,
 };
 function lecTipoPagina(p){
-if(typeof lecDelCatalan==="function")p=lecDelCatalan(p);
+if(typeof lecAlCastellano==="function")p=lecAlCastellano(p);
 const T=lecN(p);const P=Object.entries(LEC_HUELLAS).map(([k,H])=>[k,H.reduce((a,[re,w])=>a+(re.test(T)?w:0),0)]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
 const aj=lecAjeno(T);if(aj==="factura"&&(!P.length||P[0][1]<8))return{tipo:"factura",s:6};
 if(P.length&&P[0][1]>=4&&(P.length<2||P[0][1]>P[1][1]))return{tipo:P[0][0],s:P[0][1]};
@@ -14929,7 +14986,8 @@ let i=0;for(const w of Lg)if(w===C[i])i++;if(i===C.length)return true;
 if(A.length===B.length&&A.length>=3&&[...A].sort().join(" ")===[...B].sort().join(" "))return true;
 if(A[0]===B[0]){const a2=A.slice(-2),b2=B.slice(-2);
 if(A.length>=4&&B.length>=4&&A[1]!==B[1]&&lecLev(A[1],B[1])>1)return false;
-if(A.length>=3&&B.length>=3){if((a2[0]===b2[0]||lecLev(a2[0],b2[0])<=1)&&(a2[1]===b2[1]||lecLev(a2[1],b2[1])<=1))return true;}
+if(A.length>=3&&B.length>=3){if((a2[0]===b2[0]||lecLev(a2[0],b2[0])<=1)&&(a2[1]===b2[1]||lecLev(a2[1],b2[1])<=1))return true;
+const[c1,c2]=a2[1].length<=b2[1].length?[a2[1],b2[1]]:[b2[1],a2[1]];if(a2[0]===b2[0]&&c1.length>=4&&c2.length-c1.length<=4&&c2.startsWith(c1))return true;}
 else if(a2[0]===b2[0]||a2[1]===b2[1])return true;}
 const sa=A.join(" "),sb=B.join(" ");if(sa.length<10||sb.length<10||lecLev(sa,sb)!==1)return false;
 if(A[0]!==B[0]&&A[0].length===B[0].length&&A[0].slice(1)===B[0].slice(1)&&A[0].length>=4)return false;
@@ -15120,10 +15178,10 @@ if(Object.keys(cambios).length)src(add({doc,grupo:"Personas",etiqueta:cambios.re
 continue;
 }
 const ya=nuevas.find((q)=>lecMismoNombre(q.np.nombre,p.nombre));
-if(ya){const np=ya.np;{const rk=(t)=>(["testamento","herederos","familia","matrimonio","nacimiento","defuncion","renuncia","parejahecho"].includes(t)?3:t==="dni"?1:2);if(lecN(np.nombre)!==lecN(p.nombre)&&rk(r.tipo)>rk(np._tn)){np.nombre=p.nombre;np._tn=r.tipo;}else if(lecN(np.nombre)===lecN(p.nombre)&&np.nombre!==p.nombre&&rk(r.tipo)>rk(np._tn)&&/[ÁÉÍÓÚÑáéíóúñ]/.test(p.nombre)){np.nombre=p.nombre;np._tn=r.tipo;}}if(p.nif&&!np.nif){np.nif=p.nif;np._tnNif=r.tipo;}else if(p.nif&&np.nif!==p.nif){const rk=(t)=>(["testamento","herederos","familia","matrimonio","nacimiento","defuncion","renuncia","parejahecho"].includes(t)?3:t==="dni"?1:2);if(rk(r.tipo)>rk(np._tnNif||np._tn)){np.nif=p.nif;np._tnNif=r.tipo;}}if(p.genero&&!np.genero)np.genero=p.genero;if(p.nacimiento&&!np.nacimiento)np.nacimiento=p.nacimiento;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;for(const k of["domicilio","estadoCivil","profesion","padres","nacimiento","inscrita","registroPareja","fechaPareja","altaPadron","bajaPadron","sigueEmpadronado"])if(p[k]&&!np[k])np[k]=p[k];if(p.pct&&!np.pct)np.pct=p.pct;if(p.legadoDesc&&!np.notaLegado)np.notaLegado=p.legadoDesc;if(p.desheredado)np.desheredado=true;if(p.renuncia)np.renuncia=true;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;src(ya.prop,doc,p,"persona");continue;}
+if(ya){const np=ya.np;{const rk=(t)=>(["testamento","herederos","familia","matrimonio","nacimiento","defuncion","renuncia","parejahecho"].includes(t)?3:t==="dni"?1:2);if(lecN(np.nombre)!==lecN(p.nombre)&&(rk(r.tipo)>rk(np._tn)||(rk(r.tipo)===rk(np._tn)&&np._esc&&!r.escaneado)||((()=>{const A=lecN(np.nombre).split(/\s+/),B=lecN(p.nombre).split(/\s+/);return A.length===B.length&&B[B.length-1].length>A[A.length-1].length&&B[B.length-1].startsWith(A[A.length-1]);})()&&rk(r.tipo)>=rk(np._tn)))){np.nombre=p.nombre;np._tn=r.tipo;np._esc=!!r.escaneado;}else if(lecN(np.nombre)===lecN(p.nombre)&&np.nombre!==p.nombre&&rk(r.tipo)>rk(np._tn)&&/[ÁÉÍÓÚÑáéíóúñ]/.test(p.nombre)){np.nombre=p.nombre;np._tn=r.tipo;}}if(p.nif&&!np.nif){np.nif=p.nif;np._tnNif=r.tipo;}else if(p.nif&&np.nif!==p.nif){const rk=(t)=>(["testamento","herederos","familia","matrimonio","nacimiento","defuncion","renuncia","parejahecho"].includes(t)?3:t==="dni"?1:2);if(rk(r.tipo)>rk(np._tnNif||np._tn)){np.nif=p.nif;np._tnNif=r.tipo;}}if(p.genero&&!np.genero)np.genero=p.genero;if(p.nacimiento&&!np.nacimiento)np.nacimiento=p.nacimiento;if(p.edad&&!np.edad)np.edad=p.edad;if(p.estirpe&&!np.estirpe)np.estirpe=p.estirpe;for(const k of["domicilio","estadoCivil","profesion","padres","nacimiento","inscrita","registroPareja","fechaPareja","altaPadron","bajaPadron","sigueEmpadronado"])if(p[k]&&!np[k])np[k]=p[k];if(p.pct&&!np.pct)np.pct=p.pct;if(p.legadoDesc&&!np.notaLegado)np.notaLegado=p.legadoDesc;if(p.desheredado)np.desheredado=true;if(p.renuncia)np.renuncia=true;if(p.relacion&&!np.relacion){np.relacion=p.relacion;ya.prop.conf=Math.max(ya.prop.conf,p.conf);ya.prop.on=true;ya.prop.etiqueta=etiqP(p);}else if(p.relacion&&p.relacion===np.relacion&&p.conf>ya.prop.conf){ya.prop.conf=p.conf;ya.prop.on=true;}ya.prop.mostrar=descP(np);ya.prop.doc+=" + "+doc;src(ya.prop,doc,p,"persona");continue;}
 if(p.rol==="titular registral"){if(x.nombre&&lecMismoNombre(x.nombre,p.nombre))continue;{const ot=nuevas.find((q)=>lecMismoNombre(q.np.nombre,p.nombre)||(p.nif&&q.np.nif===p.nif));if(ot&&ot.np.relacion){if(p.nif&&!ot.np.nif){ot.np.nif=p.nif;ot.prop.mostrar=descP(ot.np);}continue;}}src(add({doc,grupo:"Personas",etiqueta:"Titular registral que no está en el expediente",mostrar:`${p.nombre}${p.nif?" · "+p.nif:""}: ¿cotitular, cónyuge o el propio causante con otro nombre?`,conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:p.nombre,nif:p.nif||"",relacion:"extrano",edad:"",origen:"documento"});},titReg:{nombre:p.nombre,nif:p.nif||""}}),doc,p,"persona");continue;}
 const rel=p.relacion||"";
-const np={nombre:p.nombre,_tn:r.tipo,relacion:rel,edad:p.edad||"",nif:p.nif||"",...(p.desheredado?{desheredado:true}:{}),...(p.renuncia?{renuncia:true}:{}),...(p.legadoDesc?{notaLegado:p.legadoDesc}:{}),...(p.estirpe?{estirpe:p.estirpe}:{}),...(p.pct?{pct:p.pct}:{}),...(p.nota?{nota:p.nota}:{}),...(p.genero?{genero:p.genero}:{}),...(p.nacimiento?{nacimiento:p.nacimiento}:{}),...(p.domicilio?{domicilio:p.domicilio}:{}),...(p.estadoCivil?{estadoCivil:p.estadoCivil}:{}),...(p.profesion?{profesion:p.profesion}:{}),...(p.padres?{padres:p.padres}:{}),...(p.inscrita?{inscrita:true}:{}),...(p.registroPareja?{registroPareja:p.registroPareja}:{}),...(p.fechaPareja?{fechaPareja:p.fechaPareja}:{}),...(p.altaPadron?{altaPadron:p.altaPadron}:{}),...(p.bajaPadron?{bajaPadron:p.bajaPadron}:{}),...(p.sigueEmpadronado?{sigueEmpadronado:true}:{})};
+const np={nombre:p.nombre,_tn:r.tipo,_esc:!!r.escaneado,relacion:rel,edad:p.edad||"",nif:p.nif||"",...(p.desheredado?{desheredado:true}:{}),...(p.renuncia?{renuncia:true}:{}),...(p.legadoDesc?{notaLegado:p.legadoDesc}:{}),...(p.estirpe?{estirpe:p.estirpe}:{}),...(p.pct?{pct:p.pct}:{}),...(p.nota?{nota:p.nota}:{}),...(p.genero?{genero:p.genero}:{}),...(p.nacimiento?{nacimiento:p.nacimiento}:{}),...(p.domicilio?{domicilio:p.domicilio}:{}),...(p.estadoCivil?{estadoCivil:p.estadoCivil}:{}),...(p.profesion?{profesion:p.profesion}:{}),...(p.padres?{padres:p.padres}:{}),...(p.inscrita?{inscrita:true}:{}),...(p.registroPareja?{registroPareja:p.registroPareja}:{}),...(p.fechaPareja?{fechaPareja:p.fechaPareja}:{}),...(p.altaPadron?{altaPadron:p.altaPadron}:{}),...(p.bajaPadron?{bajaPadron:p.bajaPadron}:{}),...(p.sigueEmpadronado?{sigueEmpadronado:true}:{})};
 const prop=add({doc,grupo:"Personas",etiqueta:etiqP(p),mostrar:descP(np),conf:rel?p.conf:0,aplicar:(x)=>{x.personas.push({id:uid(),nombre:np.nombre,relacion:np.relacion||"extrano",edad:(np.nacimiento&&x.fecha&&typeof edadEn==="function"?edadEn(np.nacimiento,x.fecha):null)??(np.edad||""),nif:np.nif||"",origen:"documento",...(np.genero?{genero:np.genero}:{}),...(np.nacimiento?{nacimiento:np.nacimiento}:{}),...(np.domicilio?{domicilio:np.domicilio}:{}),...(np.estadoCivil?{estadoCivil:np.estadoCivil}:{}),...(np.profesion?{profesion:np.profesion}:{}),...(np.padres?{padres:np.padres}:{}),...(np.inscrita?{inscrita:true}:{}),...(np.registroPareja?{registroPareja:np.registroPareja}:{}),...(np.fechaPareja?{fechaPareja:np.fechaPareja}:{}),...(np.altaPadron?{altaPadron:np.altaPadron}:{}),...(np.bajaPadron?{bajaPadron:np.bajaPadron}:{}),...(np.sigueEmpadronado?{sigueEmpadronado:true}:{}),...(np.desheredado?{desheredado:true}:{}),...(np.renuncia?{renuncia:true}:{}),...(np.notaLegado?{notaLegado:np.notaLegado}:{}),...(np.estirpe?{estirpe:np.estirpe}:{}),...(np.pct&&x.testamento==="porcentajes"?{pct:np.pct}:{})});}});
 if(!rel)prop.pendiente=np;
 src(prop,doc,p,"persona");nuevas.push({np,prop,ultCony:!!p.ultimoConyuge});
@@ -18909,7 +18967,10 @@ aplicar:(x,v)=>{const q=(x.personas||[]).find((z)=>z.id===p.id);if(q)q.inscrita=
 const viv=(x.bienes||[]).find((b)=>b.tipo==="vivienda"&&num(b.valorCatastralSuelo)>0);
 if(viv){
 if(x.causanteEmpadronado==null&&!ya("empcau"))L.push({id:"empcau",grupo:"Plusvalía",titulo:`¿El causante estaba empadronado en «${viv.descripcion||"la vivienda"}» al fallecer?`,texto:`La bonificación de la plusvalía por la vivienda habitual exige que lo fuera del causante; lo acredita el certificado de empadronamiento.${x.domicilioCausante?" Último domicilio según los documentos: "+x.domicilioCausante+".":""}`,tipo:"sino",aplicar:(x,v)=>{x.causanteEmpadronado=v;}});
-for(const p of vivos.filter((p)=>PQ_DAC.includes(p.relacion))){
+const pend=vivos.filter((p)=>PQ_DAC.includes(p.relacion)&&!ya("conv-"+p.id)&&p.convivio2anios==null);
+if(pend.length>=2&&!ya("conv-varios"))L.push({id:"conv-varios",grupo:"Plusvalía",titulo:"¿Quiénes convivían con el causante en la vivienda los dos años anteriores al fallecimiento?",texto:"Marca a los que estaban empadronados con él en esa vivienda, sin interrupción; si no convivía ninguno, guarda sin marcar. Con convivencia, la bonificación de la plusvalía suele ser mucho mayor (en Málaga, hasta el 95 %; sin ella, el 37,5 % si el valor catastral no pasa de 150.000 €). Se acredita con el padrón histórico.",tipo:"quienes",personas:pend.map((p)=>({id:p.id,nombre:p.nombre})),
+aplicar:(x,v)=>{const S=new Set(v||[]);for(const q of x.personas||[])if(pend.some((z)=>z.id===q.id)){q.convivio2anios=S.has(q.id);if(S.has(q.id))q.empadronado=true;}}});
+else for(const p of vivos.filter((p)=>PQ_DAC.includes(p.relacion))){
 const id="conv-"+p.id;if(ya(id)||p.convivio2anios!=null)continue;
 L.push({id,grupo:"Plusvalía",titulo:`¿${p.nombre||"Este heredero"} convivía con el causante en la vivienda los dos años anteriores al fallecimiento?`,texto:"Empadronado con él en esa vivienda, sin interrupción. Con convivencia, la bonificación de la plusvalía suele ser mucho mayor (en Málaga, hasta el 95 %; sin ella, el 37,5 % si el valor catastral no pasa de 150.000 €). Se acredita con el padrón histórico.",tipo:"sino",aplicar:(x,v)=>{const q=x.personas.find((z)=>z.id===p.id);if(q){q.convivio2anios=v;if(v)q.empadronado=true;}}});
 }
@@ -18963,6 +19024,7 @@ if(p.tipo==="edad")return`<form class="pq-form" data-pq-form="1"><label for="pq-
 if(p.tipo==="select")return`<form class="pq-form" data-pq-form="1"><label for="pq-in">Comunidad</label><div class="pq-fila"><select id="pq-in">${p.opciones.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join("")}</select><button class="btn" type="submit">Guardar</button></div></form>`;
 if(p.tipo==="seguro")return`<form class="pq-form" data-pq-form="1"><div class="pq-seg">${(p.personas||[]).map((q,i)=>`<label class="pq-fila"><span>${esc(q.nombre||"Persona")}</span><input ${i===0?'id="pq-in"':""} data-pqper="${esc(q.id)}" inputmode="decimal" autocomplete="off" placeholder="0"></label>`).join("")}</div><button class="btn" type="submit">Guardar</button></form>`;
 if(p.tipo==="nombres")return`<form class="pq-form" data-pq-form="1"><label for="pq-in">${esc(p.etiqueta||"Nombres")}</label><div class="pq-fila"><input id="pq-in" autocomplete="off" placeholder="${esc(p.ph?"Nombre "+p.ph:"")}"><button class="btn" type="submit">Guardar</button></div></form><div class="pq-ops"><button type="button" class="pq-op" data-pq="v" data-v=""><b>No hay más</b></button></div>`;
+if(p.tipo==="quienes")return`<form class="pq-form" data-pq-form="1"><div class="pq-seg">${(p.personas||[]).map((q,i)=>`<label class="pq-fila pq-marca"><input type="checkbox" ${i===0?'id="pq-in"':""} data-pqquien="${esc(q.id)}"><span>${esc(q.nombre||"Persona")}</span></label>`).join("")}</div><button class="btn" type="submit">Guardar</button></form>`;
 if(p.tipo==="sino")return`<div class="pq-ops"><button type="button" class="pq-op" data-pq="v" data-v="si"><b>Sí</b></button><button type="button" class="pq-op" data-pq="v" data-v="no"><b>No</b></button></div>`;
 if(p.tipo==="opc")return`<div class="pq-ops">${p.opciones.map(([v,t,a])=>`<button type="button" class="pq-op" data-pq="v" data-v="${esc(v)}"><b>${esc(t)}</b>${a?`<small>${esc(a)}</small>`:""}</button>`).join("")}</div>`;
 if(p.tipo==="bienes")return`<div class="pq-bienes">${PQ.bienes.length?`<ul class="pq-lista">${PQ.bienes.map((b,i)=>`<li><span>${esc(b.descripcion)}</span><b class="num">${eur(b.valor)}</b><button type="button" class="link" data-pq="quitar" data-i="${i}" aria-label="Quitar ${esc(b.descripcion)}">Quitar</button></li>`).join("")}</ul>`:""}
@@ -19004,6 +19066,7 @@ if(p.tipo==="fecha"){if(!inp.value){if(typeof toast==="function")toast("Pon la f
 if(p.tipo==="edad"){const v=Math.round(num(inp.value));if(!(v>0&&v<120)){if(typeof toast==="function")toast("Escribe la edad en años");return;}return pqResponder(v);}
 if(p.tipo==="select")return pqResponder(inp.value);
 if(p.tipo==="nombres"){const v=String(inp.value||"").split(/\s*[,;]\s*|\s+y\s+/).map((s)=>s.trim()).filter((s)=>s.length>=3);if(!v.length){if(typeof toast==="function")toast("Escribe un nombre o pulsa «No hay más»");return;}return pqResponder(v);}
+if(p.tipo==="quienes")return pqResponder([...f.querySelectorAll("[data-pqquien]")].filter((el)=>el.checked).map((el)=>el.dataset.pqquien));
 if(p.tipo==="seguro"){const v={};for(const el of f.querySelectorAll("[data-pqper]")){const n=num(el.value);if(n>0)v[el.dataset.pqper]=n;}return pqResponder(v);}
 }
 if(typeof document!=="undefined"){document.addEventListener("click",pqClick,true);document.addEventListener("submit",pqSubmit,true);}
