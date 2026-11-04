@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:373,nombre:"Versión 3.7.3",fecha:"2026-11-04"};
+const VERSION_APP={n:374,nombre:"Versión 3.7.4",fecha:"2026-11-04"};
 const NOVEDADES=[
+["Núcleo comprobado de punta a punta (3.7.4)","El reparto ya no rechaza estructuras válidas que leía la IA: legítima de los padres sin descendientes, cuota del viudo sin descendientes, varios porcentajes en una cláusula, «su esposa» sin nombre y legítima legada al desheredado por si la desheredación no vale. Se comprueba con miles de testamentos al azar en cada reparto. La hoja de casillas recoge todos los bienes (criptoactivos, arte, derechos reales) y solo las deudas y gastos deducibles, y la cuota de la nuda propiedad aplica el tipo medio con dos decimales, como dice el art. 51.2 del Reglamento y calcula el impreso."],
 ["Estructura sola más testamentos (3.7.3)","Probada con 79 resoluciones reales del BOE y un corrector automático: usufructo de la mejora a la viuda con la nuda propiedad a los nietos, «padre de cuatro hijos llamados…» y «habidos de su anterior matrimonio», nietos de un hijo fallecido sin nombre, legítima colectiva vasca y apartamiento, testador extranjero (sin legítimas españolas, sin marcar), cautela socini con otras palabras, opción del legatario, «a su citada hija», fideicomiso de residuo dentro de la institución, cuotas delante de cada heredero, padres desheredados, prelegados, y la heredera «su esposa» sin nombre (queda por completar). Un reparto con la lista de hijos incompleta ya no se da por bueno."],
 ["Testamentos reales (3.7.2)","Probado con cláusulas literales de resoluciones de la Dirección General publicadas en el BOE: legado de un porcentaje de la herencia (legado de parte alícuota), llamamiento «para el caso de que fallezcan en la misma fecha» (es una sustitución, no un heredero más), cuotas por el orden de la lista («el cincuenta por ciento el primero…»), hijos por cabezas y nietos por estirpes, sustitución fideicomisaria y fideicomiso de residuo aunque no se nombren, herencia con carga (modo), apartamiento foral, y hermanas con nombres parecidos («Marta Alicia» y «Alicia») que ya no se juntan en una."],
 ["Más lectura fina (3.7.1)","La relación de bienes de un titular del Catastro da cada inmueble con su dirección y su cuota; un IBAN con una cifra mal leída se corrige cuando cuadran los dos controles (el del IBAN y el de la cuenta); los seguros de ahorro (PIAS, unit linked) y la pensión de viudedad de la viuda (que no es de la herencia) se reconocen; certificados de deuda de la comunidad en catalán y gallego y sentencias de divorcio en catalán."],
@@ -16201,7 +16202,7 @@ Reglas:
 8. Testamentos (testamento.hay = true): una «disposición» por cada atribución del testamento.
    objeto: herencia (heredero de toda la herencia), remanente (lo que quede: «el resto», «el remanente»), tercio_libre (tercio de libre disposición), tercio_mejora, legitima_estricta, legitima (legítima sin precisar), cuota_legal_usufructuaria (la del cónyuge viudo; con hijos es el usufructo del tercio de mejora, aunque el testamento la llame «legítima estricta» de la esposa), usufructo_universal, legado_bien (un bien concreto: descríbelo en «bien»), legado_dinero (la cantidad en «bien», p. ej. «6000.00»), norma_particional (adjudica bienes concretos para pagar una cuota ya atribuida; no cambia las cuotas: el bien en «bien»), otro.
    derecho: pleno, usufructo o nuda. reparto: partes_iguales, unico (un solo beneficiario) o fraccion (la fracción en «fraccion», p. ej. «1/3» o «50 %»).
-   beneficiarios: los NOMBRES de cada persona o entidad, aunque el testamento diga «sus hijos» o «sus tres hijos citados»: escribe cada nombre.
+   beneficiarios: los NOMBRES de cada persona o entidad, aunque el testamento diga «sus hijos» o «sus tres hijos citados»: escribe cada nombre. Si el documento no da el nombre en ningún sitio («instituye heredera a su esposa» sin que figure cómo se llama), escribe el parentesco tal como aparece («su esposa»); nunca lo dejes vacío.
    Si el testamento instituye herederos a varias personas y a continuación detalla cómo se distribuyen la herencia, registra solo las atribuciones detalladas (no añadas además una «herencia» por partes iguales).
    Si el testamento deja elegir al viudo entre dos opciones (por ejemplo usufructo universal, o tercio libre más cuota legal), marca opcion «A» en las disposiciones de la primera alternativa y «B» en las de la segunda, las del resto del testamento con opcion vacía, y cautela_opcion.hay = true con su cita.
    Las sustituciones (vulgar, por estirpes, en cadena, fideicomisaria) van en «sustituciones», cada una con su cita literal.
@@ -16363,7 +16364,9 @@ for(const s of T.sustituciones||[])av.push(`Sustitución: ${cita(s)}. El reparto
 const P=personas.map((p)=>({...p}));
 const nx=(s)=>(typeof lecN==="function"?lecN(s):String(s).toUpperCase()).replace(/\s+/g," ").trim();
 const buscar=(n,d)=>P.find((p)=>nx(p.nombre)===nx(n))||P.find((p)=>(liaMismo(p.nombre,n)||(typeof lecMismoNombre==="function"&&lecMismoNombre(p.nombre,n)))&&!(d&&(d.beneficiarios||[]).some((x)=>nx(x)===nx(p.nombre)&&nx(x)!==nx(n))));
-const persona=(n,d)=>{let p=buscar(n,d);
+const persona=(n,d)=>{
+if(/^(?:a\s+)?(?:su\s+)?(?:(?:citad|nombrad|mencionad|referid)[oa]\s+)?(espos[oa]|c[óo]nyuge|marido|mujer|viud[oa])$/i.test(String(n).trim())){const c=P.find((p)=>p.relacion==="conyuge");if(c)return c;const nn=/esposa|mujer|viuda/i.test(n)?"Esposa del causante (nombre por completar)":/esposo|marido|viudo/i.test(n)?"Esposo del causante (nombre por completar)":"Cónyuge del causante (nombre por completar)";const q={nombre:nn,relacion:"conyuge",vive:true,nuevo:true,porCompletar:true};P.push(q);return q;}
+let p=buscar(n,d);
 if(p&&(!p.relacion||p.relacion==="extrano")&&T.testador&&typeof lecRelPorApellidos==="function"&&!liaExtranoEscrito(d&&d.cita,n)){const r2=lecRelPorApellidos(n,T.testador);if(r2){p.relacion=r2;p.porApellidos=true;}}
 if(!p){let rel=liaRelDeCita(d&&d.cita,n),porAp=false;
 if(rel==="extrano"&&T.testador&&typeof lecRelPorApellidos==="function"&&!liaExtranoEscrito(d&&d.cita,n)){const r2=lecRelPorApellidos(n,T.testador);if(r2){rel=r2;porAp=true;}}
@@ -16394,7 +16397,7 @@ const S=hayDesc?{E:LEY.E,M:LEY.M,F:LEY.F}:{E:fAsc,M:0,F:1-fAsc};
 const der=new Map();const da=(p,tercio,f)=>{if(!(f>1e-12))return;const L=der.get(p)||[];L.push({tercio,f});der.set(p,L);};
 let usuM=null,usuTodo=null,usuProp=null,usuF=null,usuFf=null;const legados=[];const mencion=new Set();let conyPagado=false;
 const tomar=(tercio,f)=>{if(S[tercio]==null)return 0;const v=Math.min(f,S[tercio]);S[tercio]-=v;return v;};
-const reparto=(d,n)=>{if(Array.isArray(d.pesos)&&d.pesos.length===n){const t=d.pesos.reduce((a,x)=>a+x,0);if(t>0)return d.pesos.map((x)=>x/t);}if(d.reparto==="fraccion"){const f=liaFrac(d.fraccion);if(f==null)return null;return Array(n).fill(f);}return Array(n).fill(1/n);};
+const reparto=(d,n)=>{{const m=[...String(d.fraccion||"").matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|por\s+ciento)/gi)].map((x)=>Number(x[1].replace(",","."))/100);if(d.reparto==="fraccion"&&n>1&&m.length===n&&Math.abs(m.reduce((a,x)=>a+x,0)-1)<0.02)return m;}if(Array.isArray(d.pesos)&&d.pesos.length===n){const t=d.pesos.reduce((a,x)=>a+x,0);if(t>0)return d.pesos.map((x)=>x/t);}if(d.reparto==="fraccion"){const f=liaFrac(d.fraccion);if(f==null)return null;return Array(n).fill(f);}return Array(n).fill(1/n);};
 const cab=[...hijos.map((h)=>[h]),...est.values()];
 if(hayDesc&&LEY.indiv)for(const L of cab)for(const p of L)da(p,"E",tomar("E",LEY.E/cabezas/L.length));
 if(ascL.length){for(const p of ascL){da(p,"E",tomar("E",fAsc/ascL.length));mencion.add(p);}av.push(`Legítima de ${ascL.map((p)=>p.nombre).join(" y ")} (${fAsc<0.4?"un tercio":"la mitad"} de la herencia${ascL.length===2?", por mitad":""}, arts. 809-810 CC): no hay descendientes; se reserva por ley${fAsc<0.4?" (concurre con el viudo)":""}. Compruébalo con el testamento.`);}
@@ -16416,11 +16419,13 @@ const libre=hayDesc?LEY.F:1/3;if(resto>libre+1e-9){av.push(`${cita(d)}: el usufr
 if(resto>1e-9){usuF=p;usuFf=resto;}continue;}
 if(d.objeto==="cuota_legal_usufructuaria"||(d.objeto==="legitima_estricta"&&B.every((p)=>p.relacion==="conyuge"))){
 if(ley!=="comun"){if(!B.every((p)=>p.relacion==="conyuge")&&d.objeto==="cuota_legal_usufructuaria")return fallo(`cuota del cónyuge en ${LEY.nombre.toLowerCase()} ${cita(d)}: introdúcela a mano`);av.push(`${cita(d)}: en ${LEY.nombre.toLowerCase()} el viudo tiene los derechos que le da su ley; se aplican abajo.`);continue;}
-if(!hayDesc)return fallo(`cuota del cónyuge sin descendientes ${cita(d)} (arts. 837-838 CC): introdúcela a mano`);
+if(!hayDesc){if(B.every((p)=>p.relacion==="conyuge"))continue;return fallo(`cuota del cónyuge sin descendientes ${cita(d)} (arts. 837-838 CC): introdúcela a mano`);}
 usuM=B[0];continue;
 }
 if(d.objeto==="legitima_estricta"||d.objeto==="legitima"){
+if(!hayDesc&&B.length&&B.every((p)=>p.relacion==="padre")){for(const p of B)mencion.add(p);continue;}
 if(!hayDesc)return fallo(`legítima sin descendientes legitimarios ${cita(d)}`);
+if(B.length&&B.every((p)=>p.desheredado)){av.push(`${B.map((p)=>p.nombre).join(" y ")}: el testamento le lega la legítima solo si la desheredación no vale ${cita(d)}; mientras tanto no recibe nada.`);continue;}
 for(const p of B){
 const e=[...est.entries()].find(([,L])=>L.includes(p));
 const colectiva=!LEY.indiv&&["hijo","nieto","bisnieto"].includes(p.relacion);

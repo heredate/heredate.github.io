@@ -2407,8 +2407,9 @@ function calcularISD(caso) {
     let ci, tn, te, k, tipoMedio, kGrupo;
     // CM-002 (mesa jurídica, 30-09-2026). Nuda propiedad: tipo medio efectivo correspondiente al valor íntegro de los bienes (art. 26.a Ley 29/1987; art. 51.2 RISD).
     // BL teórica = valor íntegro (nuda al 100 %) − reducciones; tipo medio = cuota tributaria teórica (con coeficiente) / BL teórica; cuota tributaria = BL real × tipo
-    // medio. m-1 (auditoría ISD 10-10-2026): se calcula con el tipo exacto, como la acumulación del art. 30, y se muestra con dos decimales (antes se redondeaba
-    // a dos decimales antes de aplicarlo: de 9 a 13 € de más). Territorios forales: norma propia no cotejada, se mantiene la tarifa sobre el valor de la nuda.
+    // medio. 3.7.4 (04-11-2026): el art. 51.2 RISD define el tipo medio «expresado con inclusión de hasta dos decimales» y el impreso (650 estatal casilla 45,
+    // 660/650 de Andalucía casilla 127) multiplica la base por esa casilla: se aplica el tipo con dos decimales, para que la cuota sea la que calcula el
+    // formulario (antes, m-1 de 10-10-2026, se aplicaba el tipo exacto y la hoja de casillas no cuadraba por céntimos o pocos euros). Forales: sin cambio.
     const nudaComun = a.nudaUsuf > 0 && !FORALES_ISD.includes(R.id); // también con BL 0: el tipo medio se guarda para la consolidación
     if (nudaComun) {
       const blT = r2(Math.max(0, bi + a.nudaUsuf - suma));
@@ -2419,7 +2420,7 @@ function calcularISD(caso) {
         `Valor íntegro ${r2(bi + a.nudaUsuf)} € (base imponible + ${r2(a.nudaUsuf)} € del usufructo que grava la nuda) menos ${r2(suma)} € de reducciones`);
       add(`Cuota tributaria teórica · tipo medio efectivo ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`, kT.cuota, `${NORMA_NUDA} (tarifa: ${q.tn}; coeficiente ×${kT.k}: ${kT.norma})`, V);
       t[t.length - 1].tipoMedio = tipoMedio;
-      ci = r2(bl * tipoExacto); tn = `${NORMA_NUDA}: base liquidable × tipo medio efectivo del ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`; te = V;
+      ci = r2(bl * tipoMedio / 100); tn = `${NORMA_NUDA}: base liquidable × tipo medio efectivo del ${tipoMedio.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`; te = V;
       add("Cuota íntegra", ci, tn, te);
       t[t.length - 1].tipoMedio = tipoMedio;
       k = { k: 1, cuota: ci, salto: false, norma: kT.norma, estado: kT.estado };
