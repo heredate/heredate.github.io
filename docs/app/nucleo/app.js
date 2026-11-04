@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:374,nombre:"Versión 3.7.4",fecha:"2026-11-04"};
+const VERSION_APP={n:375,nombre:"Versión 3.7.5",fecha:"2026-11-04"};
 const NOVEDADES=[
+["Lee más testamentos difíciles (3.7.5)","Probada a ciegas con 25 resoluciones nuevas del BOE. Ahora entiende instituciones por porcentajes repartidas en varios apartados («un 25 % a A; otro 25 % a partes iguales a los hijos de B»), cuotas por parentesco («una tercera parte cada hija y una novena parte cada nieta»), «los tres primeros por cabezas y las dos últimas por estirpes», «a sus tres nietas» sin nombrarlas, padres con solo el nombre de pila, la excónyuge a la que el testamento llama «cónyuge», el fideicomiso de residuo «en caso de no disponer» y los hijos de una hija como nietos. Si el testamento habla de cuatro hijos y nombra tres, el reparto no se da por bueno."],
 ["Núcleo comprobado de punta a punta (3.7.4)","El reparto ya no rechaza estructuras válidas que leía la IA: legítima de los padres sin descendientes, cuota del viudo sin descendientes, varios porcentajes en una cláusula, «su esposa» sin nombre y legítima legada al desheredado por si la desheredación no vale. Se comprueba con miles de testamentos al azar en cada reparto. La hoja de casillas recoge todos los bienes (criptoactivos, arte, derechos reales) y solo las deudas y gastos deducibles, y la cuota de la nuda propiedad aplica el tipo medio con dos decimales, como dice el art. 51.2 del Reglamento y calcula el impreso."],
 ["Estructura sola más testamentos (3.7.3)","Probada con 79 resoluciones reales del BOE y un corrector automático: usufructo de la mejora a la viuda con la nuda propiedad a los nietos, «padre de cuatro hijos llamados…» y «habidos de su anterior matrimonio», nietos de un hijo fallecido sin nombre, legítima colectiva vasca y apartamiento, testador extranjero (sin legítimas españolas, sin marcar), cautela socini con otras palabras, opción del legatario, «a su citada hija», fideicomiso de residuo dentro de la institución, cuotas delante de cada heredero, padres desheredados, prelegados, y la heredera «su esposa» sin nombre (queda por completar). Un reparto con la lista de hijos incompleta ya no se da por bueno."],
 ["Testamentos reales (3.7.2)","Probado con cláusulas literales de resoluciones de la Dirección General publicadas en el BOE: legado de un porcentaje de la herencia (legado de parte alícuota), llamamiento «para el caso de que fallezcan en la misma fecha» (es una sustitución, no un heredero más), cuotas por el orden de la lista («el cincuenta por ciento el primero…»), hijos por cabezas y nietos por estirpes, sustitución fideicomisaria y fideicomiso de residuo aunque no se nombren, herencia con carga (modo), apartamiento foral, y hermanas con nombres parecidos («Marta Alicia» y «Alicia») que ya no se juntan en una."],
@@ -13810,7 +13811,7 @@ if(r&&r.rep.ok){
 const rp=r.rep;const lin=rp.derechos.map((q)=>`${q.nombre}: ${liaDerTxt(q)}`).join(" · ");
 out.campos=out.campos.filter((c)=>c.k!=="testamento");
 out.personas=out.personas.filter((p)=>!p.legadoViejo||rp.personas.some((q)=>q.legatario&&lecMismoNombre(q.nombre,p.nombre)));
-out.campos.push({k:"testamento",etiqueta:"Reparto del testamento (por derechos)",valor:typeof liaValorReparto==="function"?liaValorReparto(rp.derechos):"porcentajes",derechos:rp.derechos,base:rp.base,conf:r.R.duda||(rp.avisos||[]).some((a)=>/no cabe entera/.test(a))||out.avisos.some((a)=>/habla de \d+ hijos y se han leído/.test(a))?0:1,mostrar:`${lin}. ${rp.base}.`});
+out.campos.push({k:"testamento",etiqueta:"Reparto del testamento (por derechos)",valor:typeof liaValorReparto==="function"?liaValorReparto(rp.derechos):"porcentajes",derechos:rp.derechos,base:rp.base,conf:r.R.duda||(rp.avisos||[]).some((a)=>/no cabe entera|habla de \d+ (?:hijos|nietos) y se han leído/.test(a))||out.avisos.some((a)=>/habla de \d+ hijos y se han leído/.test(a))?0:1,mostrar:`${lin}. ${rp.base}.`});
 const enRp=(n)=>rp.derechos.some((q)=>lecN(q.nombre)===lecN(n));
 for(const q of rp.derechos.filter((q)=>q.nuevo&&!out.personas.some((p)=>lecN(p.nombre)===lecN(q.nombre)||(lecMismoNombre(p.nombre,q.nombre)&&!enRp(p.nombre)))))out.personas.push({nombre:q.nombre,relacion:q.relacion||"extrano",conf:1,...(q.porApellidos?{nota:`el testamento no dice el parentesco: se propone ${q.relacion==="hijo"?"hijo/a":q.relacion==="nieto"?"nieto/a":"hermano/a"} por los apellidos; compruébalo con el libro de familia`}:{})});
 for(const p of rp.personas.filter((p)=>p.legatario)){const o=out.personas.find((q)=>lecMismoNombre(q.nombre,p.nombre));if(o){o.legatario=true;o.legadoDesc=p.legadoDesc;delete o.legadoViejo;}else out.personas.push({nombre:p.nombre,relacion:p.relacion||"extrano",legatario:true,legadoDesc:p.legadoDesc,conf:1});}
@@ -16335,6 +16336,7 @@ for(const q of r.polizas)q.tipo=/deces/i.test(q.tipo)?"decesos":/accid/i.test(q.
 for(const q of r.polizas)if(q.capital&&!enDoc("importe",q.capital,q.cita))q.capital="";
 const T=resp.testamento;
 if(T&&T.hay){
+for(const it of T.disposiciones||[])if(!(it.beneficiarios||[]).filter((n)=>String(n||"").trim()).length){const m=String(it.cita||"").match(/\b(?:a\s+)?su\s+(?:(?:citad|nombrad|mencionad|referid)[oa]\s+)?(espos[oa]|c[óo]nyuge|marido|mujer)\b/i);if(m)it.beneficiarios=["su "+m[1].toLowerCase()];}
 const disp=filtra(T.disposiciones,(it)=>(it.beneficiarios||[]).length>0);
 r.testamento={hay:true,disposiciones:disp,sustituciones:filtra(T.sustituciones,()=>true),cautela:T.cautela_opcion&&T.cautela_opcion.hay&&comprobar(T.cautela_opcion.cita)?T.cautela_opcion:null,duda:!!T.duda,motivoDuda:T.motivo_duda||"",perdidas:(T.disposiciones||[]).length-disp.length};
 }
@@ -16342,6 +16344,19 @@ out.r=r;
 if(out.total&&out.malas/out.total>0.2){out.ok=false;out.motivos.unshift(`${out.malas} de ${out.total} citas no se han podido comprobar`);}
 if(r.testamento&&r.testamento.perdidas){out.ok=false;out.motivos.unshift("alguna cláusula del testamento sin cita comprobable");}
 return out;
+}
+const LIA_DUDA_CONF=false;
+const LIA_ORD_FR={mitad:2,tercera:3,cuarta:4,quinta:5,sexta:6,"séptima":7,septima:7,octava:8,novena:9,"décima":10,decima:10};
+function liaCuotaPorRel(d,B){
+for(const txt of[d.fraccion,d.cita]){
+const M={};const re=/(\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?\s*%|(?:una?|la)\s+(mitad|tercera|cuarta|quinta|sexta|s[ée]ptima|octava|novena|d[ée]cima)(?:\s+parte)?)\s+(?:para\s+)?(?:a\s+)?cada\s+(?:una?\s+)?(?:de\s+)?(?:(?:las?|los|sus)\s+)?(?:(?:dos|tres|cuatro|cinco|seis)\s+)?(hij|niet|bisniet|herman|sobrin)[oa]s?\b/gi;
+for(const m of String(txt||"").matchAll(re)){let f;if(m[2])f=1/LIA_ORD_FR[m[2].toLowerCase()];else if(/%/.test(m[1]))f=Number(m[1].replace(/\s*%/,"").replace(",","."))/100;else{const[a,b]=m[1].split("/").map((x)=>Number(x));f=a/b;}
+M[{hij:"hijo",niet:"nieto",bisniet:"bisnieto",herman:"hermano",sobrin:"sobrino"}[m[3].toLowerCase()]]=f;}
+if(!Object.keys(M).length)continue;
+const f=B.map((p)=>M[p.relacion]);if(f.some((x)=>!(x>0)))continue;
+if(Math.abs(f.reduce((a,x)=>a+x,0)-1)<0.02)return f;
+}
+return null;
 }
 const liaFrac=(s)=>{s=String(s||"").trim().toLowerCase();let m=/^(\d+(?:[.,]\d+)?)\s*%$/.exec(s);if(m)return Number(m[1].replace(",","."))/100;m=/^(\d+)\s*\/\s*(\d+)$/.exec(s);if(m)return Number(m[1])/Number(m[2]);const P={"la mitad":1/2,mitad:1/2,"un tercio":1/3,"una tercera parte":1/3,"dos tercios":2/3,"un cuarto":1/4,"una cuarta parte":1/4};return P[s]||null;};
 const liaTokN=(s)=>liaToks(s).filter((w)=>!LIA_PARTICULAS.has(w));
@@ -16371,7 +16386,28 @@ if(p&&(!p.relacion||p.relacion==="extrano")&&T.testador&&typeof lecRelPorApellid
 if(!p){let rel=liaRelDeCita(d&&d.cita,n),porAp=false;
 if(rel==="extrano"&&T.testador&&typeof lecRelPorApellidos==="function"&&!liaExtranoEscrito(d&&d.cita,n)){const r2=lecRelPorApellidos(n,T.testador);if(r2){rel=r2;porAp=true;}}
 p={nombre:n,relacion:rel,vive:true,nuevo:true,...(porAp?{porApellidos:true}:{}),...(rel==="extrano"&&liaExtranoEscrito(d&&d.cita,n)?{extranoEscrito:true}:{})};P.push(p);}return p;};
+for(const obj of["remanente","herencia"]){const G=D.filter((d)=>d.objeto===obj&&(d.derecho||"pleno")==="pleno"&&(d.beneficiarios||[]).length&&!d.pesos);
+if(G.length<2)continue;const F=G.map((d)=>{const m=[...String(d.fraccion||"").matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|por\s+ciento)/gi)];const f=m.length===1?Number(m[0][1].replace(",","."))/100:liaFrac(d.fraccion);return f;});
+if(F.some((f)=>!(f>0&&f<1))||Math.abs(F.reduce((a,x)=>a+x,0)-1)>0.02)continue;
+if(G.some((d,i)=>d.reparto==="fraccion"&&d.beneficiarios.length>1&&!/iguales|por\s+mitad/i.test(String(d.cita||""))))continue;
+const U={...G[0],reparto:"partes_iguales",fraccion:"",beneficiarios:G.flatMap((d)=>d.beneficiarios),pesos:G.flatMap((d,i)=>d.beneficiarios.map(()=>F[i]/d.beneficiarios.length)),cita:G.map((d)=>d.cita).join(" … ")};
+D=[...D.filter((d)=>!G.includes(d)),U];av.push(`Institución por porcentajes en varias partes (${G.map((d,i)=>Math.round(F[i]*1000)/10+" %").join(" + ")}): se reparte con esas cuotas.`);}
 for(const d of D)if(["herencia","remanente","tercio_mejora","tercio_libre","legitima","legitima_estricta"].includes(d.objeto))for(const n of d.beneficiarios||[])if(n&&n!=="—")persona(n,d);
+for(const d of D)if(["legitima","legitima_estricta"].includes(d.objeto)&&/\b(?:sus\s+(?:citad[oa]s\s+|referid[oa]s\s+)?(?:padres|progenitores)|su\s+(?:citad[oa]\s+)?(?:padre|madre))\b/i.test(String(d.cita||"")))
+for(const n of d.beneficiarios||[]){const q=persona(n,d);if(!["hijo","nieto","bisnieto","conyuge","padre"].includes(q.relacion))q.relacion="padre";}
+const NUM={dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10};
+for(const d of D){if(!["herencia","remanente","legitima","legitima_estricta","tercio_mejora","tercio_libre"].includes(d.objeto))continue;
+for(const m of String(d.cita||"").matchAll(/\b(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(?:(?:citad|nombrad|mencionad|referid)[oa]s\s+)?(hij|niet)[oa]s\b/gi)){
+const n=NUM[m[1].toLowerCase()],rel=m[2].toLowerCase()==="hij"?"hijo":"nieto";
+let B=(d.beneficiarios||[]).map((x)=>persona(x,d));let nb=B.filter((q)=>q.relacion===rel).length;
+const cand=P.filter((q)=>q.relacion===rel&&q.vive!==false&&!q.excluido&&!q.desheredado);
+if(nb===0&&cand.length===n&&!/\bllamad[oa]s\b/i.test(String(d.cita).slice(m.index,m.index+60))){d.beneficiarios=[...(d.beneficiarios||[]),...cand.map((q)=>q.nombre)];B=d.beneficiarios.map((x)=>persona(x,d));nb=n;av.push(`${cita(d)}: «sus ${m[1]} ${rel==="hijo"?"hijos":"nietos"}» se leen como ${cand.map((q)=>q.nombre).join(", ")}; compruébalo.`);}
+if(nb!==n&&!(rel==="hijo"&&B.length===n))av.push(`El testamento habla de ${n} ${rel==="hijo"?"hijos":"nietos"} y se han leído ${nb} en ${cita(d)}: revisa la lista.`);}}
+const trasCita=(d)=>{const t=String(T.texto||""),c=String(d.cita||"");if(!t||c.length<20)return c;const i=t.indexOf(c.slice(0,40));return i<0?c:t.slice(i,i+c.length+300);};
+for(const d of D){const m=/(?:los|las)\s+(\d|dos|tres|cuatro|cinco|seis)\s+primer[oa]s\s+por\s+cabezas?\s*,?\s+y\s+(?:los|las)\s+(\d|dos|tres|cuatro|cinco|seis)\s+[úu]ltim[oa]s\s+por\s+estirpes?/i.exec(trasCita(d));
+const nB=(d.beneficiarios||[]).length;if(!m||d.pesos)continue;const a1=NUM[m[1].toLowerCase()]||Number(m[1]),a2=NUM[m[2].toLowerCase()]||Number(m[2]);
+if(a1+a2!==nB||a2<1)continue;d.pesos=[...Array(a1).fill(1),...Array(a2).fill(1/a2)];
+const ult=d.beneficiarios.slice(a1).map((n)=>persona(n,d));if(ult.every((q)=>["nieto","bisnieto"].includes(q.relacion)&&!q.estirpe))for(const q of ult)q.estirpe="Hijo fallecido de quien descienden "+ult.map((z)=>z.nombre).join(" y ");}
 {const hj=P.filter((p)=>p.relacion==="hijo").map((p)=>liaTokN(p.nombre)[1]).filter(Boolean);
 for(const p of P.filter((q)=>(q.nuevo||!q.relacion||q.relacion==="extrano")&&q.relacion!=="conyuge"&&(q.relacion==="extrano"||!q.relacion)&&!q.extranoEscrito&&!liaExtranoEscrito(String((D.find((d)=>(d.beneficiarios||[]).some((n)=>liaMismo(n,q.nombre)))||{}).cita||""),q.nombre))){const w=liaTokN(p.nombre);if(w.length>=3&&(hj.includes(w[1])||hj.includes(w[2]))){p.relacion="nieto";p.porApellidos=true;}}}
 {const ap2=(n)=>liaTokN(n).slice(-2).join(" ");
@@ -16388,6 +16424,10 @@ const ascL=ley==="comun"&&!P.some((p)=>esDesc(p))?vivos.filter((p)=>p.relacion==
 if(ascL.length>2)return fallo("más de dos ascendientes con legítima (abuelos por líneas, art. 810 CC): el reparto no se convierte solo");
 const hijos=vivos.filter((p)=>p.relacion==="hijo"&&!p.desheredado);
 const vivoHijo=(e)=>hijos.some((h)=>liaMismoNom(h.nombre,e)||(typeof lecMismoNombre==="function"&&lecMismoNombre(h.nombre,e))||(String(e).trim().split(/\s+/).length===1&&liaTokN(h.nombre)[0]===liaTokN(e)[0]));
+for(const p of vivos.filter((q)=>(q.relacion==="nieto"||q.relacion==="bisnieto")&&!q.estirpe)){
+const ap=liaTokN(p.nombre).slice(-2);
+const c=P.filter((h)=>h.relacion==="hijo"&&(h.desheredado||h.vive===false||h.excluido)&&liaTokN(h.nombre).length>=3&&ap.includes(liaTokN(h.nombre).slice(-2)[0]));
+if(c.length===1)p.estirpe=c[0].nombre;}
 const est=new Map();for(const p of vivos.filter((p)=>(p.relacion==="nieto"||p.relacion==="bisnieto")&&p.estirpe&&!p.desheredado&&!vivoHijo(p.estirpe))){const k=liaTokN(p.estirpe).join(" ");if(!est.has(k))est.set(k,[]);est.get(k).push(p);}
 const cabezas=hijos.length+est.size,hayDesc=cabezas>0;
 const cony=vivos.find((p)=>p.relacion==="conyuge"&&!p.separado&&!p.excónyuge);
@@ -16397,7 +16437,7 @@ const S=hayDesc?{E:LEY.E,M:LEY.M,F:LEY.F}:{E:fAsc,M:0,F:1-fAsc};
 const der=new Map();const da=(p,tercio,f)=>{if(!(f>1e-12))return;const L=der.get(p)||[];L.push({tercio,f});der.set(p,L);};
 let usuM=null,usuTodo=null,usuProp=null,usuF=null,usuFf=null;const legados=[];const mencion=new Set();let conyPagado=false;
 const tomar=(tercio,f)=>{if(S[tercio]==null)return 0;const v=Math.min(f,S[tercio]);S[tercio]-=v;return v;};
-const reparto=(d,n)=>{{const m=[...String(d.fraccion||"").matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|por\s+ciento)/gi)].map((x)=>Number(x[1].replace(",","."))/100);if(d.reparto==="fraccion"&&n>1&&m.length===n&&Math.abs(m.reduce((a,x)=>a+x,0)-1)<0.02)return m;}if(Array.isArray(d.pesos)&&d.pesos.length===n){const t=d.pesos.reduce((a,x)=>a+x,0);if(t>0)return d.pesos.map((x)=>x/t);}if(d.reparto==="fraccion"){const f=liaFrac(d.fraccion);if(f==null)return null;return Array(n).fill(f);}return Array(n).fill(1/n);};
+const reparto=(d,n,B)=>{if(B&&n>1&&/\bcada\s+un[oa]\b|\bcada\s+(?:hij|niet|herman|sobrin)/i.test(String(d.cita||"")+" "+String(d.fraccion||""))){const q=liaCuotaPorRel(d,B);if(q&&q.some((x)=>Math.abs(x-q[0])>1e-9))return q;}{const m=[...String(d.fraccion||"").matchAll(/(\d+(?:[.,]\d+)?)\s*(?:%|por\s+ciento)/gi)].map((x)=>Number(x[1].replace(",","."))/100);if(d.reparto==="fraccion"&&n>1&&m.length===n&&Math.abs(m.reduce((a,x)=>a+x,0)-1)<0.02)return m;}if(Array.isArray(d.pesos)&&d.pesos.length===n){const t=d.pesos.reduce((a,x)=>a+x,0);if(t>0)return d.pesos.map((x)=>x/t);}if(d.reparto==="fraccion"){const f=liaFrac(d.fraccion);if(f==null)return B?liaCuotaPorRel(d,B):null;return Array(n).fill(f);}return Array(n).fill(1/n);};
 const cab=[...hijos.map((h)=>[h]),...est.values()];
 if(hayDesc&&LEY.indiv)for(const L of cab)for(const p of L)da(p,"E",tomar("E",LEY.E/cabezas/L.length));
 if(ascL.length){for(const p of ascL){da(p,"E",tomar("E",fAsc/ascL.length));mencion.add(p);}av.push(`Legítima de ${ascL.map((p)=>p.nombre).join(" y ")} (${fAsc<0.4?"un tercio":"la mitad"} de la herencia${ascL.length===2?", por mitad":""}, arts. 809-810 CC): no hay descendientes; se reserva por ley${fAsc<0.4?" (concurre con el viudo)":""}. Compruébalo con el testamento.`);}
@@ -16438,10 +16478,10 @@ if(d.objeto==="legitima"&&LEY.M)da(p,"M",tomar("M",LEY.M*parte));
 continue;
 }
 if((d.objeto==="tercio_mejora")&&(!hayDesc||!LEY.M))return fallo(`mejora ${!hayDesc?"sin descendientes":"en "+LEY.nombre.toLowerCase()} ${cita(d)}`);
-const parts=reparto(d,B.length);if(!parts)return fallo(`fracción no reconocida ${cita(d)}`);
+const parts=reparto(d,B.length,B);if(!parts)return fallo(`fracción no reconocida ${cita(d)}`);
 if(d.objeto==="tercio_mejora"||d.objeto==="tercio_libre"){const t=d.objeto==="tercio_mejora"?"M":"F";const base=hayDesc?LEY[t]:1/3;if(d.objeto==="tercio_libre"&&!hayDesc&&ley==="comun")return fallo(`tercio libre sin descendientes ${cita(d)}: el resto quedaría sin disponer`);const disp=Math.min(S[t],base);B.forEach((p,i)=>da(p,t,tomar(t,disp*parts[i])));continue;}
-const iguales=d.objeto==="herencia"&&d.reparto!=="fraccion"&&B.length>1&&!D.some((z)=>z!==d&&["tercio_mejora","tercio_libre","herencia","remanente"].includes(z.objeto))&&[...der.keys()].every((p)=>B.includes(p))&&[...der.values()].every((L)=>L.every((q)=>q.tercio==="E"));
-if((d.reparto==="fraccion"||iguales)&&d.objeto==="herencia"){const disp0={...S};const orden=B.map((p,i)=>[p,i]).sort((a,b)=>(esDesc(a[0])&&hayDesc?1:0)-(esDesc(b[0])&&hayDesc?1:0));orden.forEach(([p,i])=>{let need=parts[i]-(der.get(p)||[]).reduce((s,q)=>s+q.f,0);const TT=esDesc(p)&&hayDesc?["E","M","F"]:["F"];const tot0=TT.reduce((s,t)=>s+(disp0[t]||0),0);
+const iguales=(d.objeto==="herencia"||d.objeto==="remanente")&&d.reparto!=="fraccion"&&B.length>1&&!D.some((z)=>z!==d&&["tercio_mejora","tercio_libre","herencia","remanente"].includes(z.objeto))&&[...der.keys()].every((p)=>B.includes(p))&&[...der.values()].every((L)=>L.every((q)=>q.tercio==="E"));
+if((d.reparto==="fraccion"&&d.objeto==="herencia")||iguales){const disp0={...S};const orden=B.map((p,i)=>[p,i]).sort((a,b)=>(esDesc(a[0])&&hayDesc?1:0)-(esDesc(b[0])&&hayDesc?1:0));orden.forEach(([p,i])=>{let need=parts[i]-(der.get(p)||[]).reduce((s,q)=>s+q.f,0);const TT=esDesc(p)&&hayDesc?["E","M","F"]:["F"];const tot0=TT.reduce((s,t)=>s+(disp0[t]||0),0);
 if(tot0>1e-12&&need>1e-12){const pide=Object.fromEntries(TT.map((t)=>[t,need*(disp0[t]||0)/tot0]));for(const t of TT){const v=tomar(t,pide[t]);da(p,t,v);need-=v;}}
 for(const t of TT){if(!(need>1e-12))break;const v=tomar(t,need);da(p,t,v);need-=v;}if(need>1e-6)av.push(`${p.nombre}: la cuota del testamento no cabe entera en lo que queda disponible; revisa el reparto.`);});continue;}
 const desc=B.map((p,i)=>[p,i]).filter(([p])=>esDesc(p));
@@ -16512,7 +16552,7 @@ function liaADatos(V,ref,modelo){
 const r=V.r,nom=LIA_NOMBRE[modelo]||"IA",img=ref.img;
 const conf=(n,alta)=>(n==="texto"?(alta?2:1):1);
 const marca=(it,extra)=>({ia:nom,cita:it.cita,iaImg:it._nivel==="ocr"||it._nivel==="imagen",iaNivel:it._nivel,...extra});
-const nombreBonito=(s)=>(typeof lecNombre==="function"?lecNombre(s):s)||s;
+const nombreBonito=(s0)=>{const s=String(s0||"").replace(/,?\s+(?:conocid[oa]|llamad[oa])\s+(?:tambi[ée]n\s+)?como\s+.*$/i,"").replace(/,?\s+(?:alias|a\.\s*k\.\s*a\.)\s+.*$/i,"").trim()||String(s0||"");return(typeof lecNombre==="function"?lecNombre(s):s)||s;};
 const out={tipo:LIA_TIPOS.includes(r.tipo)&&r.tipo!=="otro"?r.tipo:"",campos:[],personas:[],bienes:[],deudas:[],gastos:[],avisos:[]};
 const esTest=r.tipo==="testamento"||(!!(r.testamento&&r.testamento.hay&&(r.testamento.disposiciones||[]).length)&&(!r.tipo||r.tipo==="otro"));
 const SOLO={domicilio:["padron","defuncion","datosfiscales"],municipio_residencia:["padron","defuncion","datosfiscales"],lugar_fallecimiento:["defuncion","herederos","ultimas"],fecha_testamento:["testamento","ultimas"],notario:["testamento","ultimas","herederos"],consta_testamento:["ultimas","herederos"],fecha_acta_herederos:["herederos"],fecha_matrimonio:["familia","matrimonio","defuncion","capitulaciones"]};
@@ -16577,12 +16617,12 @@ for(const d of r.deudas){const v=num(d.importe);out.deudas.push({concepto:d.conc
 if(r.testamento&&esTest){
 const famP=r.personas.map((p)=>({nombre:nombreBonito(p.nombre),relacion:LIA_REL_APP[p.relacion]||(p.relacion==="otro_pariente"?"":"extrano"),vive:p.vive!==false,estirpe:p.estirpe?nombreBonito(p.estirpe):"",desheredado:!!p.desheredado}));
 const ley=typeof lecLeyTestamento==="function"?lecLeyTestamento(ref.texto||""):{ley:"comun",motivo:""};
-const T={...r.testamento,ley:ley.ley,leyMotivo:ley.motivo,disposiciones:r.testamento.disposiciones.map((d)=>({...d,beneficiarios:d.beneficiarios.map(nombreBonito)}))};
+const T={...r.testamento,ley:ley.ley,leyMotivo:ley.motivo,texto:ref.img?"":String(ref.texto||"").replace(/\s+/g," "),disposiciones:r.testamento.disposiciones.map((d)=>({...d,beneficiarios:d.beneficiarios.map(nombreBonito)}))};
 const rep=liaReparto(T,famP);
 const disp=T.disposiciones[0];
 if(rep.ok){
 const lin=rep.derechos.map((q)=>`${q.nombre}: ${liaDerTxt(q)}`).join(" · ");
-out.campos.push({k:"testamento",etiqueta:"Reparto del testamento (por derechos)",valor:liaValorReparto(rep.derechos),derechos:rep.derechos,base:rep.base,conf:1,mostrar:`${lin}. ${rep.base}.`,...marca(disp||{cita:"",_nivel:"texto"})});
+out.campos.push({k:"testamento",etiqueta:"Reparto del testamento (por derechos)",valor:liaValorReparto(rep.derechos),derechos:rep.derechos,base:rep.base,conf:LIA_DUDA_CONF&&T.duda||(rep.avisos||[]).some((a)=>/no cabe entera|habla de \d+ (?:hijos|nietos) y se han leído/.test(a))?0:1,mostrar:`${lin}. ${rep.base}.`,...marca(disp||{cita:"",_nivel:"texto"})});
 for(const q of rep.derechos.filter((q)=>q.nuevo&&!out.personas.some((p)=>liaMismo(p.nombre,q.nombre))))out.personas.push({nombre:q.nombre,relacion:q.relacion||"extrano",conf:1,...marca(disp)});
 for(const p of rep.personas.filter((p)=>p.legatario)){const o=out.personas.find((q)=>liaMismo(q.nombre,p.nombre));if(o){o.legatario=true;o.legadoDesc=p.legadoDesc;}}
 for(const q of rep.derechos){const o=out.personas.find((p)=>liaMismo(p.nombre,q.nombre));if(o&&(!o.relacion||o.relacion==="extrano")&&q.relacion&&q.relacion!=="extrano")o.relacion=q.relacion;}
@@ -16985,7 +17025,7 @@ for(const m of T.matchAll(new RegExp(`${lecCI("casad")}[oa]\\s+(?:${lecCI("en")}
 if(/mancomunad|de\s+hermandad|rec[íi]procamente\s+hereder|el\s+uno\s+al\s+otro|al\s+m[áa]s\s+viviente/i.test(T)){const m=new RegExp(`${lecCI("y")}\\s+${lecCI("su")}\\s+(?:${lecCI("esposa")}|${lecCI("esposo")}|${lecCI("marido")}|${lecCI("mujer")}|${lecCI("c")}[óoÓO]${lecCI("nyuge")})\\s*,?\\s*${TR}?\\s*${N}`).exec(T);if(m)add({nombre:lecNombre(m[1]),relacion:"conyuge",conf:2});}
 for(const m of T.matchAll(new RegExp(`(?:${lecCI("su")}|${lecCI("sus")})\\s+(${lecCI("padre")}|${lecCI("madre")}|${lecCI("padres")}|${lecCI("progenitores")})\\s*,?\\s*((?:${TR}?\\s*${N}\\s*(?:,|\\s+${lecCI("y")}\\s+)?\\s*){1,2})\\s*,?\\s*(?:${lecCI("que")}\\s+)?(?:${lecCI("viven?")}|${lecCI("sobreviven?")}|${lecCI("contin")}[úu]an?\\s+${lecCI("con")}\\s+${lecCI("vida")}|${lecCI("est")}[áa]n?\\s+${lecCI("vivos?")})\\b`,"g"))){
 for(const nombre of lecListaNombres(m[2]))add({nombre,relacion:"padre",conf:2});}
-for(const m of T.matchAll(new RegExp(`(${lecCI("viud")}[oa]|${lecCI("divorciad")}[oa]|${lecCI("separad")}[oa](?:\\s+${lecCI("judicialmente")})?)\\s+${lecCI("de")}\\s+(?:${lecCI("sus")}\\s+(?:${lecCI("primeras")}\\s+(?:${lecCI("y")}\\s+[úuÚU]${lecCI("nicas")}\\s+)?|[úuÚU]${lecCI("nicas")}\\s+)?${lecCI("nupcias")}\\s+${lecCI("con")}\\s+)?${TR}?\\s*${N}`,"g"))){const n=lecNombre(m[2]);if(n)ex.push({nombre:n,motivo:/viud/i.test(m[1])?"fallecido":/separad/i.test(m[1])?"separado":"excónyuge",nota:/viud/i.test(m[1])?"cónyuge fallecido antes que el testador: no hereda":"excónyuge o separado: no hereda"});}
+for(const m of T.matchAll(new RegExp(`(${lecCI("viud")}[oa]|${lecCI("divorciad")}[oa]|${lecCI("separad")}[oa](?:\\s+${lecCI("judicialmente")})?)\\s+${lecCI("de")}\\s+(?:${lecCI("sus")}\\s+(?:${lecCI("primeras")}\\s+(?:${lecCI("y")}\\s+[úuÚU]${lecCI("nicas")}\\s+)?|[úuÚU]${lecCI("nicas")}\\s+)?${lecCI("nupcias")}\\s+${lecCI("con")}\\s+|${lecCI("su")}\\s+(?:[úuÚU]${lecCI("nico")}|${lecCI("primer")}|${lecCI("segundo")})\\s+${lecCI("matrimonio")}\\s*,?\\s+(?:${lecCI("contra")}[íi]${lecCI("do")}\\s+)?${lecCI("con")}\\s+)?${TR}?\\s*${N}`,"g"))){const n=lecNombre(m[2]);if(n)ex.push({nombre:n,motivo:/viud/i.test(m[1])?"fallecido":/separad/i.test(m[1])?"separado":"excónyuge",nota:/viud/i.test(m[1])?"cónyuge fallecido antes que el testador: no hereda":"excónyuge o separado: no hereda"});}
 const par=new RegExp(`${lecCI("convive")}\\s+${lecCI("con")}\\s+${TR}?\\s*${N}[^.]{0,80}?${lecCI("pareja")}\\s+(?:${lecCI("de")}\\s+${lecCI("hecho")}|${lecCI("estable")})`).exec(T);
 if(par)add({nombre:lecNombre(par[1]),relacion:"pareja_hecho",conf:2});
 const pre=[...T.matchAll(new RegExp(`${lecCI("tuvo")}\\s+(?:${lecCI("otr")}[oa]s?|${lecCI("un")}[oa]?\\s+(?:${lecCI("hij")}[oa]|${lecCI("m")}[áa]${lecCI("s")}))\\s*,?\\s*${TR}?\\s*${N}\\s*,?\\s*(?:${lecCI("ya")}\\s+)?(?:${lecCI("fallecid")}[oa]|${lecCI("premuert")}[oa])[^.]{0,30}?(?:${lecCI("que")}\\s+)?${lecCI("dej")}[óo]\\s+([a-záéíóúñü]+|\\d+)\\s+(?:${lecCI("hij")}[oa]s?|${lecCI("descendientes")})\\s*,?\\s*(?:${lecCI("llamad")}[oa]s?\\s*)?([^.;]{4,200}?)(?=[.;]|$)`,"g")),
@@ -17011,7 +17051,10 @@ const rel=/sobrin/i.test(m[1])?"sobrino":"nieto";const est=m[3].trim();
 if(!ex.some((q)=>lecMismoNombre(q.nombre,est)||lecN(q.nombre).startsWith(lecN(est))))ex.push({nombre:est,motivo:"fallecido",nota:"premuerto: heredan sus descendientes en su lugar"});
 }
 {const m=new RegExp(`\\bhij[oa]\\s+de\\s+${TR}\\s*${N}\\s*,?\\s+y\\s+(?:de\\s+)?${TR}\\s*${N}`).exec(T);
-if(m)for(const x of[m[1],m[2]]){const n=lecNombre(x);if(n)add({nombre:n,relacion:"padre",conf:1});}}
+if(m)for(const x of[m[1],m[2]]){const n=lecNombre(x);if(n)add({nombre:n,relacion:"padre",conf:1});}
+else{const D="(?:[Dd][Oo][Nn]|[Dd][Oo][ÑNñn][Aa]|[Dd]\\.|[Dd][Ññ][Aa]\\.)\\s+",W="([A-ZÁÉÍÓÚÑ][a-záéíóúñü]+(?:\\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñü]+)?)";
+const m2=new RegExp(`\\bhij[oa]\\s+de\\s+(?:${D})?${W}\\s*,?\\s+y\\s+(?:de\\s+)?(?:${D})?${W}(?=\\s*[,;.]|\\s+(?:que|ya|ambos|quienes|vecinos|fallecid|difunt)\\b)`).exec(T);
+if(m2&&!P.some((z)=>z.relacion==="padre"))for(const x of[m2[1],m2[2]])if(!/^(?:Y|De|Del|La|El)$/.test(x))add({nombre:x,relacion:"padre",conf:1,soloPila:true});}}
 for(const m of T.matchAll(/\b(?:y\s+)?(?:de\s+)?(?:otr[oa]|un[oa]?)\s+(hij[oa]),?\s+(?:ya\s+)?(?:fallecid[oa]|premuert[oa])[^,;.]{0,40},?\s+que\s+dej[óo]\s+(?:a\s+)?(?:sus\s+)?(?:\w+\s+)?(?:hij[oa]s?|descendientes)\s*,?\s*(?:llamad[oa]s?\s+)?([^.;]{4,200}?)(?=[.;]|\s+(?:DISPOSICIONES|DISPONE)\b|$)/gi)){
 const est=`${/a$/i.test(m[1])?"hija":"hijo"} premuerto/a (sin nombre en el testamento)`;const LL=lecListaNombres(m[2]);
 for(const nombre of LL){const q=P.find((z)=>lecMismoNombre(z.nombre,nombre));if(q){q.relacion="nieto";q.estirpe=est;}else add({nombre,relacion:"nieto",estirpe:est,conf:2},LL);}
@@ -17020,6 +17063,9 @@ for(const m of T.matchAll(new RegExp(`${TR}?\\s*${N}\\s*,?\\s*(?:con\\s+)?(?:D\\
 const n=lecNombre(m[1]),nif=m[2].replace(/[\s-]/g,"").toUpperCase();if(!n||!lecNifOk(nif)||(testador&&lecMismoNombre(n,testador)))continue;
 const q=P.find((z)=>lecMismoNombre(z.nombre,n));if(q){if(!q.nif)q.nif=nif;}else add({nombre:n,nif,relacion:"",conf:1});
 }
+for(const m of T.matchAll(/\b(?:[Dd][Oo][ÑNñn][Aa]?|[Dd]\.|[Dd][Ññ][Aa]\.)\s+([A-ZÁÉÍÓÚÑ][^,;.]{3,60}?),\s+(?:conocid[oa]\s+como\s+[^,;.]{3,60},\s+)?que\s+tiene\s+(?:(?:un[oa]?|dos|tres|cuatro|cinco|seis)\s+)?hij[oa]s?\s*,?\s*(?:llamad[oa]s?\s+)?([^.;]{4,200}?)(?=[.;]|\s+(?:DISPOSICIONES|DISPONE)\b|$)/g)){
+if(!/\bhij[oa]s?\b/i.test(T.slice(Math.max(0,m.index-50),m.index)))continue;const padre={nombre:lecNombre(m[1].trim())||m[1].trim()};
+for(const nombre of lecListaNombres(m[2])){if(lecMismoNombre(nombre,padre.nombre))continue;const q=P.find((z)=>lecMismoNombre(z.nombre,nombre));if(q){q.relacion="nieto";q.estirpe=padre.nombre;}else add({nombre,relacion:"nieto",estirpe:padre.nombre,conf:2});}}
 return{personas:P,excluidos:ex};
 }
 const LEC_ORD="(?:PRIMER[OA]?|SEGUND[OA]|TERCER[OA]?|CUART[OA]|QUINT[OA]|SEXT[OA]|S[ÉE]PTIM[OA]|OCTAV[OA]|NOVEN[OA]|D[ÉE]CIM[OA]|UND[ÉE]CIM[OA]|DUOD[ÉE]CIM[OA])";
@@ -17080,6 +17126,7 @@ if(!out.length)for(const w of frag.split(/\s*,\s*|\s+y\s+/)){const q=w.trim()&&q
 }
 if(!out.length){const r=/\b(?:a\s+)?su\s+(?:(?:citad|nombrad|mencionad|referid|[úu]nic)[oa]\s+)?(hij[oa]|niet[oa]|herman[oa]|sobrin[oa])\b/i.exec(z);if(r&&!/^\s*,?\s*(?:(?:don|doña|D\.|Dña|DON|DOÑA)\s|[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ])/.test(z.slice(r.index+r[0].length))){const w=lecN(r[1]).toLowerCase();const rel=/^hij/.test(w)?"hijo":/^niet/.test(w)?"nieto":/^herm/.test(w)?"hermano":"sobrino";const L=deRel(rel);if(L.length===1)out.push(L[0].nombre);}}
 if(!out.length){const r=/\b(?:a\s+)?su\s+(?:(?:citad|nombrad|mencionad|referid|expresad)[oa]\s+|actual\s+)?(espos[oa]|c[óo]nyuge|marido|mujer|viud[oa]|pareja)\b/i.exec(z);if(r){const L=deRel(/pareja/i.test(r[1])?"pareja_hecho":"conyuge");if(L.length===1)out.push(L[0].nombre);
+else if(!L.length&&/c[óo]nyuge|espos/i.test(r[1])&&(fam.excluidos||[]).filter((e)=>e.motivo==="excónyuge").length===1){const e=fam.excluidos.find((q)=>q.motivo==="excónyuge");if(!P.some((p)=>p.nombre===e.nombre))P.push({nombre:e.nombre,relacion:"extrano",conf:1,exConyuge:true,nota:"excónyuge a la que el testamento llama «cónyuge»"});avisos.push(`El testamento llama «cónyuge» a ${e.nombre}, de quien el testador estaba divorciado al otorgarlo: el llamamiento vale como hecho a esa persona; si el divorcio fue posterior al testamento, revisa su eficacia.`);out.push(e.nombre);}
 else if(!L.length&&!/pareja/i.test(r[1])){const n=/a$/i.test(r[1])||/mujer/i.test(r[1])?"Esposa del causante (nombre por completar)":/viud/i.test(r[1])?"Cónyuge viudo (nombre por completar)":"Esposo del causante (nombre por completar)";if(!P.some((p)=>p.nombre===n))P.push({nombre:n,relacion:"conyuge",conf:0,porCompletar:true,nota:"el testamento lo nombra por su parentesco; el nombre está en la comparecencia o en el certificado de matrimonio"});out.push(n);}}}
 return out;
 };
@@ -17093,7 +17140,7 @@ const c1=c0.replace(/\s*[\[(]sic[\])]\s*/gi," ").replace(/\bPrelega\b/g,"Lega").
 const CS=/(?:^|\.\s+)((?:Si|En\s+(?:el\s+)?caso\s+de\s+que)\s+(?:alguno|cualquiera|uno)\s+de\s+(?:los|sus)\s+(?:legitimarios|herederos(?:\s+forzosos)?|hij[oa]s|descendientes)[^.]{0,260}?\bno\s+(?:lo\s+|la\s+|le\s+)?(?:aceptase|aceptare|respetase|respetare|consintiese|consintiere|acatase|acatare|impugnase|impugnare)[^.]*\.?)/i.exec(c1);
 const c=CS&&/\blega\b|\binstituy/i.test(c1.slice(0,CS.index+2))?c1.slice(0,CS.index+(CS[0].startsWith(".")?1:0))+" "+c1.slice(CS.index+CS[0].length):c1;
 if(c!==c1)cautela={cita:CS[1].slice(0,200)};
-const RES=/(?:[;,.]\s*(?:\((?:…|\.\.\.)\)\s*)?|^\s*(?:\((?:…|\.\.\.)\)\s*)?)(?:pero\s+|y\s+)?(?:con\s+el\s+(?:ruego|deseo|encargo)\s+de\s+que\s+)?(?:(?:los|las)\s+bienes\s+(?:de\s+)?que\s+(?:[a-zéíóúñ]+\s+){0,3}no\s+(?:disponga|dispusiere|dispusiera|hubiera\s+dispuesto|hubiere\s+dispuesto)|si\s+(?:a\s+su\s+(?:fallecimiento|muerte)\s+)?(?:quedar(?:en|an|asen)|existier(?:en|an))\s+bienes|(?:lo|los\s+bienes)\s+que\s+(?:quede|queden|reste|resten)\s+(?:a\s+su\s+(?:fallecimiento|muerte)|al\s+fallecimiento))/i;
+const RES=/(?:[;,.]\s*(?:\((?:…|\.\.\.)\)\s*)?|^\s*(?:\((?:…|\.\.\.)\)\s*)?)(?:pero\s+|y\s+)?(?:con\s+(?:el\s+(?:ruego|deseo|encargo)|la\s+condici[óo]n)\s+de\s+que\s+)?(?:en\s+(?:caso|el\s+supuesto)\s+de\s+no\s+(?:disponer|haber\s+dispuesto)\b|(?:los|las)\s+bienes\s+(?:de\s+)?que\s+(?:[a-zéíóúñ]+\s+){0,3}no\s+(?:disponga|dispusiere|dispusiera|hubiera\s+dispuesto|hubiere\s+dispuesto)|si\s+(?:a\s+su\s+(?:fallecimiento|muerte)\s+)?(?:quedar(?:en|an|asen)|existier(?:en|an))\s+bienes|(?:lo|los\s+bienes)\s+que\s+(?:quede|queden|reste|resten)\s+(?:a\s+su\s+(?:fallecimiento|muerte)|al\s+fallecimiento))/i;
 let c2=c;{const mr=RES.exec(c);if(mr){const cola=c.slice(mr.index);const bf=beneficiarios(cola.replace(/^[\s\S]*?\b(?:recaer[áa]n|pasar[áa]n|pasaran|pasen|ir[áa]n|ser[áa]n\s+para)\b(?:\s+en\s+su\s+d[íi]a)?\s*/i,""));for(const n of bf)if(!fideicomisarios.includes(n))fideicomisarios.push(n);c2=c.slice(0,mr.index).trim();if(c2.length<12||!/\binstituy|\blega\b/i.test(c2))continue;}}
 let[prin,resto]=cortaSust(c2);
 if(!/\binstituy|\blega\b|\bdeshered|\bnombra\b|\bmejora\b/i.test(prin)&&/^(?:\S{0,12}\s*[.–-]+\s*)?A\s+(?:su|sus)\s/i.test(prin)&&/\b(?:el\s+)?(?:resto|remanente)\s+de\s+(?:todos\s+)?(?:sus\s+)?(?:dem[áa]s\s+)?bienes|\btodos\s+sus\s+bienes/i.test(prin))prin="Instituye herederos "+prin.replace(/^(?:\S{0,12}\s*[.–-]+\s*)?/,"");
@@ -17118,7 +17165,10 @@ continue;
 if(/\binstituy/i.test(prin)){const DEN={mitad:2,tercera:3,tercio:3,cuarta:4,quinta:5,sexta:6,"séptima":7,septima:7,octava:8,novena:9,"décima":10,decima:10},NUM={una:1,un:1,la:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9};
 const RQ=new RegExp(`\\bde\\s+(una|un|la|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\\s+(mitad|tercera|cuarta|quinta|sexta|s[ée]ptima|octava|novena|d[ée]cima)s?\\s*(?:partes?)?\\s+(?:de\\s+(?:la|su)\\s+herencia\\s+)?(?:,\\s*)?(?:a|en\\s+favor\\s+de)\\s+((?:su|sus)\\s+\\w+\\s*,?\\s*)?${LEC_TRAT}?\\s*${LEC_NOMBRE_RE}`,"gi");
 const Q=[...prin.matchAll(RQ)];if(Q.length>=2){const fr=Q.map((m)=>(NUM[m[1].toLowerCase()]||1)/DEN[lecN(m[2]).toLowerCase().replace("E","e")]);const tot=fr.reduce((a,x)=>a+x,0);
-if(Math.abs(tot-1)<0.02){for(let i=0;i<Q.length;i++){const n=lecNombre(Q[i][4]);if(!n)continue;const q=quien(n);const rel=Q[i][3]?relDeP(Q[i][3]):"";if(!q)P.push({nombre:n,relacion:rel,conf:1});D.push({beneficiarios:[q?q.nombre:n],objeto:"herencia",derecho:"pleno",reparto:"fraccion",fraccion:`${String(Math.round(fr[i]*10000)/100).replace(".",",")} %`,bien:"",opcion:"",cita});}continue;}}}
+if(Math.abs(tot-1)<0.02){for(let i=0;i<Q.length;i++){const rel=Q[i][3]?relDeP(Q[i][3]):"";let n=lecNombre(Q[i][4]);
+if(!n){const w=lecN(String(Q[i][4]||"")).trim().split(/\s+/)[0];const c=w?P.filter((p)=>lecN(p.nombre).split(/\s+/)[0]===w&&(!rel||p.relacion===rel)):[];if(c.length===1)n=c[0].nombre;}
+if(!n)continue;const q=quien(n);if(!q)P.push({nombre:n,relacion:rel,conf:1});
+D.push({beneficiarios:[q?q.nombre:n],objeto:"herencia",derecho:"pleno",reparto:"fraccion",fraccion:`${NUM[Q[i][1].toLowerCase()]||1}/${DEN[lecN(Q[i][2]).toLowerCase().replace("E","e")]}`,bien:"",opcion:"",cita});}continue;}}}
 if(/\binstituy/i.test(prin)){
 const prinN=prin.replace(/\b(?:en\s+(?:un|el)\s+)((?:[a-záéíóúñ]+\s+){0,4}?[a-záéíóúñ]+)\s+por\s+ciento/gi,(m0,w)=>{const v=lecPalabrasNumero(w);return v&&v<=100?`en el ${v} por ciento`:m0;});
 const RE=new RegExp(`(?:^|[,;]|\\s)\\s*(?:y\\s+(?:a\\s+)?|a\\s+)(?:sus?\\s+(?:citad[oa]s?\\s+)?(\\w+(?:\\s+de\\s+hecho|\\s+niet[oa])?)\\s*,?\\s*)?${LEC_PERS_RE}([^;]{0,140}?)\\ben\\s+(?:un|el|una)\\s+[^()%;]{0,70}?(?:\\(\\s*(\\d{1,3}(?:[.,]\\d+)?)\\s*%\\s*\\)|(\\d{1,3}(?:[.,]\\d+)?)\\s*(?:%|por\\s+ciento))`,"g");
@@ -17208,7 +17258,7 @@ const objs=[];
 const reducida=/reducid[oa]\s+a\s+(?:su\s+|la\s+)?cuota\s+legal/i.test(zc);
 if(reducida&&/condici[óo]n/i.test(zc)&&!avisos.some((a)=>/^Institución con condición/.test(a)))avisos.push(`Institución con condición («${(/con\s+la\s+condici[óo]n\s+de\s+que\s+[^,.;]{3,80}/i.exec(zc)||[zc.slice(0,80)])[0]}»): si no se cumple, queda reducida a su cuota legal. Comprueba si se ha cumplido antes de adjudicar.`);
 if(/cuota\s+legal\s+usufructuaria/i.test(zc)&&!/sin\s+perjuicio/i.test(zc)&&!reducida)objs.push(["cuota_legal_usufructuaria","usufructo"]);
-if(/usufructo\s+universal|usufructo\s+(?:vitalicio\s+)?(?:voluntario\s+)?(?:de\s+viudedad\s+|vitalicio\s+|foral\s+)?(?:universal\s+)?(?:sobre|de)\s+(?:la\s+totalidad|todos?\s+(?:sus|los)\s+bienes|toda\s+(?:su|la)\s+herencia)|usufructo\s+(?:voluntario\s+)?de\s+viudedad/i.test(zc))objs.push(["usufructo_universal","usufructo"]);
+if(/usufructo\s+(?:vitalicio\s+)?universal|usufructo\s+(?:vitalicio\s+)?(?:voluntario\s+)?(?:de\s+viudedad\s+|vitalicio\s+|foral\s+)?(?:universal\s+)?(?:sobre|de)\s+(?:la\s+totalidad|todos?\s+(?:sus|los)\s+bienes|toda\s+(?:su|la)\s+herencia)|usufructo\s+(?:voluntario\s+)?de\s+viudedad/i.test(zc))objs.push(["usufructo_universal","usufructo"]);
 {const up=!objs.some((o)=>o[0]==="usufructo_universal")&&/\busufructo\s+(?:vitalicio\s+)?(?:de|sobre)\s+(la\s+mitad|un\s+tercio|una\s+tercera\s+parte|las\s+dos\s+terceras\s+partes|dos\s+tercios|una\s+cuarta\s+parte|\d{1,3}(?:,\d+)?\s*%)\s+(?:de\s+(?:su|la|toda\s+su)\s+herencia|del\s+caudal|de\s+sus\s+bienes)/i.exec(zc);
 if(up){const k=lecN(up[1]).toLowerCase().replace(/\s+/g," ");const fr={"la mitad":"1/2","un tercio":"1/3","una tercera parte":"1/3","las dos terceras partes":"2/3","dos tercios":"2/3","una cuarta parte":"1/4"}[k]||up[1].replace(/\s+/g," ");objs.push(["usufructo_parte","usufructo","",fr]);}}
 if(/tercio\s+(?:de\s+)?libre(?:\s+disposici[óo]n)?/i.test(zc))objs.push(["tercio_libre",/(?:en|el)\s+usufructo(?:\s+vitalicio)?|usufructo\s+(?:vitalicio\s+)?del?\s+(?:su\s+)?tercio\s+(?:de\s+)?libre/i.test(zc)&&!/pleno\s+dominio/i.test(zc)?"usufructo":/nuda\s+propiedad\s+del?\s+(?:su\s+)?tercio\s+(?:de\s+)?libre|tercio\s+(?:de\s+)?libre[^,.;]{0,40}en\s+nuda\s+propiedad/i.test(zc)?"nuda":"pleno"]);
