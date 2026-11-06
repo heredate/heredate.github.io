@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:3814,nombre:"Versión 3.8.14",fecha:"2026-11-06"};
+const VERSION_APP={n:3815,nombre:"Versión 3.8.15",fecha:"2026-11-06"};
 const NOVEDADES=[
+["Repartos de la IA nunca seguros por sí solos (3.8.15)","Cuando solo la IA ha podido leer el reparto, se propone siempre sin marcar: a ciegas, la IA sola daba algún reparto seguro y equivocado. En Cataluña y Galicia la legítima del hijo que no es heredero es un derecho de crédito que pagan los herederos: ya no aparece como parte del reparto, sino como aviso. Se reconoce al testador extranjero que se dice «ciudadano de la República de …», la «cuota usufructuaria que le corresponde por ley» del viudo y la sustitución escrita en la misma cláusula que la institución («Si éste no fuere heredero…»)."],
 ["La IA decide en actas y testamentos dudosos (3.8.14)","Medido a ciegas en 16 rondas: cuando las dos lecturas no coinciden en un acta o un testamento, la IA acertaba los casos que las reglas fallaban y casi nunca al revés; ahora se propone lo que lee la IA (siempre sin marcar, para que lo revises). En las escrituras sigue mandando la lectura por reglas. Además: el hijo reducido a su legítima estricta («que su hija herede única y exclusivamente la legítima»), las cuotas por orden («los dos primeros en una novena parte y el último en siete novenas partes»), el contador-partidor ya no sale como heredero, las cláusulas «1.ª RÓTULO.» con la opción del viudo en otro párrafo, la preterición de un hijo nacido después del testamento (art. 814 CC), y en las actas los que se nombran para excluirlos («sin que los hijos de éste sean llamados») ya no heredan, ni se toman por hijos del causante los hijos de sus hermanos."],
 ["Derecho gallego y actas más difíciles (3.8.13)","En Galicia, el hijo apartado por escritura de apartación (arts. 224-227 LDCG) ya no recibe legítima. En las actas se leen los colaterales de cuarto grado cuando el parentesco va detrás de los nombres («doña L. y don A., sobrinos nietos, y don R. y doña S., primos hermanos»), la firma «Signado: …» ya no se pega al nombre del último heredero, el cónyuge viudo nombrado en «la cuota legal usufructuaria que corresponde al cónyuge viudo, don X» entra con su cuota, y las bodas de los hijos ya no dan cónyuge a una causante viuda. En las escrituras, el hijo del cónyuge «adoptado después por el causante» es un hijo más."],
 ["Mejor arbitraje entre las dos lecturas (3.8.12)","Cuando la lectura por reglas avisa de que duda (una cláusula sin clasificar, un instituido fuera del reparto, una lista de herederos que no cuadra), en testamentos y actas se toma lo que ha leído la IA, siempre sin marcarlo como seguro para que lo revises. Si la declaración nombra heredero a alguien que solo ha leído la IA, se incorpora a la lista. En las actas, el excónyuge divorciado («de la que se divorció por sentencia») no hereda ni tiene cuota."],
@@ -16867,6 +16868,14 @@ else if(ley==="cat")av.push(`${cony.nombre}: en derecho catalán el viudo no es 
 const resto=Object.values(S).reduce((s,v)=>s+v,0);
 if(resto>0.999&&legados.length&&!D.some((d)=>["herencia","remanente","tercio_libre","tercio_mejora","legitima","legitima_estricta","usufructo_universal","usufructo_parte"].includes(d.objeto))){const r0=fallo(`toda la herencia se reparte en legados y no hay heredero instituido: los legatarios reciben sus bienes y lo que no se haya legado se hereda sin testamento (art. 912.2 CC), con el reparto legal`);r0.soloLegados=true;r0.personas=P;return r0;}
 if(resto>1e-6)return fallo(`queda sin disponer el ${(resto*100).toFixed(2).replace(".",",")} % de la herencia (sucesión intestada en esa parte, art. 912.2 CC)`);
+if((ley==="cat"||ley==="gal")&&hayDesc){const inst=new Set();for(const d of D)if(["herencia","remanente","tercio_libre","tercio_mejora","legado_bien","legado_dinero","legitima","legitima_estricta"].includes(d.objeto))for(const n of d.beneficiarios||[]){const q=P.find((z)=>liaMismoNom(z.nombre,n));if(q)inst.add(q);}
+const herederos=[...der.keys()].filter((q)=>D.some((d)=>["herencia","remanente"].includes(d.objeto)&&(d.beneficiarios||[]).some((n)=>liaMismoNom(n,q.nombre))));
+const solos=[...der.entries()].filter(([q,L])=>!inst.has(q)&&L.every((z)=>z.tercio==="E")&&q.relacion!=="conyuge");
+const tot=herederos.reduce((s,q)=>s+(der.get(q)||[]).reduce((a,z)=>a+z.f,0),0);
+if(solos.length&&herederos.length&&tot>1e-9){const mov=solos.reduce((s,[,L])=>s+L.reduce((a,z)=>a+z.f,0),0);
+for(const q of herederos){const fq=(der.get(q)||[]).reduce((a,z)=>a+z.f,0);da(q,"F",mov*fq/tot);}
+for(const[q]of solos)der.delete(q);
+av.push(`${solos.map(([q])=>q.nombre).join(", ")}: legitimario${solos.length>1?"s":""} no instituido${solos.length>1?"s":""}; en ${ley==="cat"?"Cataluña la legítima (la cuarta parte, art. 451-5 CCCat)":"Galicia la legítima (art. 243 LDCG)"} es un derecho de crédito que pagan los herederos: no ${solos.length>1?"entran":"entra"} en el reparto. Anota el crédito en la partición.`);}}
 const salida=[];const r6=(v)=>Math.round(v*1e9)/1e9;
 const baseProp=usuProp?[...der.entries()].filter(([p])=>p!==usuProp.p&&!ascL.includes(p)).reduce((s,[,L])=>s+L.reduce((a,q)=>a+q.f,0),0):0;
 const kProp=()=>(!usuProp?0:!ascL.length?usuProp.f:baseProp>1e-12?Math.min(1,usuProp.f/baseProp):0);
@@ -17023,6 +17032,7 @@ const A=suma(a),B=suma(b);return A.length===B.length&&A.every((x)=>B.some((y)=>l
 }
 function liaIgualCampo(k,a,b){
 const va=a&&a.valor,vb=b&&b.valor;if(va==null||vb==null)return false;
+if(k==="testamento"&&!!(a.derechos&&a.derechos.length)!==!!(b.derechos&&b.derechos.length))return false;
 if(k==="nombre"||k==="testamentoNotario")return liaMismoNom(va,vb);
 if(k==="nifCausante")return liaCod(va)===liaCod(vb);
 if(k==="domicilio")return(typeof lecMismaDireccion==="function"&&lecMismaDireccion(String(va),String(vb)))||liaMismo(va,vb);
@@ -17059,8 +17069,8 @@ if(L&&A){
 if(liaIgualCampo(k,L,A)){const x={...L,conc:"coinciden",ia:A.ia,iaCita:A.cita,conf:k==="civil"?L.conf:L.conf===0&&L.k!=="testamento"?1:k==="testamento"&&L.conf===0&&(A.conf===0||L.origen==="escritura")?0:Math.max(L.conf,2)};
 if(img&&typeof L.valor==="string"&&typeof A.valor==="string"&&liaNorm(L.valor)!==liaNorm(A.valor)&&["nombre","testamentoNotario","lugarFallecimiento","residencia"].includes(k)){x.valor=A.valor;if(x.mostrar)x.mostrar=A.mostrar||A.valor;}if(k==="testamento"&&!L.derechos&&A.derechos)Object.assign(x,{derechos:A.derechos,base:A.base,mostrar:A.mostrar,conf:1});d.campos.push(x);continue;}
 if(k==="testamento"&&(L.derechos&&L.derechos.length)&&!(A.derechos&&A.derechos.length)){d.campos.push({...L,conc:"soloReglas",conf:0});continue;}
-if(k==="testamento"&&(A.derechos&&A.derechos.length)&&!(L.derechos&&L.derechos.length)&&!L.consta&&L.valor!=="no"){d.campos.push({...A,conc:"soloIA",conf:Math.min(A.conf,1)});continue;}
-if(k==="testamento"&&!L.consta&&!A.consta&&L.valor!=="no"&&A.valor!=="no"&&!(L.derechos&&L.derechos.length&&A.derechos&&A.derechos.length)&&(!L.derechos||L.conf===0)!==(!A.derechos||A.conf===0)){const q=A.derechos&&A.conf>0?A:L;d.campos.push({...q,conc:q===A?"soloIA":"soloReglas",conf:1});continue;}
+if(k==="testamento"&&(A.derechos&&A.derechos.length)&&!(L.derechos&&L.derechos.length)&&!L.consta&&L.valor!=="no"){d.campos.push({...A,conc:"soloIA",conf:0});continue;}
+if(k==="testamento"&&!L.consta&&!A.consta&&L.valor!=="no"&&A.valor!=="no"&&!(L.derechos&&L.derechos.length&&A.derechos&&A.derechos.length)&&(!L.derechos||L.conf===0)!==(!A.derechos||A.conf===0)){const q=A.derechos&&A.conf>0?A:L;d.campos.push({...q,conc:q===A?"soloIA":"soloReglas",conf:q===A?0:1});continue;}
 let base=img?A:L;if(L.conf===0&&A.conf>0&&!(k==="testamento"&&L.origen==="escritura"))base=A;
 if(k==="testamento"&&loc.tipo==="testamento"&&A.derechos&&A.derechos.length&&L.origen!=="escritura")base=A;const otra=base===A?L:A;
 const x={...base,conc:"discrepan",conf:0,otraLectura:liaTxtValor(otra),notaConc:nota(L,A)+`: se propone la de ${base===A?"la IA":"las reglas"}; compruébalo.`};
@@ -17071,7 +17081,7 @@ d.campos.push(x);if(LIA_CONC_IMP.has(k)&&x.conc==="discrepan")dif.push({id,que:L
 if(L)d.campos.push({...L,conc:"soloReglas",conf:Math.min(L.conf,1)});
 else if(k==="testamento"&&["herenciaprevia","cuaderno"].includes(loc.tipo)&&A.derechos&&A.derechos.length){d.campos.push({...A,conc:"soloIA",conf:0,origen:"escritura",etiqueta:"Reparto de la herencia que cuenta la escritura (leído por la IA)"});if(!(loc.personasTranscritas||[]).length)d.personasTranscritas=(ia.personas||[]).map((q)=>({...q}));d.avisos.push("Las reglas no han podido leer el reparto de esta escritura; se propone, sin marcar, el que lee la IA. Compruébalo con la escritura antes de aplicarlo.");}
 else if(k==="testamento"&&loc.tipo&&!["testamento","desconocido"].includes(loc.tipo))continue;
-else d.campos.push({...A,conc:"soloIA",conf:Math.min(A.conf,1)});
+else d.campos.push({...A,conc:"soloIA",conf:k==="testamento"?0:Math.min(A.conf,1)});
 }
 const excl=(loc.excluidos||[]).map((e)=>e.nombre);const usadas=new Set();
 const tipoDoc=loc.tipo&&loc.tipo!=="desconocido"?loc.tipo:ia.tipo||"";
@@ -17393,8 +17403,8 @@ return out;
 const LEC_LEY_RE=[[/CATALU[ÑN]A|CATALUNYA/,"cat","Cataluña"],[/GALICIA/,"gal","Galicia"],[/PA[ÍI]S VASCO|EUSKADI|BIZKAIA|GIPUZKOA|[ÁA]LAVA/,"pv","País Vasco"],[/ARAG[ÓO]N/,"ara","Aragón"],[/NAVARRA/,"nav","Navarra"],[/BALEARS?|BALEARES/,"bal","Illes Balears"]];
 function lecLeyTestamento(t){
 const T=lecN(t);
-{const na=/\b(?:DE\s+)?NACIONALIDAD\s+(?!ESPANOLA\b)([A-Z]{4,}(?:\s+[A-Z]{4,})?)|\bSUBDIT[OA]\s+([A-Z]{4,})|\bCIUDADAN[OA]\s+(BRITANIC[OA]|ALEMAN[A]?|FRANCES[A]?|ITALIAN[OA]|BELGA|HOLANDES[A]?|NEERLANDES[A]?|SUEC[OA]|NORUEG[OA]|DANES[A]?|ESTADOUNIDENSE|NORTEAMERICAN[OA]|SUIZ[OA]|IRLANDES[A]?|RUS[OA]|CHIN[OA]|MARROQUI|RUMAN[OA])\b/.exec(T);
-if(na){const n=(na[1]||na[2]||na[3]).toLowerCase();return{ley:"ext",motivo:`el testador es de nacionalidad ${n}: comprueba qué ley rige su sucesión (art. 21-22 Reglamento UE 650/2012; para testamentos anteriores a 2015, art. 83 del mismo)`};}}
+{const na=/\b(?:DE\s+)?NACIONALIDAD\s+(?!ESPANOLA\b)([A-Z]{4,}(?:\s+[A-Z]{4,})?)|\bSUBDIT[OA]\s+([A-Z]{4,})|\bCIUDADAN[OA]\s+(BRITANIC[OA]|ALEMAN[A]?|FRANCES[A]?|ITALIAN[OA]|BELGA|HOLANDES[A]?|NEERLANDES[A]?|SUEC[OA]|NORUEG[OA]|DANES[A]?|ESTADOUNIDENSE|NORTEAMERICAN[OA]|SUIZ[OA]|IRLANDES[A]?|RUS[OA]|CHIN[OA]|MARROQUI|RUMAN[OA]|VENEZOLAN[OA]|ARGENTIN[OA]|MEXICAN[OA]|COLOMBIAN[OA]|CUBAN[OA]|PERUAN[OA]|CHILEN[OA]|URUGUAY[OA]|ECUATORIAN[OA]|PORTUGUES[A]?)\b|\bCIUDADAN[OA]\s+DE\s+(?:LA\s+REPUBLICA\s+(?:DE\s+)?|LOS\s+|EL\s+)?(?!ESPANA\b|IDENTIDAD\b)([A-Z]{4,}(?:\s+[A-Z]{4,})?)/.exec(T);
+if(na){const n=(na[1]||na[2]||na[3]||na[4]).toLowerCase();return{ley:"ext",motivo:`el testador es de nacionalidad ${n}: comprueba qué ley rige su sucesión (art. 21-22 Reglamento UE 650/2012; para testamentos anteriores a 2015, art. 83 del mismo)`};}}
 const vc=/VECINDAD\s+CIVIL\s+(COMUN|CATALANA|GALLEGA|VASCA|ARAGONESA|NAVARRA|BALEAR|MALLORQUINA|MENORQUINA|IBICENCA)/.exec(T);
 if(vc){const k={COMUN:"comun",CATALANA:"cat",GALLEGA:"gal",VASCA:"pv",ARAGONESA:"ara",NAVARRA:"nav",BALEAR:"bal",MALLORQUINA:"bal",MENORQUINA:"bal",IBICENCA:"bal"}[vc[1]];return{ley:k,motivo:`el testamento dice vecindad civil ${vc[1].toLowerCase()}`};}
 {const vz=/\bvecin[oa]\s+de\s+([A-ZÁÉÍÓÚÑ][A-Za-záéíóúñüÁÉÍÓÚÑÜ' \-]{2,40}?)(?=\s*[,.;(]|\s+con\s|\s+y\s)/.exec(String(t).replace(/\s+/g," "));
@@ -17725,6 +17735,8 @@ const des=(fam.excluidos||[]).some((e)=>e.motivo==="fallecido"&&lecMismoNombre(e
 if(des.length&&/sustitu|representaci|descendientes/i.test(zc)){for(const q of des)D.push({beneficiarios:[q.nombre],derecho:"pleno",reparto:"fraccion",fraccion:pc(v/des.length),bien:"",opcion:"",cita,objeto:"herencia"});avisos.push(`Sustitución: ${n} murió antes; su parte pasa a ${des.map((q)=>q.nombre).join(", ")} por partes iguales.`);}
 else D.push({beneficiarios:[n],derecho:"pleno",reparto:"fraccion",fraccion:pc(v),bien:"",opcion:"",cita,objeto:"herencia"});}
 continue;}}}
+{const k=zc.search(/[.;]\s*(?:Si|En\s+caso\s+de\s+que|Para\s+el\s+caso\s+de\s+que)\s+(?:[ée]ste|[ée]sta|alguno|alguna|el\s+heredero|la\s+heredera|dicho|dicha|aqu[ée]l|aqu[ée]lla)\b[^.]{0,200}?(?:no\s+fuere|no\s+llegare|falleciere|premuriere|muriere|no\s+pudiere|no\s+quisiere|renunciare)/i);
+if(k>20&&/\binstituy/i.test(zc.slice(0,k))){sus.push({cita:zc.slice(k+1).trim().slice(0,220)});zc=zc.slice(0,k+1);}}
 zc=zc.replace(/,?\s*y\s+(?:design|nombr)[a-záéíóú]*\s+(?:como\s+)?(?:albace|contador|testamentari|administrador)[^.;]*/i,"");
 const b=beneficiarios(zc.replace(/\binstituy\w*\s+(?:por\s+)?(?:[úu]nic[oa]s?\s+(?:y\s+)?)?(?:universal(?:es)?\s+)?hereder[oa]s?(?:\s+universal(?:es)?)?/i,"").replace(/\blega\b/i,""));
 if(!b.length){if(/\b(?:lega|instituy)/i.test(zc)&&!pp){duda=true;const cy=/\b(?:a\s+)?su\s+(?:citad[oa]\s+)?(espos[oa]|c[óo]nyuge|marido|mujer)\b/i.exec(zc);motivos.push(cy?`la cláusula es a favor de ${/a$/i.test(cy[1])?"su esposa":"su "+cy[1].toLowerCase()}, pero no se ha leído su nombre (suele ir en la comparecencia: «casado con…»); añádelo como cónyuge: «${zc.slice(0,80)}»`:`no se ha identificado a quién beneficia: «${zc.slice(0,80)}»`);}continue;}
@@ -17753,7 +17765,7 @@ if(base.fraccion&&!liaFrac(base.fraccion)){const k=lecN(base.fraccion).toLowerCa
 const objs=[];
 const reducida=/reducid[oa]\s+a\s+(?:su\s+|la\s+)?cuota\s+legal/i.test(zc);
 if(reducida&&/condici[óo]n/i.test(zc)&&!avisos.some((a)=>/^Institución con condición/.test(a)))avisos.push(`Institución con condición («${(/con\s+la\s+condici[óo]n\s+de\s+que\s+[^,.;]{3,80}/i.exec(zc)||[zc.slice(0,80)])[0]}»): si no se cumple, queda reducida a su cuota legal. Comprueba si se ha cumplido antes de adjudicar.`);
-if(/cuota\s+legal\s+usufructuaria/i.test(zc)&&!/sin\s+perjuicio/i.test(zc)&&!reducida)objs.push(["cuota_legal_usufructuaria","usufructo"]);
+if(/cuota\s+(?:legal\s+)?usufructuaria|cuota\s+(?:legal\s+)?(?:vidual|viudal)\b/i.test(zc)&&!/sin\s+perjuicio/i.test(zc)&&!reducida)objs.push(["cuota_legal_usufructuaria","usufructo"]);
 if(/usufructo\s+(?:vitalicio\s+)?universal|usufructo\s+(?:vitalicio\s+)?(?:voluntario\s+)?(?:de\s+viudedad\s+|vitalicio\s+|foral\s+)?(?:universal\s+)?(?:sobre|de)\s+(?:la\s+totalidad|todos?\s+(?:sus|los)\s+bienes|toda\s+(?:su|la)\s+herencia)|usufructo\s+(?:voluntario\s+)?de\s+viudedad/i.test(zc))objs.push(["usufructo_universal","usufructo"]);
 else if(/\busufructo\s+vitalicio\s*(?:[.,;]|$|e\s|y\s|con\s+relevaci|con\s+dispensa|relev|dispens)/i.test(zc)&&/\b(?:a\s+)?su\s+(?:espos[oa]|marido|mujer|c[óo]nyuge)\b/i.test(zc)&&!/\b(?:cuota|leg[íi]tim|tercio|mitad|parte)\b/i.test(zc)){objs.push(["usufructo_universal","usufructo"]);duda=true;motivos.push("el legado de «usufructo vitalicio» al cónyuge no dice sobre qué bienes; se ha entendido sobre toda la herencia");}
 {const up=!objs.some((o)=>o[0]==="usufructo_universal")&&/\busufructo\s+(?:vitalicio\s+)?(?:de|sobre)\s+(la\s+mitad|un\s+tercio|una\s+tercera\s+parte|las\s+dos\s+terceras\s+partes|dos\s+tercios|una\s+cuarta\s+parte|\d{1,3}(?:,\d+)?\s*%)\s+(?:de\s+(?:su|la|toda\s+su)\s+herencia|del\s+caudal|de\s+sus\s+bienes)/i.exec(zc);
