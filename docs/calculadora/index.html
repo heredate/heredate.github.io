@@ -1112,7 +1112,10 @@ function repartoIntestado(personas, o = {}) {
     const { grupos, fuera } = representantes(nietosV, hijosTodos);
     const n = hijos.length + grupos.length;
     if (n > 0) {
-      lineasDesc = [...hijos.map((h) => ({ id: h.id, f: 1 / n })), ...grupos.flatMap((g) => g.map((p) => ({ id: p.id, f: 1 / n / g.length })))];
+      /* Representación dentro de la estirpe (bisnietos que representan a un nieto premuerto: «subestirpe»): la parte del hijo premuerto se divide entre
+         sus ramas, y la de cada rama entre sus miembros (art. 926 CC). Sin subestirpe, cada miembro es una rama (v3.8.19) */
+      const ramas = (g) => { const R = {}; for (const p of g) { const k = norm(p.subestirpe) || "_" + p.id; (R[k] = R[k] || []).push(p); } return Object.values(R); };
+      lineasDesc = [...hijos.map((h) => ({ id: h.id, f: 1 / n })), ...grupos.flatMap((g) => { const R = ramas(g); return R.flatMap((r) => r.map((p) => ({ id: p.id, f: 1 / n / R.length / r.length }))); })];
       if (grupos.length) notas.push("Los nietos heredan por estirpes, en representación de su progenitor premuerto (arts. 924-934 CC).");
       // Auditoría r5 (H7): un nieto sin «desciende de» se trata como estirpe de un hijo premuerto que no consta; si su progenitor vive, no hereda.
       const sinEst = nietosV.filter((p) => !norm(p.estirpe));
