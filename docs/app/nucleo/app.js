@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:3822,nombre:"Versión 3.8.22",fecha:"2026-11-07"};
+const VERSION_APP={n:3823,nombre:"Versión 3.8.23",fecha:"2026-11-07"};
 const NOVEDADES=[
+["Medio hermanos y bodas de otros (3.8.23)","En las actas, la boda anterior del padre o de la madre del causante ya no se toma por su cónyuge, y los hermanos de distintos matrimonios se reconocen como medio hermanos por sus apellidos. Si la lectura doble no coincide en el cónyuge o en el medio vínculo, ese dato queda sin marcar."],
 ["Escrituras con declaración de herederos (3.8.22)","Las escrituras que cuentan la declaración de herederos («fueron declaradas herederas sus dos hijas…», «el compareciente ha sido declarado único heredero de su padre») ya dan el reparto. El contador-partidor que nombra el testamento ya no sale como heredero, y en Mallorca el hijo «definido» (art. 50 de la Compilación) no tiene legítima."],
 ["Amigos herederos, medio vínculo y usufructo contado (3.8.21)","El testamento que instituye «a su hermano don I. y a su amigo don G.» ya no pierde al amigo. En las actas, los sobrinos que representan a un medio hermano reciben la mitad aunque también haya hermanos de doble vínculo. Y la escritura que cuenta que el testador «nombró usufructuaria universal y vitalicia de su herencia a su esposa» pone ese usufructo, con el nombre de la viuda que da la escritura."],
 ["Actas y testamentos más difíciles (3.8.20)","En las actas, quien se nombra solo porque repudió o porque su parte acrece a otros (un hermano declarado ausente) ya no sale como heredero, y el causante se lee también en las copias en mayúsculas. En los testamentos: la legítima estricta que el testador deja al legitimario con discapacidad (art. 808 CC), la fracción que se deja a un grupo de sobrinos por estirpes, el testador que declara no tener descendientes, y la legítima cubierta por una donación."],
@@ -14020,7 +14021,8 @@ const cy=(()=>{const re=new RegExp(`(?:${lecCI("casad")}[oa]\\s+(?:${lecCI("en")
 const suj=(m)=>{const ini=Math.max(T.lastIndexOf(". ",m.index),T.lastIndexOf("\n",m.index),T.lastIndexOf("— ",m.index),0);const fr=T.slice(ini,m.index);const N=[...fr.matchAll(new RegExp(`${LEC_TRAT}\\s*${LEC_NOMBRE_RE}`,"g"))].map((z)=>lecNombre(z[1])).filter(Boolean);
 if(!N.length){const C=[...fr.matchAll(/\b(?:DON|DOÑA|Don|Doña)\s+((?:[A-ZÁÉÍÓÚÑÜ]{2,}\s+){1,4}[A-ZÁÉÍÓÚÑÜ]{2,})/g)];if(C.length)return C[C.length-1][1].toLowerCase().replace(/(^|\s)\S/g,(x)=>x.toUpperCase());}
 return N.length?N[N.length-1]:"";};
-return M.find((m)=>lecMismoNombre(suj(m),nombre))||M.find((m)=>!suj(m))||null;})();
+const deOtro=(m)=>{const ini=Math.max(T.lastIndexOf(". ",m.index),T.lastIndexOf("\n",m.index),0);return/\b(?:su|sus)\s+(?:padre|madre|padres|herman[oa]s?|hij[oa]s?|abuel[oa]s?|t[íi][oa]s?|sobrin[oa]s?|niet[oa]s?|suegr[oa])\b/i.test(T.slice(ini,m.index));};
+return M.find((m)=>lecMismoNombre(suj(m),nombre))||M.find((m)=>!suj(m)&&!deOtro(m))||null;})();
 const cyMuerto=cy&&/^\s*[,–—(-]?\s*(?:ya\s+)?(?:fallecid[oa]|premuert[oa]|difunt[oa]|que\s+falleci[óo]|quien\s+falleci[óo])/i.test(T.slice(cy.index+cy[0].length,cy.index+cy[0].length+40))
 &&!(cy&&nombre&&(()=>{const a0=lecAnioMuerte(T,nombre),a1=lecAnioMuerte(T,lecNombre(cy[1]));return a0&&a1&&a1>a0;})());
 const cyDespues=cy&&!cyMuerto&&/^\s*,?\s*(?:ya\s+)?(?:fallecid[oa]|que\s+falleci[óo]|quien\s+falleci[óo])/i.test(T.slice(cy.index+cy[0].length,cy.index+cy[0].length+40));
@@ -14161,6 +14163,11 @@ for(const n of lecListaNombres(L.replace(/^(?:don|doña|dña\.?|d\.)\s+/i,""))){
 if(est){const pm=lecNombre(est[1])||est[1].trim();const q=out.personas.find((p)=>lecMismoNombre(p.nombre,pm));if(q){q.excluido=true;q.conf=0;q.nota=(q.nota?q.nota+"; ":"")+"no hereda: le representan sus descendientes";out.personas=out.personas.filter((p)=>p!==q);(out.excluidos=out.excluidos||[]).push({nombre:pm,motivo:/indign/i.test(m[2])?"indigno":"fallecido",nota:"le representan sus descendientes"});}}}}
 for(const p of out.personas)if(p.relacion==="sobrino"&&p.estirpe&&!p.estirpeMedio){const ap=lecN(p.estirpe).split(/\s+/).slice(-2).join(" ");const esMedio=(h)=>h.medio||(()=>{const TN=lecN(T),k=lecN(h.nombre);for(let i=TN.indexOf(k);i>=0;i=TN.indexOf(k,i+1))if(LEC_MEDIO_RE.test(T.slice(Math.max(0,i-50),i)))return true;return false;})();
 if(out.personas.some((h)=>h.relacion==="hermano"&&esMedio(h)&&lecN(h.nombre).split(/\s+/).slice(-2).join(" ")===ap)&&!out.personas.some((h)=>h.relacion==="hermano"&&!esMedio(h)&&lecN(h.nombre).split(/\s+/).slice(-2).join(" ")===ap)){p.estirpeMedio=true;p.medio=true;}}
+if(nombre&&/\b(?:primeras|segundas|terceras|nuevas|anteriores|posteriores)\s+nupcias\b|\bmatrimonio\s+(?:anterior|posterior)\b|\bmedi[oa]s?\s+herman|\bv[íi]nculo\s+sencillo|\bde\s+un\s+solo\s+v[íi]nculo/i.test(T)){
+const ap=(n)=>lecN(n).split(/\s+/).slice(-2).join(" ");const ac=ap(nombre);const H=out.personas.filter((h)=>h.relacion==="hermano");
+if(ac.split(" ").length===2&&H.length)for(const h of H){if(h.medio||h.renuncia)continue;const w=lecN(h.nombre).split(/\s+/);if(w.length<3||ap(h.nombre)===ac)continue;const k=lecN(T).indexOf(lecN(h.nombre));
+if(k>=0&&/DOBLE\s+VINCULO|DE\s+PADRE\s+Y\s+(?:DE\s+)?MADRE/.test(lecN(T).slice(Math.max(0,k-80),k+lecN(h.nombre).length+60)))continue;
+const comp=ac.split(" "),hw=ap(h.nombre).split(" ");if(hw[0]===comp[0]||hw[1]===comp[1]){h.medio=true;h.nota=(h.nota?h.nota+"; ":"")+"lleva uno solo de los apellidos del causante y el acta cuenta otras nupcias: medio hermano (art. 949 CC)";}}}
 for(const q of out.personas)if(q.relacion==="conyuge"&&!q.separado){const k=lecN(q.nombre);if(new RegExp(`SIN\\s+(?:USUFRUCTO|DERECHO|CUOTA)\\s+ALGUN[OA]\\s+(?:A\\s+FAVOR\\s+)?DE\\s+(?:DON|DONA|D\\.|DNA\\.?)?\\s*${k.split(/\s+/)[0]}`).test(lecN(T))||/\bdemanda\s+de\s+(?:divorcio|separaci[óo]n|nulidad)[^.]{0,200}?pendiente/i.test(T)&&/\bno\s+(?:tiene\s+derecho\s+a\s+suceder|le\s+corresponde)/i.test(T)){q.separado=true;q.conf=Math.min(q.conf||0,1);q.nota=(q.nota?q.nota+"; ":"")+"la declaración lo excluye: sin derechos en la herencia";}}
 if(/\b(?:bienes\s+troncales|troncalidad|parientes?\s+troncal)/i.test(T)){for(const p of out.personas)p.conf=Math.min(p.conf||0,0);out.avisos.push("La lectura señala una duda: sucesión troncal (los bienes troncales van a los parientes de la línea de procedencia y los demás a otros herederos): el reparto depende de cada bien; asígnalo bien por bien.");}
 return out;
@@ -17164,12 +17171,16 @@ const FAM=new Set(["testamento","herederos","familia","matrimonio","nacimiento",
 const causanteN=[...(loc.campos||[]),...(ia.campos||[])].filter((c)=>c.k==="nombre").map((c)=>c.valor);
 for(const L of loc.personas||[]){
 const A=(ia.personas||[]).find((q)=>!usadas.has(q)&&liaMismoNom(q.nombre,L.nombre));const x={...L};
-if(!A){if(!x.soloDatos){x.conc="soloReglas";x.conf=Math.min(x.conf,1);}d.personas.push(x);continue;}
+if(!A){if(!x.soloDatos){x.conc="soloReglas";x.conf=Math.min(x.conf,1);}
+if(tipoDoc==="herederos"&&x.relacion==="conyuge"&&(ia.personas||[]).length&&!(ia.personas||[]).some((q)=>q.relacion==="conyuge"||q.relacion==="pareja_hecho")){x.conf=0;x.notaConc="solo lo leen las reglas como cónyuge del causante; la IA no: compruébalo";}
+d.personas.push(x);continue;}
 usadas.add(A);x.conc="coinciden";x.ia=A.ia;x.iaCita=A.cita;const malos=[];
 if(img&&liaNorm(A.nombre)!==liaNorm(L.nombre))x.nombre=A.nombre;
 if(A.nif&&x.nif&&liaCod(A.nif)!==liaCod(x.nif))malos.push(["nif",x.nif,A.nif]);else if(A.nif&&!x.nif)x.nif=A.nif;
 if(A.relacion&&x.relacion&&A.relacion!==x.relacion&&!(A.relacion==="extrano"||x.relacion==="extrano"))malos.push(["relacion",x.relacion,A.relacion]);else if(A.relacion&&(!x.relacion||x.relacion==="extrano")&&A.relacion!=="extrano")x.relacion=A.relacion;
 for(const k of["estirpe","legadoDesc","nacimiento"])if(A[k]&&!x[k])x[k]=A[k];if(A.desheredado)x.desheredado=true;if(A.legatario)x.legatario=true;
+if(["hermano","sobrino"].includes(x.relacion)&&!!x.medio!==!!A.medio&&(ia.personas||[]).some((q)=>q.medio)){x.conf=Math.min(x.conf,0);x.notaConc=(x.notaConc?x.notaConc+"; ":"")+`medio vínculo: las reglas leen «${x.medio?"sí":"no"}» y la IA «${A.medio?"sí":"no"}»`;}
+else if(["hermano","sobrino"].includes(x.relacion)&&!!x.medio!==!!A.medio&&tipoDoc==="herederos"){x.conf=Math.min(x.conf,0);x.notaConc=(x.notaConc?x.notaConc+"; ":"")+`medio vínculo: solo ${x.medio?"las reglas":"la IA"} lo lee`;}
 if(malos.length){
 x.conc="discrepan";x.conf=0;x.notaConc=malos.map(([k,a,b])=>`${k==="nif"?"NIF":"parentesco"}: las reglas leen «${a}» y la IA «${b}»`).join("; ");
 if(img)for(const[k,,b]of malos)x[k]=b;
