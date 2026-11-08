@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:3827,nombre:"Versión 3.8.27",fecha:"2026-11-07"};
+const VERSION_APP={n:3828,nombre:"Versión 3.8.28",fecha:"2026-11-08"};
 const NOVEDADES=[
+["Copias escaneadas, red de seguridad del acta y evaluación del piloto (3.8.28)","El texto de una copia escaneada se arregla antes de leerlo: palabras partidas con guion al final del renglón, renglones cortados y saltos de hoja con el papel timbrado, acentos y eñes perdidos («conyuge», «dofia») y letras confundidas («compareclentes», «abnela»). Con copias de calidad normal, la lectura pasa de acertar el 52 % de los casos a acertar el 69 % (73 % con texto limpio). En las actas, nadie queda marcado si la declaración no lo nombra, lo nombra solo para excluirlo, niega derechos al cónyuge o llama heredero a alguien que no se ha leído. Nuevo en Ajustes: «Evaluación del piloto», para medir con expedientes reales cuánto acierta la lectura sin sacar datos personales."],
 ["Declaraciones contadas y sobrinos nombrados (3.8.27)","Se leen «sus dos hijos, doña A. y don P.» y «sus seis sobrinos, por cabezas…: don R., …» en la declaración, y el ascendiente que «no es llamado» por haber descendientes ya no sale como heredero. En las escrituras: la declaración contada («se declararon herederos del causante \"a sus padres…\"»), «los también comparecientes», «los hijos de su hermano P., llamados D., Á. y B.», y la hija de un sobrino premuerto ya no se toma por hija del testador."],
 ["Copias antiguas y cónyuge separado (3.8.26)","Mejor lectura de copias antiguas y en mayúsculas («D.ª», «sus hijos citados», «dejando de dicho matrimonio tres hijos», cláusulas «; tercera.-»). El cónyuge separado judicialmente ya no sale como heredero, la renuncia del viudo a su cuota legal se quita del reparto, y las declaraciones numeradas con bisnietos se leen enteras."],
 ["Cuotas que dice la escritura (3.8.25)","Cuando la escritura dice en qué cuota acepta cada heredero (por ejemplo, después de una sentencia), y no coincide con lo que resulta del título, se propone el reparto de la escritura, sin marcar. En las actas, los sobrinos que entran «en representación de su madre premuerta» sin nombrarla quedan en la estirpe correcta, y el excónyuge divorciado que lee la IA ya no recibe usufructo."],
@@ -15290,6 +15291,95 @@ cache.set(lw,res);return res?lecMismaCaja(w,res):w;
 });
 }
 const lecMismaCaja=(orig,nuevo)=>(orig===orig.toUpperCase()?nuevo.toUpperCase():orig[0]===orig[0].toUpperCase()?nuevo[0].toUpperCase()+nuevo.slice(1):nuevo);
+function lecDesguionar(t){
+let T=String(t||"");if(!/-[ \t]*\n/.test(T))return T;
+T=T.replace(/([A-Za-zÁÉÍÓÚÑÜáéíóúñü])-[ \t]*\n[ \t]*(?=[a-záéíóúñü])/g,"$1");
+if(!LEC_VOCAB){LEC_VOCAB=new Map();for(const w of LEC_VOCAB_TXT.split(" "))LEC_VOCAB.set(lecN(w),w);}
+return T.replace(/([A-ZÁÉÍÓÚÑÜ]+)-[ \t]*\n[ \t]*([A-ZÁÉÍÓÚÑÜ]+)(?![a-záéíóúñü])/g,(m,a,b)=>{const j=LEC_VOCAB.has(lecN(a+b)),ea=LEC_VOCAB.has(lecN(a))&&a.length>2,eb=LEC_VOCAB.has(lecN(b))&&b.length>2;return j||(!ea&&!eb&&(a.length<3||b.length<3))?a+b:m;});
+}
+const LEC_OCR_PARES=[["cl","d"],["d","cl"],["rn","m"],["m","rn"],["li","h"],["h","li"],["c","e"],["e","c"],["n","u"],["u","n"],["l","i"],["i","l"],["1","l"],["1","i"],["b","h"],["h","b"],["f","t"],["t","f"],["o","a"],["a","o"],["0","o"],["s","e"],["ii","ñ"],["fi","ñ"],["r","n"],["n","r"],["ri","n"],["vv","w"],["c","o"],["o","c"]];
+const LEC_OCR_PRIO=new Set([...LEC_VOCAB_NOT,..."hijo hija hijos hijas nieto nieta nietos nietas bisnieto bisnieta bisnietos abuelo abuela abuelos padre madre padres hermano hermana hermanos hermanas sobrino sobrina sobrinos sobrinas esposo esposa viudo viuda primo prima primos tío tía tíos marido don doña sus que del los las con por dos tres cuatro cinco seis siete ocho nueve diez partes iguales mitad herederos herederas heredero heredera declaro declara fallecido fallecida falleció premuerto premuerta matrimonio nupcias casado casada soltero soltera divorciado divorciada separado separada causante requirente compareciente comparecientes paterno paterna materno materna línea vínculo doble representación estirpe".split(" ")]);
+function lecCorregirOCR(t){
+const T=String(t||"");if(!LEC_VOCAB){LEC_VOCAB=new Map();for(const v of LEC_VOCAB_TXT.split(" "))LEC_VOCAB.set(lecN(v),v);}
+const cache=new Map();const DOS={eu:"en",sc:"se",dc:"de",cl:"el",lc:"le",ei:"el",ln:"en",cn:"en",sn:"su",dcl:"del",qne:"que",quc:"que",dou:"don",clon:"don",dori:"don",doiia:"doña",sns:"sus"};
+const esp=/\bdoña\b/i.test(T);
+const S=T.replace(/(?<=(?:^|[\s—–(,;:])\s*)(eu|sc|dc|cl|lc|ei|ln|cn|sn|dcl|qne|quc)(?=\s[a-záéíóúñ]{2,}\b)/gm,(w)=>DOS[w])
+.replace(/\b(dou|clon|dori)(?=\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/g,"don").replace(/\b(?:dono|dena|doila|dofla|dofia|doiia)(?=\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/g,"doña").replace(/\b(?:Dono|Dena|Doila|Dofla)(?=\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/g,"Doña").replace(/\bDona(?=\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ])/g,(m)=>(esp?"Doña":m)).replace(/\b(sns)(?=\s+[a-záéíóúñ])/g,"sus")
+.replace(/\b([A-ZÁÉÍÓÚÑ][a-záéíóúñ]{1,})([A-ZÁÉÍÓÚÑ])([a-záéíóúñ]{2,})\b/g,(m,a,b,c)=>(/^(?:Mc|Mac|De|Di|Da|La|Le|Van|Von)$/.test(a)?m:a+b.toLowerCase()+c))
+.replace(/(?<=[A-ZÁÉÍÓÚÑ]{2})8(?=[A-ZÁÉÍÓÚÑ])|(?<=[A-ZÁÉÍÓÚÑ])8(?=[A-ZÁÉÍÓÚÑ]{2})/g,"B").replace(/(?<=[A-ZÁÉÍÓÚÑ]{3})0(?=[A-ZÁÉÍÓÚÑ]|\s)|(?<=[A-ZÁÉÍÓÚÑ])0(?=[A-ZÁÉÍÓÚÑ]{2})/g,"O").replace(/(?<=[A-ZÁÉÍÓÚÑ]{2})5(?=[A-ZÁÉÍÓÚÑ])/g,"S").replace(/\b5(?=[A-ZÁÉÍÓÚÑ]{3,}\b)/g,"S").replace(/\b0(?=[A-ZÁÉÍÓÚÑ]{3,}\b)/g,"O")
+.replace(/(?<=[a-záéíóúñ])1(?=[a-záéíóúñ])/g,"i").replace(/(?<=[A-Za-záéíóúñ])0(?=[a-záéíóúñ])/g,"o").replace(/(?<=[a-záéíóúñ])6(?=[a-záéíóúñ])/g,"ó");
+return S.replace(/(?<![A-Za-zÁÉÍÓÚÑÜáéíóúñü0-9])([a-záéíóúñü01]{3,})(?![A-Za-zÁÉÍÓÚÑÜáéíóúñü0-9])/g,(w)=>{
+if(cache.has(w))return cache.get(w);let r=w;
+if(!LEC_VOCAB.has(lecN(w))&&/[a-z]/.test(w)){const C=new Set();
+for(const[a,b]of LEC_OCR_PARES){let i=w.indexOf(a);while(i>=0){const v=w.slice(0,i)+b+w.slice(i+a.length);const f=LEC_VOCAB.get(lecN(v));if(f)C.add(f);i=w.indexOf(a,i+1);}}
+if(C.size===1)r=[...C][0];else if(C.size>1){const P=[...C].filter((f)=>LEC_OCR_PRIO.has(f));if(P.length===1)r=P[0];}}
+cache.set(w,r);return r;});
+}
+let LEC_ACENTO=null;
+function lecRestaurarAcentos(t){
+const T=String(t||"");if(!/[a-z]/.test(T))return T;
+if(!LEC_ACENTO){const sin=(w)=>w.normalize("NFD").replace(/[\u0300-\u036f]/g,"");const W=LEC_VOCAB_TXT.split(" ");const forma=new Set(W);const M=new Map();
+for(const w of W){const k=sin(w);if(k===w)continue;if(!M.has(k))M.set(k,new Set());M.get(k).add(w);}
+LEC_ACENTO={forma,M};}
+const{forma,M}=LEC_ACENTO;
+return T.replace(/(?<![A-Za-zÁÉÍÓÚÑÜáéíóúñü])([a-z]{3,})(?![A-Za-zÁÉÍÓÚÑÜáéíóúñü])/g,(w,_1,off)=>{
+if(forma.has(w)){if(w==="dona"&&/^\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+/.test(T.slice(off+4,off+40)))return"doña";return w;}
+const c=M.get(w);if(!c||c.size!==1)return w;const r=[...c][0];
+if(/[^i]o$/.test(w)&&/ó$/.test(r)){const st=w.slice(0,-1);if(forma.has(st+"a")||forma.has(st+"e"))return w;}
+return r;});
+}
+const lecGuardaFuera=(D,i)=>/(?:REPUDIAD[OA]S?|RENUNCIAD[OA]S?|HABIENDO REPUDIADO|HABIENDO RENUNCIADO|EXCLUID[OA]S?|EXCLUYE A|SIN DERECHO[^.;]{0,30}|NO ES LLAMAD[OA]|NO HEREDA|PREMUERT[OA]S?|FALLECID[OA]S?|DIFUNT[OA]S?|REPRESENTACION DE|HUBIERA CORRESPONDIDO A|SIN QUE)[,\s]+(?:A\s+)?(?:(?:SU|LA|EL|DE|LOS|LAS)[,\s]+(?:\w+[,\s]+){0,3})?(?:DON|DONA|D\.)?[,\s]*$/.test(D.slice(Math.max(0,i-80),i))||/^[^.;]{0,60}?,?\s*(?:QUE|QUIEN)\s+(?:HA\s+|HABIA\s+)?(?:REPUDI|RENUNCI|NO ACEPT|PREMURI|FALLECI)/.test(D.slice(i,i+110))||/^[^.;]{0,60}?(?:NO ES LLAMAD|NO SON LLAMAD|QUEDAN? EXCLUID|NO HEREDA|SEAN LLAMAD|DECLARAD[OA] EN SITUACI|CARECEN? DE|NO TIENEN? DERECHO)/.test(D.slice(i,i+110));
+function lecGuardaDeclaracion(texto,personas,nombreCausante){
+const T=lecN(String(texto||"")).replace(/\s+/g," ");const out=[];const causante=lecN(String(nombreCausante||"")).split(/\s+/).filter((w)=>w.length>2);
+const R=[...T.matchAll(/\b(?:DECLARO|DECLARA|SE DECLARAN?|DECLARAR|JUICIO DE NOTORIEDAD|SON (?:SUS |LOS )?(?:UNICOS |UNIVERSALES )*(?:Y UNIVERSALES )?HEREDEROS|SON HEREDEROS|HAN SIDO DECLARADOS)\b/g)].filter((m)=>/HEREDER/.test(T.slice(m.index,m.index+400)));
+if(!R.length)return out;
+const i0=R[R.length-1].index;let D=T.slice(i0,i0+1500);const f=/\b(?:DOY FE|CON LO QUE|LEIDA|ASI LO DICE|EN TESTIMONIO)\b/.exec(D);if(f&&f.index>60)D=D.slice(0,f.index);
+const vivos=personas.filter((p)=>p&&p.nombre&&p.relacion&&p.relacion!=="extrano"&&!p.excluido&&!p.descartado&&p.vive!==false&&!p.separado&&!p["excónyuge"]&&!/no hereda|renunci|repudi|premuert|excluid/i.test(p.nota||""));
+const esta=(p)=>{const k=lecN(p.nombre).split(/\s+/).filter((w)=>w.length>1&&!/^(?:DE|DEL|LA|LOS|LAS|Y)$/.test(w));return k.length>0&&new RegExp(`\\b${k[0].replace(/[^A-Z]/g,"")}\\b`).test(D)&&(k.length<2||k.slice(1).some((w)=>D.includes(w)));};
+const nombrados=vivos.filter((p)=>p.relacion!=="conyuge"&&esta(p)).length;if(!nombrados)return out;
+for(const p of vivos){
+if(p.relacion==="conyuge"){
+const habla=/CONYUGE|VIUD[OA]|USUFRUCT|ESPOS[OA]|MARIDO/.test(D)||esta(p);
+const niega=/(?:SIN|NO)\s+(?:QUE\s+)?(?:CORRESPOND\w*|TIENE|TENGA|DERECHO|LE\s+CORRESPONDE)[^.;]{0,90}(?:CONYUGE|VIUD|ESPOS|MARIDO)|(?:CONYUGE|ESPOS[OA]|MARIDO)[^.;]{0,80}(?:SEPARAD|DIVORCIAD|EXCLUID|CARECE|SIN DERECHO)|SEPARAD[OA] (?:JUDICIALMENTE|DE HECHO|LEGALMENTE)/.test(D);
+if(!habla||niega){if(p.conf>0)p.conf=0;out.push(`Comprobación del acta: la declaración ${niega?"niega derechos al cónyuge":"no habla del cónyuge"} (${p.nombre}); se deja sin marcar.`);}
+continue;}
+if(!esta(p)){if(p.conf>0)p.conf=0;out.push(`Comprobación del acta: ${p.nombre} no aparece en la declaración de herederos; se deja sin marcar.`);continue;}
+{const k=lecN(p.nombre).split(/\s+/)[0].replace(/[^A-Z]/g,"");const pos=[...D.matchAll(new RegExp(`\\b${k}\\b`,"g"))].map((m)=>m.index);
+if(pos.length&&pos.every((i)=>lecGuardaFuera(D,i))){if(p.conf>0)p.conf=0;out.push(`Comprobación del acta: la declaración nombra a ${p.nombre} solo para excluirlo; se deja sin marcar.`);}}
+}
+{const causa=(/HEREDER[OA]S?\s+(?:UNIVERSALES\s+)?(?:ABINTESTATO|AB INTESTATO|LEGALES|LEGITIM[OA]S)?\s*(?:DEL? (?:FALLECID[OA]|CAUSANTE)\s*,?\s*)?DE\s+(?:DON|DONA)\s+((?:[A-Z]+\s+){1,4})/.exec(D)||[])[1]||"";
+const cuerpo=D.split(/\b(?:HAGO CONSTAR|SE HACE CONSTAR|LEIDA|DOY FE|CONTRA ESTA)\b/)[0];
+const fal=[];
+for(const m of cuerpo.matchAll(/\b(?:DON|DONA)\s+((?:[A-Z]{2,}\s+){1,4})/g)){
+const W=m[1].trim().split(/\s+/).filter((w)=>!/^(?:Y|E|DE|DEL|LA|LOS|LAS|EN|POR|A|CON|SU|SUS|HIJO|HIJA|HIJOS|MAYOR|VECINO|VECINA|NACIDO|NACIDA)$/.test(w));if(W.length<2)continue;
+if(causa&&W.every((w)=>causa.includes(w)))continue;
+if(causante&&W.filter((w)=>causante.includes(w)).length>=Math.min(2,W.length))continue;
+{const ant=cuerpo.slice(Math.max(0,m.index-60),m.index),pos=cuerpo.slice(m.index,m.index+110);
+if(/\b(?:DE|DEL|CON|ANTE|POR|PARA)[,\s]+(?:(?:SU|LA|EL|DICH[OA]|CITAD[OA])[,\s]+(?:\w+[,\s]+){0,2})?$/.test(ant)||/NOTARI|TESTIGO|COMPAREC|REQUIRENTE|REQUERID|PROCURADOR|ABOGAD|SOLICITANTE|VIUD[OA]|CONYUGE|ESPOS[OA]|MARIDO|\bSR\.?|ILMO|FIRMAD|CAUSANTE[,\s]*$/.test(ant)||/^[^.;]{0,90}(?:MAGISTRAD|JUEZ|SECRETARI|NOTARIO|LETRAD)/.test(pos))continue;}
+if(lecGuardaFuera(cuerpo,m.index+m[0].indexOf(m[1])))continue;
+const leido=personas.some((p)=>{const k=lecN(p.nombre||"").split(/\s+/);return k.includes(W[0])&&W.slice(1).some((w)=>k.includes(w));});
+if(!leido)fal.push(W.join(" "));}
+if(fal.length){for(const p of vivos)if(p.conf>0)p.conf=0;out.push(`Comprobación del acta: la declaración nombra como heredero a ${[...new Set(fal)].map((n)=>lecTitulo?lecTitulo(n):n).join(", ")} y no se ha leído: revisa la lista.`);}}
+if(/REPRESENTACION|POR ESTIRPES|HIJOS DE SU (?:DIFUNT|PREMUERT|FALLECID)\w*|HIJAS DE SU (?:DIFUNT|PREMUERT|FALLECID)\w*/.test(D)){
+const sinE=vivos.filter((p)=>["nieto","sobrino","bisnieto"].includes(p.relacion)&&!p.estirpe&&!p.estirpeGrupo);
+const conHermanos=vivos.some((p)=>["hijo","hermano"].includes(p.relacion));
+if(sinE.length&&conHermanos){for(const p of vivos)if(p.conf>0)p.conf=0;out.push(`Comprobación del acta: la declaración habla de representación y no se ha leído de quién son hijos ${sinE.length>1?"los":"el"} ${sinE[0].relacion}${sinE.length>1?"s":""}: revisa las estirpes.`);}}
+return out;
+}
+function lecUnirLineas(t){
+let L=String(t||"").split("\n");
+const SER=/^\s*[A-Z]{1,3}\s?\d{7}\s*$/;L=L.filter((l)=>!SER.test(l));L=L.filter((l)=>!/^\s*[-—–]\s*\d{1,3}\s*[-—–]\s*$/.test(l));const largas=L.filter((l)=>l.trim().length>=40);if(largas.length<8)return t;
+const cojas=largas.filter((l)=>/[A-Za-zÁÉÍÓÚÑÜáéíóúñü0-9,()]\s*$/.test(l)).length;if(cojas<largas.length*0.4)return t;
+const AP=/^\s*(?:[IVXL]{1,6}\s*[.)\-–º°]|\d{1,2}\s*[.)\-–º°]\s|[a-hA-H]\s*\)|[a-hA-H]\.-|(?:PRIMER[OA]|SEGUND[OA]|TERCER[OA]|CUART[OA]|QUINT[OA]|SEXT[OA]|S[ÉE]PTIM[OA]|OCTAV[OA]|NOVEN[OA]|D[ÉE]CIM[OA]|Primer[oa]|Segund[oa]|Tercer[oa]|Cuart[oa]|Quint[oa]|Sext[oa]|S[ée]ptim[oa]|Octav[oa]|Noven[oa]|D[ée]cim[oa])\b\s*[.:\-–]|(?:EXPONEN?|OTORGAN?|COMPARECEN?|INTERVIENEN?|DISPOSICIONES|CL[ÁA]USULAS|ESTIPULACIONES|ANTECEDENTES|MANIFIESTAN?|HECHOS|DECLARO|DISPONGO|DOY FE|INVENTARIO|AUTORIZACI[ÓO]N)\b)/;
+const out=[];
+for(let i=L.length-2;i>0;i--)if(!L[i].trim()){let a=i-1;while(a>=0&&!L[a].trim())a--;let b=i+1;while(b<L.length&&!L[b].trim())b++;if(a>=0&&b<L.length&&b-a<=4&&L[a].trim().length>=25&&/[a-záéíóúñü,]\s*$/.test(L[a])&&(/^\s*(?:[a-záéíóúñü]|(?:don|doña|D\.|Dª)\s)/.test(L[b])||/(?:^|\s)(?:don|doña|Don|Doña|DON|DOÑA|D\.|Dª|D\.ª|y|e|de|del|a)\s*$/.test(L[a])))L.splice(a+1,b-a-1);}
+for(const l of L){const p=out.length?out[out.length-1]:null;
+const titulo=p!=null&&p.trim().length>=12&&p===p.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]\s*$/.test(p)&&/^\s*(?:DE|DEL|Y|E|A|EN|LA|LAS|LOS|POR|CON)\s+[A-ZÁÉÍÓÚÑ]/.test(l)&&l===l.toUpperCase();
+const rotulo=l.trim().length<90&&l===l.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]{3}/.test(l)&&!/(?:^|\s)(?:don|doña|Don|Doña|DON|DOÑA|D\.|Dª|de|del|y|e|a|la|los|las)\s*$/.test(p||"");
+if(titulo||(!rotulo&&p!=null&&p.trim().length>=25&&l.trim()&&/[A-Za-zÁÉÍÓÚÑÜáéíóúñü0-9,()]\s*$/.test(p)&&!AP.test(l)&&!(p===p.toUpperCase()&&p.trim().length<70)))out[out.length-1]=p.replace(/\s+$/,"")+" "+l.replace(/^\s+/,"");
+else out.push(l);}
+return out.join("\n");
+}
 function lecUnirCabeceras(t){
 const L=String(t).split("\n");
 const P=[[/\b(?:Fecha|Lugar|Valor|Importe|Saldo|N[úu]mero|Clase)\s+del?(?=\s|$)(?!\s+(?:la\s+)?[a-záéíóúñ]{3,})/g,/^[a-záéíóúñ][a-záéíóúñ ]{2,24}$/],
@@ -15329,7 +15419,7 @@ ini=false;return out;});
 }
 function lecAnalizar(texto,nombre){
 const idioma=typeof lecIdiomaDoc==="function"?lecIdiomaDoc(texto):"";if(idioma)texto=lecAlCastellano(texto);
-texto=lecUnirCabeceras(lecArreglarOrdinal(lecArreglarIsin(lecQuitarCabeceras(texto))));
+texto=lecUnirCabeceras(lecArreglarOrdinal(lecArreglarIsin(lecDesguionar(lecQuitarCabeceras(texto)))));
 texto=texto.replace(/(?<![A-Za-z])(?:Es|eS|es)(?=\s?\d{2}(?:\s?\d{4}){3,5}(?!\d))/g,"ES");
 texto=texto.replace(/(^|[\s—–\-(,])D[*°º]\s*(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])/gm,"$1Dª ");
 texto=texto.replace(/(^|[\s—–\-(,])D(?:[*°º%?”"]{1,3})\s*(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/gm,"$1Dª ");
@@ -15347,16 +15437,23 @@ texto=texto.replace(/(,\s*\d{1,2})\?(?=\s*(?:[A-H]\b|izq|dcha|der|cen))/gi,"$1º
 texto=texto.replace(/(?<![\d.,])(\d{1,3}(?:\.\d{3})+)(\d{2})\s?€/g,"$1,$2 €");
 texto=texto.replace(/(?<=[0-9A-Z])£|£(?=[0-9A-Z])/g,"E");
 texto=texto.replace(/\b(?:Paña|Poña|Daña|Dofia|Dofía|Doñia|Doñía|Dona)\s+(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/g,(m)=>(/^Dona/.test(m)?m:"Doña ")).replace(/\b(?:PAÑA|POÑA|DOFIA|DOÑIA)\s+(?=[A-ZÁÉÍÓÚÑ]{2,}\s+[A-ZÁÉÍÓÚÑ]{2,})/g,"DOÑA ");
+texto=texto.replace(/\b(?:dofia|dofía|doiia|dofla)(?=\s+[A-ZÁÉÍÓÚÑ])/g,"doña").replace(/\b(?:DOFIA|DOIIA|DOFLA)(?=\s+[A-ZÁÉÍÓÚÑ])/g,"DOÑA")
+.replace(/\b([A-ZÁÉÍÓÚ][a-záéíóú]*[aeiouáéíóú])fiez\b/g,"$1ñez").replace(/\b(Pe|Mu|Bego|Casta|Espa|Ordo|Logro|Due|Cari|Iba|Ya|Nu)fi([aoi][sz]?)\b/g,(m,a,b)=>a+"ñ"+b)
+.replace(/(?<![A-Za-zÁÉÍÓÚÑÜáéíóúñü])([a-záéíóú]{2,}fi[a-záéíóú]{1,})(?![A-Za-zÁÉÍÓÚÑÜáéíóúñü])/g,(w)=>{if(!LEC_VOCAB){LEC_VOCAB=new Map();for(const v of LEC_VOCAB_TXT.split(" "))LEC_VOCAB.set(lecN(v),v);}if(LEC_VOCAB.has(lecN(w)))return w;const r=w.replace("fi","ñ");const f=LEC_VOCAB.get(lecN(r));return f&&f.includes("ñ")?r:w;});
 texto=texto.replace(/(?<![A-Za-zÁÉÍÓÚÑáéíóúñ])ll(?=[bcdfghjkmnpqrstvwxz][a-záéíóú])/g,"Il");
 texto=texto.replace(/(\b\d{5}\s+[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' -]*?\s(?:DE|DEL|DE LA|DE LOS|DE LAS|LA|EL|LOS|LAS|SAN|SANTA|GRAN))[ \t]*\n(?:[ \t]*\n)?[ \t]*(?:(?:Localizaci[óo]n|Situaci[óo]n|Municipio|Poblaci[óo]n)\s*[:：]?\s*)?([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ' -]{2,40}?(?:\s*\([A-ZÁÉÍÓÚÑÜ ]{3,30}\))?)[ \t]*(?=\n|$)/g,"$1 $2");
 texto=texto.replace(/(\b(?:Do[ñn]a|DO[ÑN]A|Don|DON|D\.|Dª|D\.ª)\s+)l(?=[a-záéíóúñ]{3,}\s+[A-ZÁÉÍÓÚÑ])/g,"$1I").replace(/(\b(?:Do[ñn]a|DO[ÑN]A|Don|DON|D\.|Dª|D\.ª)\s+)Ii(?=[a-záéíóúñ]{3,})/g,"$1Il");
 texto=texto.replace(/\b[Iil1]lamad([oa]s?)\b/g,"llamad$1").replace(/\b[Il1]LAMAD([OA]S?)\b/g,"LLAMAD$1");
 texto=texto.replace(/(?<![\d.])(\d{8})\s?-\s?([A-Z])\b/g,(m,n,l)=>(lecNifOk(n+l)?n+l:m));
 texto=texto.replace(/\b(\d{1,2})\.(\d{3})\.(\d{3})\s?-?\s?([A-Z])\b/g,(m,a,b,c,l)=>{const n=(a+b+c).padStart(8,"0")+l;return lecNifOk(n)?n:m;});
-const info=lecTipoInfo(texto,nombre);let tipo=info.tipo;
+const NOTA=["testamento","herederos","herenciaprevia","cuaderno","renuncia"];
+let info=lecTipoInfo(texto,nombre);
+{const u=lecUnirLineas(texto);if(u!==texto){const i1=lecTipoInfo(lecRestaurarAcentos(lecCorregirOCR(u)),nombre);if(NOTA.includes(i1.tipo)||NOTA.includes(info.tipo)){texto=u;info=NOTA.includes(i1.tipo)?i1:info;}}}
+let tipo=info.tipo;
 if(!lecAnalizar.mayus&&["testamento","herederos","herenciaprevia","cuaderno","renuncia"].includes(tipo)&&lecMayusculas(texto)){lecAnalizar.mayus=true;try{const r=lecAnalizar(lecDescapitalizar(texto),nombre);r.avisos=[...(r.avisos||[]),"El documento está escrito en mayúsculas: se ha leído pasando a minúsculas las palabras corrientes; revisa los nombres con la copia."];return r;}finally{lecAnalizar.mayus=false;}}
 if(tipo==="familia"&&!/LIBRO DE FAMILIA/.test(lecN(texto))){const T=lecN(texto);if(/NACIMIENTO/.test(T)&&!/MATRIMONIO/.test(T.slice(0,400))&&/(?:CERTIFICA|INSCRIPCION|ACTA|EXTRACTO)[^\n]{0,60}NACIMIENTO/.test(T))tipo="nacimiento";else if(/MATRIMONIO/.test(T))tipo="matrimonio";}
 if(/(?:^|\s)905 (?:\d{8}[A-Z]|[XYZ]\d{7}[A-Z]) 906 /.test(texto)||/\(C\) ?CAUSANTE[\s\S]{0,200}?(?:^|\s)24 (?:\d{8}[A-Z]|[XYZ]\d{7}[A-Z]) 25 /.test(texto))tipo="modelo650";
+if(NOTA.includes(tipo))texto=lecRestaurarAcentos(lecCorregirOCR(texto));
 if(["testamento","herederos","renuncia","cuaderno"].includes(tipo))texto=lecVocabNotarial(texto);
 let primeraP=false;if(tipo==="testamento"){const tp=lecTerceraPersona(texto);if(tp!==texto){texto=tp;primeraP=true;}}
 if(tipo==="testamento")texto=texto.replace(/\bhij([oa])(s?)\s+(?:entenad|hijastr|pol[íi]tic)[oa]s?\b/gi,"entenad$1$2");
@@ -15425,6 +15522,7 @@ if(info.empate)avisos.unshift(`El contenido encaja por igual con ${info.empate.m
 else if(info.soloNombre&&tipo!=="desconocido")avisos.unshift(`Apenas se ha reconocido texto propio de «${LEC_TIPOS[tipo]||tipo}»: se ha tratado así por el nombre del archivo. Revisa lo propuesto.`);
 if(avisos.some((a)=>/^El testamento deshereda a /.test(a)))for(let i=avisos.length-1;i>=0;i--)if(/^Desheredación de /.test(avisos[i]))avisos.splice(i,1);
 if(idioma)avisos.push(`Documento en ${idioma}: se ha leído con su traducción al castellano. Revisa con el original los nombres y las cifras propuestos.`);
+if(tipo==="herederos")avisos.push(...lecGuardaDeclaracion(texto,d.personas||[],((d.campos||[]).find((c)=>c.k==="nombre")||{}).valor));
 return{tipo,titulo:LEC_TIPOS[tipo],campos:d.campos||[],personas:d.personas||[],bienes:d.bienes||[],deudas:d.deudas||[],gastos:d.gastos||[],...(d.excluidos&&d.excluidos.length?{excluidos:d.excluidos}:{}),avisos:[...new Set(avisos)],extra:d};
 }
 const LEC_ERRORES=[
@@ -16190,6 +16288,7 @@ for(const p of orden)if(!sep.has(p.exp)&&ids.includes(p.id)){try{p.aplicar(x);n+
 if(nx&&typeof orgGuardarOrigen==="function")orgGuardarOrigen(x,orden.filter((p)=>!sep.has(p.exp)&&ids.includes(p.id)));
 for(const p of orden)if(!sep.has(p.exp)&&ids.includes(p.id)&&p.repartir){try{p.repartir(x);}catch(e){console.error(e);}}
 if(nx&&typeof lecConsolidar==="function"){try{lecConsolidar(x,R);}catch(e){console.error(e);}}
+if(nx&&typeof evFoto==="function")evFoto(x,R,ids);
 if(nx){try{lecPendientes(x,R,orden.filter((p)=>!sep.has(p.exp)&&!ids.includes(p.id)&&p.pendiente));}catch(e){console.error(e);}}
 if(nx){try{lecHipotecasPendientes(x,orden.filter((p)=>!sep.has(p.exp)&&!ids.includes(p.id)&&p.k==="deuda"&&p.deuda&&(p.deuda.registral||p.deuda.sinImporte)));}catch(e){console.error(e);}}
 if(nx){
@@ -16260,7 +16359,7 @@ const filas=[x.nifCausante?["NIF del causante",x.nifCausante]:null,x.lugarFallec
 ...PP.map((q)=>["Plan de pensiones (no es herencia)",[q.plan||"",q.entidad?"en "+q.entidad:"",q.importe?eur0(q.importe):"",q.beneficiarios?"beneficiarios: "+String(q.beneficiarios).slice(0,60):""].filter(Boolean).join(" · ")]),
 ...AR.map((b)=>["Arrendado: "+String(b.descripcion||"inmueble").slice(0,40),[b.arrendamiento.arrendatario||"",b.arrendamiento.renta?eur0(b.arrendamiento.renta)+" al mes":"",b.arrendamiento.fecha?"desde "+fechaCorta(b.arrendamiento.fecha):""].filter(Boolean).join(" · ")])].filter(Boolean);
 const tipos=D.map((d)=>LEC_TIPOS[d.tipo]||d.tipo).filter((v,i,a)=>a.indexOf(v)===i);
-return`<div class="card lec-res" style="margin-top:14px">${cardH("Leído de los documentos",D.length?`${plural(D.length,"documento leído","documentos leídos")}`:"Datos del causante",`<button class="link" data-sec="documentos">Documentos ›</button>`)}${tipos.length?`<p class="caption lec-res-tipos" style="margin:0 0 10px">${esc(tipos.join(" · "))}</p>`:""}${filas.length?`<div class="kv">${filas.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div>`:""}${typeof orgResumenHTML==="function"?orgResumenHTML(x):""}<p class="caption" style="margin:10px 0 0">Las personas y bienes cargados desde documentos llevan la marca «leído de documento» hasta que los revises.</p></div>`;
+return`<div class="card lec-res" style="margin-top:14px">${cardH("Leído de los documentos",D.length?`${plural(D.length,"documento leído","documentos leídos")}`:"Datos del causante",`<button class="link" data-sec="documentos">Documentos ›</button>`)}${tipos.length?`<p class="caption lec-res-tipos" style="margin:0 0 10px">${esc(tipos.join(" · "))}</p>`:""}${filas.length?`<div class="kv">${filas.map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")}</div>`:""}${typeof orgResumenHTML==="function"?orgResumenHTML(x):""}<p class="caption" style="margin:10px 0 0">Las personas y bienes cargados desde documentos llevan la marca «leído de documento» hasta que los revises.</p>${typeof evTarjetaHTML==="function"?evTarjetaHTML(x):""}</div>`;
 }
 function lecFranjaHTML(x){
 if(!["encargo","documentacion",undefined,""].includes(x.fase))return"";
@@ -17309,6 +17408,7 @@ if(tc&&tc.conf>0&&(tc.derechos.some((q)=>/^(?:sus|los|las|mis|a\s+sus)\s|hijos|h
 tc.conf=0;d.avisos.push("El reparto propuesto tiene herederos sin nombre o depende de un poder testatorio (fiducia): no se marca; complétalo con los nombres y comprueba si el poder se ha ejercido.");}}
 {const tc=d.campos.find((c)=>c.k==="testamento"&&Array.isArray(c.derechos)&&c.derechos.length);
 if(tc&&tc.conf>0&&[...(loc.avisos||[]),...(d.avisos||[])].some((a)=>/^Comprobación: [\s\S]*no est[áa] en el reparto|^La lectura señala una duda/.test(a)))tc.conf=0;}
+if(d.tipo==="herederos"&&texto&&typeof lecGuardaDeclaracion==="function")d.avisos.push(...lecGuardaDeclaracion(texto,d.personas,(d.campos.find((c)=>c.k==="nombre")||{}).valor));
 if((loc.avisos||[]).some((a)=>/a favor de la Administración/.test(a))){for(const c of d.campos)if(c.k==="testamento"&&Array.isArray(c.derechos))c.conf=0;for(const q of d.personas){q.conf=0;q.nota="la declaración de herederos es a favor de la Administración: no es heredero";}}
 return d;
 }
@@ -18003,6 +18103,111 @@ if(rep.ok)for(const o of out.personas)if(!rep.derechos.some((q)=>lecMismoNombre(
 {const SS=R.sustitutos.filter((n)=>!(rep.ok&&rep.derechos.some((d)=>lecMismoNombre(d.nombre,n))));if(SS.length)out.avisos.push(`Sustitutos nombrados en el testamento (${SS.join(", ")}): solo heredan si el instituido no puede o no quiere; quedan sin marcar.`);}
 return{rep,R,ley,motivo};
 }
+const EV_CAT=[
+["deMas","Heredero de más","La app proponía a alguien que no hereda"],
+["faltaba","Faltaba un heredero","Hereda alguien que la app no proponía"],
+["cuota","Cuota distinta","Pleno dominio o nuda propiedad con otra fracción"],
+["usufructo","Usufructo distinto","El usufructo era de otra persona o de otra parte"],
+["parentesco","Parentesco distinto","Hijo, nieto, sobrino, cónyuge… corregido"],
+["legado","Legado distinto","Un legatario de más, de menos o cambiado"],
+["nombre","Nombre corregido","La persona era la buena, pero con el nombre mal escrito"],
+];
+const evOn=()=>!!(DB.evaluacion&&DB.evaluacion.activo);
+const evR4=(n)=>Math.round((Number(n)||0)*10000)/10000;
+function evDerechos(x){
+let D={};
+try{const C=calcular(x);D=(C&&C.isd&&C.isd.derechos)||{};}catch(e){D={};}
+return(x.personas||[]).map((p)=>{
+const z=D[p.id]||[];const s=(t)=>evR4(z.filter((d)=>d.tipo===t).reduce((a,d)=>a+(Number(d.fraccion)||0),0));
+return{id:p.id,nombre:p.nombre||"",rel:p.relacion||"",pleno:s("pleno"),nuda:s("nuda"),usu:s("usufructo"),leg:(x.bienes||[]).some((b)=>b.legatarioId===p.id)||(x.legados||[]).some((l)=>l.personaId===p.id||l.legatarioId===p.id)};
+});
+}
+function evFoto(x,R,ids){
+try{
+const docs=(R&&R.docs)||[];const P=(R&&R.propuestas)||[];
+const clave=P.filter((p)=>["Personas","Testamento","Herencia"].includes(p.grupo)&&ids.includes(p.id));
+const seguro=clave.length>0&&clave.every((p)=>p.conf>=1);
+const tipos=[...new Set(docs.map((d)=>d.tipo).filter(Boolean))];
+const escaneado=docs.some((d)=>d.escaneado||(d.datos&&d.datos.escaneado)||/escane|foto|imagen/i.test(String(d.formato||"")));
+const ia=typeof liaActiva==="function"?!!liaActiva():false;
+x.evalLectura={fecha:hoy(),tipos,escaneado,ia,seguro,version:typeof VERSION_APP==="object"?VERSION_APP.nombre:"",personas:evDerechos(x)};
+delete x.evalHecha;
+}catch(e){console.error("evFoto",e);}
+}
+function evComparar(x){
+const S=(x.evalLectura&&x.evalLectura.personas)||[],C=evDerechos(x);
+const tot=(q)=>q?q.pleno+q.nuda+q.usu:0;const dif=(a,b)=>Math.abs((a||0)-(b||0))>0.001;
+const F=Object.fromEntries(EV_CAT.map(([k])=>[k,0]));
+const ids=new Set([...S.map((q)=>q.id),...C.map((q)=>q.id)]);
+for(const id of ids){
+const a=S.find((q)=>q.id===id),b=C.find((q)=>q.id===id);
+const ha=tot(a)>0.0001,hb=tot(b)>0.0001;
+if(ha&&!hb)F.deMas++;
+else if(!ha&&hb)F.faltaba++;
+else if(ha&&hb){if(dif(a.pleno,b.pleno)||dif(a.nuda,b.nuda))F.cuota++;if(dif(a.usu,b.usu))F.usufructo++;}
+if(a&&b&&a.rel!==b.rel&&(ha||hb))F.parentesco++;
+if(a&&b&&a.leg!==b.leg)F.legado++;else if(!a&&b&&b.leg)F.legado++;else if(a&&!b&&a.leg)F.legado++;
+if(a&&b&&a.nombre&&b.nombre&&a.nombre!==b.nombre&&(ha||hb))F.nombre++;
+}
+const estructura=F.deMas+F.faltaba+F.cuota+F.usufructo+F.parentesco+F.legado;
+return{fallos:F,ok:estructura===0};
+}
+function evRegistrar(x){
+if(!x||!x.evalLectura)return;
+const c=evComparar(x),E=x.evalLectura;
+DB.evaluacion=DB.evaluacion||{activo:true,registros:[]};DB.evaluacion.registros=DB.evaluacion.registros||[];
+const reg={n:DB.evaluacion.registros.length+1,mes:String(hoy()).slice(0,7),tipos:E.tipos||[],escaneado:!!E.escaneado,ia:!!E.ia,seguro:!!E.seguro,personas:(E.personas||[]).length,herederos:(E.personas||[]).filter((q)=>q.pleno+q.nuda+q.usu>0).length,ok:c.ok,fallos:c.fallos,version:E.version||""};
+const prev=DB.evaluacion.registros.findIndex((r)=>r.exp===x.id);
+const fila={...reg,exp:x.id};
+if(prev>=0){fila.n=DB.evaluacion.registros[prev].n;DB.evaluacion.registros[prev]=fila;}else DB.evaluacion.registros.push(fila);
+x.evalHecha={fecha:hoy(),ok:c.ok};
+guardar();
+return c;
+}
+function evResumen(){
+const L=(DB.evaluacion&&DB.evaluacion.registros)||[];
+const ok=L.filter((r)=>r.ok).length,sym=L.filter((r)=>!r.ok&&r.seguro).length,seg=L.filter((r)=>r.seguro).length;
+const cat=Object.fromEntries(EV_CAT.map(([k])=>[k,L.reduce((a,r)=>a+((r.fallos&&r.fallos[k])?1:0),0)]));
+return{n:L.length,ok,sym,seg,segOk:L.filter((r)=>r.ok&&r.seguro).length,cat,esc:L.filter((r)=>r.escaneado).length,escOk:L.filter((r)=>r.escaneado&&r.ok).length};
+}
+function evInforme(){
+const L=(DB.evaluacion&&DB.evaluacion.registros)||[];
+return{informe:"Evaluación del lector de Partiva en el piloto",generado:String(hoy()).slice(0,7),version:typeof VERSION_APP==="object"?VERSION_APP.nombre:"",resumen:evResumen(),
+expedientes:L.map((r)=>({n:r.n,mes:r.mes,tipos:r.tipos,escaneado:r.escaneado,ia:r.ia,seguro:r.seguro,personas:r.personas,herederos:r.herederos,ok:r.ok,fallos:r.fallos,version:r.version}))};
+}
+function evResumenTxt(){
+const S=evResumen();if(!S.n)return"Aún no hay expedientes evaluados.";
+const pc=(a,b)=>(b?Math.round((a/b)*100)+" %":"—");
+const cats=EV_CAT.filter(([k])=>S.cat[k]).map(([k,t])=>`${t}: ${S.cat[k]}`).join(" · ");
+return`Partiva · evaluación del lector (${String(hoy()).slice(0,7)})\n${plural(S.n,"expediente revisado","expedientes revisados")} · sin corregir el reparto: ${S.ok} (${pc(S.ok,S.n)})\nDados por buenos por la app: ${S.seg} · de ellos con error: ${S.sym}\nEscaneados: ${S.esc} · bien: ${S.escOk}\n${cats||"Sin correcciones del reparto."}\n(Sin datos personales: solo tipos de corrección.)`;
+}
+const evH=(s)=>String(s==null?"":s).replace(/[&<>"]/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+function evTarjetaHTML(x){
+if(!evOn()||!x||!x.evalLectura)return"";
+const h=x.evalHecha;
+const est=h?(h.ok?"Registrada: la lectura acertó el reparto":"Registrada: hubo que corregir el reparto"):"Cuando hayas revisado y corregido el expediente, registra cómo acertó la lectura";
+return`<div class="ev-tarjeta" role="group" aria-label="Evaluación del piloto"><span class="t"><b>Evaluación del piloto</b><small>${evH(est)}. Solo se guarda el tipo de corrección, sin nombres.</small></span><button class="btn sm${h?" gray":""}" data-ev="registrar" data-id="${evH(x.id)}">${h?"Volver a registrar":"Registrar evaluación"}</button></div>`;
+}
+function evAjustesHTML(){
+const on=evOn(),S=evResumen();const D=DB.evaluacion||{};
+const ico='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>';
+const sw=`<button class="row" data-ev="activar" role="switch" aria-checked="${on}"><span class="ico ${on?"green":"q"}">${ico}</span><span class="t"><b>Evaluar la lectura en el piloto</b><small>${on?"Activada: cada expediente leído de documentos muestra «Registrar evaluación» en su Resumen":"Desactivada"}</small></span><span class="sg-sw" aria-hidden="true"></span></button>`;
+const pc=(a,b)=>(b?Math.round((a/b)*100)+" %":"—");
+const res=S.n?`<div class="row"><span class="t"><b>${plural(S.n,"expediente evaluado","expedientes evaluados")}</b><small>Reparto sin corregir: ${S.ok} (${pc(S.ok,S.n)}) · dados por buenos por la app: ${S.seg}, con error: ${S.sym}${S.esc?` · escaneados: ${S.esc}, bien ${S.escOk}`:""}</small></span></div>${EV_CAT.filter(([k])=>S.cat[k]).map(([k,t,d])=>`<div class="row"><span class="t"><b>${evH(t)}</b><small>${evH(d)}</small></span><span class="v">${S.cat[k]}</span></div>`).join("")}`:`<div class="row"><span class="t"><small>Aún no hay expedientes evaluados.</small></span></div>`;
+const acc=S.n?`<div class="field"><div class="lia-acts"><button class="btn sm" data-ev="descargar">Descargar informe anónimo</button><button class="btn sm gray" data-ev="copiar">Copiar resumen</button>${D.borrar?`<button class="btn sm red" data-ev="borrarSi">Sí, borrar las ${S.n}</button><button class="btn sm gray" data-ev="borrarNo">Cancelar</button>`:`<button class="btn sm gray" data-ev="borrar">Borrar evaluaciones</button>`}</div></div>`:"";
+return`<div class="sectitle" id="ev-aj">Evaluación del piloto</div><div class="group" style="--inset:60px">${sw}${on?res+acc:""}</div><p class="group-foot">Sirve para medir cuánto acierta el lector con expedientes reales. El informe no lleva nombres, DNI, bienes, importes ni referencias: solo el tipo de documento, si estaba escaneado, si la app dio el reparto por bueno y qué hubo que corregir.</p>`;
+}
+function evAccion(a,b){
+DB.evaluacion=DB.evaluacion||{activo:false,registros:[]};
+if(a==="activar"){DB.evaluacion.activo=!DB.evaluacion.activo;guardar();render();return;}
+if(a==="registrar"){const x=DB.expedientes.find((q)=>q.id===b.dataset.id);if(!x)return;const c=evRegistrar(x);render();toast(c&&c.ok?"Evaluación registrada: la lectura acertó el reparto":"Evaluación registrada: se anotan las correcciones, sin nombres");return;}
+if(a==="descargar"){const j=JSON.stringify(evInforme(),null,1);descargar(`Partiva - evaluacion del lector ${String(hoy()).slice(0,7)}.json`,new Blob([j],{type:"application/json"}));return;}
+if(a==="copiar"){const t=evResumenTxt();try{navigator.clipboard.writeText(t).then(()=>toast("Resumen copiado"),()=>toast("No se ha podido copiar"));}catch(e){toast("No se ha podido copiar");}return;}
+if(a==="borrar"){DB.evaluacion.borrar=true;render();return;}
+if(a==="borrarNo"){delete DB.evaluacion.borrar;render();return;}
+if(a==="borrarSi"){DB.evaluacion.registros=[];delete DB.evaluacion.borrar;for(const x of DB.expedientes)delete x.evalHecha;guardar();render();toast("Evaluaciones borradas");return;}
+}
+if(typeof document!=="undefined")document.addEventListener("click",(e)=>{const b=e.target&&e.target.closest?e.target.closest("[data-ev]"):null;if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();evAccion(b.dataset.ev,b);},true);
 function ltDeudaLinea(T){
 const a=/DEUDA\s+TRIBUTARIA[^\n]*\n([^\n]*\d,\d{2}[^\n]*)/i.exec(T);if(a&&!/DEUDA\s+TRIBUTARIA[^\n]*\d,\d{2}/i.test(a[0].split("\n")[0]))return a;
 const b=/(CUOTA\s+TRIBUTARIA\s+[\d.]+,\d{2}[^\n]*?DEUDA\s+TRIBUTARIA\s+[\d.]+,\d{2})/i.exec(T);if(b)return[b[0],b[1].replace(/[A-ZÁÉÍÓÚÑ]{3,}/gi," ")];
@@ -23994,6 +24199,7 @@ return sheetHTML("Despacho y ajustes",`<div class="sectitle" style="margin-top:4
       ${typeof dtAjustesHTML==="function"?dtAjustesHTML():""}
       ${typeof redAjustesHTML==="function"?redAjustesHTML():""}
       ${typeof liaAjustesHTML==="function"?liaAjustesHTML():""}
+      ${typeof evAjustesHTML==="function"?evAjustesHTML():""}
       ${sgAjustesHTML()}
       <div class="sectitle">Datos</div><div class="group" style="--inset:60px"><label class="row" style="cursor:pointer;position:relative;overflow:hidden"><span class="ico blue">${I.box}</span><span class="t"><b>Importar un archivo</b><small>Expediente exportado, datos de la familia o copia de seguridad</small></span>${I.chev}<input type="file" id="f-restore" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label><button class="row" data-act="impAbrir"><span class="ico green">${I.list}</span><span class="t"><b>Traer la cartera desde una hoja (Excel / CSV)</b><small>Para empezar con las herencias que ya tienes abiertas, sin teclearlas</small></span>${I.chev}</button><button class="row" data-act="ics"><span class="ico gold">${I.calplus}</span><span class="t"><b>Plazos de la cartera al calendario</b></span>${I.chev}</button><button class="row" data-act="ejemplos"><span class="ico q">${I.doc}</span><span class="t"><b>Cargar casos de ejemplo</b></span>${I.chev}</button></div>
       <p class="group-foot">Los datos y los documentos se guardan en este equipo, en este navegador; no se envían a ningún servidor. El despacho es el responsable de ellos y de sus copias (arriba, en «Tus datos»). Activa la copia automática (arriba, en «Copias de seguridad») para no depender de un solo ordenador. Para trabajar varios ordenadores con los mismos expedientes, usa «Despacho en red» (arriba); en el móvil, o en un navegador sin esa opción, los expedientes se pasan con «Exportar» o con una copia.</p>${hayWebPublica()?`<p class="group-foot"><a href="/condiciones.html" target="_blank" rel="noopener">Condiciones</a> · <a href="/privacidad.html" target="_blank" rel="noopener">Privacidad</a> · <a href="/aviso-legal.html" target="_blank" rel="noopener">Aviso legal</a> · <a href="/datos.html" target="_blank" rel="noopener">Datos y seguridad</a></p>`:""}
