@@ -1401,8 +1401,9 @@ return`<div class="card vig" style="margin-top:14px">${cardH("Vigilancia normati
 function vNovedades(){
 return NOV_NORMA.map((n)=>{const X=afectados(n);return`<div class="card nov"><div class="nov-h"><span class="kick">${fechaLarga(n.f)} · ${n.amb==="estatal"?"Estatal":n.amb==="autonomica"?esc(nombreTerr(n.k)):esc(ORDENANZAS[n.k]?.nombre||n.k)}</span>${X.length?`<span class="tag warn">${plural(X.length,"expediente afectado","expedientes afectados")}</span>`:""}</div><b class="nov-t">${esc(n.t)}</b><p class="caption" style="margin:4px 0 0">${esc(n.d)}</p>${X.length?`<div class="chips" style="margin-top:10px">${X.map((x)=>`<button class="chip" data-open="${x.id}">${esc(x.despacho?.ref||nombreExp(x))}</button>`).join("")}</div>`:""}</div>`;}).join("");
 }
-const VERSION_APP={n:3830,nombre:"Versión 3.8.30",fecha:"2026-11-08"};
+const VERSION_APP={n:3831,nombre:"Versión 3.8.31",fecha:"2026-11-10"};
 const NOVEDADES=[
+["Lectura de contraste: más repartos ya marcados, ninguno equivocado (3.8.31)","Testamentos, actas y escrituras de herencia los lee ahora Claude Opus 5.5 y, si el reparto no queda seguro, los lee además Sonnet 5.5 por separado: cuando las dos lecturas dan exactamente el mismo reparto y el texto no lo desmiente, se propone ya marcado. En cinco exámenes a ciegas (106 documentos claros, uno entero de documentos con trampa) los repartos propuestos ya marcados pasan de 22 a 70, sin ninguno marcado y equivocado. Se puede apagar en Ajustes. Además: una escritura que dice «fueron declarados herederos los cuatro hijos» sin nombrarlos ya no deja marcado al viudo solo, «que son los demás comparecientes» no es una persona, y la relectura desde la memoria de un documento ya leído con IA vuelve a funcionar."],
 ["Lectura reforzada y ronda 35 (3.8.30)","Testamentos, actas y escrituras de herencia los lee ahora Claude Sonnet 5.5 (lectura reforzada, se puede cambiar a «económica» en Ajustes): en nuestras pruebas a ciegas acierta más que Haiku y que Opus. Además: «D.» y «Dª.» en las actas, «deberán sucederle…», «los hijos de su hijo premuerto», abuelos por líneas paterna y materna, «salvo el citado don D.», el ahijado ya no es hijo, «fueron nombrados como tales los tres hijos» y «fue declarada su única heredera» en las escrituras, y el causante de una escritura que cuenta dos herencias."],
 ["Red de seguridad del testamento (3.8.29)","En los testamentos, el reparto no se da por bueno si un titular queda sin nombre, si un heredero que no es legitimario no aparece en ninguna cláusula, si el testamento reparte por partes iguales y las cuotas leídas son distintas, o si lega el usufructo al cónyuge y el reparto no lo recoge. «Casado con la señora Montserrat …» (estilo catalán) se lee como «doña»."],
 ["Copias escaneadas, red de seguridad del acta y evaluación del piloto (3.8.28)","El texto de una copia escaneada se arregla antes de leerlo: palabras partidas con guion al final del renglón, renglones cortados y saltos de hoja con el papel timbrado, acentos y eñes perdidos («conyuge», «dofia») y letras confundidas («compareclentes», «abnela»). Con copias de calidad normal, la lectura pasa de acertar el 52 % de los casos a acertar el 69 % (73 % con texto limpio). En las actas, nadie queda marcado si la declaración no lo nombra, lo nombra solo para excluirlo, niega derechos al cónyuge o llama heredero a alguien que no se ha leído. Nuevo en Ajustes: «Evaluación del piloto», para medir con expedientes reales cuánto acierta la lectura sin sacar datos personales."],
@@ -13030,7 +13031,7 @@ if(P.length<2||P.join(" ").length<4||P.join(" ").length>70)return"";
 if(lecNombreBasura(P.join(" ")))return"";
 return lecTitulo(P.join(" "));
 }
-const LEC_NO_NOMBRE=new Set(["RESERVA","PERJUICIO","CUOTA","CONFORME","LES","ME","MI","MIS","TU","TUS","SU","SUS","CONOZCO","CONOCE","TERCIO","TERCIOS","MEJORA","LEGITIMA","ILUSTRE","ES","SON","HAN","HABER","CUAL","CUALES","DICHO","DICHA","MISMO","MISMA","OTORGANTE","TESTADOR","TESTADORA","NOTARIAL","NOTARIALES","CLAUSULA","SIGUIENTE","SIGUIENTES","CONCEPTO","PREMORIENCIA","SUSTITUIDOS","SUSTITUIDO","PARTES","IGUALES","RESTANTES","UNIVERSALES","ESTIRPES","DEFECTO","INCAPACIDAD","VOLUNTAD","ULTIMA","TESTAMENTO","ABIERTO","ACREDITA","INTERES","LEGITIMO","PREVIA","EXHIBICION","CERTIFICACION","PROFESION","JUBILADO","JUBILADA","EDAD","NECESARIA","LEGAL","ESTA","ESTE","AQUI","ASI","DICE","DOY","FICTICIO","FICTICIA","VALIDEZ","INVENTADOS"]);
+const LEC_NO_NOMBRE=new Set(["RESERVA","PERJUICIO","CUOTA","CONFORME","LES","ME","MI","MIS","TU","TUS","SU","SUS","CONOZCO","CONOCE","TERCIO","TERCIOS","MEJORA","LEGITIMA","ILUSTRE","ES","SON","HAN","HABER","CUAL","CUALES","DICHO","DICHA","MISMO","MISMA","OTORGANTE","TESTADOR","TESTADORA","NOTARIAL","NOTARIALES","CLAUSULA","SIGUIENTE","SIGUIENTES","CONCEPTO","PREMORIENCIA","SUSTITUIDOS","SUSTITUIDO","PARTES","IGUALES","RESTANTES","UNIVERSALES","ESTIRPES","DEFECTO","INCAPACIDAD","VOLUNTAD","ULTIMA","TESTAMENTO","ABIERTO","ACREDITA","INTERES","LEGITIMO","PREVIA","EXHIBICION","CERTIFICACION","PROFESION","JUBILADO","JUBILADA","EDAD","NECESARIA","LEGAL","ESTA","ESTE","AQUI","ASI","DICE","DOY","FICTICIO","FICTICIA","VALIDEZ","INVENTADOS","COMPARECIENTE","COMPARECIENTES","DEMAS","OTORGANTES","REQUIRENTE","REQUIRENTES","ADMINISTRE","ADMINISTRAR"]);
 const LEC_NO_INICIO=new Set(["EL","A","AL","LO","UN","UNA","UNOS","SU","SUS","MI","LE","ES","Y","E","O","QUE","SE","NO"]);
 function lecNombreBasura(n){
 const W=String(n||"").split(/\s+/).filter(Boolean).map((w)=>lecN(w).replace(/[^A-Z]/g,""));
@@ -15510,6 +15511,10 @@ if(ct&&ct.derechos){d.campos=[...(d.campos||[]).filter((c)=>c.k!=="testamento"),
 d.personasTranscritas=r2.personas||[];
 d.avisos=[...(d.avisos||[]),`La escritura transcribe ${tr.tipo==="testamento"?"el testamento":"la declaración de herederos"} de ${tr.causante||"el causante"}: se ha leído y se propone su reparto sin marcar. Si es la herencia de este expediente, confírmalo; si es una herencia anterior (título del causante), no lo apliques.`,...(r2.avisos||[]).filter((x)=>/Comprobación|fideicomis|habla de \d+|no se ha leído ninguno|desheredaci|preterici|transmisi|murió después/i.test(x))];
 if(tr.tipo==="acta")d.tipoTranscrito="herederos";
+if(tr.tipo==="acta"){const NUM={dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10};const T1=texto.replace(/\s+/g," ");
+const m=/declarad[oa]s?\s+(?:[úu]nic[oa]s?\s+(?:y\s+universales\s+)?)?hereder[oa]s?[^.;]{0,80}?\b(?:l[oa]s|sus)\s+(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)\s+hij[oa]s\b/i.exec(T1),hablaH=/declarad[oa]s?\s+(?:[úu]nic[oa]s?\s+(?:y\s+universales\s+)?)?hereder[oa]s?[^.;]{0,80}?\bhij[oa]s\b/i.test(T1);
+const n=m?NUM[m[1].toLowerCase()]||Number(m[1]):0,hijos=(d.personasTranscritas||[]).filter((q)=>q.relacion==="hijo").length;
+if((n&&hijos!==n)||(hablaH&&!hijos)){for(const q of d.personasTranscritas)q.conf=0;d.avisos.push(n?`La declaración de herederos que cuenta la escritura habla de ${n} hijos y se han leído ${hijos}: revisa la lista con el acta.`:"La declaración de herederos que cuenta la escritura habla de hijos y no se ha leído ninguno: revisa la lista con el acta.");}}
 if(tr.causante){const avT=lecTransmision(texto,tr.causante,(r2.personas||[]).map((p)=>({...p})));for(const a of avT)if(!d.avisos.some((x)=>x.slice(0,60)===a.slice(0,60)))d.avisos.push(a);}
 }}catch(e){console.error(e);}}
 if(["herenciaprevia","cuaderno","renuncia"].includes(tipo)&&!lecAnalizar.dentro){const ct=(d.campos||[]).find((c)=>c.k==="testamento");if(ct&&Array.isArray(ct.derechos)){const nd=lecRenunciaUsufructo(texto,ct.derechos);if(nd!==ct.derechos){ct.derechos=nd;d.avisos=[...(d.avisos||[]),"El cónyuge renuncia en la escritura a su cuota legal usufructuaria: se quita del reparto."];}}}
@@ -16529,11 +16534,12 @@ return null;
 }
 const LIA_V="lia-3";
 const LIA_URL="https://api.anthropic.com/v1/messages";
-const LIA_HAIKU="claude-haiku-5-5",LIA_SONNET="claude-sonnet-5-5";
-const LIA_NOMBRE={[LIA_HAIKU]:"Haiku",[LIA_SONNET]:"Sonnet"};
+const LIA_HAIKU="claude-haiku-5-5",LIA_SONNET="claude-sonnet-5-5",LIA_OPUS="claude-opus-5-5";
+const LIA_NOMBRE={[LIA_HAIKU]:"Haiku",[LIA_SONNET]:"Sonnet",[LIA_OPUS]:"Opus"};
 const LIA_TARIFAS={
 "claude-haiku-5-5":{entrada:0.10,salida:0.50,cacheEscritura:0.125,cacheLectura:0.01,umbral:100000,alto:{entrada:0.50,salida:2.50,cacheEscritura:0.625,cacheLectura:0.05}},
 "claude-sonnet-5-5":{entrada:2,salida:10,cacheEscritura:2.50,cacheLectura:0.10},
+"claude-opus-5-5":{entrada:4,salida:20,cacheEscritura:5,cacheLectura:0.20},
 };
 const LIA_USD_EUR=1/1.1195,LIA_CAMBIO_TXT="tipo de referencia del BCE del 14-10-2026 (1 € = 1,1195 $)";
 const LIA_CUPO=1000,LIA_FRENO=30,LIA_MAX_PAG_IMG=20,LIA_MAX_TXT=120000,LIA_LADO=1500;
@@ -16613,7 +16619,7 @@ LIA.ventana=LIA.ventana.filter((q)=>ahora()-q.t<60000);usadas=LIA.ventana.reduce
 LIA.ventana.push({t:ahora(),n:paginas});
 }
 const LIA_ERR={401:"la clave no es válida o se ha revocado",403:"la clave no tiene permiso para este modelo",404:"modelo no disponible para esta clave",413:"el documento es demasiado grande para enviarlo",429:"se ha superado el límite de peticiones de la cuenta",529:"el servicio de Anthropic está saturado",500:"error del servicio de Anthropic",400:"petición rechazada"};
-const LIA_SIN_RAZONAR={[LIA_HAIKU]:{type:"disabled"},[LIA_SONNET]:{type:"between_tools"}};
+const LIA_SIN_RAZONAR={[LIA_HAIKU]:{type:"disabled"},[LIA_SONNET]:{type:"between_tools"},[LIA_OPUS]:{type:"between_tools"}};
 async function liaLlamar({modelo=LIA_HAIKU,sistema,esquema,contenido,maxTokens=2000,clave,_corregido=false}){
 clave=clave||(await liaClave());if(!clave)throw new Error("sin-clave");
 const cuerpo={model:modelo,max_tokens:maxTokens,thinking:LIA_SIN_RAZONAR[modelo]||{type:"disabled"},system:[{type:"text",text:sistema,cache_control:{type:"ephemeral"}}],messages:[{role:"user",content:contenido}]};
@@ -17452,6 +17458,42 @@ if(d.tipo==="testamento"&&texto&&typeof lecGuardaTestamento==="function")d.aviso
 if((loc.avisos||[]).some((a)=>/a favor de la Administración/.test(a))){for(const c of d.campos)if(c.k==="testamento"&&Array.isArray(c.derechos))c.conf=0;for(const q of d.personas){q.conf=0;q.nota="la declaración de herederos es a favor de la Administración: no es heredero";}}
 return d;
 }
+function liaFamiliaDe(D){const X=D&&D.extra&&D.extra.tipoTranscrito==="herederos"&&(D.extra.personasTranscritas||[]).length?D.extra.personasTranscritas:(D&&D.personas)||[];return X.filter((p)=>p.relacion&&p.relacion!=="extrano"&&!p.excluido&&!p.descartado);}
+function liaRepartoDe(D){const c=((D&&D.campos)||[]).find((x)=>x.k==="testamento");return c&&Array.isArray(c.derechos)&&c.derechos.length?c.derechos:null;}
+function liaAcuerdoIA(A,B){
+if(!A||!B)return false;
+const nom=(D)=>((D.campos||[]).find((c)=>c.k==="nombre")||{}).valor;const nA=nom(A),nB=nom(B);
+if(nA&&nB&&!liaMismoNom(nA,nB))return false;
+const rA=liaRepartoDe(A),rB=liaRepartoDe(B);
+if(rA||rB)return!!rA&&!!rB&&liaMismosDerechos(rA,rB);
+const fA=liaFamiliaDe(A),fB=liaFamiliaDe(B);if(!fA.length||fA.length!==fB.length)return false;
+const muerto=(p)=>!!(p.fallecido||p.premuerto||p.vive===false),sep=(p)=>!!(p.separado||p["excónyuge"]);
+const eq=(p,q)=>liaMismoNom(p.nombre,q.nombre)&&p.relacion===q.relacion&&!!p.renuncia===!!q.renuncia&&!!p.medio===!!q.medio&&muerto(p)===muerto(q)&&sep(p)===sep(q)&&(p.lineaAsc||"")===(q.lineaAsc||"")&&((!p.estirpe&&!q.estirpe)||liaMismoNom(p.estirpe,q.estirpe));
+return fA.every((p)=>fB.some((q)=>eq(p,q)));
+}
+function liaSeguro(d){
+if(!d)return false;const c=(d.campos||[]).find((x)=>x.k==="testamento");
+if(c&&Array.isArray(c.derechos)&&c.derechos.length)return c.conf>0;
+const F=liaFamiliaDe(d);if(!F.length)return false;
+return F.every((p)=>p.conf!==0||p.separado||p["excónyuge"])&&!(d.avisos||[]).some((a)=>/revisa la lista|no se ha le[íi]do ninguno|habla de \d+ .* y se han le[íi]do/i.test(a));
+}
+function liaConsenso(reglas,DS,DO,img,texto,nombres){
+if(!liaAcuerdoIA(DS,DO))return null;
+if(((reglas&&reglas.avisos)||[]).some((a)=>/a favor de la Administración/.test(a)))return null;
+if([...((DS&&DS.avisos)||[]),...((DO&&DO.avisos)||[])].some((a)=>/^Comprobación:/.test(a)))return null;
+const f=liaConciliar({...DO,tipo:(reglas&&reglas.tipo)||DO.tipo},DS,img,null,texto);
+const en=(L,p)=>(L||[]).some((q)=>liaMismoNom(q.nombre,p.nombre)&&q.relacion===p.relacion);
+for(const c of f.campos)if(c.k==="testamento"&&Array.isArray(c.derechos)&&c.derechos.length&&!(c.conf>0)){c.conf=1;c.conc="consenso";}
+for(const p of f.personas||[])if(p.conf===0&&en(liaFamiliaDe(DS),p)&&en(liaFamiliaDe(DO),p)){p.conf=1;p.conc="consenso";}
+if(f.extra&&Array.isArray(f.extra.personasTranscritas))for(const p of f.extra.personasTranscritas)if(p.conf===0&&en(liaFamiliaDe(DS),p)&&en(liaFamiliaDe(DO),p))p.conf=1;
+for(const p of[...((DS&&DS.personas)||[]),...((DO&&DO.personas)||[]),...((reglas&&reglas.personas)||[])])if(p.desheredado&&!(f.personas||[]).some((q)=>liaMismoNom(q.nombre,p.nombre)))f.personas.push({...p,conf:0});
+f.avisos=(f.avisos||[]).filter((a)=>!/^Comprobación del (?:acta|testamento):/.test(a));
+if(texto&&typeof lecGuardaDeclaracion==="function"&&(f.tipo==="herederos"||(f.extra&&f.extra.tipoTranscrito==="herederos")))f.avisos.push(...lecGuardaDeclaracion(texto,f.extra&&f.extra.tipoTranscrito==="herederos"&&(f.extra.personasTranscritas||[]).length?f.extra.personasTranscritas:f.personas,(f.campos.find((c)=>c.k==="nombre")||{}).valor));
+if(texto&&typeof lecGuardaTestamento==="function"&&f.tipo==="testamento")f.avisos.push(...lecGuardaTestamento(texto,f.campos.find((c)=>c.k==="testamento")));
+const N=nombres||["Opus","Sonnet"];
+f.avisos.unshift(`Lectura de contraste: ${N[0]} y ${N[1]} han leído el documento por separado y dan el mismo reparto; se propone marcado. Las reglas de este ordenador leían otra cosa o no estaban seguras.`);
+f.consenso=true;return f;
+}
 const LIA_SIS_DES=`Eres un verificador de documentos de herencias en España. Te doy un documento y varias preguntas; cada una tiene dos lecturas posibles de un dato (A y B). Para cada pregunta, mira el documento y responde qué lectura es la que está escrita: «A», «B» o «ninguna» si no es ninguna de las dos o no se puede saber. Copia en «cita» el fragmento literal del documento (3 a 25 palabras) que lo demuestra. No deduzcas: solo lo que está escrito. Los importes pueden aparecer con puntos de miles y coma decimal; las fechas, en cualquier formato. Si la pregunta es un reparto completo (quién recibe qué cuota), solo elige A o B si el documento lo dice así de forma inequívoca para TODAS las personas; si no, «ninguna».`;
 const LIA_ESQ_DES=liaObj({respuestas:{type:"array",items:liaObj({id:liaStr,eleccion:liaStr,cita:liaStr})}});
 async function liaDesempatar(cont,preguntas,ref){
@@ -17476,17 +17518,17 @@ const hs=Array.isArray(r.archivos)&&r.archivos.length>1?await Promise.all(r.arch
 const hash=hs.every(Boolean)?hs.join("+")+(r.desde>0?`#${r.desde}-${r.hasta}`:""):"";const kc=`doc:${LIA_V}:${hash}`;
 const avisoIA=(t)=>({...datos,avisos:[...(datos.avisos||[]),t]});
 const doble=LIA.cfg.modo==="doble";
-const juntar=(D,modelo,S,img)=>{if(!doble)return liaFundir(datos,D,modelo);const f=liaConciliar(datos,D,img,S||null,ref&&!ref.img?ref.texto:"");f.ia={modelo,nombre:LIA_NOMBRE[modelo]||"IA",doble:true,...(S?{desempate:"Sonnet"}:{})};return f;};
-if(hash){const c=await liaGet("cache",kc);if(c&&c.datosIA){const d=juntar(c.datosIA,c.modelo,c.sonnet,c.img);d.avisos.unshift(`Leído con IA (${LIA_NOMBRE[c.modelo]||"IA"}) el ${String(c.f||"").slice(0,10).split("-").reverse().join("/")}; resultado guardado en este equipo, sin volver a enviarlo.`);return d;}}
+const juntar=(D,modelo,S,img)=>{if(!doble)return liaFundir(datos,D,modelo);const f=liaConciliar(datos,D,img,S||null,img?"":(r.texto||""));f.ia={modelo,nombre:LIA_NOMBRE[modelo]||"IA",doble:true,...(S?{desempate:"Sonnet"}:{})};return f;};
+if(hash){const c=await liaGet("cache",kc);if(c&&c.datosIA){let d=juntar(c.datosIA,c.modelo,c.sonnet,c.img);if(doble&&c.contraste&&!liaSeguro(d)){const z=liaConsenso(datos,c.datosIA,c.contraste,c.img,c.img?"":(r.texto||""),[LIA_NOMBRE[c.modelo]||"IA",c.contrasteNombre||"IA"]);if(z&&liaSeguro(z)){z.ia={...d.ia,contraste:c.contrasteNombre||"IA"};d=z;}}d.avisos.unshift(`Leído con IA (${LIA_NOMBRE[c.modelo]||"IA"}) el ${String(c.f||"").slice(0,10).split("-").reverse().join("/")}; resultado guardado en este equipo, sin volver a enviarlo.`);return d;}}
 let cont;try{cont=await liaContenido(file,r);}catch(e){console.error(e);return avisoIA("No se ha podido preparar el documento para la lectura con IA: se queda lo que ha leído el lector local.");}
 if(liaQuedan()<cont.paginas)return avisoIA(`Lectura con IA no usada: el cupo del mes está agotado (${(LIA.cfg.cupo||LIA_CUPO)} páginas). Se queda lo que ha leído el lector local.`);
 await liaFreno(cont.paginas);
 const ref={img:cont.img,texto:r.texto||"",ocr:cont.img?r.texto||"":"",calidad:liaOcrCalidad(geo)};
 const esTest=datos.tipo==="testamento"||/testament/i.test(file.name||"");
-const intentar=async(modelo)=>{
+const intentar=async(modelo,primera)=>{
 if(typeof lecProgreso==="function")lecProgreso(`${base} · leyendo con IA (${LIA_NOMBRE[modelo]})`);
-const res=await liaLlamar({modelo,sistema:LIA_SIS_DOC,esquema:LIA_ESQ_DOC,contenido:cont.contenido,maxTokens:modelo===LIA_SONNET?6000:esTest?4000:2500});
-await liaSumarUso(modelo===LIA_HAIKU?cont.paginas:0,modelo,res.uso);
+const res=await liaLlamar({modelo,sistema:LIA_SIS_DOC,esquema:LIA_ESQ_DOC,contenido:cont.contenido,maxTokens:modelo!==LIA_HAIKU?6000:esTest?4000:2500});
+await liaSumarUso(primera?cont.paginas:0,modelo,res.uso);
 const V=res.json?liaValidar(res.json,ref):{ok:false,motivos:[res.parada==="max_tokens"?"respuesta cortada":"JSON no válido"],r:null};
 let D=V.r?liaADatos(V,ref,modelo):null;
 if(V.ok&&D&&D.reparto&&!D.reparto.ok&&V.r.testamento)V.ok=false,V.motivos.unshift("el testamento no se ha podido pasar a derechos: "+D.reparto.motivo);
@@ -17498,20 +17540,30 @@ let a;
 const clave=["testamento","herederos","herenciaprevia","cuaderno","renuncia"].includes(datos.tipo)||/testament|herencia|herederos|partici/i.test(file.name||"");
 const reforzada=LIA.cfg.reforzada!==false&&clave;
 try{
-a=await intentar(reforzada?LIA_SONNET:LIA_HAIKU);
-if(reforzada)a.reforzada=true;
+if(reforzada){try{a=await intentar(LIA_OPUS,true);}catch(e){if(e&&(e.status===403||e.status===404))a=await intentar(LIA_SONNET,true);else throw e;}a.reforzada=true;}
+else a=await intentar(LIA_HAIKU,true);
 const reglasFlojas=!LIA.cfg||LIA.cfg.modo!=="doble"||(datos.tipo==="testamento"?!(datos.campos||[]).some((c)=>c.k==="testamento"&&c.derechos&&c.conf>0):liaDebeLeer(file,r,datos,geo,"dudas").si);
-if(!a.reforzada&&!a.V.ok&&LIA.cfg.escalar!==false&&reglasFlojas){const motivo=a.V.motivos.slice(0,3).join("; ");const b=await intentar(LIA_SONNET).catch((e)=>null);if(b&&b.D&&(b.V.ok||(b.V.r&&(!a.D||b.V.malas<a.V.malas))))a=b;a.escalado=motivo;}
+if(!a.reforzada&&!a.V.ok&&LIA.cfg.escalar!==false&&reglasFlojas){const motivo=a.V.motivos.slice(0,3).join("; ");const b=await intentar(LIA_SONNET,false).catch((e)=>null);if(b&&b.D&&(b.V.ok||(b.V.r&&(!a.D||b.V.malas<a.V.malas))))a=b;a.escalado=motivo;}
 }catch(e){if(!e||!e.status)console.error(e);return avisoIA(`Lectura con IA no disponible (${liaMsgError(e)}): se queda lo que ha leído el lector local.`);}
 if(!a.D)return avisoIA(`La lectura con IA no ha dado un resultado válido (${a.V.motivos.join("; ")}): se queda lo que ha leído el lector local.`);
 if(a.V.malas)a.D.avisos.push(`${a.V.malas===1?"Un dato propuesto por la IA no se ha incluido":a.V.malas+" datos propuestos por la IA no se han incluido"}: su cita no aparece en el documento o no contiene el dato.`);
 if(cont.corto)a.D.avisos.push("Documento muy largo: a la IA se ha enviado solo el principio.");
 if(cont.img)a.D.avisos.push(`Leído con IA (${LIA_NOMBRE[a.modelo]}) a partir de ${cont.paginas===1?"la imagen":cont.paginas+" imágenes"}: compruébalo con el documento.`);
 let fin=juntar(a.D,a.modelo,null,cont.img),S=null;
-if(doble&&fin.conciliacion&&fin.conciliacion.importantes&&LIA.cfg.escalar!==false){
+let contraste=null,contrasteNombre="";
+if(doble&&a.reforzada&&LIA.cfg.contraste!==false&&LIA.cfg.escalar!==false&&!liaSeguro(fin)){
+const mc=a.modelo===LIA_OPUS?LIA_SONNET:LIA_OPUS,nc=LIA_NOMBRE[mc];contrasteNombre=nc;
+try{if(typeof lecProgreso==="function")lecProgreso(`${base} · lectura de contraste con IA (${nc})`);
+const res=await liaLlamar({modelo:mc,sistema:LIA_SIS_DOC,esquema:LIA_ESQ_DOC,contenido:cont.contenido,maxTokens:6000});
+await liaSumarUso(0,mc,res.uso);
+const Vb=res.json?liaValidar(res.json,ref):null;const Db=Vb&&Vb.r?liaADatos(Vb,ref,mc):null;
+if(Db){contraste=Db;const z=liaConsenso(datos,a.D,Db,cont.img,cont.img?"":(r.texto||""),[LIA_NOMBRE[a.modelo]||"IA",nc]);if(z&&liaSeguro(z)){z.ia={...fin.ia,contraste:nc};fin=z;}}
+}catch(e){fin.avisos.push(`No se ha podido hacer la lectura de contraste con ${nc} (${liaMsgError(e)}): el reparto queda sin marcar.`);}
+}
+if(doble&&!fin.consenso&&fin.conciliacion&&fin.conciliacion.importantes&&LIA.cfg.escalar!==false){
 try{if(typeof lecProgreso==="function")lecProgreso(`${base} · desempate con IA (Sonnet)`);S=await liaDesempatar(cont,fin.conciliacion.preguntas,ref);if(S)fin=juntar(a.D,a.modelo,S,cont.img);}catch(e){fin.avisos.push(`No se ha podido desempatar con Sonnet (${liaMsgError(e)}): las discrepancias quedan sin marcar.`);}
 }
-if(hash)await liaPut("cache",kc,{datosIA:a.D,modelo:a.modelo,sonnet:S,img:cont.img,f:new Date().toISOString()});
+if(hash)await liaPut("cache",kc,{datosIA:a.D,modelo:a.modelo,sonnet:S,img:cont.img,contraste,contrasteNombre,f:new Date().toISOString()});
 if(a.escalado)fin.ia.escalado=a.escalado;
 return fin;
 }
@@ -17560,11 +17612,13 @@ const aceptar=!c.aceptado&&LIA.ui.modo==="aceptar"?`<div class="lia-acepta" role
 const sw=`<button class="row" data-lia="activar" role="switch" aria-checked="${!!(c.activo&&c.aceptado)}"><span class="ico ${c.activo&&c.aceptado?"green":"q"}">${ico}</span><span class="t"><b>Leer documentos con IA</b><small>${c.activo&&c.aceptado?(c.fin4?"Activada":"Activada, falta la clave"):"Desactivada: todo se lee en este ordenador"}. Solo lectura y consultas con cita; los cálculos siguen siendo reglas.</small></span><span class="sg-sw" aria-hidden="true"></span></button>`;
 const modo=`<div class="field"><span class="lbl" id="lia-modo-l">Cuándo se usa</span><div class="seg block" role="group" aria-labelledby="lia-modo-l" style="margin-top:6px"><button data-lia="modo" data-v="doble" aria-pressed="${c.modo==="doble"||!c.modo}">Lectura doble: reglas e IA en todos los documentos</button><button data-lia="modo" data-v="dudas" aria-pressed="${c.modo==="dudas"}">Solo si el lector local no está seguro</button><button data-lia="modo" data-v="siempre" aria-pressed="${c.modo==="siempre"}">Siempre en fotos y testamentos</button></div></div>`;
 const refz=c.reforzada!==false;
-const refF=`<button class="row" data-lia="reforzada" role="switch" aria-checked="${refz}"><span class="t"><b>Lectura reforzada de testamentos, actas y escrituras</b><small>${refz?"Activada: los documentos que deciden el reparto los lee Sonnet 5.5, el modelo que más acierta en nuestras pruebas. Unos céntimos más por expediente":"Económica: todo lo lee Haiku 5.5, y Sonnet 5.5 solo si la lectura no se puede comprobar"}</small></span><span class="sg-sw" aria-hidden="true"></span></button>`;
+const conz=!(c.contraste===false);
+const conF=`<button class="row" data-lia="contraste" role="switch" aria-checked="${conz}"><span class="t"><b>Lectura de contraste</b><small>${conz?"Activada: cuando el reparto de un testamento, acta o escritura no queda seguro, lo lee además Sonnet 5.5 por separado. Si las dos lecturas coinciden y el texto no lo desmiente, el reparto se propone ya marcado. Unos céntimos más solo en esos documentos":"Desactivada: si las reglas y la IA no coinciden, el reparto queda sin marcar para que lo revises"}</small></span><span class="sg-sw" aria-hidden="true"></span></button>`;
+const refF=`<button class="row" data-lia="reforzada" role="switch" aria-checked="${refz}"><span class="t"><b>Lectura reforzada de testamentos, actas y escrituras</b><small>${refz?"Activada: los documentos que deciden el reparto los lee Opus 5.5, el modelo que más acierta en nuestras pruebas a ciegas. Unos céntimos más por expediente":"Económica: todo lo lee Haiku 5.5, y Sonnet 5.5 solo si la lectura no se puede comprobar"}</small></span><span class="sg-sw" aria-hidden="true"></span></button>`;
 const cupoF=`<div class="field"><label for="lia-cupo">Cupo mensual de páginas</label><input id="lia-cupo" inputmode="numeric" data-lia-cupo="1" value="${cupo}"><span class="hint">Al llegar al cupo se sigue con el lector local, sin IA. Cada consulta normativa cuenta como una página. Aviso al 80 %.</span></div>`;
 const usoF=`<div class="row lia-uso"><span class="t"><b>Te quedan ${liaMiles(quedan)} de ${liaMiles(cupo)} este mes</b><small>${liaMiles(u.paginas)} páginas leídas${u.consultas?` · ${u.consultas} ${u.consultas===1?"consulta":"consultas"}`:""} · gasto estimado ${liaEurTxt(u.usd)} (${u.usd.toFixed(4).replace(".",",")} $ con las tarifas oficiales; ${LIA_CAMBIO_TXT})</small><span class="lia-barra" role="progressbar" aria-label="Cupo del mes usado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></span></span></div>`;
 return`<div class="sectitle" id="lia-aj">Lectura con IA</div><div class="group sg-g" style="--inset:60px">${sw}${aceptar}</div>
-    ${c.activo&&c.aceptado?`<div class="group">${clave}${modo}${refF}${cupoF}${usoF}</div>${acepta}`:""}
+    ${c.activo&&c.aceptado?`<div class="group">${clave}${modo}${refF}${conF}${cupoF}${usoF}</div>${acepta}`:""}
     <p class="group-foot">Opcional. Ayuda al lector con fotos difíciles, testamentos y formatos que las reglas no leen bien: cada dato llega con la frase literal del documento y entra sin cargar hasta que lo revisas. Usa Claude Sonnet 5.5 para testamentos, actas y escrituras (lectura reforzada) y Claude Haiku 5.5 para el resto.</p>`;
 }
 async function liaAccion(a,b){
@@ -17587,6 +17641,7 @@ try{const r=await liaLlamar({modelo:LIA_HAIKU,sistema:"Responde solo: OK",conten
 catch(e){LIA.ui.err=`La clave no funciona: ${liaMsgError(e)}.`;}
 LIA.ui.probando=false;return rp();
 }
+if(a==="contraste"){await liaGuardarCfg({contraste:!(LIA.cfg&&LIA.cfg.contraste!==false)});return rp();}
 if(a==="reforzada"){await liaGuardarCfg({reforzada:!(LIA.cfg&&LIA.cfg.reforzada!==false)});return rp();}
 if(a==="modo"){await liaGuardarCfg({modo:["siempre","dudas","doble"].includes(b.dataset.v)?b.dataset.v:"doble"});return rp();}
 }
